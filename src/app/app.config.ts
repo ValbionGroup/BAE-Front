@@ -17,7 +17,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     provideLucideConfig({
-      strokeWidth: 1.5,
+      strokeWidth: 2,
     }),
   ],
 };

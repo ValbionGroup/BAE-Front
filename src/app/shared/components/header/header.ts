@@ -20,7 +20,7 @@ interface NavItem {
 
 @Component({
   selector: 'bfd-header',
-  imports: [RouterLink, RouterLinkActive, LucideDynamicIcon, LucideBell, LucideCog, LucideSettings],
+  imports: [RouterLink, RouterLinkActive, LucideDynamicIcon, LucideBell, LucideSettings],
   templateUrl: './header.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -29,11 +29,11 @@ export class Header {
   protected readonly routes = AppRoutes;
 
   protected readonly navItems: NavItem[] = [
-    { label: 'Dashboard', icon: LucideLayoutDashboard, route: AppRoutes.home },
-    { label: 'Logistique', icon: LucideUtensils, route: 'bookmarks' },
-    { label: 'Coordination', icon: LucideClipboardList, route: 'team' },
-    { label: 'Commandes', icon: LucidePackage, route: 'messages' },
-    { label: 'Administration', icon: LucideShieldUser, route: 'calendar' },
+    { label: 'Tableau de bord', icon: LucideLayoutDashboard, route: AppRoutes.home },
+    { label: 'Logistique', icon: LucideUtensils, route: AppRoutes.logistics.base },
+    { label: 'Coordination', icon: LucideClipboardList, route: AppRoutes.coordination.base },
+    { label: 'Commandes', icon: LucidePackage, route: AppRoutes.orders.base},
+    { label: 'Administration', icon: LucideShieldUser, route: AppRoutes.administration.base },
   ];
 
   protected toggleMenu(): void {
