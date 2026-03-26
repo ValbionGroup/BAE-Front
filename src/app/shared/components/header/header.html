@@ -1,0 +1,122 @@
+<header
+  class="bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 w-full"
+  role="banner"
+>
+  <div class="flex items-center justify-between gap-4 px-4 md:px-6 h-16">
+    <!-- Brand -->
+    <div class="flex items-center gap-3 shrink-0">
+      <a [routerLink]="['/' + routes.home]" class="flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md" aria-label="Go to home">
+        <!-- Placeholder logo -->
+        <span class="w-8 h-8 rounded-full bg-primary flex items-center justify center text-sm font-bold" aria-hidden="true">
+          B
+        </span>
+        <span class="text-gray-900 dark:text-gray-100 font-semibold text-lg leading-none hidden sm:block">
+          BAE
+        </span>
+      </a>
+    </div>
+
+    <!-- Desktop nav -->
+    <nav class="hidden md:flex items-center gap-1" aria-label="Main navigation">
+      @for (item of navItems; track item.route) {
+        <a
+          [routerLink]="'/' + item.route"
+          routerLinkActive="bg-primary text-gray-900! dark:text-white!"
+          [routerLinkActiveOptions]="{ exact: item.route === routes.home }"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <svg [lucideIcon]="item.icon"></svg>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="hidden md:flex items-center gap-1">
+        <button
+          type="button"
+          class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Notifications"
+        >
+          <svg lucideBell />
+        </button>
+        <button
+          type="button"
+          class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Settings"
+        >
+          <svg lucideSettings />
+        </button>
+      </div>
+
+      <div class="hidden md:block w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" aria-hidden="true"></div>
+
+      <!-- User profile -->
+      <button
+        type="button"
+        class="hidden md:flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        aria-label="User menu"
+      >
+        <span
+          class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold shrink-0"
+          aria-hidden="true"
+        >
+          EL
+        </span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200 hidden lg:block">Espiet Lucas</span>
+      </button>
+
+      <!-- Mobile hamburger -->
+      <button
+        type="button"
+        (click)="toggleMenu()"
+        class="flex md:hidden items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        [attr.aria-expanded]="mobileMenuOpen()"
+        aria-controls="mobile-nav"
+        aria-label="Toggle navigation menu"
+      >
+        <i class="pi text-lg" [class]="mobileMenuOpen() ? 'pi-times' : 'pi-bars'" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile nav -->
+  @if (mobileMenuOpen()) {
+    <nav
+      id="mobile-nav"
+      class="md:hidden border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-col gap-1"
+      aria-label="Mobile navigation"
+    >
+      @for (item of navItems; track item.route) {
+        <a
+          [routerLink]="'/' + item.route"
+          routerLinkActive="bg-primary text-white!"
+          [routerLinkActiveOptions]="{ exact: item.route === routes.home }"
+          (click)="toggleMenu()"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <svg [lucideIcon]="item.icon"></svg>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+
+      <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold" aria-hidden="true">
+            EL
+          </span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Espiet Lucas</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Notifications">
+            <i class="pi pi-bell text-base" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Settings">
+            <i class="pi pi-cog text-base" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+  }
+</header>

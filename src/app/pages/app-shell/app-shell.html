@@ -1,0 +1,31 @@
+<div class="relative flex h-screen w-screen flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
+  <!--
+    @if (isSearchPopupOpen()) {
+      <app-search-pop (closePopup)="isSearchPopupOpen.set(false)"></app-search-pop>
+    }
+  -->
+
+  <header class="relative z-10">
+    <bfd-header class="border-b border-gray-200 dark:border-gray-700" />
+  </header>
+
+  <div class="flex h-full w-full">
+    <main class="relative flex h-full w-full overflow-auto">
+      <router-outlet />
+    </main>
+  </div>
+
+<!--
+  <app-context-menu
+    (closeMenu)="isContextMenuOpen.set(false)"
+    [isVisible]="isContextMenuOpen()"
+    [options]="contextMenuOptions()"
+    [x]="contextMenuX()"
+    [y]="contextMenuY()" />
+-->
+
+<!--  <app-notification-container />
+  <app-tooltip-singleton class="fixed z-100" #tooltip></app-tooltip-singleton>
+  <app-dropdown-singleton class="fixed z-90" #dropdown></app-dropdown-singleton>
+  <app-entity-auto-complete-dialog #entityAutoComplete></app-entity-auto-complete-dialog>-->
+</div>
