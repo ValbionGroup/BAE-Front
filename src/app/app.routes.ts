@@ -59,6 +59,11 @@ export const routes: Routes = [
         path: AppRoutes.logistics.base,
         children: [
           {
+            path: '',
+            redirectTo: AppRoutes.logistics.stock,
+            pathMatch: 'full',
+          },
+          {
             path: AppRoutes.logistics.stock,
             component: Logistics
           },
@@ -84,6 +89,11 @@ export const routes: Routes = [
         path: AppRoutes.coordination.base,
         children: [
           {
+            path: '',
+            redirectTo: AppRoutes.coordination.planning,
+            pathMatch: 'full',
+          },
+          {
             path: AppRoutes.coordination.planning,
             component: Coordination
           },
@@ -96,6 +106,11 @@ export const routes: Routes = [
       {
         path: AppRoutes.orders.base,
         children: [
+          {
+            path: '',
+            redirectTo: AppRoutes.orders.preorders,
+            pathMatch: 'full',
+          },
           {
             path: AppRoutes.orders.preorders,
             component: Orders
@@ -113,6 +128,11 @@ export const routes: Routes = [
       {
         path: AppRoutes.administration.base,
         children: [
+          {
+            path: '',
+            redirectTo: AppRoutes.administration.members,
+            pathMatch: 'full',
+          },
           {
             path: AppRoutes.administration.members,
             component: Administration

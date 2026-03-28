@@ -3,7 +3,6 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'bfd-administration',
   imports: [],
-  templateUrl: './administration.html',
-  styleUrl: './administration.css',
+  templateUrl: './administration.html'
 })
 export class Administration {}
