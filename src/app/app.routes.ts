@@ -6,6 +6,7 @@ import {Logistics} from '#pages/authed/logistics/logistics';
 import {Coordination} from '#pages/authed/coordination/coordination';
 import {Orders} from '#pages/authed/orders/orders';
 import {Administration} from '#pages/authed/administration/administration';
+import {Stock} from '#pages/authed/logistics/stock/stock';
 
 export const AppRoutes = {
   home: '',
@@ -65,7 +66,7 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.logistics.stock,
-            component: Logistics
+            component: Stock
           },
           {
             path: AppRoutes.logistics.recipes,
