@@ -19,7 +19,6 @@ export const AppRoutes = {
   logistics: {
     base: 'logistics',
     stock: 'stock',
-    products: 'products',
     recipes: 'recipes',
     compare: 'compare',
     events: 'events',
@@ -57,6 +56,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.logistics.base,
+        component: Logistics,
         children: [
           {
             path: '',
@@ -65,10 +65,6 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.logistics.stock,
-            component: Logistics
-          },
-          {
-            path: AppRoutes.logistics.products,
             component: Logistics
           },
           {
