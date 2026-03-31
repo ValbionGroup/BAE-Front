@@ -5,15 +5,11 @@
     }
   -->
 
-  <header class="relative z-10">
-    <bfd-header class="border-b border-gray-200 dark:border-gray-700" />
-  </header>
+  <bfd-header />
 
-  <div class="flex h-full w-full">
-    <main class="relative flex h-full w-full overflow-auto">
-      <router-outlet />
-    </main>
-  </div>
+  <main class="flex h-full w-full overflow-auto pt-16">
+    <router-outlet />
+  </main>
 
 <!--
   <app-context-menu

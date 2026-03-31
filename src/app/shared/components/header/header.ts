@@ -22,6 +22,11 @@ interface NavItem {
   selector: 'bfd-header',
   imports: [RouterLink, RouterLinkActive, LucideDynamicIcon, LucideBell, LucideSettings],
   templateUrl: './header.html',
+  styles: `
+    :host {
+      display: contents;
+    }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Header {
