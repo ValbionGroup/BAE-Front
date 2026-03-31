@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, signal} from '@angular/core';
 import {
   LucideAlertTriangle,
   LucideCheckCircle,
@@ -8,6 +8,7 @@ import {
   LucideXCircle,
 } from '@lucide/angular';
 import {Button} from '#shared/components/button/button';
+import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
 
 interface StockItem {
   id: number;
@@ -22,12 +23,12 @@ interface StockItem {
   selector: 'bfd-stock',
   imports: [
     LucideSearch,
-    LucidePlus,
     LucideAlertTriangle,
     LucideCheckCircle,
     LucideXCircle,
     LucidePackage,
     Button,
+    Table,
   ],
   templateUrl: './stock.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -89,6 +90,34 @@ export class Stock {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
-  protected readonly LucidePlus = LucidePlus;
   protected readonly console = console;
+
+  protected stockColumns: TableColumn[] = [
+    {
+      id: 'name',
+      label: 'Article',
+      type: ColumnType.TEXT
+    },
+    {
+      id: 'catg',
+      label: 'Catégorie',
+      type: ColumnType.PILL
+    },
+    {
+      id: 'qte',
+      label: 'Quantité',
+      type: ColumnType.QUANTITY
+    },
+    {
+      id: 'smin',
+      label: 'Seuil Min.',
+      type: ColumnType.NUMBER
+    },
+    {
+      id: 'stt',
+      label: 'Statut',
+      type: ColumnType.STATUS
+    }
+  ]
+  protected readonly LucidePlus = LucidePlus;
 }
