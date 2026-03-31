@@ -9,6 +9,7 @@ import {
 } from '@lucide/angular';
 import {Button} from '#shared/components/button/button';
 import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
+import {SearchBar} from '#shared/components/search-bar/search-bar';
 
 interface StockItem {
   id: number;
@@ -29,6 +30,7 @@ interface StockItem {
     LucidePackage,
     Button,
     Table,
+    SearchBar,
   ],
   templateUrl: './stock.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
