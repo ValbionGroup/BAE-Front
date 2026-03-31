@@ -7,6 +7,7 @@ import {
   LucideSearch,
   LucideXCircle,
 } from '@lucide/angular';
+import {Button} from '#shared/components/button/button';
 
 interface StockItem {
   id: number;
@@ -26,6 +27,7 @@ interface StockItem {
     LucideCheckCircle,
     LucideXCircle,
     LucidePackage,
+    Button,
   ],
   templateUrl: './stock.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,4 +88,7 @@ export class Stock {
   protected onSearch(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }
+
+  protected readonly LucidePlus = LucidePlus;
+  protected readonly console = console;
 }
