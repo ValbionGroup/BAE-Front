@@ -7,6 +7,8 @@ import {Coordination} from '#pages/authed/coordination/coordination';
 import {Orders} from '#pages/authed/orders/orders';
 import {Administration} from '#pages/authed/administration/administration';
 import {Stock} from '#pages/authed/logistics/stock/stock';
+import {Compare} from '#pages/authed/logistics/compare/compare';
+import {Recipes} from '#pages/authed/logistics/recipes/recipes';
 
 export const AppRoutes = {
   home: '',
@@ -70,11 +72,11 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.logistics.recipes,
-            component: Logistics
+            component: Recipes
           },
           {
             path: AppRoutes.logistics.compare,
-            component: Logistics
+            component: Compare
           },
           {
             path: AppRoutes.logistics.events,

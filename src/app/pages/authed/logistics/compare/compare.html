@@ -1,0 +1,97 @@
+<div class="flex flex-col gap-6">
+
+  <!-- Info banner -->
+  <div class="bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 rounded-xl p-4 flex gap-3">
+    <svg lucideStore [size]="18" class="text-blue-500 shrink-0 mt-0.5" aria-hidden="true"></svg>
+    <div>
+      <p class="text-sm font-medium text-blue-900 dark:text-blue-200">Comparateur de prix fournisseurs</p>
+      <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+        Comparez les prix des produits chez différents fournisseurs. Le prix le plus bas est mis en évidence en vert.
+      </p>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <label class="relative">
+    <span class="sr-only">Rechercher un produit</span>
+    <svg lucideSearch [size]="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" aria-hidden="true"></svg>
+    <input
+      type="search"
+      placeholder="Rechercher un produit ou une catégorie..."
+      (input)="onSearch($event)"
+      class="w-full sm:max-w-sm pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    />
+  </label>
+
+  <!-- Comparison table -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-auto">
+    <table class="w-full text-sm" aria-label="Comparatif de prix par fournisseur">
+      <thead>
+        <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <th scope="col" class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide min-w-48 sticky left-0 bg-gray-50 dark:bg-gray-800/50">
+            Produit
+          </th>
+          @for (supplier of suppliers(); track supplier.id) {
+            <th scope="col" class="text-center px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap min-w-32">
+              {{ supplier.name }}
+            </th>
+          }
+          <th scope="col" class="text-center px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide min-w-32 whitespace-nowrap">
+            Économie max.
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (product of filteredProducts(); track product.id) {
+          <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors last:border-b-0">
+            <td class="px-4 py-3 sticky left-0 bg-white dark:bg-gray-800">
+              <div class="font-medium text-gray-900 dark:text-gray-100">{{ product.name }}</div>
+              <div class="text-xs text-gray-400 mt-0.5">{{ product.category }} · {{ product.unit }}</div>
+            </td>
+            @for (supplier of suppliers(); track supplier.id) {
+              @let price = getPrice(product, supplier.id);
+              <td class="px-4 py-3 text-center font-mono">
+                @if (price !== null) {
+                  <span
+                    [class]="isMinPrice(product, supplier.id)
+                      ? 'inline-block px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 font-semibold text-xs'
+                      : 'text-gray-700 dark:text-gray-300 text-sm'"
+                  >
+                    {{ formatPrice(price) }}
+                    @if (isMinPrice(product, supplier.id)) {
+                      <span class="sr-only"> (meilleur prix)</span>
+                    }
+                  </span>
+                } @else {
+                  <span class="text-gray-300 dark:text-gray-600" aria-label="Non disponible">—</span>
+                }
+              </td>
+            }
+            <td class="px-4 py-3 text-center">
+              @let savings = getSavings(product);
+              @if (savings !== null) {
+                <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <svg lucideTrendingDown [size]="12" aria-hidden="true"></svg>
+                  {{ formatPrice(savings) }}
+                </span>
+              } @else {
+                <span class="text-gray-300 dark:text-gray-600">—</span>
+              }
+            </td>
+          </tr>
+        }
+        @empty {
+          <tr>
+            <td [attr.colspan]="suppliers().length + 2" class="px-4 py-14 text-center">
+              <div class="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-600">
+                <svg lucideStore [size]="32" aria-hidden="true"></svg>
+                <span class="text-sm">Aucun produit trouvé</span>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+</div>
