@@ -1,21 +1,23 @@
-<table class="w-full text-sm" [aria-label]="name()">
-  <thead>
-  <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-    @for (column of columns(); track column.id) {
-      <th
-        scope="col"
-        class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-        [class]="getTextAlignment(column)"
-        [class.hidden]="column.hidden"
-        [class.md\\:table-cell]="!column.hidden && column.responsive === 'md'"
-        [class.sm\\:table-cell]="!column.hidden && column.responsive === 'sm'"
-      >
-        {{ column.label }}
-      </th>
-    }
-  </tr>
-  </thead>
-  <tbody>
-    <ng-content />
-  </tbody>
-</table>
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+  <table class="w-full text-sm" [aria-label]="name()">
+    <thead>
+    <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      @for (column of columns(); track column.id) {
+        <th
+          scope="col"
+          class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+          [class]="getTextAlignment(column)"
+          [class.hidden]="column.hidden"
+          [class.md\\:table-cell]="!column.hidden && column.responsive === 'md'"
+          [class.sm\\:table-cell]="!column.hidden && column.responsive === 'sm'"
+        >
+          {{ column.label }}
+        </th>
+      }
+    </tr>
+    </thead>
+    <tbody>
+      <ng-content />
+    </tbody>
+  </table>
+</div>

@@ -30,24 +30,18 @@
 
   <!-- Toolbar -->
   <div class="flex flex-col sm:flex-row gap-3">
-    <label class="relative flex-1">
-      <span class="sr-only">Rechercher</span>
-      <svg lucideSearch [size]="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" aria-hidden="true"></svg>
-      <input
-        type="search"
-        [placeholder]="activeTab() === 'produits' ? 'Rechercher un produit...' : 'Rechercher une recette...'"
-        (input)="onSearch($event)"
-        class="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      />
-    </label>
-    <button
-      type="button"
-      class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
-    >
-      <svg lucidePlus [size]="16" aria-hidden="true"></svg>
-      @if (activeTab() === 'produits') { <span>Ajouter un produit</span> }
-      @else { <span>Ajouter une recette</span> }
-    </button>
+    <bfd-search-bar
+      hint="Rechercher..."
+      (search)="onSearch($event)"
+      class="relative flex-1"
+    />
+
+    <bfd-button
+      [action]="() => console.log('Ajouter', activeTab())"
+      [icon]="LucidePlus"
+      [label]="activeTab() === 'produits' ? 'Ajouter un produit' : 'Ajouter une recette'"
+      class="shrink-0"
+    />
   </div>
 
   <!-- Products tab -->

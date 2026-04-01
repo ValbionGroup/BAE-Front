@@ -1,15 +1,16 @@
 import {ChangeDetectionStrategy, Component, computed, signal} from '@angular/core';
 import {
   LucideAlertTriangle,
-  LucideCheckCircle,
+  LucideCheckCircle, LucideCircleCheckBig, LucideCircleX,
   LucidePackage,
   LucidePlus,
-  LucideSearch,
+  LucideSearch, LucideTriangleAlert,
   LucideXCircle,
 } from '@lucide/angular';
 import {Button} from '#shared/components/button/button';
 import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
 import {SearchBar} from '#shared/components/search-bar/search-bar';
+import {Pills} from '#shared/components/pills/pills';
 
 interface StockItem {
   id: number;
@@ -31,6 +32,10 @@ interface StockItem {
     Button,
     Table,
     SearchBar,
+    LucideCircleCheckBig,
+    LucideTriangleAlert,
+    LucideCircleX,
+    Pills,
   ],
   templateUrl: './stock.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,7 +58,7 @@ export class Stock {
   ]);
 
   protected readonly categories = computed(() =>
-    [...new Set(this.items().map(i => i.category))].sort()
+    [...new Set(this.items().map(i => i.category))].sort().map(cat => ({ label: cat, key: cat }))
   );
 
   protected readonly filteredItems = computed(() => {
@@ -66,16 +71,6 @@ export class Stock {
       const matchesCategory = category === 'all' || item.category === category;
       return matchesSearch && matchesCategory;
     });
-  });
-
-  protected readonly stats = computed(() => {
-    const all = this.items();
-    return {
-      total: all.length,
-      ok: all.filter(i => i.quantity >= i.minThreshold).length,
-      low: all.filter(i => i.quantity > 0 && i.quantity < i.minThreshold).length,
-      out: all.filter(i => i.quantity === 0).length,
-    };
   });
 
   protected getStatus(item: StockItem): 'ok' | 'low' | 'out' {

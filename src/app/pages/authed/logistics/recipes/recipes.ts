@@ -7,6 +7,8 @@ import {
   LucideTag,
   LucideUsers,
 } from '@lucide/angular';
+import {SearchBar} from '#shared/components/search-bar/search-bar';
+import {Button} from '#shared/components/button/button';
 
 interface Product {
   id: number;
@@ -41,6 +43,8 @@ interface Recipe {
     LucidePackage,
     LucideTag,
     LucideUsers,
+    SearchBar,
+    Button,
   ],
   templateUrl: './recipes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -161,4 +165,7 @@ export class Recipes {
   protected formatPrice(price: number): string {
     return price.toFixed(2) + ' €';
   }
+
+  protected readonly console = console;
+  protected readonly LucidePlus = LucidePlus;
 }
