@@ -10,6 +10,9 @@ import {apiCaseRequestInterceptor} from '#core/interceptors/api-case-request/api
 import {authInterceptor} from '#core/interceptors/auth/auth-interceptor';
 import {errorInterceptor} from '#core/interceptors/error/error-interceptor';
 import {apiResponseCaseInterceptor} from '#core/interceptors/api-case-response/api-case-response-interceptor';
+import {provideEffects} from '@ngrx/effects';
+import {AuthEffects} from '#core/store/auth/auth.effect';
+import {storeConfig} from '#app/app-store.config';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,6 +26,10 @@ export const appConfig: ApplicationConfig = {
         apiResponseCaseInterceptor
       ])
     ),
+    storeConfig,
+    provideEffects([
+      AuthEffects
+    ]),
     providePrimeNG({
       ripple: true,
       theme: {
