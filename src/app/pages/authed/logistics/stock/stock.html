@@ -28,6 +28,7 @@
   <bfd-table
     name="Inventaire de stock"
     [columns]="stockColumns"
+    [rows]="[]"
   >
       @for (item of filteredItems(); track item.id) {
         <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors last:border-b-0">

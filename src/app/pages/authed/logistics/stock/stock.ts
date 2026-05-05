@@ -19,15 +19,12 @@ interface StockItem {
   quantity: number;
   unit: string;
   minThreshold: number;
+  status?: 'ok' | 'low' | 'out';
 }
 
 @Component({
   selector: 'bfd-stock',
   imports: [
-    LucideSearch,
-    LucideAlertTriangle,
-    LucideCheckCircle,
-    LucideXCircle,
     LucidePackage,
     Button,
     Table,
@@ -89,29 +86,29 @@ export class Stock {
 
   protected readonly console = console;
 
-  protected stockColumns: TableColumn[] = [
+  protected stockColumns: TableColumn<StockItem>[] = [
     {
-      id: 'name',
+      key: 'name',
       label: 'Article',
       type: ColumnType.TEXT
     },
     {
-      id: 'catg',
+      key: 'category',
       label: 'Catégorie',
       type: ColumnType.PILL
     },
     {
-      id: 'qte',
+      key: 'quantity',
       label: 'Quantité',
       type: ColumnType.QUANTITY
     },
     {
-      id: 'smin',
+      key: 'minThreshold',
       label: 'Seuil Min.',
       type: ColumnType.NUMBER
     },
     {
-      id: 'stt',
+      key: 'status',
       label: 'Statut',
       type: ColumnType.STATUS
     }

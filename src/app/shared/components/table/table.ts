@@ -10,10 +10,12 @@ export enum ColumnType {
   PILLS = 'pills',
 }
 
-export interface TableColumn {
-  id: string;
+export interface TableColumn<T> {
+  key: keyof T;
   label: string;
   type: ColumnType;
+  renderHook?: (value: unknown, row?: T) => unknown;
+  tooltip?: string;
   responsive?: 'sm' | 'md';
   hidden?: boolean;
 }
@@ -23,11 +25,13 @@ export interface TableColumn {
   imports: [],
   templateUrl: './table.html',
 })
-export class Table {
+export class Table<T> {
   name = input.required<string>();
-  columns = input.required<TableColumn[]>();
 
-  protected getTextAlignment(column: TableColumn) {
+  columns = input.required<TableColumn<T>[]>();
+  rows = input.required<T[]>();
+
+  protected getTextAlignment(column: TableColumn<T>) {
     switch (column.type) {
       case ColumnType.NUMBER:
       case ColumnType.QUANTITY:
