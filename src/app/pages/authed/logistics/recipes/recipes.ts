@@ -37,8 +37,6 @@ interface Recipe {
 @Component({
   selector: 'bfd-recipes',
   imports: [
-    LucideSearch,
-    LucidePlus,
     LucideChefHat,
     LucidePackage,
     LucideTag,

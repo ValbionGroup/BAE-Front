@@ -24,10 +24,6 @@ interface StockItem {
 @Component({
   selector: 'bfd-stock',
   imports: [
-    LucideSearch,
-    LucideAlertTriangle,
-    LucideCheckCircle,
-    LucideXCircle,
     LucidePackage,
     Button,
     Table,
