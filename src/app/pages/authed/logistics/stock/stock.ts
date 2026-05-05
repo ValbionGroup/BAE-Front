@@ -1,11 +1,10 @@
 import {ChangeDetectionStrategy, Component, computed, signal} from '@angular/core';
 import {
-  LucideAlertTriangle,
-  LucideCheckCircle, LucideCircleCheckBig, LucideCircleX,
+  LucideCircleCheckBig,
+  LucideCircleX,
   LucidePackage,
   LucidePlus,
-  LucideSearch, LucideTriangleAlert,
-  LucideXCircle,
+  LucideTriangleAlert
 } from '@lucide/angular';
 import {Button} from '#shared/components/button/button';
 import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
