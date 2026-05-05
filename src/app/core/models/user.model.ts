@@ -13,5 +13,5 @@ export interface MemberModel {
 
 export interface UserProfileModel {
   user: UserModel;
-  member?: MemberModel;
+  member: MemberModel;
 }
