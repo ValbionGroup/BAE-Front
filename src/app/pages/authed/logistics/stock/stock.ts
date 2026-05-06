@@ -1,12 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, signal} from '@angular/core';
-import {
-  LucideAlertTriangle,
-  LucideCheckCircle, LucideCircleCheckBig, LucideCircleX,
-  LucidePackage,
-  LucidePlus,
-  LucideSearch, LucideTriangleAlert,
-  LucideXCircle,
-} from '@lucide/angular';
+import {LucidePlus} from '@lucide/angular';
 import {Button} from '#shared/components/button/button';
 import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
 import {SearchBar} from '#shared/components/search-bar/search-bar';
@@ -24,16 +17,7 @@ interface StockItem {
 
 @Component({
   selector: 'bfd-stock',
-  imports: [
-    LucidePackage,
-    Button,
-    Table,
-    SearchBar,
-    LucideCircleCheckBig,
-    LucideTriangleAlert,
-    LucideCircleX,
-    Pills,
-  ],
+  imports: [Button, Table, SearchBar, Pills],
   templateUrl: './stock.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -61,13 +45,15 @@ export class Stock {
   protected readonly filteredItems = computed(() => {
     const query = this.searchQuery().toLowerCase();
     const category = this.selectedCategory();
-    return this.items().filter(item => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query);
-      const matchesCategory = category === 'all' || item.category === category;
-      return matchesSearch && matchesCategory;
-    });
+    return this.items()
+      .filter(item => {
+        const matchesSearch =
+          item.name.toLowerCase().includes(query) ||
+          item.category.toLowerCase().includes(query);
+        const matchesCategory = category === 'all' || item.category === category;
+        return matchesSearch && matchesCategory;
+      })
+      .map(item => ({ ...item, status: this.getStatus(item) }));
   });
 
   protected getStatus(item: StockItem): 'ok' | 'low' | 'out' {
@@ -85,33 +71,13 @@ export class Stock {
   }
 
   protected readonly console = console;
+  protected readonly LucidePlus = LucidePlus;
 
   protected stockColumns: TableColumn<StockItem>[] = [
-    {
-      key: 'name',
-      label: 'Article',
-      type: ColumnType.TEXT
-    },
-    {
-      key: 'category',
-      label: 'Catégorie',
-      type: ColumnType.PILL
-    },
-    {
-      key: 'quantity',
-      label: 'Quantité',
-      type: ColumnType.QUANTITY
-    },
-    {
-      key: 'minThreshold',
-      label: 'Seuil Min.',
-      type: ColumnType.NUMBER
-    },
-    {
-      key: 'status',
-      label: 'Statut',
-      type: ColumnType.STATUS
-    }
-  ]
-  protected readonly LucidePlus = LucidePlus;
+    { key: 'name', label: 'Article', type: ColumnType.LABEL },
+    { key: 'category', label: 'Catégorie', type: ColumnType.PILL, responsive: 'md' },
+    { key: 'quantity', label: 'Quantité', type: ColumnType.QUANTITY, unitKey: 'unit' },
+    { key: 'minThreshold', label: 'Seuil Min.', type: ColumnType.NUMBER, responsive: 'sm' },
+    { key: 'status', label: 'Statut', type: ColumnType.STATUS },
+  ];
 }

@@ -28,55 +28,7 @@
   <bfd-table
     name="Inventaire de stock"
     [columns]="stockColumns"
-    [rows]="[]"
-  >
-      @for (item of filteredItems(); track item.id) {
-        <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors last:border-b-0">
-          <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-            <div class="flex items-center gap-2">
-              <svg lucidePackage [size]="14" class="text-gray-400 shrink-0" aria-hidden="true"></svg>
-              {{ item.name }}
-            </div>
-          </td>
-          <td class="px-4 py-3 text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ item.category }}</td>
-          <td class="px-4 py-3 text-right font-mono text-gray-900 dark:text-gray-100">
-            {{ item.quantity }}&nbsp;<span class="text-gray-400 text-xs font-sans">{{ item.unit }}</span>
-          </td>
-          <td class="px-4 py-3 text-right font-mono text-gray-400 hidden sm:table-cell">{{ item.minThreshold }}</td>
-          <td class="px-4 py-3 text-center">
-            @switch (getStatus(item)) {
-              @case ('ok') {
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                  <svg lucideCheckCircle [size]="11" aria-hidden="true"></svg>
-                  OK
-                </span>
-              }
-              @case ('low') {
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                  <svg lucideAlertTriangle [size]="11" aria-hidden="true"></svg>
-                  Faible
-                </span>
-              }
-              @case ('out') {
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                  <svg lucideXCircle [size]="11" aria-hidden="true"></svg>
-                  Rupture
-                </span>
-              }
-            }
-          </td>
-        </tr>
-      }
-      @empty {
-        <tr>
-          <td colspan="5" class="px-4 py-14 text-center">
-            <div class="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-600">
-              <svg lucidePackage [size]="32" aria-hidden="true"></svg>
-              <span class="text-sm">Aucun article trouvé</span>
-            </div>
-          </td>
-        </tr>
-      }
-  </bfd-table>
+    [rows]="filteredItems()"
+  />
 
 </div>

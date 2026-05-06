@@ -1,1 +1,40 @@
-<p>table-content works!</p>
+@for (row of rows(); track $index) {
+  <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors last:border-b-0">
+    @for (column of columns(); track $any(column.key)) {
+      <td [class]="getTdClasses(column)">
+        @switch (column.type) {
+          @case (ColumnType.LABEL) {
+            <bfd-table-cell-label
+              [value]="$any(getCellValue(row, column))"
+              [subtitle]="getSubtitle(row, column)"
+            />
+          }
+          @case (ColumnType.NUMBER) {
+            <bfd-table-cell-number [value]="$any(getCellValue(row, column))" />
+          }
+          @case (ColumnType.QUANTITY) {
+            <bfd-table-cell-quantity
+              [value]="$any(getCellValue(row, column))"
+              [unit]="getUnit(row, column)"
+            />
+          }
+          @case (ColumnType.PILL) {
+            <bfd-table-cell-pill [value]="$any(getCellValue(row, column))" />
+          }
+          @case (ColumnType.STATUS) {
+            <bfd-table-cell-pill [value]="$any(getCellValue(row, column))" variant="status" />
+          }
+          @default {
+            <bfd-table-cell-text [value]="$any(getCellValue(row, column))" />
+          }
+        }
+      </td>
+    }
+  </tr>
+} @empty {
+  <tr>
+    <td [attr.colspan]="columns().length" class="px-4 py-14 text-center">
+      <span class="text-sm text-gray-400 dark:text-gray-600">{{ emptyMessage() }}</span>
+    </td>
+  </tr>
+}

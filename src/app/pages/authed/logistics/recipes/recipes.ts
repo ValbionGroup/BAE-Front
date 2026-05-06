@@ -3,12 +3,12 @@ import {
   LucideChefHat,
   LucidePackage,
   LucidePlus,
-  LucideSearch,
   LucideTag,
   LucideUsers,
 } from '@lucide/angular';
 import {SearchBar} from '#shared/components/search-bar/search-bar';
 import {Button} from '#shared/components/button/button';
+import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
 
 interface Product {
   id: number;
@@ -43,6 +43,7 @@ interface Recipe {
     LucideUsers,
     SearchBar,
     Button,
+    Table,
   ],
   templateUrl: './recipes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -166,4 +167,16 @@ export class Recipes {
 
   protected readonly console = console;
   protected readonly LucidePlus = LucidePlus;
+
+  protected productColumns: TableColumn<Product>[] = [
+    { key: 'name', label: 'Produit', type: ColumnType.LABEL, subtitleKey: 'unit' },
+    { key: 'category', label: 'Catégorie', type: ColumnType.PILL, responsive: 'sm' },
+    { key: 'supplier', label: 'Fournisseur', type: ColumnType.TEXT, responsive: 'md' },
+    {
+      key: 'price',
+      label: 'Prix unit.',
+      type: ColumnType.NUMBER,
+      renderHook: (value) => (value as number).toFixed(2) + ' €',
+    },
+  ];
 }

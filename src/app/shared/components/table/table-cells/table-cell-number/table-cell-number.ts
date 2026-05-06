@@ -1,8 +1,10 @@
-import { Component } from '@angular/core';
+import {ChangeDetectionStrategy, Component, input} from '@angular/core';
 
 @Component({
   selector: 'bfd-table-cell-number',
-  imports: [],
-  templateUrl: './table-cell-number.html'
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<span class="font-mono text-gray-400 dark:text-gray-500">{{ value() }}</span>`,
 })
-export class TableCellNumber {}
+export class TableCellNumber {
+  value = input.required<string | number>();
+}
