@@ -3,7 +3,7 @@ import { CanActivateFn } from '@angular/router';
 
 import { guestGuard } from './guest-guard';
 
-describe('guestGuard', () => {
+describe(guestGuard.name, () => {
   const executeGuard: CanActivateFn = (...guardParameters) =>
     TestBed.runInInjectionContext(() => guestGuard(...guardParameters));
 
