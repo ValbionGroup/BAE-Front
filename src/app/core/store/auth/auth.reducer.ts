@@ -8,16 +8,18 @@ export const initialAuthState: AuthState = {};
 export const authReducer = createReducer(
   initialAuthState,
 
-  on(AuthActions.loginSuccess, (state, { user }) => ({
+  on(AuthActions.loginSuccess, (state, { user, member }) => ({
     ...state,
     user,
+    member,
     alert: undefined,
     loginError: undefined,
   })),
 
-  on(AuthActions.rehydrationSuccess, (state, { user }) => ({
+  on(AuthActions.rehydrationSuccess, (state, { user, member }) => ({
     ...state,
     user,
+    member,
     alert: undefined,
   })),
 
