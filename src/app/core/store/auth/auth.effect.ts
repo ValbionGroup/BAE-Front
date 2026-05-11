@@ -24,7 +24,7 @@ export class AuthEffects {
       mergeMap(() =>
         this.tokensService.getValidAccessToken().pipe(
           switchMap((token) => {
-            if (!isNil(token)) {
+            if (isNil(token)) {
               return of(AuthActions.rehydrationFailed());
             }
 

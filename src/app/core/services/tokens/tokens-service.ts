@@ -25,7 +25,7 @@ export class TokensService {
 
   isTokenAboutToExpire(): boolean {
     const expiresAt = Number(localStorage.getItem(this.TOKEN_EXPIRES_AT_KEY));
-    return !expiresAt || Date.now() > expiresAt - 60_000;
+    return !expiresAt || Date.now() > expiresAt * 1000 - 60_000;
   }
 
   getValidAccessToken(): Observable<string | null> {
