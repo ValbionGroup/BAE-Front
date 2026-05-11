@@ -1,6 +1,7 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { AuthTokens } from '#core/models/auth/auth-tokens.model';
+import {isNil} from '#shared/utils/base-function';
 
 @Injectable({
   providedIn: 'root',
@@ -25,7 +26,7 @@ export class TokensService {
 
   isTokenAboutToExpire(): boolean {
     const expiresAt = Number(localStorage.getItem(this.TOKEN_EXPIRES_AT_KEY));
-    return !expiresAt || Date.now() > expiresAt * 1000 - 60_000;
+    return !isNil(expiresAt) && Date.now() > expiresAt * 1000 - 60_000;
   }
 
   getValidAccessToken(): Observable<string | null> {
