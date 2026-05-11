@@ -1,12 +1,10 @@
-import {Component, input} from '@angular/core';
-import {LucideDynamicIcon, LucideIconInput, LucidePlus} from "@lucide/angular";
+import { Component, input } from '@angular/core';
+import { LucideDynamicIcon, LucideIconInput, LucidePlus } from '@lucide/angular';
 
 @Component({
   selector: 'bfd-button',
-  imports: [
-    LucideDynamicIcon
-  ],
-  templateUrl: './button.html'
+  imports: [LucideDynamicIcon],
+  templateUrl: './button.html',
 })
 export class Button {
   label = input.required<string>();

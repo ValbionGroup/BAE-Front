@@ -5,12 +5,21 @@
   <div class="flex items-center justify-between gap-4 px-4 md:px-6 h-16">
     <!-- Brand -->
     <div class="flex items-center gap-3 shrink-0">
-      <a [routerLink]="['/' + routes.home]" class="flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md" aria-label="Go to home">
+      <a
+        [routerLink]="['/' + routes.home]"
+        class="flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
+        aria-label="Go to home"
+      >
         <!-- Placeholder logo -->
-        <span class="w-8 h-8 rounded-full bg-primary flex items-center justify center text-sm font-bold" aria-hidden="true">
+        <span
+          class="w-8 h-8 rounded-full bg-primary flex items-center justify center text-sm font-bold"
+          aria-hidden="true"
+        >
           B
         </span>
-        <span class="text-gray-900 dark:text-gray-100 font-semibold text-lg leading-none hidden sm:block">
+        <span
+          class="text-gray-900 dark:text-gray-100 font-semibold text-lg leading-none hidden sm:block"
+        >
           BAE
         </span>
       </a>
@@ -39,7 +48,7 @@
           class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label="Notifications"
         >
-          <svg lucideBell [size]="18"/>
+          <svg lucideBell [size]="18" />
         </button>
         <button
           type="button"
@@ -50,7 +59,10 @@
         </button>
       </div>
 
-      <div class="hidden md:block w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" aria-hidden="true"></div>
+      <div
+        class="hidden md:block w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"
+        aria-hidden="true"
+      ></div>
 
       <!-- User profile -->
       <button
@@ -64,7 +76,9 @@
         >
           {{ memberInitials() }}
         </span>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-200 hidden lg:block">{{ authedMember()?.firstName }} {{ authedMember()?.lastName }}</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200 hidden lg:block"
+          >{{ authedMember()?.firstName }} {{ authedMember()?.lastName }}</span
+        >
       </button>
 
       <!-- Mobile hamburger -->
@@ -76,7 +90,11 @@
         aria-controls="mobile-nav"
         aria-label="Toggle navigation menu"
       >
-        <i class="pi text-lg" [class]="mobileMenuOpen() ? 'pi-times' : 'pi-bars'" aria-hidden="true"></i>
+        <i
+          class="pi text-lg"
+          [class]="mobileMenuOpen() ? 'pi-times' : 'pi-bars'"
+          aria-hidden="true"
+        ></i>
       </button>
     </div>
   </div>
@@ -101,18 +119,33 @@
         </a>
       }
 
-      <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-3 flex items-center justify-between">
+      <div
+        class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-3 flex items-center justify-between"
+      >
         <div class="flex items-center gap-2">
-          <span class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold" aria-hidden="true">
+          <span
+            class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold"
+            aria-hidden="true"
+          >
             {{ memberInitials() }}
           </span>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ authedMember()?.firstName }} {{ authedMember()?.lastName }}</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200"
+            >{{ authedMember()?.firstName }} {{ authedMember()?.lastName }}</span
+          >
         </div>
         <div class="flex items-center gap-1">
-          <button type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Notifications">
+          <button
+            type="button"
+            class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Notifications"
+          >
             <i class="pi pi-bell text-base" aria-hidden="true"></i>
           </button>
-          <button type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Settings">
+          <button
+            type="button"
+            class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Settings"
+          >
             <i class="pi pi-cog text-base" aria-hidden="true"></i>
           </button>
         </div>

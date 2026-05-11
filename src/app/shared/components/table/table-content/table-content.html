@@ -1,5 +1,7 @@
 @for (row of rows(); track $index) {
-  <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors last:border-b-0">
+  <tr
+    class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors last:border-b-0"
+  >
     @for (column of columns(); track $any(column.key)) {
       <td [class]="getTdClasses(column)">
         @switch (column.type) {

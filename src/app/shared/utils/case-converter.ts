@@ -37,9 +37,9 @@ export function convertKeysToCamelCase(input: any, ignoreKeys: string[] = []): a
       Object.entries(input).map(([key, value]) => {
         return [
           toCamelCase(key),
-          ignoreKeys.includes(key) ? value : convertKeysToCamelCase(value, ignoreKeys)
+          ignoreKeys.includes(key) ? value : convertKeysToCamelCase(value, ignoreKeys),
         ];
-      })
+      }),
     );
   }
   return input;
@@ -52,8 +52,8 @@ export function convertKeysToSnakeCase(input: any, ignoreKeys: string[] = []): a
     return Object.fromEntries(
       Object.entries(input).map(([key, value]) => [
         toSnakeCase(key),
-        ignoreKeys.includes(key) ? value : convertKeysToSnakeCase(value, ignoreKeys)
-      ])
+        ignoreKeys.includes(key) ? value : convertKeysToSnakeCase(value, ignoreKeys),
+      ]),
     );
   }
   return input;

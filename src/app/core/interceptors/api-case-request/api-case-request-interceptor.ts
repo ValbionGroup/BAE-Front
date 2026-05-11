@@ -1,7 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import {API_BASE_URL} from '#core/tokens/api-url.token';
-import {convertKeysToSnakeCase} from '#shared/utils/case-converter';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { convertKeysToSnakeCase } from '#shared/utils/case-converter';
 
 export const apiCaseRequestInterceptor: HttpInterceptorFn = (req, next) => {
   // add other apis if needed
@@ -17,7 +17,7 @@ export const apiCaseRequestInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(
     req.clone({
-      body: convertKeysToSnakeCase(req.body, ignoredKeysPerUrl.get(req.url) ?? [])
-    })
+      body: convertKeysToSnakeCase(req.body, ignoredKeysPerUrl.get(req.url) ?? []),
+    }),
   );
 };

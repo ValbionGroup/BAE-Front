@@ -1,5 +1,5 @@
-import {Component, input, output} from '@angular/core';
-import {Pill} from '#shared/components/pills/pill/pill';
+import { Component, input, output } from '@angular/core';
+import { Pill } from '#shared/components/pills/pill/pill';
 
 export interface PillElement {
   label: string;
@@ -8,10 +8,8 @@ export interface PillElement {
 
 @Component({
   selector: 'bfd-pills',
-  imports: [
-    Pill
-  ],
-  templateUrl: './pills.html'
+  imports: [Pill],
+  templateUrl: './pills.html',
 })
 export class Pills {
   pillListLabel = input.required<string>();

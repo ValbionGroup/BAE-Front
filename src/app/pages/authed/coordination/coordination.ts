@@ -3,6 +3,6 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'bfd-coordination',
   imports: [],
-  templateUrl: './coordination.html'
+  templateUrl: './coordination.html',
 })
 export class Coordination {}

@@ -1,17 +1,15 @@
 import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { from, switchMap } from 'rxjs';
-import {ApiEndPointV1} from '#core/models/endpoint.model';
-import {API_BASE_URL} from '#core/tokens/api-url.token';
-import {TokensService} from '#core/services/tokens/tokens-service';
+import { ApiEndPointV1 } from '#core/models/endpoint.model';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { TokensService } from '#core/services/tokens/tokens-service';
 
-const IGNORE_PATHS = [
-  ApiEndPointV1.LOGIN
-];
+const IGNORE_PATHS = [ApiEndPointV1.LOGIN];
 
 export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
-  next: HttpHandlerFn
+  next: HttpHandlerFn,
 ) => {
   const apiBaseUrl = inject(API_BASE_URL);
   const tokenService = inject(TokensService);
@@ -29,6 +27,6 @@ export const authInterceptor: HttpInterceptorFn = (
         ? req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })
         : req;
       return next(authReq);
-    })
+    }),
   );
 };

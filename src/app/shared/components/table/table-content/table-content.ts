@@ -1,10 +1,10 @@
-import {ChangeDetectionStrategy, Component, input} from '@angular/core';
-import {ColumnType, TableColumn} from '../table';
-import {TableCellLabel} from '../table-cells/table-cell-label/table-cell-label';
-import {TableCellNumber} from '../table-cells/table-cell-number/table-cell-number';
-import {TableCellPill} from '../table-cells/table-cell-pill/table-cell-pill';
-import {TableCellQuantity} from '../table-cells/table-cell-quantity/table-cell-quantity';
-import {TableCellText} from '../table-cells/table-cell-text/table-cell-text';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ColumnType, TableColumn } from '../table';
+import { TableCellLabel } from '../table-cells/table-cell-label/table-cell-label';
+import { TableCellNumber } from '../table-cells/table-cell-number/table-cell-number';
+import { TableCellPill } from '../table-cells/table-cell-pill/table-cell-pill';
+import { TableCellQuantity } from '../table-cells/table-cell-quantity/table-cell-quantity';
+import { TableCellText } from '../table-cells/table-cell-text/table-cell-text';
 
 @Component({
   selector: 'tbody[bfd-table-content]',

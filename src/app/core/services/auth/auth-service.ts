@@ -1,10 +1,10 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {API_BASE_URL} from '#core/tokens/api-url.token';
-import {Observable} from 'rxjs';
-import {AuthTokens} from '#core/models/auth/auth-tokens.model';
-import {UserProfileModel} from '#core/models/user.model';
-import {ApiEndPointV1} from '#core/models/endpoint.model';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { Observable } from 'rxjs';
+import { AuthTokens } from '#core/models/auth/auth-tokens.model';
+import { UserProfileModel } from '#core/models/user.model';
+import { ApiEndPointV1 } from '#core/models/endpoint.model';
 
 @Injectable({
   providedIn: 'root',

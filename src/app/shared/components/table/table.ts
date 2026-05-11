@@ -1,5 +1,5 @@
-import {ChangeDetectionStrategy, Component, input} from '@angular/core';
-import {TableContent} from './table-content/table-content';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { TableContent } from './table-content/table-content';
 
 export enum ColumnType {
   TEXT = 'text',
@@ -37,7 +37,9 @@ export class Table<T extends object> {
   emptyMessage = input<string>('Aucun résultat');
 
   protected getThClasses(column: TableColumn<T>): string {
-    const parts = ['px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide'];
+    const parts = [
+      'px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
+    ];
     if (column.type === ColumnType.NUMBER || column.type === ColumnType.QUANTITY) {
       parts.push('text-right');
     } else if (column.type === ColumnType.STATUS) {

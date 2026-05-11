@@ -37,7 +37,10 @@ export class Compare {
 
   protected readonly products = signal<ComparableProduct[]>([
     {
-      id: 1, name: 'Bière blonde 33cl', category: 'Bières', unit: 'bouteille',
+      id: 1,
+      name: 'Bière blonde 33cl',
+      category: 'Bières',
+      unit: 'bouteille',
       prices: [
         { supplierId: 1, price: 0.65 },
         { supplierId: 2, price: 0.72 },
@@ -46,7 +49,10 @@ export class Compare {
       ],
     },
     {
-      id: 2, name: 'Coca-Cola 33cl', category: 'Softs', unit: 'cannette',
+      id: 2,
+      name: 'Coca-Cola 33cl',
+      category: 'Softs',
+      unit: 'cannette',
       prices: [
         { supplierId: 1, price: 0.52 },
         { supplierId: 2, price: 0.48 },
@@ -55,16 +61,22 @@ export class Compare {
       ],
     },
     {
-      id: 3, name: 'Eau minérale 50cl', category: 'Softs', unit: 'bouteille',
+      id: 3,
+      name: 'Eau minérale 50cl',
+      category: 'Softs',
+      unit: 'bouteille',
       prices: [
         { supplierId: 1, price: 0.19 },
         { supplierId: 2, price: 0.22 },
-        { supplierId: 3, price: 0.20 },
+        { supplierId: 3, price: 0.2 },
         { supplierId: 4, price: null },
       ],
     },
     {
-      id: 4, name: 'Chips nature 150g', category: 'Snacks', unit: 'sachet',
+      id: 4,
+      name: 'Chips nature 150g',
+      category: 'Snacks',
+      unit: 'sachet',
       prices: [
         { supplierId: 1, price: 0.89 },
         { supplierId: 2, price: 1.05 },
@@ -73,16 +85,22 @@ export class Compare {
       ],
     },
     {
-      id: 5, name: 'Vin rouge 75cl', category: 'Vins', unit: 'bouteille',
+      id: 5,
+      name: 'Vin rouge 75cl',
+      category: 'Vins',
+      unit: 'bouteille',
       prices: [
         { supplierId: 1, price: 3.49 },
-        { supplierId: 2, price: 4.20 },
+        { supplierId: 2, price: 4.2 },
         { supplierId: 3, price: 3.89 },
         { supplierId: 4, price: null },
       ],
     },
     {
-      id: 6, name: "Jus d'orange 1L", category: 'Softs', unit: 'brique',
+      id: 6,
+      name: "Jus d'orange 1L",
+      category: 'Softs',
+      unit: 'brique',
       prices: [
         { supplierId: 1, price: 1.09 },
         { supplierId: 2, price: 1.25 },
@@ -91,11 +109,14 @@ export class Compare {
       ],
     },
     {
-      id: 7, name: 'Rhum 70cl', category: 'Spiritueux', unit: 'bouteille',
+      id: 7,
+      name: 'Rhum 70cl',
+      category: 'Spiritueux',
+      unit: 'bouteille',
       prices: [
-        { supplierId: 1, price: 9.90 },
-        { supplierId: 2, price: 8.90 },
-        { supplierId: 3, price: 10.50 },
+        { supplierId: 1, price: 9.9 },
+        { supplierId: 2, price: 8.9 },
+        { supplierId: 3, price: 10.5 },
         { supplierId: 4, price: null },
       ],
     },
@@ -105,18 +126,18 @@ export class Compare {
     const query = this.searchQuery().toLowerCase();
     if (!query) return this.products();
     return this.products().filter(
-      p => p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)
+      (p) => p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query),
     );
   });
 
   protected getPrice(product: ComparableProduct, supplierId: number): number | null {
-    return product.prices.find(p => p.supplierId === supplierId)?.price ?? null;
+    return product.prices.find((p) => p.supplierId === supplierId)?.price ?? null;
   }
 
   protected isMinPrice(product: ComparableProduct, supplierId: number): boolean {
     const validPrices = product.prices
-      .filter(p => p.price !== null)
-      .map(p => p.price as number);
+      .filter((p) => p.price !== null)
+      .map((p) => p.price as number);
     if (validPrices.length === 0) return false;
     const price = this.getPrice(product, supplierId);
     return price !== null && price === Math.min(...validPrices);
@@ -124,8 +145,8 @@ export class Compare {
 
   protected getSavings(product: ComparableProduct): number | null {
     const validPrices = product.prices
-      .filter(p => p.price !== null)
-      .map(p => p.price as number);
+      .filter((p) => p.price !== null)
+      .map((p) => p.price as number);
     if (validPrices.length < 2) return null;
     const savings = Math.max(...validPrices) - Math.min(...validPrices);
     return savings > 0 ? savings : null;

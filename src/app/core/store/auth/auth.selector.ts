@@ -1,5 +1,5 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import {AuthState} from '#core/models/auth/auth-state.model';
+import { AuthState } from '#core/models/auth/auth-state.model';
 
 export const selectAuthState = createFeatureSelector<AuthState>('auth');
 
@@ -9,5 +9,5 @@ export const selectMember = createSelector(selectAuthState, (state: AuthState) =
 
 export const selectLoginError = createSelector(
   selectAuthState,
-  (state: AuthState) => state.loginError
+  (state: AuthState) => state.loginError,
 );

@@ -2,8 +2,8 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/com
 import { inject } from '@angular/core';
 import { throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import {API_BASE_URL} from '#core/tokens/api-url.token';
-import {convertKeysToCamelCase} from '#shared/utils/case-converter';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { convertKeysToCamelCase } from '#shared/utils/case-converter';
 
 export const apiResponseCaseInterceptor: HttpInterceptorFn = (req, next) => {
   const apiBaseUrl = inject(API_BASE_URL);
@@ -28,18 +28,18 @@ export const apiResponseCaseInterceptor: HttpInterceptorFn = (req, next) => {
             error: convertKeysToCamelCase(error.error),
             headers: error.headers,
             status: error.status,
-            url: error.url as string
-          })
+            url: error.url as string,
+          }),
       );
     }),
     map((event) => {
       if (event instanceof HttpResponse) {
         const ignoredKeys = ignoredKeysPerUrl.get(req.url) ?? [];
         return event.clone({
-          body: convertKeysToCamelCase(event.body as object, ignoredKeys)
+          body: convertKeysToCamelCase(event.body as object, ignoredKeys),
         });
       }
       return event;
-    })
+    }),
   );
 };

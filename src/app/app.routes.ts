@@ -1,14 +1,15 @@
 import { Routes } from '@angular/router';
 import { Home } from '#pages/authed/home/home';
 import { Login } from '#pages/guest/login/login';
-import {AppShell} from '#pages/app-shell/app-shell';
-import {Logistics} from '#pages/authed/logistics/logistics';
-import {Coordination} from '#pages/authed/coordination/coordination';
-import {Orders} from '#pages/authed/orders/orders';
-import {Administration} from '#pages/authed/administration/administration';
-import {Stock} from '#pages/authed/logistics/stock/stock';
-import {Compare} from '#pages/authed/logistics/compare/compare';
-import {Recipes} from '#pages/authed/logistics/recipes/recipes';
+import { AppShell } from '#pages/app-shell/app-shell';
+import { Logistics } from '#pages/authed/logistics/logistics';
+import { Coordination } from '#pages/authed/coordination/coordination';
+import { Orders } from '#pages/authed/orders/orders';
+import { Administration } from '#pages/authed/administration/administration';
+import { Stock } from '#pages/authed/logistics/stock/stock';
+import { Compare } from '#pages/authed/logistics/compare/compare';
+import { Recipes } from '#pages/authed/logistics/recipes/recipes';
+import { authGuard } from '#core/guards/auth/auth-guard';
 
 export const AppRoutes = {
   home: '',
@@ -41,7 +42,7 @@ export const AppRoutes = {
     base: 'administration',
     members: 'members',
     cotisation: 'cotisation',
-  }
+  },
 };
 
 export const routes: Routes = [
@@ -52,6 +53,7 @@ export const routes: Routes = [
   {
     path: '',
     component: AppShell,
+    canActivate: [authGuard],
     children: [
       {
         path: AppRoutes.home,
@@ -68,21 +70,21 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.logistics.stock,
-            component: Stock
+            component: Stock,
           },
           {
             path: AppRoutes.logistics.recipes,
-            component: Recipes
+            component: Recipes,
           },
           {
             path: AppRoutes.logistics.compare,
-            component: Compare
+            component: Compare,
           },
           {
             path: AppRoutes.logistics.events,
-            component: Logistics
-          }
-        ]
+            component: Logistics,
+          },
+        ],
       },
       {
         path: AppRoutes.coordination.base,
@@ -94,13 +96,13 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.coordination.planning,
-            component: Coordination
+            component: Coordination,
           },
           {
             path: AppRoutes.coordination.events,
-            component: Coordination
-          }
-        ]
+            component: Coordination,
+          },
+        ],
       },
       {
         path: AppRoutes.orders.base,
@@ -112,17 +114,17 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.orders.preorders,
-            component: Orders
+            component: Orders,
           },
           {
             path: AppRoutes.orders.statistics,
-            component: Orders
+            component: Orders,
           },
           {
             path: AppRoutes.orders.history,
-            component: Orders
-          }
-        ]
+            component: Orders,
+          },
+        ],
       },
       {
         path: AppRoutes.administration.base,
@@ -134,14 +136,14 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.administration.members,
-            component: Administration
+            component: Administration,
           },
           {
             path: AppRoutes.administration.cotisation,
-            component: Administration
-          }
-        ]
-      }
-    ]
+            component: Administration,
+          },
+        ],
+      },
+    ],
   },
 ];

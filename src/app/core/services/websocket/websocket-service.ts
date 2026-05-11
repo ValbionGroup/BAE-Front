@@ -4,9 +4,7 @@ import { Injectable } from '@angular/core';
   providedIn: 'root',
 })
 export class WebsocketService {
-  initialize(userId: number) {
-
-  }
+  initialize(userId: number) {}
 
   shutdown() {}
 }
