@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners} from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -13,9 +13,15 @@ import { apiResponseCaseInterceptor } from '#core/interceptors/api-case-response
 import { provideEffects } from '@ngrx/effects';
 import { AuthEffects } from '#core/store/auth/auth.effect';
 import { storeConfig } from '#app/app-store.config';
+import {rehydrateAuth} from '#core/store/auth/auth.actions';
+import {Store} from '@ngrx/store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideAppInitializer(() => {
+      const store = inject(Store);
+      store.dispatch(rehydrateAuth());
+    }),
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(
