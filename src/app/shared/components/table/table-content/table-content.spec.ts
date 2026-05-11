@@ -3,8 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TableContent } from './table-content';
 
 describe('TableContent', () => {
-  let component: TableContent;
-  let fixture: ComponentFixture<TableContent>;
+  let component: TableContent<object>;
+  let fixture: ComponentFixture<TableContent<object>>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
