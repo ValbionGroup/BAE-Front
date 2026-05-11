@@ -4,6 +4,6 @@ import { Header } from '#shared/components/header/header';
 @Component({
   selector: 'bfd-home',
   imports: [],
-  templateUrl: './home.html'
+  templateUrl: './home.html',
 })
 export class Home {}

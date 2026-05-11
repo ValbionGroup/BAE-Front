@@ -1,9 +1,11 @@
 <button
   type="button"
   (click)="onClick()"
-  [class]="active()
-          ? 'px-3 py-1.5 rounded-full text-xs font-medium bg-violet-500 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-          : 'px-3 py-1.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'"
+  [class]="
+    active()
+      ? 'px-3 py-1.5 rounded-full text-xs font-medium bg-violet-500 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+      : 'px-3 py-1.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+  "
 >
   {{ label() }}
 </button>

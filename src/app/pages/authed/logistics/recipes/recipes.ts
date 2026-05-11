@@ -1,14 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import {
-  LucideChefHat,
-  LucidePackage,
-  LucidePlus,
-  LucideSearch,
-  LucideTag,
-  LucideUsers,
-} from '@lucide/angular';
-import {SearchBar} from '#shared/components/search-bar/search-bar';
-import {Button} from '#shared/components/button/button';
+import { LucideChefHat, LucidePackage, LucidePlus, LucideTag, LucideUsers } from '@lucide/angular';
+import { SearchBar } from '#shared/components/search-bar/search-bar';
+import { Button } from '#shared/components/button/button';
+import { ColumnType, Table, TableColumn } from '#shared/components/table/table';
 
 interface Product {
   id: number;
@@ -36,16 +30,7 @@ interface Recipe {
 
 @Component({
   selector: 'bfd-recipes',
-  imports: [
-    LucideSearch,
-    LucidePlus,
-    LucideChefHat,
-    LucidePackage,
-    LucideTag,
-    LucideUsers,
-    SearchBar,
-    Button,
-  ],
+  imports: [LucideChefHat, LucidePackage, LucideTag, LucideUsers, SearchBar, Button, Table],
   templateUrl: './recipes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,20 +39,118 @@ export class Recipes {
   protected readonly searchQuery = signal('');
 
   protected readonly products = signal<Product[]>([
-    { id: 1, name: 'Bière blonde 33cl', category: 'Bières', unit: 'bouteille', price: 0.65, supplier: 'Lidl' },
-    { id: 2, name: 'Bière brune 33cl', category: 'Bières', unit: 'bouteille', price: 0.72, supplier: 'Lidl' },
-    { id: 3, name: 'Coca-Cola 33cl', category: 'Softs', unit: 'cannette', price: 0.45, supplier: 'Costco' },
-    { id: 4, name: 'Eau minérale 50cl', category: 'Softs', unit: 'bouteille', price: 0.19, supplier: 'Lidl' },
-    { id: 5, name: 'Vin rouge 75cl', category: 'Vins', unit: 'bouteille', price: 3.49, supplier: 'Lidl' },
-    { id: 6, name: 'Chips nature 150g', category: 'Snacks', unit: 'sachet', price: 0.75, supplier: 'Costco' },
-    { id: 7, name: "Jus d'orange 1L", category: 'Softs', unit: 'brique', price: 0.99, supplier: 'Costco' },
-    { id: 8, name: 'Rhum 70cl', category: 'Spiritueux', unit: 'bouteille', price: 8.90, supplier: 'Auchan' },
-    { id: 9, name: 'Vodka 70cl', category: 'Spiritueux', unit: 'bouteille', price: 9.50, supplier: 'Carrefour' },
-    { id: 10, name: 'Sirop de grenadine', category: 'Sirops', unit: 'bouteille', price: 2.20, supplier: 'Auchan' },
-    { id: 11, name: 'Citron vert', category: 'Fruits', unit: 'pièce', price: 0.45, supplier: 'Marché' },
-    { id: 12, name: 'Menthe fraîche', category: 'Herbes', unit: 'botte', price: 1.20, supplier: 'Marché' },
-    { id: 13, name: 'Sucre en poudre 1kg', category: 'Épicerie', unit: 'kg', price: 1.05, supplier: 'Lidl' },
-    { id: 14, name: 'Eau gazeuse 1L', category: 'Softs', unit: 'bouteille', price: 0.55, supplier: 'Lidl' },
+    {
+      id: 1,
+      name: 'Bière blonde 33cl',
+      category: 'Bières',
+      unit: 'bouteille',
+      price: 0.65,
+      supplier: 'Lidl',
+    },
+    {
+      id: 2,
+      name: 'Bière brune 33cl',
+      category: 'Bières',
+      unit: 'bouteille',
+      price: 0.72,
+      supplier: 'Lidl',
+    },
+    {
+      id: 3,
+      name: 'Coca-Cola 33cl',
+      category: 'Softs',
+      unit: 'cannette',
+      price: 0.45,
+      supplier: 'Costco',
+    },
+    {
+      id: 4,
+      name: 'Eau minérale 50cl',
+      category: 'Softs',
+      unit: 'bouteille',
+      price: 0.19,
+      supplier: 'Lidl',
+    },
+    {
+      id: 5,
+      name: 'Vin rouge 75cl',
+      category: 'Vins',
+      unit: 'bouteille',
+      price: 3.49,
+      supplier: 'Lidl',
+    },
+    {
+      id: 6,
+      name: 'Chips nature 150g',
+      category: 'Snacks',
+      unit: 'sachet',
+      price: 0.75,
+      supplier: 'Costco',
+    },
+    {
+      id: 7,
+      name: "Jus d'orange 1L",
+      category: 'Softs',
+      unit: 'brique',
+      price: 0.99,
+      supplier: 'Costco',
+    },
+    {
+      id: 8,
+      name: 'Rhum 70cl',
+      category: 'Spiritueux',
+      unit: 'bouteille',
+      price: 8.9,
+      supplier: 'Auchan',
+    },
+    {
+      id: 9,
+      name: 'Vodka 70cl',
+      category: 'Spiritueux',
+      unit: 'bouteille',
+      price: 9.5,
+      supplier: 'Carrefour',
+    },
+    {
+      id: 10,
+      name: 'Sirop de grenadine',
+      category: 'Sirops',
+      unit: 'bouteille',
+      price: 2.2,
+      supplier: 'Auchan',
+    },
+    {
+      id: 11,
+      name: 'Citron vert',
+      category: 'Fruits',
+      unit: 'pièce',
+      price: 0.45,
+      supplier: 'Marché',
+    },
+    {
+      id: 12,
+      name: 'Menthe fraîche',
+      category: 'Herbes',
+      unit: 'botte',
+      price: 1.2,
+      supplier: 'Marché',
+    },
+    {
+      id: 13,
+      name: 'Sucre en poudre 1kg',
+      category: 'Épicerie',
+      unit: 'kg',
+      price: 1.05,
+      supplier: 'Lidl',
+    },
+    {
+      id: 14,
+      name: 'Eau gazeuse 1L',
+      category: 'Softs',
+      unit: 'bouteille',
+      price: 0.55,
+      supplier: 'Lidl',
+    },
   ]);
 
   protected readonly recipes = signal<Recipe[]>([
@@ -101,7 +184,7 @@ export class Recipes {
       name: 'Sangria',
       category: 'Cocktails',
       servings: 6,
-      cost: 5.50,
+      cost: 5.5,
       ingredients: [
         { productName: 'Vin rouge 75cl', quantity: 1, unit: 'bouteille' },
         { productName: "Jus d'orange 1L", quantity: 25, unit: 'cl' },
@@ -114,7 +197,7 @@ export class Recipes {
       name: 'Plateau apéro',
       category: 'Snacks',
       servings: 4,
-      cost: 3.30,
+      cost: 3.3,
       ingredients: [
         { productName: 'Chips nature 150g', quantity: 2, unit: 'sachets' },
         { productName: 'Coca-Cola 33cl', quantity: 4, unit: 'cannettes' },
@@ -126,7 +209,7 @@ export class Recipes {
       name: 'Vodka Orange',
       category: 'Cocktails',
       servings: 1,
-      cost: 1.40,
+      cost: 1.4,
       ingredients: [
         { productName: 'Vodka 70cl', quantity: 4, unit: 'cl' },
         { productName: "Jus d'orange 1L", quantity: 10, unit: 'cl' },
@@ -138,10 +221,10 @@ export class Recipes {
     const query = this.searchQuery().toLowerCase();
     if (!query) return this.products();
     return this.products().filter(
-      p =>
+      (p) =>
         p.name.toLowerCase().includes(query) ||
         p.category.toLowerCase().includes(query) ||
-        p.supplier.toLowerCase().includes(query)
+        p.supplier.toLowerCase().includes(query),
     );
   });
 
@@ -149,7 +232,7 @@ export class Recipes {
     const query = this.searchQuery().toLowerCase();
     if (!query) return this.recipes();
     return this.recipes().filter(
-      r => r.name.toLowerCase().includes(query) || r.category.toLowerCase().includes(query)
+      (r) => r.name.toLowerCase().includes(query) || r.category.toLowerCase().includes(query),
     );
   });
 
@@ -168,4 +251,16 @@ export class Recipes {
 
   protected readonly console = console;
   protected readonly LucidePlus = LucidePlus;
+
+  protected productColumns: TableColumn<Product>[] = [
+    { key: 'name', label: 'Produit', type: ColumnType.LABEL, subtitleKey: 'unit' },
+    { key: 'category', label: 'Catégorie', type: ColumnType.PILL, responsive: 'sm' },
+    { key: 'supplier', label: 'Fournisseur', type: ColumnType.TEXT, responsive: 'md' },
+    {
+      key: 'price',
+      label: 'Prix unit.',
+      type: ColumnType.NUMBER,
+      renderHook: (value) => (value as number).toFixed(2) + ' €',
+    },
+  ];
 }
