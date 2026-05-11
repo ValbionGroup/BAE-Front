@@ -1,27 +1,35 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ButtonDirective, ButtonIcon, ButtonLabel } from 'primeng/button';
-import { Checkbox } from 'primeng/checkbox';
-import { InputText } from 'primeng/inputtext';
-import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { toSignal } from '@angular/core/rxjs-interop';
+import * as AuthActions from '#core/store/auth/auth.actions';
+import { selectLoginError } from '#core/store/auth/auth.selector';
+import { TextInput } from '#shared/components/text-input/text-input';
 
 @Component({
   selector: 'bfd-login',
-  imports: [ReactiveFormsModule, ButtonDirective, ButtonIcon, ButtonLabel, Checkbox, InputText],
+  imports: [ReactiveFormsModule, TextInput],
   templateUrl: './login.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
-  private fb = inject(FormBuilder);
+  private readonly fb = inject(FormBuilder);
+  private readonly store = inject(Store);
+
+  protected readonly loginError = toSignal(this.store.select(selectLoginError));
 
   protected form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
-    rememberMe: [false],
   });
 
   protected onSubmit(): void {
     if (this.form.invalid) return;
-    // TODO: dispatch login action
+    const { email, password } = this.form.value;
+    this.store.dispatch(AuthActions.loginStart({ email: email!, password: password! }));
+  }
+
+  protected loginWithEirbConnect(): void {
+    // TODO: redirect to EirbConnect OAuth endpoint
   }
 }

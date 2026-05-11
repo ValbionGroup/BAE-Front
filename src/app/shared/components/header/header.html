@@ -62,9 +62,9 @@
           class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold shrink-0"
           aria-hidden="true"
         >
-          EL
+          {{ memberInitials() }}
         </span>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-200 hidden lg:block">Espiet Lucas</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200 hidden lg:block">{{ authedMember()?.firstName }} {{ authedMember()?.lastName }}</span>
       </button>
 
       <!-- Mobile hamburger -->
@@ -104,9 +104,9 @@
       <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold" aria-hidden="true">
-            EL
+            {{ memberInitials() }}
           </span>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Espiet Lucas</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ authedMember()?.firstName }} {{ authedMember()?.lastName }}</span>
         </div>
         <div class="flex items-center gap-1">
           <button type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Notifications">

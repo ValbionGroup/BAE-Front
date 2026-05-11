@@ -1,5 +1,11 @@
 import {ChangeDetectionStrategy, Component, computed, signal} from '@angular/core';
-import {LucidePlus} from '@lucide/angular';
+import {
+  LucideCircleCheckBig,
+  LucideCircleX,
+  LucidePackage,
+  LucidePlus,
+  LucideTriangleAlert
+} from '@lucide/angular';
 import {Button} from '#shared/components/button/button';
 import {ColumnType, Table, TableColumn} from '#shared/components/table/table';
 import {SearchBar} from '#shared/components/search-bar/search-bar';
@@ -17,7 +23,16 @@ interface StockItem {
 
 @Component({
   selector: 'bfd-stock',
-  imports: [Button, Table, SearchBar, Pills],
+  imports: [
+    LucidePackage,
+    Button,
+    Table,
+    SearchBar,
+    LucideCircleCheckBig,
+    LucideTriangleAlert,
+    LucideCircleX,
+    Pills,
+  ],
   templateUrl: './stock.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
