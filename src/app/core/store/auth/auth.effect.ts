@@ -32,7 +32,7 @@ export class AuthEffects {
               map((userProfile) =>
                 AuthActions.rehydrationSuccess({
                   user: userProfile.user,
-                  member: userProfile.member!,
+                  member: userProfile.member,
                 }),
               ),
               catchError(() => of(AuthActions.rehydrationFailed())),
