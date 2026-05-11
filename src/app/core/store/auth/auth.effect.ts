@@ -55,7 +55,7 @@ export class AuthEffects {
               map((userProfile) =>
                 AuthActions.loginSuccess({
                   user: userProfile.user,
-                  member: userProfile.member!,
+                  member: userProfile.member,
                 }),
               ),
               catchError((err) => of(AuthActions.loginFailure({ error: err }))),
