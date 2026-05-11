@@ -10,6 +10,7 @@ import { Stock } from '#pages/authed/logistics/stock/stock';
 import { Compare } from '#pages/authed/logistics/compare/compare';
 import { Recipes } from '#pages/authed/logistics/recipes/recipes';
 import { authGuard } from '#core/guards/auth/auth-guard';
+import {guestGuard} from '#core/guards/auth/guest-guard';
 
 export const AppRoutes = {
   home: '',
@@ -48,6 +49,7 @@ export const AppRoutes = {
 export const routes: Routes = [
   {
     path: AppRoutes.login,
+    canActivate: [guestGuard],
     component: Login,
   },
   {
