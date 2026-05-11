@@ -9,6 +9,7 @@ export interface MemberModel {
   points: number;
   firstName: string;
   lastName: string;
+  role: string;
 }
 
 export interface UserProfileModel {
