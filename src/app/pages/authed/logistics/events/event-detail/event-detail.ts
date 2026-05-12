@@ -3,9 +3,8 @@ import { DatePipe, DOCUMENT } from '@angular/common';
 import {
   LucideChefHat,
   LucideDownload,
-  LucideEdit,
   LucidePlus,
-  LucideShoppingCart,
+  LucideShoppingCart, LucideSquarePen,
   LucideStore,
   LucideTrash2,
 } from '@lucide/angular';
@@ -17,8 +16,7 @@ import { EventDetail as EventDetailModel } from '../events.models';
   imports: [
     Button,
     LucideChefHat,
-    LucideDownload,
-    LucideEdit,
+    LucideSquarePen,
     LucideShoppingCart,
     LucideStore,
     LucideTrash2,
