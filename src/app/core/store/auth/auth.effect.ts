@@ -24,7 +24,7 @@ export class AuthEffects {
       mergeMap(() =>
         this.tokensService.getValidAccessToken().pipe(
           switchMap((token) => {
-            if (!isNil(token)) {
+            if (isNil(token)) {
               return of(AuthActions.rehydrationFailed());
             }
 
@@ -32,7 +32,7 @@ export class AuthEffects {
               map((userProfile) =>
                 AuthActions.rehydrationSuccess({
                   user: userProfile.user,
-                  member: userProfile.member!,
+                  member: userProfile.member,
                 }),
               ),
               catchError(() => of(AuthActions.rehydrationFailed())),
@@ -55,7 +55,7 @@ export class AuthEffects {
               map((userProfile) =>
                 AuthActions.loginSuccess({
                   user: userProfile.user,
-                  member: userProfile.member!,
+                  member: userProfile.member,
                 }),
               ),
               catchError((err) => of(AuthActions.loginFailure({ error: err }))),

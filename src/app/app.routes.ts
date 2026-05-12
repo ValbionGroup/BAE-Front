@@ -9,7 +9,9 @@ import { Administration } from '#pages/authed/administration/administration';
 import { Stock } from '#pages/authed/logistics/stock/stock';
 import { Compare } from '#pages/authed/logistics/compare/compare';
 import { Recipes } from '#pages/authed/logistics/recipes/recipes';
+import { Events } from '#pages/authed/logistics/events/events';
 import { authGuard } from '#core/guards/auth/auth-guard';
+import { guestGuard } from '#core/guards/auth/guest-guard';
 
 export const AppRoutes = {
   home: '',
@@ -48,6 +50,7 @@ export const AppRoutes = {
 export const routes: Routes = [
   {
     path: AppRoutes.login,
+    canActivate: [guestGuard],
     component: Login,
   },
   {
@@ -82,7 +85,7 @@ export const routes: Routes = [
           },
           {
             path: AppRoutes.logistics.events,
-            component: Logistics,
+            component: Events,
           },
         ],
       },

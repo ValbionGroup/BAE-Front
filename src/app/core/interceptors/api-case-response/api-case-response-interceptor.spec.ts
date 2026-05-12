@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpInterceptorFn } from '@angular/common/http';
 
-import { apiCaseResponseInterceptor } from './api-case-response-interceptor';
+import { apiResponseCaseInterceptor } from './api-case-response-interceptor';
 
-describe('apiCaseResponseInterceptor', () => {
+describe('apiResponseCaseInterceptor', () => {
   const interceptor: HttpInterceptorFn = (req, next) =>
-    TestBed.runInInjectionContext(() => apiCaseResponseInterceptor(req, next));
+    TestBed.runInInjectionContext(() => apiResponseCaseInterceptor(req, next));
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
