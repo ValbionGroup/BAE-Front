@@ -26,12 +26,14 @@ export const authReducer = createReducer(
   on(AuthActions.loginFailure, (state, { error }) => ({
     ...state,
     user: undefined,
+    member: undefined,
     loginError: error,
   })),
 
   on(AuthActions.rehydrationFailed, (state) => ({
     ...state,
     user: undefined,
+    member: undefined,
     loginError: undefined,
   })),
 
