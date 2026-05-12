@@ -1,0 +1,80 @@
+<article
+  [class]="cardClasses()"
+  [attr.aria-label]="'Commande numéro ' + order().number + ', ' + statusLabel()"
+>
+  <!-- Clickable body: advances the order -->
+  <div
+    class="flex-1 p-4 cursor-pointer select-none"
+    role="button"
+    tabindex="0"
+    [attr.aria-label]="canAdvance() ? advanceLabel() + ' la commande ' + order().number : 'Commande ' + order().number"
+    (click)="onCardClick()"
+    (keydown.enter)="onCardClick()"
+    (keydown.space)="onCardClick()"
+  >
+    <!-- Header row -->
+    <div class="flex items-start justify-between gap-2 mb-3">
+      <span class="text-3xl font-bold text-gray-900 dark:text-gray-100 leading-none">
+        #{{ order().number }}
+      </span>
+
+      <!-- Elapsed time chip -->
+      <span
+        class="text-xs font-mono tabular-nums px-2 py-1 rounded-full bg-white/60 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shrink-0"
+        aria-label="Temps écoulé : {{ elapsedLabel() }}"
+      >
+        {{ elapsedLabel() }}
+      </span>
+    </div>
+
+    <!-- Status pill -->
+    <div class="mb-3">
+      <span
+        [class]="'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ' + statusClasses()"
+        role="status"
+      >
+        {{ statusLabel() }}
+      </span>
+    </div>
+
+    <!-- Items list -->
+    <ul class="space-y-2" aria-label="Articles de la commande">
+      @for (item of order().items; track item.recipeId) {
+        <li class="flex flex-col gap-0.5">
+          <div class="flex items-baseline gap-2">
+            <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ item.recipeName }}</span>
+            <span class="text-base text-gray-600 dark:text-gray-400">× {{ item.quantity }}</span>
+          </div>
+          @if (item.notes) {
+            <span class="text-sm italic text-gray-500 dark:text-gray-400">{{ item.notes }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="flex gap-2 p-3 pt-0">
+    @if (canAdvance()) {
+      <button
+        type="button"
+        class="flex-1 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+        [attr.aria-label]="advanceLabel() + ' la commande ' + order().number"
+        (click)="onAdvanceClick($event)"
+      >
+        {{ advanceLabel() }}
+      </button>
+    }
+
+    @if (canCancel()) {
+      <button
+        type="button"
+        class="px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-red-400 dark:hover:border-red-600 hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+        [attr.aria-label]="'Annuler la commande ' + order().number"
+        (click)="onCancelClick($event)"
+      >
+        Annuler
+      </button>
+    }
+  </div>
+</article>

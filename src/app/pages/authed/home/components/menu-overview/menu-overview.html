@@ -1,0 +1,13 @@
+<div class="space-y-1.5">
+  @for (item of items(); track item.recipeId) {
+    <div class="flex items-baseline gap-2 text-sm">
+      <span class="font-medium text-gray-800 dark:text-gray-100">{{ item.recipeName }}</span>
+      <span class="text-gray-400 dark:text-gray-500 tabular-nums shrink-0">&times; {{ item.servings }}</span>
+      @if (item.prepNotes) {
+        <span class="text-gray-400 dark:text-gray-500 italic truncate">{{ item.prepNotes }}</span>
+      }
+    </div>
+  } @empty {
+    <p class="text-sm text-gray-400 dark:text-gray-500 italic">Aucun plat au menu</p>
+  }
+</div>

@@ -1,0 +1,33 @@
+<div class="flex flex-col sm:flex-row gap-2 w-full" role="group" aria-label="Repondre a la soiree">
+  <!-- Je viens -->
+  <button
+    type="button"
+    (click)="setAttending()"
+    [class]="
+      'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ' +
+      (currentStatus() === 'attending'
+        ? 'bg-emerald-500 dark:bg-emerald-600 text-white shadow-sm'
+        : 'bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30')
+    "
+    [attr.aria-pressed]="currentStatus() === 'attending'"
+    aria-label="Je viens a cette soiree"
+  >
+    Je viens
+  </button>
+
+  <!-- Je ne viens pas -->
+  <button
+    type="button"
+    (click)="setAbsent()"
+    [class]="
+      'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ' +
+      (currentStatus() === 'absent'
+        ? 'bg-red-500 dark:bg-red-600 text-white shadow-sm'
+        : 'bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30')
+    "
+    [attr.aria-pressed]="currentStatus() === 'absent'"
+    aria-label="Je ne viens pas a cette soiree"
+  >
+    Absent
+  </button>
+</div>

@@ -5,6 +5,7 @@ import { AppShell } from '#pages/app-shell/app-shell';
 import { Logistics } from '#pages/authed/logistics/logistics';
 import { Coordination } from '#pages/authed/coordination/coordination';
 import { Orders } from '#pages/authed/orders/orders';
+import { Kitchen } from '#pages/authed/orders/kitchen/kitchen';
 import { Administration } from '#pages/authed/administration/administration';
 import { Stock } from '#pages/authed/logistics/stock/stock';
 import { Compare } from '#pages/authed/logistics/compare/compare';
@@ -39,6 +40,7 @@ export const AppRoutes = {
     preorders: 'preorders',
     statistics: 'statistics',
     history: 'history',
+    kitchen: 'kitchen',
   },
   administration: {
     base: 'administration',
@@ -126,6 +128,10 @@ export const routes: Routes = [
           {
             path: AppRoutes.orders.history,
             component: Orders,
+          },
+          {
+            path: AppRoutes.orders.kitchen,
+            component: Kitchen,
           },
         ],
       },
