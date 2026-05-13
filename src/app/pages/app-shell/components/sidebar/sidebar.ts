@@ -54,14 +54,14 @@ export class Sidebar {
 
   protected readonly userName = computed<string>(() => {
     const m = this.member();
-    if (!m) return 'Léa Marchand';
-    return `${m.firstName} ${m.lastName}`.trim() || 'Léa Marchand';
+    if (!m) return 'Aucun membre';
+    return `${m.firstName} ${m.lastName}`.trim() || 'Aucun Membre';
   });
 
   protected readonly userRole = computed<string>(() => {
     const m = this.member();
-    if (!m) return 'Trésorière · 2A';
-    return m.role || 'Trésorière · 2A';
+    if (!m) return 'Aucun rôle';
+    return m.role || 'Aucun rôle';
   });
 
   protected readonly espace: readonly NavItem[] = [
