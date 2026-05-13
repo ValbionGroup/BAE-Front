@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import {
   LucideDynamicIcon,
   LucideIconInput,
@@ -14,45 +14,36 @@ import {
   LucideMusic,
   LucideSmile,
 } from '@lucide/angular';
+import {
+  CoordinationService,
+  type CoordinationApiData,
+} from '#core/services/coordination/coordination-service';
 
 interface Member {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
 }
 
 interface Role {
-  id: string;
+  id: number;
   name: string;
   icon: LucideIconInput;
   requiredCount: number;
-  assignedMemberIds: string[];
+  assignedMemberIds: number[];
 }
 
 interface SoireeEvent {
-  id: string;
+  id: number;
   name: string;
   date: Date;
 }
 
 interface EventData {
   event: SoireeEvent;
-  presentMemberIds: string[];
+  presentMemberIds: number[];
   roles: Role[];
 }
-
-const MEMBERS: Member[] = [
-  { id: 'm1', firstName: 'Lucas', lastName: 'Espiet' },
-  { id: 'm2', firstName: 'Marie', lastName: 'Dupont' },
-  { id: 'm3', firstName: 'Thomas', lastName: 'Martin' },
-  { id: 'm4', firstName: 'Chloé', lastName: 'Bernard' },
-  { id: 'm5', firstName: 'Antoine', lastName: 'Petit' },
-  { id: 'm6', firstName: 'Camille', lastName: 'Roux' },
-  { id: 'm7', firstName: 'Paul', lastName: 'Moreau' },
-  { id: 'm8', firstName: 'Julie', lastName: 'Simon' },
-  { id: 'm9', firstName: 'Nicolas', lastName: 'Laurent' },
-  { id: 'm10', firstName: 'Emma', lastName: 'Lefebvre' },
-];
 
 const AVATAR_COLORS = [
   'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
@@ -60,76 +51,43 @@ const AVATAR_COLORS = [
   'bg-pink-500', 'bg-cyan-500',
 ];
 
-function createInitialEventsData(): EventData[] {
-  return [
-    {
-      event: { id: 'e1', name: 'Soirée Electro', date: new Date(2026, 2, 14) },
-      presentMemberIds: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8'],
-      roles: [
-        { id: 'barbecue', name: 'Barbecue', icon: LucideFlame, requiredCount: 2, assignedMemberIds: ['m1', 'm2'] },
-        { id: 'bar', name: 'Bar', icon: LucideWine, requiredCount: 2, assignedMemberIds: ['m3', 'm4'] },
-        { id: 'caisse', name: 'Caisse', icon: LucideCreditCard, requiredCount: 1, assignedMemberIds: ['m5'] },
-        { id: 'securite', name: 'Sécurité', icon: LucideShield, requiredCount: 1, assignedMemberIds: ['m6'] },
-        { id: 'sono', name: 'Sono', icon: LucideMusic, requiredCount: 1, assignedMemberIds: ['m7'] },
-        { id: 'accueil', name: 'Accueil', icon: LucideSmile, requiredCount: 1, assignedMemberIds: ['m8'] },
-      ],
-    },
-    {
-      event: { id: 'e2', name: 'Soirée Hip-Hop', date: new Date(2026, 3, 11) },
-      presentMemberIds: ['m1', 'm3', 'm5', 'm7', 'm9', 'm2', 'm4', 'm6'],
-      roles: [
-        { id: 'barbecue', name: 'Barbecue', icon: LucideFlame, requiredCount: 2, assignedMemberIds: ['m9', 'm1'] },
-        { id: 'bar', name: 'Bar', icon: LucideWine, requiredCount: 2, assignedMemberIds: ['m3', 'm5'] },
-        { id: 'caisse', name: 'Caisse', icon: LucideCreditCard, requiredCount: 1, assignedMemberIds: ['m7'] },
-        { id: 'securite', name: 'Sécurité', icon: LucideShield, requiredCount: 1, assignedMemberIds: ['m2'] },
-        { id: 'sono', name: 'Sono', icon: LucideMusic, requiredCount: 1, assignedMemberIds: ['m4'] },
-        { id: 'accueil', name: 'Accueil', icon: LucideSmile, requiredCount: 1, assignedMemberIds: ['m6'] },
-      ],
-    },
-    {
-      event: { id: 'e3', name: 'Soirée Jungle', date: new Date(2026, 4, 16) },
-      presentMemberIds: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'],
-      roles: [
-        { id: 'barbecue', name: 'Barbecue', icon: LucideFlame, requiredCount: 3, assignedMemberIds: ['m1'] },
-        { id: 'bar', name: 'Bar', icon: LucideWine, requiredCount: 3, assignedMemberIds: ['m3', 'm4'] },
-        { id: 'caisse', name: 'Caisse', icon: LucideCreditCard, requiredCount: 2, assignedMemberIds: ['m5', 'm6'] },
-        { id: 'securite', name: 'Sécurité', icon: LucideShield, requiredCount: 2, assignedMemberIds: ['m7'] },
-        { id: 'sono', name: 'Sono', icon: LucideMusic, requiredCount: 1, assignedMemberIds: [] },
-        { id: 'accueil', name: 'Accueil', icon: LucideSmile, requiredCount: 2, assignedMemberIds: ['m2'] },
-      ],
-    },
-    {
-      event: { id: 'e4', name: 'Soirée Techno', date: new Date(2026, 5, 13) },
-      presentMemberIds: [],
-      roles: [
-        { id: 'barbecue', name: 'Barbecue', icon: LucideFlame, requiredCount: 3, assignedMemberIds: [] },
-        { id: 'bar', name: 'Bar', icon: LucideWine, requiredCount: 3, assignedMemberIds: [] },
-        { id: 'caisse', name: 'Caisse', icon: LucideCreditCard, requiredCount: 2, assignedMemberIds: [] },
-        { id: 'securite', name: 'Sécurité', icon: LucideShield, requiredCount: 2, assignedMemberIds: [] },
-        { id: 'sono', name: 'Sono', icon: LucideMusic, requiredCount: 1, assignedMemberIds: [] },
-        { id: 'accueil', name: 'Accueil', icon: LucideSmile, requiredCount: 2, assignedMemberIds: [] },
-      ],
-    },
-    {
-      event: { id: 'e5', name: 'Soirée Latino', date: new Date(2026, 6, 4) },
-      presentMemberIds: [],
-      roles: [
-        { id: 'barbecue', name: 'Barbecue', icon: LucideFlame, requiredCount: 3, assignedMemberIds: [] },
-        { id: 'bar', name: 'Bar', icon: LucideWine, requiredCount: 3, assignedMemberIds: [] },
-        { id: 'caisse', name: 'Caisse', icon: LucideCreditCard, requiredCount: 2, assignedMemberIds: [] },
-        { id: 'securite', name: 'Sécurité', icon: LucideShield, requiredCount: 2, assignedMemberIds: [] },
-        { id: 'sono', name: 'Sono', icon: LucideMusic, requiredCount: 1, assignedMemberIds: [] },
-        { id: 'accueil', name: 'Accueil', icon: LucideSmile, requiredCount: 2, assignedMemberIds: [] },
-      ],
-    },
-  ];
+const JOB_ICONS: Record<string, LucideIconInput> = {
+  'Barman': LucideWine,
+  'Caissier': LucideCreditCard,
+  'Serveur': LucideSmile,
+  'Sécurité': LucideShield,
+  'Logistique': LucideFlame,
+  'Sono': LucideMusic,
+};
+
+function buildEventsData(raw: CoordinationApiData): EventData[] {
+  return raw.events.map(event => ({
+    event: { id: event.id, name: event.name, date: new Date(event.date) },
+    presentMemberIds: raw.responses
+      .filter(r => r.eventId === event.id && r.isAvailable)
+      .map(r => r.memberId),
+    roles: raw.eventJobs
+      .filter(ej => ej.eventId === event.id)
+      .map(ej => {
+        const job = raw.jobs.find(j => j.id === ej.jobId)!;
+        return {
+          id: ej.jobId,
+          name: job.name,
+          icon: JOB_ICONS[job.name] ?? LucideUsers,
+          requiredCount: ej.count,
+          assignedMemberIds: raw.assignments
+            .filter(a => a.eventId === event.id && a.jobId === ej.jobId)
+            .map(a => a.memberId),
+        };
+      }),
+  }));
 }
 
-function findNextEventId(events: EventData[]): string {
+function findNextEventId(events: EventData[]): number | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const next = events.find(ed => ed.event.date >= today);
-  return next?.event.id ?? events[events.length - 1].event.id;
+  return next?.event.id ?? events.at(-1)?.event.id ?? null;
 }
 
 @Component({
@@ -145,25 +103,50 @@ function findNextEventId(events: EventData[]): string {
   templateUrl: './coordination.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Coordination {
-  protected eventsData = signal<EventData[]>(createInitialEventsData());
-  protected selectedEventId = signal<string>(findNextEventId(this.eventsData()));
-  protected openPickerRoleId = signal<string | null>(null);
+export class Coordination implements OnInit {
+  private readonly svc = inject(CoordinationService);
 
-  protected selectedEventData = computed(() =>
+  protected readonly loading = signal(true);
+  protected readonly loadError = signal<string | null>(null);
+  protected readonly allMembers = signal<Member[]>([]);
+  protected readonly eventsData = signal<EventData[]>([]);
+  protected readonly selectedEventId = signal<number | null>(null);
+  protected readonly openPickerRoleId = signal<number | null>(null);
+
+  ngOnInit(): void {
+    this.svc.loadAll().subscribe({
+      next: (raw) => {
+        this.allMembers.set(raw.members.map(m => ({
+          id: m.id,
+          firstName: m.firstName,
+          lastName: m.lastName,
+        })));
+        const events = buildEventsData(raw);
+        this.eventsData.set(events);
+        this.selectedEventId.set(findNextEventId(events));
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loadError.set('Impossible de charger les données de coordination.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  protected readonly selectedEventData = computed(() =>
     this.eventsData().find(ed => ed.event.id === this.selectedEventId())
   );
 
-  protected presentMembers = computed(() => {
+  protected readonly presentMembers = computed(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
-    return MEMBERS.filter(m => eventData.presentMemberIds.includes(m.id));
+    return this.allMembers().filter(m => eventData.presentMemberIds.includes(m.id));
   });
 
-  protected memberRoleMap = computed(() => {
+  protected readonly memberRoleMap = computed(() => {
     const eventData = this.selectedEventData();
-    if (!eventData) return new Map<string, string>();
-    const map = new Map<string, string>();
+    if (!eventData) return new Map<number, string>();
+    const map = new Map<number, string>();
     for (const role of eventData.roles) {
       for (const memberId of role.assignedMemberIds) {
         map.set(memberId, role.name);
@@ -172,26 +155,26 @@ export class Coordination {
     return map;
   });
 
-  protected assignedMemberIds = computed(() => {
+  protected readonly assignedMemberIds = computed(() => {
     const eventData = this.selectedEventData();
-    if (!eventData) return new Set<string>();
-    const ids = new Set<string>();
+    if (!eventData) return new Set<number>();
+    const ids = new Set<number>();
     for (const role of eventData.roles) {
       for (const id of role.assignedMemberIds) ids.add(id);
     }
     return ids;
   });
 
-  protected availableMembers = computed(() => {
+  protected readonly availableMembers = computed(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
     const assigned = this.assignedMemberIds();
-    return MEMBERS.filter(m =>
+    return this.allMembers().filter(m =>
       eventData.presentMemberIds.includes(m.id) && !assigned.has(m.id)
     );
   });
 
-  protected unfulfilledCount = computed(() => {
+  protected readonly unfulfilledCount = computed(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return 0;
     return eventData.roles.filter(r => r.assignedMemberIds.length < r.requiredCount).length;
@@ -207,17 +190,16 @@ export class Coordination {
     return date < today;
   }
 
-  protected getMember(id: string): Member | undefined {
-    return MEMBERS.find(m => m.id === id);
+  protected getMember(id: number): Member | undefined {
+    return this.allMembers().find(m => m.id === id);
   }
 
   protected getMemberInitials(member: Member): string {
     return member.firstName[0] + member.lastName[0];
   }
 
-  protected getAvatarColor(memberId: string): string {
-    const idx = MEMBERS.findIndex(m => m.id === memberId);
-    return AVATAR_COLORS[idx % AVATAR_COLORS.length];
+  protected getAvatarColor(memberId: number): string {
+    return AVATAR_COLORS[memberId % AVATAR_COLORS.length];
   }
 
   protected formatDate(date: Date): string {
@@ -261,19 +243,22 @@ export class Coordination {
       : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300';
   }
 
-  protected selectEvent(id: string): void {
+  protected selectEvent(id: number): void {
     this.selectedEventId.set(id);
     this.openPickerRoleId.set(null);
   }
 
-  protected togglePicker(roleId: string): void {
+  protected togglePicker(roleId: number): void {
     this.openPickerRoleId.update(current => current === roleId ? null : roleId);
   }
 
-  protected assignMember(memberId: string, roleId: string): void {
+  protected assignMember(memberId: number, roleId: number): void {
+    const eventId = this.selectedEventId();
+    if (eventId === null) return;
+
     this.eventsData.update(events =>
       events.map(ed => {
-        if (ed.event.id !== this.selectedEventId()) return ed;
+        if (ed.event.id !== eventId) return ed;
         return {
           ...ed,
           roles: ed.roles.map(r => {
@@ -284,12 +269,19 @@ export class Coordination {
       })
     );
     this.openPickerRoleId.set(null);
+
+    this.svc.assign(eventId, memberId, roleId).subscribe({
+      error: () => this.loadError.set('Erreur lors de l\'affectation.'),
+    });
   }
 
-  protected removeAssignment(memberId: string, roleId: string): void {
+  protected removeAssignment(memberId: number, roleId: number): void {
+    const eventId = this.selectedEventId();
+    if (eventId === null) return;
+
     this.eventsData.update(events =>
       events.map(ed => {
-        if (ed.event.id !== this.selectedEventId()) return ed;
+        if (ed.event.id !== eventId) return ed;
         return {
           ...ed,
           roles: ed.roles.map(r => {
@@ -299,5 +291,9 @@ export class Coordination {
         };
       })
     );
+
+    this.svc.unassign(eventId, memberId, roleId).subscribe({
+      error: () => this.loadError.set('Erreur lors de la suppression.'),
+    });
   }
 }

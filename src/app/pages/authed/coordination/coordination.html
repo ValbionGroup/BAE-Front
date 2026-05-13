@@ -6,6 +6,19 @@
     <p class="text-sm text-gray-500 dark:text-gray-400">Attribution des rôles pour les soirées de l'association</p>
   </div>
 
+  @if (loadError()) {
+    <div role="alert" class="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm">
+      <svg lucideAlertTriangle [size]="16" aria-hidden="true" />
+      {{ loadError() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center py-20" aria-live="polite" aria-label="Chargement en cours">
+      <div class="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" aria-hidden="true"></div>
+    </div>
+  } @else {
+
   <!-- Event Slider -->
   <section aria-label="Sélection de la soirée">
     <div class="flex gap-3 overflow-x-auto pb-2 scroll-smooth" role="group" aria-label="Liste des soirées">
@@ -246,5 +259,7 @@
 
     </div>
   }
+
+  } <!-- end @else (loading) -->
 
 </main>
