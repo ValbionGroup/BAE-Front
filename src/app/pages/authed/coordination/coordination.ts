@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, TemplateRef, viewChild } from '@angular/core';
 import {
   LucideDynamicIcon,
   LucideIconInput,
@@ -13,16 +13,26 @@ import {
   LucideShield,
   LucideMusic,
   LucideSmile,
+  LucideSettings,
+  LucideZap,
+  LucideLock,
+  LucideEllipsisVertical,
 } from '@lucide/angular';
 import {
   CoordinationService,
   type CoordinationApiData,
 } from '#core/services/coordination/coordination-service';
+import { Btn } from '#shared/components/ui/btn/btn';
+import { Badge } from '#shared/components/ui/badge/badge';
+import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
 
 interface Member {
   id: number;
   firstName: string;
   lastName: string;
+  role: string;
+  points: number;
 }
 
 interface Role {
@@ -45,10 +55,38 @@ interface EventData {
   roles: Role[];
 }
 
+interface PosteView {
+  id: number;
+  label: string;
+  color: string;
+  icon: LucideIconInput;
+  need: number;
+  assignedMemberIds: number[];
+}
+
+interface MemberView {
+  id: number;
+  name: string;
+  poste: string;
+  lock: boolean;
+  score: number;
+  bonus: number;
+  preferences: string[];
+}
+
 const AVATAR_COLORS = [
   'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
   'bg-rose-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500',
   'bg-pink-500', 'bg-cyan-500',
+];
+
+const POSTE_COLORS = [
+  'blue',
+  'emerald',
+  'amber',
+  'rose',
+  'indigo',
+  'teal',
 ];
 
 const JOB_ICONS: Record<string, LucideIconInput> = {
@@ -92,19 +130,21 @@ function findNextEventId(events: EventData[]): number | null {
 
 @Component({
   selector: 'bfd-coordination',
-  imports: [
-    LucideDynamicIcon,
-    LucideUsers,
-    LucideAlertTriangle,
-    LucideCheck,
-    LucidePlus,
-    LucideX,
-  ],
+  imports: [Btn, Badge, Avatar, LucideDynamicIcon],
   templateUrl: './coordination.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Coordination implements OnInit {
   private readonly svc = inject(CoordinationService);
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected readonly icSettings = LucideSettings;
+  protected readonly icZap = LucideZap;
+  protected readonly icCheck = LucideCheck;
+  protected readonly icLock = LucideLock;
+  protected readonly icPlus = LucidePlus;
+  protected readonly icMore = LucideEllipsisVertical;
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -112,6 +152,18 @@ export class Coordination implements OnInit {
   protected readonly eventsData = signal<EventData[]>([]);
   protected readonly selectedEventId = signal<number | null>(null);
   protected readonly openPickerRoleId = signal<number | null>(null);
+  constructor() {
+    this.pageHeader.set({
+      title: 'Coordination',
+      subtitle: 'Soirée Hivernale · 18 membres présents',
+      breadcrumb: ['Préparation', 'Coordination', 'Soirée Hivernale'],
+      activeNavId: 'coord',
+    });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
+    });
+  }
 
   ngOnInit(): void {
     this.svc.loadAll().subscribe({
@@ -120,6 +172,8 @@ export class Coordination implements OnInit {
           id: m.id,
           firstName: m.firstName,
           lastName: m.lastName,
+          role: m.role,
+          points: m.points,
         })));
         const events = buildEventsData(raw);
         this.eventsData.set(events);
@@ -295,5 +349,110 @@ export class Coordination implements OnInit {
     this.svc.unassign(eventId, memberId, roleId).subscribe({
       error: () => this.loadError.set('Erreur lors de la suppression.'),
     });
+  }
+
+  protected get postes(): PosteView[] {
+    const eventData = this.selectedEventData();
+    if (!eventData) return [];
+
+    return eventData.roles.map((role, index) => ({
+      id: role.id,
+      label: role.name,
+      color: POSTE_COLORS[index % POSTE_COLORS.length],
+      icon: role.icon,
+      need: role.requiredCount,
+      assignedMemberIds: role.assignedMemberIds,
+    }));
+  }
+
+  protected get membres(): MemberView[] {
+    const eventData = this.selectedEventData();
+    if (!eventData) return [];
+
+    return this.allMembers().map((member) => {
+      const assignedRole = eventData.roles.find(role => role.assignedMemberIds.includes(member.id));
+      const score = member.points;
+      const bonus = assignedRole ? Math.max(0, assignedRole.requiredCount - assignedRole.assignedMemberIds.length) : 0;
+
+      return {
+        id: member.id,
+        name: `${member.firstName} ${member.lastName}`,
+        poste: assignedRole?.name ?? member.role,
+        lock: score >= 90,
+        score,
+        bonus,
+        preferences: this.buildPreferences(member, eventData),
+      };
+    });
+  }
+
+  protected assignedTo(label: string): Array<{ name: string; lock: boolean; score: number }> {
+    const poste = this.postes.find(role => role.label === label);
+    if (!poste) return [];
+
+    return poste.assignedMemberIds
+      .map(memberId => this.getMember(memberId))
+      .filter((member): member is Member => member !== undefined)
+      .map(member => ({
+        name: `${member.firstName} ${member.lastName}`,
+        lock: member.points >= 90,
+        score: member.points,
+      }));
+  }
+
+  protected isFull(p: PosteView): boolean {
+    return p.assignedMemberIds.length >= p.need;
+  }
+
+  protected posteBgClass(color: string): string {
+    const palette: Record<string, string> = {
+      blue: 'bg-blue-500',
+      emerald: 'bg-emerald-500',
+      amber: 'bg-amber-500',
+      rose: 'bg-rose-500',
+      indigo: 'bg-indigo-500',
+      teal: 'bg-teal-500',
+    };
+    return palette[color] ?? 'bg-blue-500';
+  }
+
+  protected toFill(p: PosteView): number {
+    return Math.max(0, p.need - p.assignedMemberIds.length);
+  }
+
+  protected vacantSlots(p: PosteView): number[] {
+    return Array.from({ length: this.toFill(p) }, (_, index) => index);
+  }
+
+  protected prefsFor(member: MemberView): string[] {
+    return member.preferences;
+  }
+
+  protected scoreClassSmall(score: number): string {
+    return this.getScoreClass(score);
+  }
+
+  protected scoreClass(score: number): string {
+    return this.getScoreClass(score);
+  }
+
+  protected bonusClass(bonus: number): string {
+    if (bonus > 0) return 'text-ok';
+    if (bonus < 0) return 'text-error';
+    return 'text-muted';
+  }
+
+  private buildPreferences(member: Member, eventData: EventData): string[] {
+    const ordered = [
+      member.role,
+      ...eventData.roles.map(role => role.name).filter(roleName => roleName !== member.role),
+    ];
+    return ordered.slice(0, 3).concat(Array.from({ length: Math.max(0, 3 - ordered.length) }, () => '—')).slice(0, 3);
+  }
+
+  private getScoreClass(score: number): string {
+    if (score >= 80) return 'text-ok';
+    if (score >= 60) return 'text-warn';
+    return 'text-error';
   }
 }
