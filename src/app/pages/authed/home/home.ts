@@ -24,8 +24,8 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
-import {Store} from '@ngrx/store';
-import {selectMember} from '#core/store/auth/auth.selector';
+import { Store } from '@ngrx/store';
+import { selectMember } from '#core/store/auth/auth.selector';
 
 interface KpiTile {
   readonly label: string;

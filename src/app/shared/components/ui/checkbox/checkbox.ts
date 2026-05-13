@@ -37,9 +37,7 @@ export class Checkbox implements ControlValueAccessor {
   protected readonly boxClass = computed(
     () =>
       'inline-flex h-3.5 w-3.5 items-center justify-center rounded-[3px] border-[1.4px] cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-40 ' +
-      (this.internalChecked()
-        ? 'border-blue bg-blue text-white'
-        : 'border-border bg-transparent'),
+      (this.internalChecked() ? 'border-blue bg-blue text-white' : 'border-border bg-transparent'),
   );
 
   private cvaValue: boolean | null = null;
