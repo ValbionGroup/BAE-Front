@@ -15,6 +15,7 @@ import { Avatar } from '#shared/components/ui/avatar/avatar';
 import {startOfMonth, startOfToday} from 'date-fns';
 
 interface CalEvent {
+  readonly id: number;
   readonly name: string;
   readonly kind: 'red' | 'blue' | 'warn';
   readonly resp: 'yes' | 'no' | '—' | 'past';
@@ -65,7 +66,9 @@ export class Presences {
 
   protected readonly weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   protected readonly viewTabs = ['Mois', 'Liste', 'Récap'];
+
   protected readonly activeTab = signal(0);
+  protected readonly activeEventView = signal<number | undefined>(undefined);
 
   protected readonly days = computed(() => {
     const currentMonth = this.currentMonth();
@@ -80,11 +83,11 @@ export class Presences {
   });
 
   private readonly events: Record<string, CalEvent> = {
-    '2026-2-14': { name: 'Soirée Hivernale', kind: 'red', resp: 'yes' },
-    '2026-2-7': { name: 'Repas Internat.', kind: 'blue', resp: '—' },
-    '2026-2-28': { name: 'Repas Alternants', kind: 'red', resp: 'no' },
-    '2026-1-31': { name: 'Galette', kind: 'blue', resp: 'past' },
-    '2026-2-21': { name: 'Tournoi BAE', kind: 'warn', resp: '—' },
+    '2026-2-14': { id: 1, name: 'Soirée Hivernale', kind: 'red', resp: 'yes' },
+    '2026-2-7': { id: 2, name: 'Repas Internat.', kind: 'blue', resp: '—' },
+    '2026-2-28': { id: 3, name: 'Repas Alternants', kind: 'red', resp: 'no' },
+    '2026-1-31': { id: 4, name: 'Galette', kind: 'blue', resp: 'past' },
+    '2026-2-21': { id: 5, name: 'Tournoi BAE', kind: 'warn', resp: '—' },
   };
 
   protected readonly responseStats = [
@@ -154,5 +157,9 @@ export class Presences {
 
   protected goToToday() {
     this.currentMonth.set(this.today);
+  }
+
+  protected selectEventView(index: number | undefined) {
+    this.activeEventView.set(index);
   }
 }

@@ -67,8 +67,9 @@
           </div>
           @if (ev) {
             <div
+              (click)="selectEventView(ev.id)"
               [class]="
-                'flex flex-col gap-0.75 rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug ' +
+                'flex flex-col gap-0.75 rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug cursor-pointer select-none ' +
                 evBgClass(ev.kind)
               "
             >
