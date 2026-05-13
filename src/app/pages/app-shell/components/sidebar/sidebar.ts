@@ -5,11 +5,11 @@ import {
   LucideCalendar,
   LucideChartLine,
   LucideChefHat,
-  LucideChevronDown,
   LucideDynamicIcon,
   LucideEuro,
   LucideHouse,
   LucideIconInput,
+  LucideLogOut,
   LucidePackage,
   LucideQrCode,
   LucideSearch,
@@ -22,6 +22,7 @@ import {
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { Kbd } from '#shared/components/ui/kbd/kbd';
 import { Logo } from '#shared/components/ui/logo/logo';
+import { logout } from '#core/store/auth/auth.actions';
 import { selectMember } from '#core/store/auth/auth.selector';
 
 interface NavItem {
@@ -40,7 +41,7 @@ interface NavItem {
     RouterLinkActive,
     LucideDynamicIcon,
     LucideSearch,
-    LucideChevronDown,
+    LucideLogOut,
     Logo,
     Kbd,
     Avatar,
@@ -87,4 +88,8 @@ export class Sidebar {
     { id: 'tick', label: 'Tickets', icon: LucideTicket, route: '/tickets' },
     { id: 'set', label: 'Paramètres', icon: LucideSettings, route: '/parametres' },
   ];
+
+  protected logout(): void {
+    this.store.dispatch(logout());
+  }
 }

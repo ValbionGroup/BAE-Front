@@ -32,7 +32,7 @@
           (i ? 'border-t border-border-s' : '')
         "
       >
-        <input type="checkbox" [checked]="g.checked" style="accent-color: var(--bae-blue)" />
+        <bfd-checkbox [checked]="g.checked" ariaLabel="Sélectionner l'article" />
         <span class="text-text">{{ g.p }}</span>
         <span class="mono tnum text-right text-text-2">{{ g.q }}</span>
         <span [class]="'mono tnum text-right ' + enseignePriceClass('Auchan', g.best)"

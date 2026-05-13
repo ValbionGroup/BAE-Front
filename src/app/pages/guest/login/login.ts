@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -28,6 +28,7 @@ export class Login {
   private readonly store = inject(Store);
 
   protected readonly loginError = toSignal(this.store.select(selectLoginError));
+  protected readonly year = computed(() => new Date().getFullYear());
 
   protected form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -39,11 +40,11 @@ export class Login {
   protected readonly icAlert = LucideTriangleAlert;
 
   protected readonly brandTags = [
-    'Stocks par lot',
-    'Algo de répartition',
-    'Caisse temps réel',
-    'QR Lydia',
-    'Précommandes publiques',
+    'Gestion des présence',
+    'Commandes',
+    'Caisse en temps réel',
+    'Scan de QR',
+    'Statistiques',
   ];
 
   protected onSubmit(): void {

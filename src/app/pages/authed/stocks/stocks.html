@@ -52,7 +52,7 @@
       <div
         class="grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.6fr_24px] gap-3 border-b border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
       >
-        <span><svg [lucideIcon]="icCheck" [size]="11" aria-hidden="true"></svg></span>
+        <bfd-checkbox ariaLabel="Tout sélectionner" />
         <span>Produit</span>
         <span>Catégorie</span>
         <span class="text-right">Quantité</span>
@@ -71,16 +71,7 @@
               (i === 0 ? 'bg-surface-2' : '')
             "
           >
-            <span
-              [class]="
-                'inline-flex h-3.5 w-3.5 items-center justify-center rounded-[3px] border-[1.4px] ' +
-                (i === 0 ? 'border-blue bg-blue text-white' : 'border-border bg-transparent')
-              "
-            >
-              @if (i === 0) {
-                <svg [lucideIcon]="icCheck" [size]="10" stroke-width="2.5" aria-hidden="true"></svg>
-              }
-            </span>
+            <bfd-checkbox [checked]="i === 0" ariaLabel="Sélectionner le produit" />
             <div class="flex min-w-0 items-center gap-2.5">
               <span class="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-text">{{
                 p.n

@@ -8,6 +8,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Badge } from '#shared/components/ui/badge/badge';
+import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 
 interface CartLine {
   readonly p: string;
@@ -29,7 +30,7 @@ interface Voucher {
 
 @Component({
   selector: 'bfd-logistique',
-  imports: [Badge, LucideDynamicIcon],
+  imports: [Badge, Checkbox, LucideDynamicIcon],
   templateUrl: './logistique.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

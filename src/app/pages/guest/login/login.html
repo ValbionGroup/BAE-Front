@@ -13,16 +13,12 @@
 
     <div>
       <div class="mono mb-4 text-[11px] tracking-widest text-muted">
-        BUREAU DES ALTERNANTS · OPÉRATIONS
+        BUREAU DES ALTERNANTS DE L'ENSEIRB
       </div>
       <h2 class="m-0 text-[42px] font-semibold leading-[1.08] -tracking-[1px] text-text">
         Stocks, présences,<br />caisse — une seule<br />
         <span class="text-blue">console</span> pour la <span class="text-red">soirée</span>.
       </h2>
-      <p class="mt-4 max-w-[460px] text-[15px] leading-relaxed text-text-2">
-        Coordonnez les postes, suivez la péremption des lots et encaissez les commandes depuis la
-        même interface. Pensé pour les conditions de soirée — pas pour un bureau.
-      </p>
       <div class="mt-7 flex flex-wrap gap-2.5">
         @for (tag of brandTags; track tag) {
           <bfd-badge kind="ghost">{{ tag }}</bfd-badge>
@@ -31,19 +27,17 @@
     </div>
 
     <div class="flex items-center gap-4 text-[11.5px] text-muted">
-      <span class="mono">© BAE 2026</span>
-      <span>·</span><span>Conditions</span> <span>·</span><span>Confidentialité</span> <span>·</span
-      ><span>Statut système</span>
+      <span class="mono">© BAE {{ year() }}</span>
       <span class="ml-auto inline-flex items-center gap-1.5">
         <span class="h-1.5 w-1.5 rounded-full bg-ok"></span>
-        Tous services opérationnels
+        Tous les services sont opérationnels
       </span>
     </div>
   </div>
 
   <!-- RIGHT form pane -->
   <div class="flex flex-1 items-center justify-center p-10">
-    <div class="w-[380px]">
+    <div class="w-95">
       <div class="mono mb-2.5 text-[11px] font-semibold tracking-widest text-blue">CONNEXION</div>
       <h1 class="m-0 text-[28px] font-semibold -tracking-[0.6px] text-text">
         Bon retour parmi nous.

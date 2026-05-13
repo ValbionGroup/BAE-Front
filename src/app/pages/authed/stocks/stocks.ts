@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import {
-  LucideCheck,
   LucideClock,
   LucideDownload,
   LucideDynamicIcon,
   LucideEuro,
-  LucideFilter,
+  LucideFunnel,
   LucideIconInput,
-  LucideMoreHorizontal,
+  LucideEllipsis,
   LucidePackage,
   LucidePencil,
   LucidePlus,
@@ -20,6 +19,7 @@ import { PageHeaderService } from '#core/services/page-header/page-header-servic
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
+import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Input } from '#shared/components/ui/input/input';
 
 interface Kpi {
@@ -53,7 +53,7 @@ interface Lot {
 
 @Component({
   selector: 'bfd-stocks',
-  imports: [Btn, Badge, Card, Input, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Checkbox, Input, LucideDynamicIcon],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -71,9 +71,8 @@ export class Stocks {
   protected readonly icDownload = LucideDownload;
   protected readonly icPlus = LucidePlus;
   protected readonly icSearch = LucideSearch;
-  protected readonly icFilter = LucideFilter;
-  protected readonly icCheck = LucideCheck;
-  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icFilter = LucideFunnel;
+  protected readonly icMore = LucideEllipsis;
   protected readonly icEdit = LucidePencil;
   protected readonly icTrash = LucideTrash2;
 
