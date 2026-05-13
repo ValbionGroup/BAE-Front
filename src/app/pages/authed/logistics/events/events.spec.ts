@@ -1,17 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Events } from './events';
 
-import { TableContent } from './table-content';
-
-describe('TableContent', () => {
-  let component: TableContent<object>;
-  let fixture: ComponentFixture<TableContent<object>>;
+describe(Events.name, () => {
+  let component: Events;
+  let fixture: ComponentFixture<Events>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TableContent],
+      imports: [Events],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(TableContent);
+    fixture = TestBed.createComponent(Events);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

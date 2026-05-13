@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { AuthTokens } from '#core/models/auth/auth-tokens.model';
-import {isNil} from '#shared/utils/base-function';
+import { isNil } from '#shared/utils/base-function';
 
 @Injectable({
   providedIn: 'root',
