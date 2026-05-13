@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, signal } from '@angular/core';
-import { EventDetail, MenuItem } from '#core/models/event.model';
+import {EventDetail, MenuItem, Presence, RosterRow} from '#core/models/event.model';
 import {
   Member,
   Role,
@@ -111,7 +111,44 @@ export class EventsService {
   }
 
   fetchRosterForEvent(id: string) {
-    return of(this._events());
+    return of([
+      {
+        id: 'a',
+        name: 'Person 1',
+        role: 'Role',
+        status: Presence.PRESENT,
+        when: new Date(),
+        late: false
+      },      {
+        id: 'b',
+        name: 'Person 2',
+        role: 'Role',
+        status: Presence.ABSENT,
+        when: new Date(),
+        late: false
+      },      {
+        id: 'c',
+        name: 'Person 3',
+        role: 'Role',
+        status: Presence.PENDING,
+        when: new Date(),
+        late: false
+      },      {
+        id: 'd',
+        name: 'Person 4',
+        role: 'Role',
+        status: Presence.PRESENT,
+        when: new Date(),
+        late: false
+      },      {
+        id: 'e',
+        name: 'Person 5',
+        role: 'Role',
+        status: Presence.PRESENT,
+        when: new Date(),
+        late: false
+      }
+    ] as RosterRow[] | undefined);
   }
 
   stationForMember(memberId: string, eventId: string): Role | null {

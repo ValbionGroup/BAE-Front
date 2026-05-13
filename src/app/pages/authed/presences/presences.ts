@@ -70,11 +70,6 @@ export class Presences {
   protected readonly activeTab = signal(0);
   protected readonly activeEventView = signal<string | undefined>(undefined);
 
-  protected readonly selectedEvent = computed(() => {
-    const id = this.activeEventView();
-    return id ? this.events.getEventById(id) : undefined;
-  });
-
   protected readonly days = computed(() => {
     const currentMonth = this.currentMonth();
     const start = new Date(startOfMonth(currentMonth));
@@ -106,9 +101,9 @@ export class Presences {
     );
   }
 
-  protected respLabel(resp: EventDetail['memberPresence']): string {
-    if (resp === Presence.PRESENT) return '✓ Présent';
-    if (resp === Presence.ABSENT) return '✗ Absent';
+  protected respLabel(event: EventDetail): string {
+    if (event.memberPresence === Presence.PRESENT) return '✓ Présent';
+    if (event.memberPresence === Presence.ABSENT) return '✗ Absent';
     return '— Non répondu';
   }
 
@@ -130,5 +125,11 @@ export class Presences {
 
   protected selectEventView(index: string | undefined) {
     this.activeEventView.set(index);
+  }
+
+  protected getEventColor(event: EventDetail): string {
+    if (event.memberPresence === Presence.PRESENT) return 'bg-ok-soft text-ok';
+    if (event.memberPresence === Presence.ABSENT) return 'bg-danger-soft text-danger';
+    return 'bg-warn-soft text-warn';
   }
 }

@@ -11,7 +11,7 @@ import { LucideBell } from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
-import { EventData, Presence, RosterRow } from '#core/models/event.model';
+import { Presence, RosterRow } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
 
 @Component({
@@ -27,21 +27,19 @@ import { EventsStore } from '#core/store/events.store';
 export class RosterAside {
   private readonly events = inject(EventsStore);
 
-  readonly event = input<EventData | undefined>(undefined);
+  readonly eventId = input<string | undefined>(undefined);
 
   protected readonly icBell = LucideBell;
 
-  private readonly eventId = computed(() => this.event()?.id);
-
-  protected readonly eventDetail = computed(() => {
+  protected readonly event = computed(() => {
     const id = this.eventId();
     return id ? this.events.events()[id] : undefined;
   });
 
-  protected readonly roster = computed<RosterRow[]>(() => this.eventDetail()?.roster ?? []);
+  protected readonly roster = computed<RosterRow[]>(() => this.event()?.roster ?? []);
 
   protected readonly rosterLoading = computed(() => {
-    const status = this.eventDetail()?.rosterStatus;
+    const status = this.event()?.rosterStatus;
     return status === 'init' || status === 'loading' || status === 'refreshing';
   });
 
@@ -73,9 +71,9 @@ export class RosterAside {
   });
 
   protected readonly formattedDate = computed(() => {
-    const e = this.event();
-    if (!e) return '';
-    return e.date.toLocaleDateString('fr-FR', {
+    const date = this.event()?.date;
+    if (!date) return '';
+    return date.toLocaleDateString('fr-FR', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -85,7 +83,7 @@ export class RosterAside {
   constructor() {
     effect(() => {
       const id = this.eventId();
-      if (id) untracked(() => this.events.loadEventRoster(id));
+      if (id) untracked(() => void this.events.loadEventRoster(id));
     });
   }
 

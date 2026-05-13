@@ -7,7 +7,7 @@ import {
   LucideSmile,
   LucideIconInput,
 } from '@lucide/angular';
-import { EventData, EventDetail } from '#core/models/event.model';
+import {EventData, EventDetail, Presence} from '#core/models/event.model';
 
 export interface Member {
   id: string;
@@ -62,6 +62,7 @@ export function createInitialEventsData(): EventDetail[] {
       name: 'Soirée Electro',
       date: new Date(todayYear, todayMonth, todayDay),
       location: 'A',
+      memberPresence: Presence.PRESENT,
       roles: [
         {
           id: 'barbecue',
@@ -112,6 +113,7 @@ export function createInitialEventsData(): EventDetail[] {
       name: 'Soirée Hip-Hop',
       date: new Date(2026, 3, 11),
       location: 'B',
+      memberPresence: Presence.ABSENT,
       roles: [
         {
           id: 'barbecue',
@@ -162,6 +164,7 @@ export function createInitialEventsData(): EventDetail[] {
       name: 'Soirée Jungle',
       date: new Date(2026, 4, 16),
       location: 'C',
+      memberPresence: Presence.ABSENT,
       roles: [
         {
           id: 'barbecue',
@@ -206,6 +209,7 @@ export function createInitialEventsData(): EventDetail[] {
       name: 'Soirée Techno',
       date: new Date(2026, 5, 13),
       location: 'D',
+      memberPresence: Presence.PENDING,
       roles: [
         {
           id: 'barbecue',
@@ -244,6 +248,7 @@ export function createInitialEventsData(): EventDetail[] {
       name: 'Soirée Latino',
       date: new Date(2026, 6, 4),
       location: 'E',
+      memberPresence: Presence.PRESENT,
       roles: [
         {
           id: 'barbecue',
