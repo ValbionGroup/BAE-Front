@@ -1,0 +1,63 @@
+<!-- Topbar action: add a new event -->
+<ng-template #actions>
+  <bfd-btn kind="primary" size="md" [icon]="icPlus">Nouvelle soirée</bfd-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <div class="mb-3 text-[13px] text-text-2">
+    {{ events.length }} soirées · cliquez pour gérer l'affectation des postes
+  </div>
+
+  <div class="flex flex-col gap-3">
+    @for (e of events; track e.id) {
+      @let badge = statusBadge(e);
+      <a
+        [routerLink]="['/coordination', e.id]"
+        class="group flex items-center gap-4 rounded-md border border-border-s bg-surface px-4 py-4 no-underline hover:bg-surface-2"
+      >
+        <!-- Date chip -->
+        <div
+          [class]="
+            'w-14 shrink-0 rounded-md py-1.5 text-center border ' +
+            (e.status === 'past'
+              ? 'bg-surface-2 text-muted border-border-s'
+              : 'bg-red-soft text-red border-red')
+          "
+        >
+          <div class="tnum text-xl font-semibold leading-none">{{ e.day }}</div>
+          <div class="mono mt-0.5 text-[9.5px] uppercase tracking-widest">{{ e.month }}</div>
+        </div>
+
+        <!-- Name + time + sub -->
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2.5">
+            <span class="text-[15px] font-semibold text-text">{{ e.name }}</span>
+            <bfd-badge [kind]="badge.kind" [dot]="badge.dot">{{ badge.label }}</bfd-badge>
+          </div>
+          <div class="mt-1 text-[12px] text-muted">{{ e.time }} · {{ e.sub }}</div>
+        </div>
+
+        <!-- Progress -->
+        <div class="w-48 shrink-0">
+          <div class="mb-1 flex justify-between text-[11px] text-muted">
+            <span>Postes affectés</span>
+            <span class="tnum text-text">{{ e.assigned }}/{{ e.required }}</span>
+          </div>
+          <div class="h-1.5 overflow-hidden rounded-sm bg-border">
+            <div
+              [class]="'h-full ' + progressClass(e)"
+              [style.width.%]="progressPct(e)"
+            ></div>
+          </div>
+        </div>
+
+        <svg
+          [lucideIcon]="icChevronRight"
+          [size]="16"
+          class="text-muted group-hover:text-text"
+          aria-hidden="true"
+        ></svg>
+      </a>
+    }
+  </div>
+</div>

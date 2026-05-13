@@ -87,11 +87,12 @@ interface ActivityItem {
 })
 export class Home {
   private readonly store = inject(Store);
+  private readonly currentDate = new Date();
 
   constructor() {
     inject(PageHeaderService).set({
       title: 'Accueil',
-      subtitle: 'Jeudi 12 février · semaine 7',
+      subtitle: `${this.formatDateForDisplay(this.currentDate)} · semaine ${this.getWeekNumber(this.currentDate)}`,
       breadcrumb: ['Espace', 'Accueil'],
       activeNavId: 'home',
     });
@@ -249,5 +250,19 @@ export class Home {
 
   protected pct(v: number): number {
     return (v / this.chartMax) * 100;
+  }
+
+  private getWeekNumber(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  }
+
+  private formatDateForDisplay(date: Date): string {
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: "long" };
+    const res = date.toLocaleDateString('fr-FR', options);
+    return res.charAt(0).toUpperCase() + res.slice(1);
   }
 }

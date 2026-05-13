@@ -1,0 +1,102 @@
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <div class="mb-3 text-[13px] text-text-2">
+    {{ events().length }} soirées · ajustez les recettes ci-dessous, puis ouvrez la liste de courses
+  </div>
+
+  <div class="flex flex-col gap-4">
+    @for (e of events(); track e.id) {
+      @let badge = statusBadge(e);
+      <div class="rounded-md border border-border-s bg-surface">
+        <!-- Event header -->
+        <div class="flex items-center gap-4 border-b border-border-s px-4 py-3">
+          <div
+            [class]="
+              'w-14 shrink-0 rounded-md py-1.5 text-center border ' +
+              (e.status === 'past'
+                ? 'bg-surface-2 text-muted border-border-s'
+                : 'bg-red-soft text-red border-red')
+            "
+          >
+            <div class="tnum text-xl font-semibold leading-none">{{ e.day }}</div>
+            <div class="mono mt-0.5 text-[9.5px] uppercase tracking-widest">{{ e.month }}</div>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2.5">
+              <span class="text-[15px] font-semibold text-text">{{ e.name }}</span>
+              <bfd-badge [kind]="badge.kind" [dot]="badge.dot">{{ badge.label }}</bfd-badge>
+            </div>
+            <div class="mt-0.5 text-[12px] text-muted">
+              {{ e.time }} · {{ totalPortions(e) }} portions · {{ formatPrice(totalCost(e)) }} €
+              estimés
+            </div>
+          </div>
+          <a
+            [routerLink]="['/logistique', e.id]"
+            class="inline-flex items-center gap-1.5 text-[13px] text-blue no-underline"
+          >
+            Voir les courses
+            <svg [lucideIcon]="icArrowRight" [size]="14" aria-hidden="true"></svg>
+          </a>
+        </div>
+
+        <!-- Recipes table -->
+        <div class="grid grid-cols-[28px_1fr_110px_120px_28px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+          <span></span>
+          <span>Recette</span>
+          <span class="text-right">Coût unité</span>
+          <span class="text-center">Portions</span>
+          <span></span>
+        </div>
+
+        @if (e.recipes.length === 0) {
+          <div class="px-4 py-4 text-center text-[12px] text-muted">
+            Aucune recette pour cette soirée. Ajoutez-en une ci-dessous.
+          </div>
+        }
+        @for (r of e.recipes; track r.id) {
+          <div class="grid grid-cols-[28px_1fr_110px_120px_28px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]">
+            <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-surface-2 text-text-2">
+              <svg [lucideIcon]="icChef" [size]="14" aria-hidden="true"></svg>
+            </span>
+            <span class="text-text">{{ r.name }}</span>
+            <span class="mono tnum text-right text-text-2">{{ formatPrice(r.unitCost) }} €</span>
+            <div class="inline-flex items-center justify-center gap-px rounded-md border border-border bg-surface-2 p-0.5 justify-self-center">
+              <button
+                type="button"
+                (click)="dec(e, r)"
+                class="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-muted hover:text-text"
+                [attr.aria-label]="'Diminuer ' + r.name"
+              >
+                <svg [lucideIcon]="icMinus" [size]="12" aria-hidden="true"></svg>
+              </button>
+              <span class="tnum w-8 text-center text-[13px] font-semibold text-text">{{ r.count }}</span>
+              <button
+                type="button"
+                (click)="inc(e, r)"
+                class="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm border-none bg-blue text-white hover:bg-blue-deep"
+                [attr.aria-label]="'Augmenter ' + r.name"
+              >
+                <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
+              </button>
+            </div>
+            <button
+              type="button"
+              (click)="remove(e, r)"
+              class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted hover:bg-danger-soft hover:text-danger"
+              [attr.aria-label]="'Supprimer ' + r.name"
+            >
+              <svg [lucideIcon]="icTrash" [size]="14" aria-hidden="true"></svg>
+            </button>
+          </div>
+        }
+
+        <!-- Add recipe -->
+        <div class="flex justify-end border-t border-border-s px-4 py-2.5">
+          <bfd-btn kind="ghost" size="sm" [icon]="icPlus" (clicked)="add(e)">
+            Ajouter une recette
+          </bfd-btn>
+        </div>
+      </div>
+    }
+  </div>
+</div>
