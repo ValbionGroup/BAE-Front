@@ -21,14 +21,14 @@
       <bfd-btn kind="ghost" size="sm">Aujourd'hui</bfd-btn>
       <button
         type="button"
-        class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
+        class="flex h-7.5 w-7.5 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
       >
         <svg [lucideIcon]="icChevronRight" [size]="14" class="rotate-180" aria-hidden="true"></svg>
       </button>
       <div class="px-2 text-[15px] font-semibold -tracking-[0.2px] text-text">{{ monthName }}</div>
       <button
         type="button"
-        class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
+        class="flex h-7.5 w-7.5 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
       >
         <svg [lucideIcon]="icChevronRight" [size]="14" aria-hidden="true"></svg>
       </button>
@@ -66,7 +66,7 @@
           @if (ev) {
             <div
               [class]="
-                'flex flex-col gap-[3px] rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug ' +
+                'flex flex-col gap-0.75 rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug ' +
                 evBgClass(ev.kind)
               "
             >
