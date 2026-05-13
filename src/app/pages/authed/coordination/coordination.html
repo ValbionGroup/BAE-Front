@@ -8,7 +8,7 @@
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
   <!-- Algo result banner -->
   <div
-    class="mb-[18px] flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-[18px] py-3.5"
+    class="mb-4.5 flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-4.5 py-3.5"
   >
     <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15 text-ok">
       <svg [lucideIcon]="icCheck" [size]="18" aria-hidden="true"></svg>
@@ -17,14 +17,13 @@
       <div class="text-[13.5px] font-semibold text-text">Algorithme exécuté · il y a 4 min</div>
       <div class="mt-0.5 text-[12px] text-text-2">
         18 affectations · score moyen <span class="mono tnum text-text">83/100</span> · 2
-        verrouillées manuellement · 1 conflit résolu
+        verrouillées manuellement
       </div>
     </div>
-    <bfd-btn kind="ghost" size="sm" [icon]="icClock">Historique</bfd-btn>
   </div>
 
   <!-- Postes grid -->
-  <div class="mb-[22px] grid grid-cols-3 gap-3">
+  <div class="mb-5.5 grid grid-cols-3 gap-3">
     @for (p of postes; track p.id) {
       @let assigned = assignedTo(p.label);
       @let full = isFull(p);

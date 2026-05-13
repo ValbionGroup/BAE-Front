@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
   LucideChefHat,
-  LucideDynamicIcon,
+  LucideDynamicIcon, LucideEllipsis,
   LucideMoreHorizontal,
   LucidePencil,
   LucidePlus,
@@ -53,7 +53,7 @@ export class Recettes {
   protected readonly icSearch = LucideSearch;
   protected readonly icPlus = LucidePlus;
   protected readonly icEdit = LucidePencil;
-  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icMore = LucideEllipsis;
   protected readonly icStar = LucideStar;
 
   protected readonly filterTabs = ['Tout', 'Plats', 'Accompagnements', 'Boissons', 'Desserts'];
