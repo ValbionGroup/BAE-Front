@@ -3,10 +3,9 @@ import { Injectable, computed, effect, signal } from '@angular/core';
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type ResolvedTheme = 'dark' | 'light';
 
-const STORAGE_KEY = 'bae-theme';
-
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  private readonly STORAGE_KEY = 'bae_theme';
   private readonly _mode = signal<ThemeMode>(this.readInitialMode());
   private readonly _systemPref = signal<ResolvedTheme>(this.readSystemPref());
 
@@ -29,7 +28,7 @@ export class ThemeService {
       const resolved = this.resolved();
       document.documentElement.classList.toggle('light', resolved === 'light');
       try {
-        localStorage.setItem(STORAGE_KEY, this._mode());
+        localStorage.setItem(this.STORAGE_KEY, this._mode());
       } catch {
         /* storage unavailable — non-fatal */
       }
@@ -47,7 +46,7 @@ export class ThemeService {
 
   private readInitialMode(): ThemeMode {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
     } catch {
       /* storage unavailable */

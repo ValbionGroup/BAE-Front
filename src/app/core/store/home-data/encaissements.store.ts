@@ -13,13 +13,7 @@ export const EncaissementsStore = signalStore(
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: [
-          ],
-        });
-      }, 1500);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: [] });

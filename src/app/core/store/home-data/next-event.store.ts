@@ -12,11 +12,7 @@ export const NextEventStore = signalStore(
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      // Events are created from the Coordination module, not from the home page.
-      // When none exist yet, the API returns null and the page renders the empty state.
-      setTimeout(() => {
-        patchState(store, { loading: false, data: null });
-      }, 900);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: null });

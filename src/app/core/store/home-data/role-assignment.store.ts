@@ -12,11 +12,7 @@ export const RoleAssignmentStore = signalStore(
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      // A role is only assigned once a future event exists. With no upcoming
-      // event, the API returns null and the page renders the empty state.
-      setTimeout(() => {
-        patchState(store, { loading: false, data: null });
-      }, 1000);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: null });

@@ -1,24 +1,18 @@
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
-import { AgendaEvent } from './models';
+import { KpiTile } from './models';
 
-interface AgendaState {
+interface StatsState {
   readonly loading: boolean;
-  readonly data: readonly AgendaEvent[];
+  readonly data: readonly KpiTile[];
 }
 
-export const AgendaStore = signalStore(
+export const StatsStore = signalStore(
   { providedIn: 'root' },
-  withState<AgendaState>({ loading: true, data: [] }),
+  withState<StatsState>({ loading: true, data: [] }),
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: [
-          ],
-        });
-      }, 1200);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: [] });

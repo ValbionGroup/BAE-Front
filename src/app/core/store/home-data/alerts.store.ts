@@ -1,24 +1,19 @@
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
-import { KpiTile } from './models';
+import { LucideClock, LucideTriangleAlert, LucideTruck } from '@lucide/angular';
+import { AlertItem } from './models';
 
-interface StatsState {
+interface AlertsState {
   readonly loading: boolean;
-  readonly data: readonly KpiTile[];
+  readonly data: readonly AlertItem[];
 }
 
-export const StatsStore = signalStore(
+export const AlertsStore = signalStore(
   { providedIn: 'root' },
-  withState<StatsState>({ loading: true, data: [] }),
+  withState<AlertsState>({ loading: true, data: [] }),
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: [
-          ],
-        });
-      }, 600);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: [] });

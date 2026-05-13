@@ -1,24 +1,18 @@
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
-import { ActivityItem } from './models';
+import { AgendaEvent } from './models';
 
-interface ActivityFeedState {
+interface AgendaState {
   readonly loading: boolean;
-  readonly data: readonly ActivityItem[];
+  readonly data: readonly AgendaEvent[];
 }
 
-export const ActivityFeedStore = signalStore(
+export const AgendaStore = signalStore(
   { providedIn: 'root' },
-  withState<ActivityFeedState>({ loading: true, data: [] }),
+  withState<AgendaState>({ loading: true, data: [] }),
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: [
-          ],
-        });
-      }, 1100);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: [] });
