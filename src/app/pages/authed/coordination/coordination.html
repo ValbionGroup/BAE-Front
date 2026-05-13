@@ -55,6 +55,14 @@
               <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
               @if (m.lock) {
                 <svg [lucideIcon]="icLock" [size]="11" class="text-muted" aria-hidden="true"></svg>
+              } @else {
+                <svg
+                  [lucideIcon]="icX"
+                  [size]="12"
+                  class="text-muted cursor-pointer"
+                  (click)="removeAssignment(m.id, p.id); $event.stopPropagation()"
+                  aria-hidden="true"
+                ></svg>
               }
               <span [class]="'mono tnum text-[10.5px] ' + scoreClassSmall(m.score)">{{
                 m.score
@@ -63,10 +71,32 @@
           }
           @for (_ of vacantSlots(p); track $index) {
             <div
-              class="flex items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-[12px] text-muted"
+              class="flex items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-[12px] text-muted cursor-pointer"
+              (click)="togglePicker(p.id)"
             >
               <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
               <span>Affecter…</span>
+            </div>
+          }
+
+          @let pickerOpen = openPickerRoleId() === p.id;
+          @if (pickerOpen) {
+            <div class="mt-2 rounded-md border border-border p-2 bg-white dark:bg-gray-800">
+              @for (am of availableMembers(); track am.id) {
+                <div
+                  class="flex items-center justify-between gap-2 px-2 py-1 cursor-pointer hover:bg-surface-2"
+                  (click)="assignMember(am.id, p.id); $event.stopPropagation()"
+                >
+                  <div class="flex items-center gap-2">
+                    <bfd-avatar [name]="am.firstName + ' ' + am.lastName" [size]="20" />
+                    <div class="text-[12px] text-text">{{ am.firstName }} {{ am.lastName }}</div>
+                  </div>
+                  <div [class]="'mono tnum text-[11px] ' + scoreClassSmall(am.points)">{{ am.points }}</div>
+                </div>
+              }
+              @if (availableMembers().length === 0) {
+                <div class="px-2 py-1 text-[12px] text-muted">Aucun membre disponible</div>
+              }
             </div>
           }
         </div>

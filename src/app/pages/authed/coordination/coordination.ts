@@ -142,6 +142,7 @@ export class Coordination implements OnInit {
   protected readonly icSettings = LucideSettings;
   protected readonly icZap = LucideZap;
   protected readonly icCheck = LucideCheck;
+  protected readonly icX = LucideX;
   protected readonly icLock = LucideLock;
   protected readonly icPlus = LucidePlus;
   protected readonly icMore = LucideEllipsisVertical;
@@ -386,7 +387,7 @@ export class Coordination implements OnInit {
     });
   }
 
-  protected assignedTo(label: string): Array<{ name: string; lock: boolean; score: number }> {
+  protected assignedTo(label: string): Array<{ id: number; name: string; lock: boolean; score: number }> {
     const poste = this.postes.find(role => role.label === label);
     if (!poste) return [];
 
@@ -394,6 +395,7 @@ export class Coordination implements OnInit {
       .map(memberId => this.getMember(memberId))
       .filter((member): member is Member => member !== undefined)
       .map(member => ({
+        id: member.id,
         name: `${member.firstName} ${member.lastName}`,
         lock: member.points >= 90,
         score: member.points,
