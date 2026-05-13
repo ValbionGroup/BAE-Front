@@ -24,12 +24,6 @@ export const QuickActionsStore = signalStore(
         patchState(store, {
           loading: false,
           data: [
-            { label: 'Nouvelle commande', icon: LucideShoppingCart },
-            { label: 'Scanner un produit', icon: LucideScanLine },
-            { label: 'Encaisser Lydia', icon: LucideQrCode },
-            { label: 'Vérifier adhérent', icon: LucideUser },
-            { label: 'Ajouter au stock', icon: LucidePlus },
-            { label: 'Ouvrir un ticket', icon: LucideTicket },
           ],
         });
       }, 400);

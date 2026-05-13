@@ -16,27 +16,6 @@ export const ActivityFeedStore = signalStore(
         patchState(store, {
           loading: false,
           data: [
-            {
-              who: 'Maxime',
-              what: 'a marqué le lot ',
-              emphasis: '#L23-117',
-              tail: ' périmé',
-              when: 'il y a 4 min',
-            },
-            { who: 'Sarah', what: "a lancé l'algo de répartition", when: 'il y a 22 min' },
-            {
-              who: 'Tom',
-              what: "a uploadé une preuve d'achat ",
-              emphasis: 'Carrefour',
-              when: '14:02',
-            },
-            {
-              who: 'Inès',
-              what: 'a ouvert le ticket ',
-              emphasis: '#142',
-              tail: ' « scan code-barres »',
-              when: '11:48',
-            },
           ],
         });
       }, 1100);

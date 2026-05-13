@@ -12,34 +12,10 @@ export const NextEventStore = signalStore(
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
+      // Events are created from the Coordination module, not from the home page.
+      // When none exist yet, the API returns null and the page renders the empty state.
       setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: {
-            name: 'Soirée Hivernale',
-            date: 'Ven. 14 fév.',
-            start: '19:30',
-            days: 3,
-            members: 18,
-            prereg: 47,
-            preparation: [
-              { label: 'Recettes', value: '3/3', progress: 100, colorVar: 'var(--bae-ok)' },
-              {
-                label: 'Liste de courses',
-                value: '12/14',
-                progress: 86,
-                colorVar: 'var(--bae-blue)',
-              },
-              {
-                label: 'Postes affectés',
-                value: '11/18',
-                progress: 61,
-                colorVar: 'var(--bae-warn)',
-              },
-              { label: 'Précommandes', value: '47', progress: null, colorVar: 'var(--bae-red)' },
-            ],
-          },
-        });
+        patchState(store, { loading: false, data: null });
       }, 900);
     },
     clear(): void {

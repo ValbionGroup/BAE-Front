@@ -17,30 +17,6 @@ export const AlertsStore = signalStore(
         patchState(store, {
           loading: false,
           data: [
-            {
-              icon: LucideTriangleAlert,
-              title: 'Lot #L23-117 périmé',
-              sub: 'Saucisses Strasbourg · 6 pièces · DLC 09/02',
-              action: 'Retirer',
-              bgClass: 'bg-danger-soft',
-              fgClass: 'text-danger',
-            },
-            {
-              icon: LucideClock,
-              title: '2 réponses présence manquantes',
-              sub: 'Soirée Hivernale · J-3 · relance auto activée',
-              action: 'Relancer',
-              bgClass: 'bg-warn-soft',
-              fgClass: 'text-warn',
-            },
-            {
-              icon: LucideTruck,
-              title: 'Liste de courses prête',
-              sub: '14 produits · 2 enseignes · ~218 €',
-              action: 'Ouvrir',
-              bgClass: 'bg-blue-soft',
-              fgClass: 'text-blue',
-            },
           ],
         });
       }, 800);
