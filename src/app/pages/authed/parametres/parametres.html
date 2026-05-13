@@ -1,0 +1,119 @@
+<div class="flex h-full overflow-hidden">
+  <!-- LEFT: section nav -->
+  <aside class="w-60 shrink-0 overflow-y-auto border-r border-border-s px-3 py-4">
+    @for (s of sections; track s.id) {
+      <div
+        (click)="activeSection.set(s.id)"
+        [class]="
+          'mb-px flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-[13px] ' +
+          (s.id === activeSection() ? 'bg-surface-2 text-text' : 'bg-transparent text-text-2')
+        "
+      >
+        <svg
+          [lucideIcon]="s.icon"
+          [size]="15"
+          [class]="s.id === activeSection() ? 'text-blue' : 'text-muted'"
+          aria-hidden="true"
+        ></svg>
+        <span>{{ s.l }}</span>
+      </div>
+    }
+  </aside>
+
+  <!-- RIGHT: settings content -->
+  <div class="flex-1 overflow-y-auto px-8 pt-6 pb-8">
+    <h2 class="m-0 mb-1 text-[19px] font-semibold -tracking-[0.2px] text-text">Profil</h2>
+    <p class="m-0 mb-5 text-[12.5px] text-muted">Mets à jour tes infos et tes préférences.</p>
+
+    <!-- Avatar row -->
+    <div class="mb-5 flex items-center gap-4">
+      <bfd-avatar name="Léa Marchand" [size]="64" />
+      <div>
+        <div class="text-sm font-semibold text-text">Léa Marchand</div>
+        <div class="mt-0.5 text-xs text-muted">Trésorière · ENSEIRB-MATMECA · 2A INFO</div>
+      </div>
+      <div class="flex-1"></div>
+      <bfd-btn kind="ghost" size="sm" [icon]="icUpload">Changer la photo</bfd-btn>
+    </div>
+
+    <div class="mb-5 grid grid-cols-2 gap-3.5">
+      <bfd-field label="Prénom"><bfd-input value="Léa" /></bfd-field>
+      <bfd-field label="Nom"><bfd-input value="Marchand" /></bfd-field>
+      <bfd-field label="Email"
+        ><bfd-input [icon]="icMail" value="lea.marchand@enseirb-matmeca.fr"
+      /></bfd-field>
+      <bfd-field label="Promo"><bfd-input value="2026 — Filière INFO" /></bfd-field>
+    </div>
+
+    <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Sécurité</h3>
+    <div class="mb-5 rounded-md border border-border-s bg-surface">
+      <div class="flex items-center gap-3.5 p-4">
+        <div class="flex-1">
+          <div class="text-[13px] text-text">Mot de passe</div>
+          <div class="mt-0.5 text-[11.5px] text-muted">Modifié il y a 4 mois</div>
+        </div>
+        <bfd-btn kind="ghost" size="sm">Modifier</bfd-btn>
+      </div>
+      <div class="flex items-center gap-3.5 border-t border-border-s p-4">
+        <div class="flex-1">
+          <div class="text-[13px] text-text">Double authentification (2FA)</div>
+          <div class="mt-0.5 text-[11.5px] text-muted">TOTP · Google Authenticator</div>
+        </div>
+        <bfd-toggle [on]="twofa()" (change)="twofa.set($event)" />
+      </div>
+      <div class="flex items-center gap-3.5 border-t border-border-s p-4">
+        <div class="flex-1">
+          <div class="text-[13px] text-text">Sessions actives</div>
+          <div class="mt-0.5 text-[11.5px] text-muted">Mac · Chrome · Bordeaux (cette session)</div>
+        </div>
+        <bfd-btn kind="ghost" size="sm">Voir tout</bfd-btn>
+      </div>
+    </div>
+
+    <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Affichage</h3>
+    <div class="mb-5 grid grid-cols-3 gap-2.5">
+      @for (opt of themeOptions; track opt.id) {
+        @let active = activeTheme() === opt.id;
+        <div
+          (click)="setTheme(opt.id)"
+          [class]="
+            'cursor-pointer rounded-md p-3.5 border-[1.5px] ' +
+            (active ? 'border-blue' : 'border-border')
+          "
+          [style.background]="
+            active
+              ? 'color-mix(in oklch, var(--bae-blue) 6%, var(--bae-surface))'
+              : 'var(--bae-surface)'
+          "
+        >
+          <svg
+            [lucideIcon]="opt.icon"
+            [size]="18"
+            [class]="'mb-2 ' + (active ? 'text-blue' : 'text-text-2')"
+            aria-hidden="true"
+          ></svg>
+          <div class="text-[13px] font-medium text-text">{{ opt.label }}</div>
+          <div class="mt-0.5 text-[11px] text-muted">{{ opt.sub }}</div>
+        </div>
+      }
+    </div>
+
+    <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Modules (admin)</h3>
+    <div class="rounded-md border border-border-s bg-surface">
+      @for (m of modules; track m.l; let i = $index) {
+        <div [class]="'flex items-center gap-3.5 p-4 ' + (i ? 'border-t border-border-s' : '')">
+          <div class="flex-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[13px] text-text">{{ m.l }}</span>
+              @if (m.beta) {
+                <bfd-badge kind="ghost">Bêta</bfd-badge>
+              }
+            </div>
+            <div class="mt-0.5 text-[11.5px] text-muted">{{ m.s }}</div>
+          </div>
+          <bfd-toggle [on]="m.enabled" />
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,7 +1,7 @@
 @if (modals().length > 0) {
   <div class="fixed inset-0 z-50" role="presentation">
     <div
-      class="absolute inset-0 bg-black/40"
+      class="absolute inset-0 bg-black/55 backdrop-blur-sm"
       aria-hidden="true"
       (click)="closeTop()"
     ></div>
@@ -13,18 +13,12 @@
           [attr.data-modal-id]="modal.id"
           [style.transform]="stackTransform(i, total)"
           [style.z-index]="50 + i"
-          class="absolute w-full max-w-md pointer-events-auto"
+          class="absolute w-full max-w-[560px] pointer-events-auto"
         >
           @if (modal.type === 'delete') {
-            <bfd-delete-modal
-              [config]="asDelete(modal)"
-              (close)="close(modal.id)"
-            />
+            <bfd-delete-modal [config]="asDelete(modal)" (close)="close(modal.id)" />
           } @else {
-            <bfd-message-modal
-              [config]="asMessage(modal)"
-              (close)="close(modal.id)"
-            />
+            <bfd-message-modal [config]="asMessage(modal)" (close)="close(modal.id)" />
           }
         </div>
       }

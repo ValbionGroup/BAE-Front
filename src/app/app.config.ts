@@ -20,12 +20,15 @@ import { AuthEffects } from '#core/store/auth/auth.effect';
 import { storeConfig } from '#app/app-store.config';
 import { rehydrateAuth } from '#core/store/auth/auth.actions';
 import { Store } from '@ngrx/store';
+import { ThemeService } from '#core/services/theme/theme-service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(() => {
       const store = inject(Store);
       store.dispatch(rehydrateAuth());
+      // Instantiate ThemeService eagerly so the .light class is applied before first paint.
+      inject(ThemeService);
     }),
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),

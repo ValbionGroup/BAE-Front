@@ -80,7 +80,9 @@ export class ModalContainer {
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    if (ke.shiftKey ? this.document.activeElement === first : this.document.activeElement === last) {
+    if (
+      ke.shiftKey ? this.document.activeElement === first : this.document.activeElement === last
+    ) {
       event.preventDefault();
       (ke.shiftKey ? last : first).focus();
     }

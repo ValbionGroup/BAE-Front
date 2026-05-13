@@ -1,0 +1,178 @@
+<div class="grid h-full grid-cols-[1fr_360px]">
+  <!-- LEFT: products -->
+  <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-5">
+    <!-- Category tabs -->
+    <div class="flex flex-wrap items-center gap-2">
+      @for (c of cats; track c; let i = $index) {
+        <button
+          type="button"
+          (click)="activeCat.set(i)"
+          [class]="
+            'inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold ' +
+            (i === activeCat()
+              ? 'border-blue bg-blue text-white'
+              : 'border-border bg-surface text-text-2')
+          "
+        >
+          {{ c }}
+          <span
+            [class]="
+              'tnum rounded-lg px-2 py-px text-[11px] ' +
+              (i === activeCat() ? 'bg-white/[.18] text-white/90' : 'bg-surface-2 text-muted')
+            "
+            >{{ itemsInCat(c) }}</span
+          >
+        </button>
+      }
+      <div class="flex-1"></div>
+      <bfd-btn kind="outline" size="md" [icon]="icSearch">Rechercher</bfd-btn>
+    </div>
+
+    <!-- Product grid -->
+    <div class="grid flex-1 grid-cols-4 content-start gap-3">
+      @for (it of items; track it.n) {
+        @let out = isOut(it.n);
+        @let low = isLowStock(it.n);
+        <button
+          type="button"
+          [disabled]="out"
+          [class]="
+            'relative flex min-h-[110px] flex-col gap-3 rounded-lg border p-3.5 text-left transition-transform ' +
+            (out
+              ? 'cursor-not-allowed opacity-50 bg-transparent border-border-s'
+              : it.tag === 'best'
+                ? 'cursor-pointer border-red'
+                : 'cursor-pointer border-border bg-surface')
+          "
+          [style.background]="
+            it.tag === 'best' && !out
+              ? 'linear-gradient(135deg, var(--bae-surface), color-mix(in oklch, var(--bae-red) 18%, var(--bae-surface)))'
+              : ''
+          "
+        >
+          @if (it.tag && !out) {
+            <span
+              [class]="
+                'absolute top-2.5 right-2.5 rounded-lg px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ' +
+                tagBgClass(it.tag)
+              "
+              >{{ tagLabel(it.tag) }}</span
+            >
+          }
+          <div class="flex-1 text-[15px] font-semibold leading-tight text-text">{{ it.n }}</div>
+          <div class="flex items-end justify-between">
+            <span class="tnum text-[22px] font-semibold -tracking-[0.5px] text-text">
+              {{ formatPrice(it.p) }}
+              <span class="text-[13px] font-medium text-muted">€</span>
+            </span>
+            @if (out) {
+              <bfd-badge kind="ghost">Rupture</bfd-badge>
+            } @else if (low) {
+              <bfd-badge kind="warn" [dot]="true">3 rest.</bfd-badge>
+            }
+          </div>
+        </button>
+      }
+    </div>
+
+    <!-- Hints -->
+    <div
+      class="flex items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted"
+    >
+      <span><bfd-kbd>F1</bfd-kbd> · catégorie suivante</span>
+      <span><bfd-kbd>+</bfd-kbd> / <bfd-kbd>−</bfd-kbd> · quantité</span>
+      <span><bfd-kbd>Entrée</bfd-kbd> · encaisser</span>
+      <span class="flex-1"></span>
+      <span>Caissier·ère <span class="text-text">Léa M.</span></span>
+      <span>·</span>
+      <span>Tickets jour <span class="tnum text-text">87</span></span>
+    </div>
+  </div>
+
+  <!-- RIGHT: cart -->
+  <aside class="flex flex-col border-l border-border-s bg-surface">
+    <!-- Header -->
+    <div class="flex items-center gap-2.5 border-b border-border-s p-4">
+      <div
+        class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
+      >
+        <svg [lucideIcon]="icCart" [size]="18" aria-hidden="true"></svg>
+      </div>
+      <div class="flex-1">
+        <div class="text-sm font-semibold text-text">Ticket #2026-0188</div>
+        <div class="text-[11px] text-muted">4 articles · 7 quantités</div>
+      </div>
+      <bfd-btn kind="ghost" size="sm" [icon]="icX"></bfd-btn>
+    </div>
+
+    <!-- Member -->
+    <div class="m-4 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3">
+      <span
+        class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ok-soft text-ok"
+      >
+        <svg [lucideIcon]="icCheck" [size]="16" stroke-width="2.3" aria-hidden="true"></svg>
+      </span>
+      <div class="flex-1">
+        <div class="text-[12.5px] font-medium text-text">Adhérent·e — Tom Bessière</div>
+        <div class="text-[10.5px] text-muted">2A · cotisation valide jusqu'au 31/08/2026</div>
+      </div>
+      <bfd-btn kind="ghost" size="sm">Retirer</bfd-btn>
+    </div>
+
+    <!-- Items -->
+    <div class="flex-1 overflow-y-auto px-4">
+      @for (it of cart(); track it.n; let last = $last) {
+        <div
+          [class]="'flex items-center gap-2.5 py-2.5 ' + (last ? '' : 'border-b border-border-s')"
+        >
+          <span
+            class="tnum inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-border bg-surface-2 text-[13px] font-semibold text-text"
+          >
+            {{ it.q }}
+          </span>
+          <div class="min-w-0 flex-1">
+            <div
+              class="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+            >
+              {{ it.n }}
+            </div>
+            <div class="tnum text-[11px] text-muted">{{ formatPrice(it.p) }} € × {{ it.q }}</div>
+          </div>
+          <span class="tnum text-[13px] font-semibold text-text"
+            >{{ formatPrice(it.p * it.q) }} €</span
+          >
+        </div>
+      }
+    </div>
+
+    <!-- Totals + payment -->
+    <div class="border-t border-border-s bg-bg p-4">
+      <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
+        <div class="flex justify-between text-text-2">
+          <span>Sous-total</span>
+          <span class="tnum">{{ formatPrice(subtotal()) }} €</span>
+        </div>
+        <div class="flex justify-between text-ok">
+          <span>Remise adhérent·e</span>
+          <span class="tnum">−{{ formatPrice(remise) }} €</span>
+        </div>
+      </div>
+      <div class="flex items-baseline justify-between border-t border-dashed border-border py-3">
+        <span class="text-sm text-text-2">À encaisser</span>
+        <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
+          >{{ formatPrice(total()) }} €</span
+        >
+      </div>
+
+      <div class="mt-2.5 grid grid-cols-2 gap-2">
+        <bfd-btn kind="secondary" size="lg" [icon]="icEuro">Espèces</bfd-btn>
+        <bfd-btn kind="secondary" size="lg" [icon]="icQr">Lydia</bfd-btn>
+      </div>
+      <div class="mt-2">
+        <bfd-btn kind="primary" size="xl" [full]="true" [iconRight]="icArrowRight">
+          Encaisser · {{ formatPrice(total()) }} €
+        </bfd-btn>
+      </div>
+    </div>
+  </aside>
+</div>

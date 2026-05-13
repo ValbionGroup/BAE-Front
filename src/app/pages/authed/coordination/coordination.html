@@ -1,8 +1,145 @@
-<main class="p-6 md:p-8">
-  <div>
-    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Coordination</h1>
-    <p class="text-gray-600 dark:text-gray-400"></p>
-  </div>
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <div class="grid grid-cols-[1fr_360px] gap-[18px]">
+    <!-- LEFT -->
+    <div class="flex flex-col gap-[18px]">
+      <!-- KPIs -->
+      <div class="grid grid-cols-4 gap-3">
+        @for (s of stats; track s.label) {
+          <bfd-card [padding]="14">
+            <div class="text-[11px] text-muted">{{ s.label }}</div>
+            <div [class]="'tnum mt-1 text-[22px] font-semibold -tracking-[0.3px] text-' + s.kind">
+              {{ s.value }}
+            </div>
+          </bfd-card>
+        }
+      </div>
 
-  <div></div>
-</main>
+      <!-- Algo bar -->
+      <div class="flex items-center gap-3 rounded-md border border-border-s bg-surface px-4 py-3.5">
+        <div
+          class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-blue-soft text-blue"
+        >
+          <svg [lucideIcon]="icZap" [size]="18" aria-hidden="true"></svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-[13px] font-semibold text-text">Algorithme de répartition</div>
+          <div class="text-[11.5px] text-muted">
+            Affecte automatiquement les postes selon préférences + historique. Score moyen attendu :
+            <span class="text-text font-medium">{{ affectedScore() }}/100</span>
+          </div>
+        </div>
+        <bfd-btn kind="outline" size="md">Paramètres</bfd-btn>
+        <bfd-btn
+          kind="primary"
+          size="md"
+          [icon]="icZap"
+          (clicked)="runAlgo()"
+          [disabled]="algoRunning()"
+        >
+          @if (algoRunning()) {
+            Calcul…
+          } @else {
+            Lancer l'algo
+          }
+        </bfd-btn>
+      </div>
+
+      <!-- Roles grid -->
+      <div class="grid grid-cols-2 gap-[18px]">
+        @for (role of roles; track role.id) {
+          <bfd-card [padding]="0">
+            <div class="flex items-center gap-2.5 border-b border-border-s px-4 py-3">
+              <div
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-2 text-text"
+              >
+                <svg [lucideIcon]="role.icon" [size]="15" aria-hidden="true"></svg>
+              </div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold text-text">{{ role.name }}</div>
+                <div class="text-[11px] text-muted">
+                  {{ role.assigned.length }} / {{ role.required }} postes
+                </div>
+              </div>
+              <bfd-badge [kind]="roleStatus(role).kind">{{ roleStatus(role).label }}</bfd-badge>
+            </div>
+
+            <div class="flex flex-col gap-1.5 p-3">
+              @for (a of role.assigned; track a.name) {
+                <div class="flex items-center gap-2.5 rounded-md bg-surface-2 px-2.5 py-2">
+                  <bfd-avatar [name]="a.name" [size]="22" />
+                  <span class="flex-1 text-[12.5px] text-text">{{ a.name }}</span>
+                  <span [class]="'tnum text-[11.5px] font-medium ' + scoreColor(a.score)">{{
+                    a.score
+                  }}</span>
+                  @if (a.locked) {
+                    <svg
+                      [lucideIcon]="icLock"
+                      [size]="13"
+                      class="text-muted"
+                      aria-hidden="true"
+                    ></svg>
+                  }
+                  <svg
+                    [lucideIcon]="icMore"
+                    [size]="14"
+                    class="text-muted cursor-pointer"
+                    aria-hidden="true"
+                  ></svg>
+                </div>
+              }
+              @for (slot of vacant(role); track $index) {
+                <div
+                  class="flex items-center gap-2.5 rounded-md border border-dashed border-border px-2.5 py-2 text-[12.5px] text-muted"
+                >
+                  <div
+                    class="h-[22px] w-[22px] rounded-full border border-dashed border-border"
+                  ></div>
+                  <span class="flex-1">Poste vacant</span>
+                  <bfd-btn kind="ghost" size="sm" [icon]="icPlus">Affecter</bfd-btn>
+                </div>
+              }
+            </div>
+          </bfd-card>
+        }
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <aside class="flex flex-col gap-3">
+      <div class="text-[13px] font-semibold text-text">Disponibles · pas encore affectés</div>
+      <div class="flex flex-col rounded-md border border-border-s bg-surface">
+        @for (m of available; track m.name; let last = $last) {
+          <div
+            [class]="
+              'flex items-center gap-2.5 px-3 py-2.5 ' + (last ? '' : 'border-b border-border-s')
+            "
+          >
+            <bfd-avatar [name]="m.name" [size]="26" />
+            <div class="min-w-0 flex-1">
+              <div class="text-[12.5px] font-medium text-text">{{ m.name }}</div>
+              <div class="text-[10.5px] text-muted">
+                {{ m.role }} · préfère <span class="text-text-2">{{ m.preferred }}</span>
+              </div>
+            </div>
+            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight">Affecter</bfd-btn>
+          </div>
+        }
+      </div>
+
+      <bfd-card>
+        <div class="flex items-start gap-2.5">
+          <svg [lucideIcon]="icAlert" [size]="15" class="mt-0.5 text-warn" aria-hidden="true"></svg>
+          <div class="text-[12px] text-text-2">
+            <div class="font-medium text-text">2 conflits détectés</div>
+            <div class="mt-1">
+              Yanis et Tom partagent la zone B en caisse — l'algo recommande de les séparer.
+            </div>
+            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight" class="mt-2 inline-block"
+              >Voir</bfd-btn
+            >
+          </div>
+        </div>
+      </bfd-card>
+    </aside>
+  </div>
+</div>

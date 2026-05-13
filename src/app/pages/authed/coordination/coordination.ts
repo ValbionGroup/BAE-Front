@@ -1,169 +1,151 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
-  LucideDynamicIcon,
-  LucidePlus,
-  LucideX,
+  LucideArrowRight,
   LucideCheck,
+  LucideDynamicIcon,
+  LucideIconInput,
+  LucideLock,
+  LucideMoreHorizontal,
+  LucidePlus,
+  LucideShoppingCart,
+  LucideTriangleAlert,
   LucideUsers,
-  LucideAlertTriangle,
+  LucideZap,
 } from '@lucide/angular';
-import { EventsService } from '#core/services/events/events-service';
-import { Member, Role, EventData } from '#core/models/coordination.model';
+import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { Btn } from '#shared/components/ui/btn/btn';
+import { Badge } from '#shared/components/ui/badge/badge';
+import { Card } from '#shared/components/ui/card/card';
+import { Avatar } from '#shared/components/ui/avatar/avatar';
 
-function findNextEventId(events: EventData[]): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const next = events.find(ed => ed.event.date >= today);
-  return next?.event.id ?? events[events.length - 1].event.id;
+interface Role {
+  readonly id: string;
+  readonly name: string;
+  readonly icon: LucideIconInput;
+  readonly required: number;
+  readonly assigned: readonly { name: string; locked: boolean; score: number }[];
+}
+
+interface Member {
+  readonly name: string;
+  readonly role: string;
+  readonly preferred: string;
+  readonly available: boolean;
 }
 
 @Component({
   selector: 'bfd-coordination',
-  imports: [
-    LucideDynamicIcon,
-    LucideUsers,
-    LucideAlertTriangle,
-    LucideCheck,
-    LucidePlus,
-    LucideX,
-  ],
+  imports: [Btn, Badge, Card, Avatar, LucideDynamicIcon],
   templateUrl: './coordination.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Coordination {
-  private readonly eventsService = inject(EventsService);
+  constructor() {
+    inject(PageHeaderService).set({
+      title: 'Coordination',
+      subtitle: 'Soirée Hivernale · 18 postes · algo prêt',
+      breadcrumb: ['Préparation', 'Coordination'],
+      activeNavId: 'coord',
+    });
+  }
 
-  protected readonly eventsData = this.eventsService.events;
-  protected selectedEventId = signal<string>(findNextEventId(this.eventsData()));
-  protected openPickerRoleId = signal<string | null>(null);
+  protected readonly icPlus = LucidePlus;
+  protected readonly icZap = LucideZap;
+  protected readonly icCheck = LucideCheck;
+  protected readonly icLock = LucideLock;
+  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icArrowRight = LucideArrowRight;
+  protected readonly icAlert = LucideTriangleAlert;
 
-  protected selectedEventData = computed(() =>
-    this.eventsData().find(ed => ed.event.id === this.selectedEventId())
-  );
+  protected readonly algoRunning = signal(false);
+  protected readonly affectedScore = signal(88);
 
-  protected presentMembers = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return [];
-    const members = this.eventsService.members();
-    return members.filter(m => eventData.presentMemberIds.includes(m.id));
+  protected readonly stats = [
+    { label: 'Postes affectés', value: '11/18', kind: 'warn' as const },
+    { label: 'Score moyen', value: '88/100', kind: 'ok' as const },
+    { label: 'Verrouillés', value: '4', kind: 'blue' as const },
+    { label: 'Conflits', value: '2', kind: 'danger' as const },
+  ];
+
+  protected readonly roles: readonly Role[] = [
+    {
+      id: 'cuisine',
+      name: 'Cuisine',
+      icon: LucideUsers,
+      required: 4,
+      assigned: [
+        { name: 'Maxime Roussel', locked: true, score: 94 },
+        { name: 'Inès Berthier', locked: false, score: 88 },
+        { name: 'Hugo Martelli', locked: false, score: 76 },
+      ],
+    },
+    {
+      id: 'caisse',
+      name: 'Caisse',
+      icon: LucideShoppingCart,
+      required: 3,
+      assigned: [
+        { name: 'Léa Marchand', locked: true, score: 96 },
+        { name: 'Tom Bessière', locked: true, score: 92 },
+        { name: 'Yanis Demir', locked: false, score: 81 },
+      ],
+    },
+    {
+      id: 'service',
+      name: 'Service salle',
+      icon: LucideUsers,
+      required: 4,
+      assigned: [
+        { name: 'Sarah Kamiyana', locked: true, score: 90 },
+        { name: 'Romain Joly', locked: false, score: 78 },
+      ],
+    },
+    {
+      id: 'bar',
+      name: 'Bar',
+      icon: LucideUsers,
+      required: 3,
+      assigned: [
+        { name: 'Pierre Lavigne', locked: false, score: 84 },
+        { name: 'Camille Astier', locked: false, score: 79 },
+        { name: 'Élise Pradel', locked: false, score: 72 },
+      ],
+    },
+  ];
+
+  protected readonly available: readonly Member[] = [
+    { name: 'Camille Roy', role: 'Membre', preferred: 'Service', available: true },
+    { name: 'Antoine Lefèvre', role: 'Membre', preferred: 'Bar', available: true },
+    { name: 'Julie Dumas', role: 'Membre', preferred: 'Cuisine', available: true },
+    { name: 'Nathan Picard', role: 'Membre', preferred: 'Caisse', available: true },
+  ];
+
+  protected readonly progress = computed(() => {
+    const total = this.roles.reduce((s, r) => s + r.required, 0);
+    const filled = this.roles.reduce((s, r) => s + r.assigned.length, 0);
+    return Math.round((filled / total) * 100);
   });
 
-  protected memberRoleMap = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return new Map<string, string>();
-    const map = new Map<string, string>();
-    for (const role of eventData.roles) {
-      for (const memberId of role.assignedMemberIds) {
-        map.set(memberId, role.name);
-      }
-    }
-    return map;
-  });
-
-  protected assignedMemberIds = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return new Set<string>();
-    const ids = new Set<string>();
-    for (const role of eventData.roles) {
-      for (const id of role.assignedMemberIds) ids.add(id);
-    }
-    return ids;
-  });
-
-  protected availableMembers = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return [];
-    const assigned = this.assignedMemberIds();
-    const members = this.eventsService.members();
-    return members.filter(m =>
-      eventData.presentMemberIds.includes(m.id) && !assigned.has(m.id)
-    );
-  });
-
-  protected unfulfilledCount = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return 0;
-    return eventData.roles.filter(r => r.assignedMemberIds.length < r.requiredCount).length;
-  });
-
-  protected isFulfilled(role: Role): boolean {
-    return role.assignedMemberIds.length >= role.requiredCount;
+  protected scoreColor(score: number): string {
+    if (score >= 90) return 'text-ok';
+    if (score >= 75) return 'text-blue';
+    return 'text-warn';
   }
 
-  protected isPast(date: Date): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
+  protected roleStatus(role: Role): { label: string; kind: 'ok' | 'warn' | 'danger' } {
+    const filled = role.assigned.length;
+    if (filled >= role.required) return { label: 'Complet', kind: 'ok' };
+    if (filled >= role.required - 1) return { label: 'Presque', kind: 'warn' };
+    return { label: 'Incomplet', kind: 'danger' };
   }
 
-  protected getMember(id: string): Member | undefined {
-    return this.eventsService.members().find(m => m.id === id);
+  protected runAlgo(): void {
+    this.algoRunning.set(true);
+    setTimeout(() => this.algoRunning.set(false), 1500);
   }
 
-  protected getMemberInitials(member: Member): string {
-    return member.firstName[0] + member.lastName[0];
-  }
-
-  protected getAvatarColor(memberId: string): string {
-    return this.eventsService.getAvatarColor(memberId);
-  }
-
-  protected formatDate(date: Date): string {
-    return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  }
-
-  protected formatEventDate(date: Date): string {
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-  }
-
-  protected getEmptySlots(role: Role): number[] {
-    const count = Math.max(0, role.requiredCount - role.assignedMemberIds.length);
-    return Array.from({ length: count }, (_, i) => i);
-  }
-
-  protected getEventCardClass(ed: EventData): string {
-    if (this.selectedEventId() === ed.event.id) {
-      return 'border-violet-500 bg-violet-50 dark:bg-violet-950/30 text-violet-900 dark:text-violet-100 shadow-sm';
-    }
-    if (this.isPast(ed.event.date)) {
-      return 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600';
-    }
-    return 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-violet-300 dark:hover:border-violet-700 hover:shadow-sm';
-  }
-
-  protected getRoleCardClass(role: Role): string {
-    return this.isFulfilled(role)
-      ? 'border-emerald-200 dark:border-emerald-800/60'
-      : 'border-red-200 dark:border-red-800/60';
-  }
-
-  protected getRoleHeaderClass(role: Role): string {
-    return this.isFulfilled(role)
-      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
-      : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200';
-  }
-
-  protected getRoleCountClass(role: Role): string {
-    return this.isFulfilled(role)
-      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
-      : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300';
-  }
-
-  protected selectEvent(id: string): void {
-    this.selectedEventId.set(id);
-    this.openPickerRoleId.set(null);
-  }
-
-  protected togglePicker(roleId: string): void {
-    this.openPickerRoleId.update(current => current === roleId ? null : roleId);
-  }
-
-  protected assignMember(memberId: string, roleId: string): void {
-    this.eventsService.assignMember(this.selectedEventId(), roleId, memberId);
-    this.openPickerRoleId.set(null);
-  }
-
-  protected removeAssignment(memberId: string, roleId: string): void {
-    this.eventsService.removeAssignment(this.selectedEventId(), roleId, memberId);
+  protected vacant(role: Role): readonly null[] {
+    const n = Math.max(0, role.required - role.assigned.length);
+    return Array.from({ length: n }, () => null);
   }
 }

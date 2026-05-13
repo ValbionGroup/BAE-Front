@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import {
   LucideAlertTriangle,
   LucideCheckCircle,
@@ -15,6 +8,7 @@ import {
   LucideX,
   LucideXCircle,
 } from '@lucide/angular';
+import { Btn } from '#shared/components/ui/btn/btn';
 import { MessageModalConfig, ModalAction } from '../modal.models';
 
 const NOOP = () => {};
@@ -25,20 +19,20 @@ const TYPE_META: Record<
 > = {
   error: {
     icon: LucideXCircle,
-    iconClass: 'text-red-500',
-    iconBg: 'bg-red-50 dark:bg-red-500/10',
+    iconClass: 'text-danger',
+    iconBg: 'bg-danger-soft',
     defaultActions: [{ label: 'Dismiss', action: NOOP, variant: 'secondary' }],
   },
   success: {
     icon: LucideCheckCircle,
-    iconClass: 'text-green-500',
-    iconBg: 'bg-green-50 dark:bg-green-500/10',
+    iconClass: 'text-ok',
+    iconBg: 'bg-ok-soft',
     defaultActions: [{ label: 'OK', action: NOOP, variant: 'primary' }],
   },
   warning: {
     icon: LucideAlertTriangle,
-    iconClass: 'text-amber-500',
-    iconBg: 'bg-amber-50 dark:bg-amber-500/10',
+    iconClass: 'text-warn',
+    iconBg: 'bg-warn-soft',
     defaultActions: [
       { label: 'Cancel', action: NOOP, variant: 'secondary' },
       { label: 'Confirm', action: NOOP, variant: 'primary' },
@@ -46,15 +40,15 @@ const TYPE_META: Record<
   },
   info: {
     icon: LucideInfo,
-    iconClass: 'text-blue-500',
-    iconBg: 'bg-blue-50 dark:bg-blue-500/10',
+    iconClass: 'text-blue',
+    iconBg: 'bg-blue-soft',
     defaultActions: [{ label: 'Close', action: NOOP, variant: 'secondary' }],
   },
 };
 
 @Component({
   selector: 'bfd-message-modal',
-  imports: [LucideDynamicIcon, LucideX],
+  imports: [LucideDynamicIcon, LucideX, Btn],
   templateUrl: './message-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -64,9 +58,7 @@ export class MessageModal {
 
   protected readonly showDetails = signal(false);
   protected readonly meta = computed(() => TYPE_META[this.config().type]);
-  protected readonly actions = computed(
-    () => this.config().actions ?? this.meta().defaultActions,
-  );
+  protected readonly actions = computed(() => this.config().actions ?? this.meta().defaultActions);
 
   protected onClose(): void {
     this.close.emit();
@@ -78,6 +70,6 @@ export class MessageModal {
   }
 
   protected toggleDetails(): void {
-    this.showDetails.update(v => !v);
+    this.showDetails.update((v) => !v);
   }
 }

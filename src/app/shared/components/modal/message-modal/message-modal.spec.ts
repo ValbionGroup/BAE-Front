@@ -34,7 +34,8 @@ describe('MessageModal', () => {
   it('emits close when the × button is clicked', () => {
     const spy = vi.fn();
     component.close.subscribe(spy);
-    const closeBtn: HTMLButtonElement = fixture.nativeElement.querySelector('[aria-label="Fermer"]');
+    const closeBtn: HTMLButtonElement =
+      fixture.nativeElement.querySelector('[aria-label="Fermer"]');
     closeBtn.click();
     expect(spy).toHaveBeenCalled();
   });
@@ -47,13 +48,13 @@ describe('MessageModal', () => {
     fixture.componentRef.setInput('config', { ...baseConfig, details: 'stack trace...' });
     fixture.detectChanges();
     const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-    const toggle = Array.from(buttons).find(b => b.textContent?.includes('détails'));
+    const toggle = Array.from(buttons).find((b) => b.textContent?.includes('détails'));
     expect(toggle).toBeTruthy();
   });
 
   it('renders the default Dismiss action for error type', () => {
     const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-    const dismiss = Array.from(buttons).find(b => b.textContent?.trim() === 'Dismiss');
+    const dismiss = Array.from(buttons).find((b) => b.textContent?.trim() === 'Dismiss');
     expect(dismiss).toBeTruthy();
   });
 
@@ -61,7 +62,9 @@ describe('MessageModal', () => {
     const spy = vi.fn();
     component.close.subscribe(spy);
     const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-    const dismiss = Array.from(buttons).find(b => b.textContent?.trim() === 'Dismiss') as HTMLButtonElement;
+    const dismiss = Array.from(buttons).find(
+      (b) => b.textContent?.trim() === 'Dismiss',
+    ) as HTMLButtonElement;
     dismiss.click();
     expect(spy).toHaveBeenCalled();
   });
@@ -73,7 +76,7 @@ describe('MessageModal', () => {
     });
     fixture.detectChanges();
     const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-    const custom = Array.from(buttons).find(b => b.textContent?.trim() === 'Custom');
+    const custom = Array.from(buttons).find((b) => b.textContent?.trim() === 'Custom');
     expect(custom).toBeTruthy();
   });
 
@@ -85,7 +88,9 @@ describe('MessageModal', () => {
     });
     fixture.detectChanges();
     const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-    const btn = Array.from(buttons).find(b => b.textContent?.trim() === 'Do it') as HTMLButtonElement;
+    const btn = Array.from(buttons).find(
+      (b) => b.textContent?.trim() === 'Do it',
+    ) as HTMLButtonElement;
     btn.click();
     expect(actionSpy).toHaveBeenCalled();
   });

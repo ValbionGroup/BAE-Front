@@ -13,18 +13,20 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   ],
   host: { '[attr.id]': 'null' },
   template: `
-    <input
-      [id]="id()"
-      [type]="type()"
-      [placeholder]="placeholder()"
-      [autocomplete]="autocomplete()"
-      [attr.aria-describedby]="errorId() ?? null"
-      [attr.aria-invalid]="invalid() ? 'true' : null"
-      [value]="value"
-      (input)="onInput($event)"
-      (blur)="onTouched()"
-      [class]="classes()"
-    />
+    <div [class]="wrapperClasses()">
+      <input
+        [id]="id()"
+        [type]="type()"
+        [placeholder]="placeholder()"
+        [autocomplete]="autocomplete()"
+        [attr.aria-describedby]="errorId() ?? null"
+        [attr.aria-invalid]="invalid() ? 'true' : null"
+        [value]="value"
+        (input)="onInput($event)"
+        (blur)="onTouched()"
+        class="flex-1 bg-transparent border-none outline-none text-text text-[13px] min-w-0 placeholder:text-muted"
+      />
+    </div>
   `,
 })
 export class TextInput implements ControlValueAccessor {
@@ -39,13 +41,11 @@ export class TextInput implements ControlValueAccessor {
   private onChange = (_: string) => {};
   protected onTouched = () => {};
 
-  protected classes = computed(() => {
+  protected wrapperClasses = computed(() => {
     const base =
-      'w-full px-4 py-3 bg-white dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-gray-100 text-[0.9375rem] placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-3 transition-all';
-    const variant = this.invalid()
-      ? 'border-red-400 dark:border-red-500 focus:border-red-400 dark:focus:border-red-500 focus:ring-red-400/15'
-      : 'border-gray-200 dark:border-gray-700 focus:border-violet-500 dark:focus:border-violet-400 focus:ring-violet-500/15 dark:focus:ring-violet-400/15';
-    return `${base} ${variant}`;
+      'flex items-center gap-2 h-9 px-3 bg-surface-2 rounded-md border text-text text-[13px]';
+    const borderClass = this.invalid() ? 'border-danger' : 'border-border';
+    return `${base} ${borderClass}`;
   });
 
   writeValue(value: string): void {

@@ -1,54 +1,328 @@
-<main class="p-6 md:p-8 flex flex-col gap-6">
-  <header>
-    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Tableau de bord</h1>
-    <p class="text-gray-600 dark:text-gray-400">Bonjour {{ firstName() }}</p>
-  </header>
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- Greeting strip + KPI row -->
+  <div class="mb-4.5 flex items-baseline justify-between gap-6">
+    <div>
+      <h2 class="m-0 text-[26px] font-semibold -tracking-[0.5px] text-text">
+        Salut {{ memberData()?.firstName }}, <span class="text-muted">tout est sous contrôle.</span>
+      </h2>
+      <p class="m-0 mt-1 text-[13px] text-muted">
+        3 alertes mineures à traiter avant la prochaine soirée — pas urgent.
+      </p>
+    </div>
+    <div class="flex items-center gap-4">
+      @for (k of kpis; track k.label) {
+        <div class="text-right">
+          <div class="mb-0.5 text-[11px] text-muted">{{ k.label }}</div>
+          <div class="tnum text-[17px] font-semibold text-text">
+            {{ k.value }}
+            <span [class]="'ml-1 text-[11px] font-medium ' + (k.positive ? 'text-ok' : 'text-red')">
+              {{ k.delta }}
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
 
-  @if (member(); as m) {
-    @if (currentEvent(); as evt) {
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-        <div class="lg:col-span-3">
-          <bfd-current-event-card [event]="evt" [member]="m" />
-        </div>
-        @if (upcomingEvents().length > 0) {
-          <aside class="lg:col-span-1 flex flex-col gap-3" aria-label="Prochaines soirées">
-            <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Prochaines soirées
-            </h2>
-            @for (next of upcomingEvents(); track next.event.id) {
-              <bfd-upcoming-event-card [event]="next" [member]="m" />
-            }
-          </aside>
-        }
-      </div>
-    } @else if (upcomingEvents().length > 0) {
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-        <div
-          class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-10 flex items-center justify-center"
-          role="status"
-        >
-          <p class="text-gray-400 dark:text-gray-500 text-sm text-center">
-            Aucune soirée en cours.<br />Réponds à la prochaine ↦
-          </p>
-        </div>
-        <aside class="lg:col-span-1 flex flex-col gap-3" aria-label="Prochaines soirées">
-          <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Prochaines soirées
-          </h2>
-          @for (next of upcomingEvents(); track next.event.id) {
-            <bfd-upcoming-event-card [event]="next" [member]="m" />
-          }
-        </aside>
-      </div>
-    } @else {
+  <div class="grid grid-cols-[1fr_320px] gap-[18px]">
+    <!-- MAIN -->
+    <div class="flex flex-col gap-[18px]">
+      <!-- Hero next event -->
       <div
-        class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-10 text-center"
-        role="status"
+        class="relative overflow-hidden rounded-lg border border-border-s p-[22px]"
+        style="
+          background: linear-gradient(
+            135deg,
+            var(--bae-surface) 0%,
+            var(--bae-surface) 60%,
+            color-mix(in oklch, var(--bae-blue) 22%, var(--bae-surface)) 100%
+          );
+        "
       >
-        <p class="text-gray-400 dark:text-gray-500 text-sm">Aucune soirée prévue pour le moment.</p>
-      </div>
-    }
+        <div
+          class="absolute -top-10 -right-10 h-[220px] w-[220px] rounded-full opacity-[.18]"
+          style="background: radial-gradient(circle, var(--bae-red) 0%, transparent 70%)"
+          aria-hidden="true"
+        ></div>
 
-    <bfd-member-stats-card [member]="m" />
-  }
-</main>
+        <div class="mb-2 flex items-center gap-2.5">
+          <bfd-badge kind="red" [dot]="true">PROCHAINE SOIRÉE</bfd-badge>
+          <bfd-badge kind="ghost">DANS {{ next.days }} JOURS</bfd-badge>
+        </div>
+
+        <div class="flex items-end justify-between gap-6">
+          <div>
+            <h3 class="m-0 text-[28px] font-semibold -tracking-[0.5px] text-text">
+              {{ next.name }}
+            </h3>
+            <div class="mt-2.5 flex gap-[18px] text-[13px] text-text-2">
+              <span class="inline-flex items-center gap-1.5">
+                <svg
+                  [lucideIcon]="icCalendar"
+                  [size]="14"
+                  class="text-muted"
+                  aria-hidden="true"
+                ></svg>
+                {{ next.date }} · {{ next.start }}
+              </span>
+              <span class="inline-flex items-center gap-1.5">
+                <svg [lucideIcon]="icUsers" [size]="14" class="text-muted" aria-hidden="true"></svg>
+                {{ next.members }} membres confirmés
+              </span>
+              <span class="inline-flex items-center gap-1.5">
+                <svg [lucideIcon]="icQr" [size]="14" class="text-muted" aria-hidden="true"></svg>
+                {{ next.prereg }} précommandes
+              </span>
+            </div>
+          </div>
+
+          <div class="flex min-w-[240px] flex-col items-end gap-1.5">
+            <div class="mb-0.5 text-[11px] text-muted">Votre réponse</div>
+            <div class="flex gap-1.5">
+              <bfd-btn kind="primary" size="sm" [icon]="icCheck">Présente</bfd-btn>
+              <bfd-btn kind="outline" size="sm">Absente</bfd-btn>
+              <bfd-btn kind="ghost" size="sm">Indécise</bfd-btn>
+            </div>
+            <div class="mt-1 text-[11px] text-muted">
+              Poste préférentiel : <span class="text-text">Caisse</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-[18px] grid grid-cols-4 gap-3">
+          @for (cell of prepCells; track cell.label) {
+            <div class="rounded-md border border-border-s bg-surface-2 p-3">
+              <div class="mb-1 text-[11px] text-muted">{{ cell.label }}</div>
+              <div class="tnum text-[17px] font-semibold text-text">{{ cell.value }}</div>
+              @if (cell.progress !== null) {
+                <div class="mt-2 h-1 overflow-hidden rounded-sm bg-border">
+                  <div
+                    class="h-full"
+                    [style.width.%]="cell.progress"
+                    [style.background]="cell.colorVar"
+                  ></div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Agenda + Alerts -->
+      <div class="grid grid-cols-2 gap-[18px]">
+        <bfd-card [padding]="0">
+          <div class="flex items-center border-b border-border-s px-4 py-3.5">
+            <div class="flex-1">
+              <div class="text-[13px] font-semibold text-text">Soirées à venir</div>
+              <div class="mt-0.5 text-[11px] text-muted">4 événements planifiés sur 6 semaines</div>
+            </div>
+            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight">Tout voir</bfd-btn>
+          </div>
+          @for (e of agenda; track e.name; let last = $last) {
+            <div
+              [class]="
+                'flex items-center gap-3.5 px-4 py-3 ' + (last ? '' : 'border-b border-border-s')
+              "
+            >
+              <div
+                class="w-[42px] rounded-md border border-border-s bg-surface-2 px-0 py-1 text-center"
+              >
+                <div class="tnum text-[16px] font-semibold leading-none text-text">{{ e.day }}</div>
+                <div class="mt-0.5 text-[9px] uppercase tracking-widest text-muted">
+                  {{ e.month }}
+                </div>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[13px] font-medium text-text">{{ e.name }}</div>
+                <div class="mt-0.5 text-[11px] text-muted">{{ e.sub }}</div>
+              </div>
+              <bfd-badge [kind]="e.statusKind">{{ e.status }}</bfd-badge>
+            </div>
+          }
+        </bfd-card>
+
+        <bfd-card [padding]="0">
+          <div class="flex items-center border-b border-border-s px-4 py-3.5">
+            <div class="flex-1">
+              <div class="text-[13px] font-semibold text-text">Alertes & rappels</div>
+              <div class="mt-0.5 text-[11px] text-muted">3 éléments demandent votre attention</div>
+            </div>
+            <bfd-badge kind="warn" [dot]="true">3</bfd-badge>
+          </div>
+          @for (a of alerts; track a.title; let last = $last) {
+            <div
+              [class]="
+                'flex items-start gap-3 px-4 py-3 ' + (last ? '' : 'border-b border-border-s')
+              "
+            >
+              <div
+                [class]="
+                  'inline-flex h-[30px] w-[30px] items-center justify-center rounded-md ' +
+                  a.bgClass +
+                  ' ' +
+                  a.fgClass
+                "
+              >
+                <svg [lucideIcon]="a.icon" [size]="15" aria-hidden="true"></svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[13px] font-medium text-text">{{ a.title }}</div>
+                <div class="mt-0.5 text-[11px] text-muted">{{ a.sub }}</div>
+              </div>
+              <bfd-btn kind="ghost" size="sm">{{ a.action }}</bfd-btn>
+            </div>
+          }
+        </bfd-card>
+      </div>
+
+      <!-- Encaissements chart -->
+      <bfd-card [padding]="0">
+        <div class="flex items-center border-b border-border-s px-4 py-3.5">
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold text-text">
+              Encaissements · 6 dernières soirées
+            </div>
+            <div class="mt-0.5 text-[11px] text-muted">
+              Caisse + précommandes · marge brute estimée à 62%
+            </div>
+          </div>
+          <div class="flex gap-1">
+            @for (p of periods; track p; let i = $index) {
+              <button
+                type="button"
+                [class]="
+                  'rounded-sm border px-2.5 py-1 text-[11px] ' +
+                  (i === activePeriodIndex
+                    ? 'border-border bg-surface-3 text-text'
+                    : 'border-transparent bg-transparent text-muted')
+                "
+              >
+                {{ p }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="flex h-[140px] items-end gap-2 p-4">
+          @for (b of chartBars; track b.label) {
+            <div class="flex flex-1 flex-col items-center gap-1.5">
+              <div class="flex h-[88px] w-full items-end justify-center gap-[3px]">
+                @if (b.isNext) {
+                  <div
+                    class="rounded-t-[3px] border border-dashed border-blue"
+                    style="
+                      width: 70%;
+                      height: 60%;
+                      background: repeating-linear-gradient(
+                        45deg,
+                        var(--bae-blueSoft) 0 6px,
+                        transparent 6px 12px
+                      );
+                    "
+                  ></div>
+                } @else {
+                  <div class="w-[40%] rounded-t-[3px] bg-blue" [style.height.%]="pct(b.v1)"></div>
+                  <div class="w-[40%] rounded-t-[3px] bg-red" [style.height.%]="pct(b.v2)"></div>
+                }
+              </div>
+              <div
+                [class]="'text-[10.5px] ' + (b.isNext ? 'font-semibold text-blue' : 'text-muted')"
+              >
+                {{ b.label }}{{ b.isNext ? ' (est.)' : '' }}
+              </div>
+            </div>
+          }
+        </div>
+        <div class="flex gap-[18px] px-4 pb-3.5 text-[11px] text-muted">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="h-2.5 w-2.5 rounded-sm bg-blue"></span>Caisse sur place
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="h-2.5 w-2.5 rounded-sm bg-red"></span>Précommandes
+          </span>
+          <span class="ml-auto">Total · 5 460 €</span>
+        </div>
+      </bfd-card>
+    </div>
+
+    <!-- RIGHT rail -->
+    <div class="flex flex-col gap-[18px]">
+      <bfd-card>
+        <div class="text-[13px] font-semibold text-text">Votre rôle ce soir-là</div>
+        <div class="mt-0.5 text-[11px] text-muted">Affectation · Soirée Hivernale</div>
+
+        <div class="mt-3.5 rounded-md border border-border-s bg-surface-2 p-3.5">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] text-muted">POSTE</div>
+              <div class="mt-0.5 text-[18px] font-semibold -tracking-[0.3px] text-text">
+                Caisse · zone B
+              </div>
+            </div>
+            <div
+              class="inline-flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-blue-soft text-blue"
+            >
+              <svg [lucideIcon]="icCart" [size]="18" aria-hidden="true"></svg>
+            </div>
+          </div>
+          <div class="mt-3.5 flex flex-col gap-1.5 text-[12px]">
+            @for (m of roleMeta; track m.label) {
+              <div class="flex justify-between">
+                <span class="text-muted">{{ m.label }}</span>
+                <span class="text-text">{{ m.value }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div
+          class="mt-3 flex items-start gap-2 rounded-md border border-dashed border-border p-2.5 text-[11.5px] text-text-2"
+        >
+          <svg [lucideIcon]="icZap" [size]="14" class="mt-px text-warn" aria-hidden="true"></svg>
+          <span
+            >Algo basé sur 9 soirées d'historique · score d'affectation
+            <b class="text-text">92/100</b>.</span
+          >
+        </div>
+      </bfd-card>
+
+      <bfd-card>
+        <div class="mb-3 flex items-center">
+          <div class="flex-1 text-[13px] font-semibold text-text">Accès rapides</div>
+          <svg [lucideIcon]="icSettings" [size]="14" class="text-muted" aria-hidden="true"></svg>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          @for (qa of quickActions; track qa.label) {
+            <button
+              type="button"
+              class="flex flex-col items-start gap-2 rounded-md border border-border-s bg-surface-2 p-3 text-left text-text cursor-pointer hover:bg-surface-3"
+            >
+              <svg [lucideIcon]="qa.icon" [size]="16" class="text-blue" aria-hidden="true"></svg>
+              <span class="text-[12px] font-medium">{{ qa.label }}</span>
+            </button>
+          }
+        </div>
+      </bfd-card>
+
+      <bfd-card [padding]="0">
+        <div class="px-4 pt-3.5 pb-2.5">
+          <div class="text-[13px] font-semibold text-text">Activité de l'équipe</div>
+        </div>
+        @for (a of activity; track $index) {
+          <div class="flex items-start gap-2.5 border-t border-border-s px-4 py-2.5">
+            <bfd-avatar [name]="a.who" [size]="22" />
+            <div class="min-w-0 flex-1 text-[12px] leading-normal text-text-2">
+              <span class="font-medium text-text">{{ a.who }}</span> {{ a.what }}
+              @if (a.emphasis) {
+                <span class="mono text-blue">{{ a.emphasis }}</span>
+              }
+              @if (a.tail) {
+                {{ a.tail }}
+              }
+              <div class="mt-0.5 text-[10.5px] text-muted">{{ a.when }}</div>
+            </div>
+          </div>
+        }
+      </bfd-card>
+    </div>
+  </div>
+</div>

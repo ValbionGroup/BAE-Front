@@ -1,55 +1,44 @@
 import { Routes } from '@angular/router';
-import { Home } from '#pages/authed/home/home';
 import { Login } from '#pages/guest/login/login';
 import { AppShell } from '#pages/app-shell/app-shell';
-import { Logistics } from '#pages/authed/logistics/logistics';
+import { Home } from '#pages/authed/home/home';
+import { Presences } from '#pages/authed/presences/presences';
+import { Stocks } from '#pages/authed/stocks/stocks';
+import { Recettes } from '#pages/authed/recettes/recettes';
 import { Coordination } from '#pages/authed/coordination/coordination';
-import { Orders } from '#pages/authed/orders/orders';
-import { Kitchen } from '#pages/authed/orders/kitchen/kitchen';
-import { Administration } from '#pages/authed/administration/administration';
-import { Stock } from '#pages/authed/logistics/stock/stock';
-import { Compare } from '#pages/authed/logistics/compare/compare';
-import { Recipes } from '#pages/authed/logistics/recipes/recipes';
-import { Events } from '#pages/authed/logistics/events/events';
+import { Logistique } from '#pages/authed/logistique/logistique';
+import { Caisse } from '#pages/authed/caisse/caisse';
+import { Precommandes } from '#pages/public/precommandes/precommandes';
+import { Paiements } from '#pages/authed/paiements/paiements';
+import { Analyse } from '#pages/authed/analyse/analyse';
+import { Tickets } from '#pages/authed/tickets/tickets';
+import { Parametres } from '#pages/authed/parametres/parametres';
 import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
 
 export const AppRoutes = {
   home: '',
+  presences: 'presences',
+  stocks: 'stocks',
+  recettes: 'recettes',
+  coordination: 'coordination',
+  logistique: 'logistique',
+  caisse: 'caisse',
+  precommandes: 'precommandes',
+  paiements: 'paiements',
+  analyse: 'analyse',
+  tickets: 'tickets',
+  parametres: 'parametres',
   login: 'login',
-  forgotPassword: 'forgot-password',
-  resetPassword: 'reset-password',
-  logout: 'logout',
-  live: 'live',
-  'order-screen': 'order-screen',
-  'available-recipe-screen': 'available-recipe-screen',
-  logistics: {
-    base: 'logistics',
-    stock: 'stock',
-    recipes: 'recipes',
-    compare: 'compare',
-    events: 'events',
-  },
-  coordination: {
-    base: 'coordination',
-    events: 'events',
-    planning: 'planning',
-  },
-  orders: {
-    base: 'orders',
-    preorders: 'preorders',
-    statistics: 'statistics',
-    history: 'history',
-    kitchen: 'kitchen',
-  },
-  administration: {
-    base: 'administration',
-    members: 'members',
-    cotisation: 'cotisation',
-  },
-};
+} as const;
 
 export const routes: Routes = [
+  // Public — anyone (signed-in or not) can place precommandes.
+  // Lives at the top level so it bypasses both the auth shell and any guards.
+  {
+    path: AppRoutes.precommandes,
+    component: Precommandes,
+  },
   {
     path: AppRoutes.login,
     canActivate: [guestGuard],
@@ -60,99 +49,18 @@ export const routes: Routes = [
     component: AppShell,
     canActivate: [authGuard],
     children: [
-      {
-        path: AppRoutes.home,
-        component: Home,
-      },
-      {
-        path: AppRoutes.logistics.base,
-        component: Logistics,
-        children: [
-          {
-            path: '',
-            redirectTo: AppRoutes.logistics.stock,
-            pathMatch: 'full',
-          },
-          {
-            path: AppRoutes.logistics.stock,
-            component: Stock,
-          },
-          {
-            path: AppRoutes.logistics.recipes,
-            component: Recipes,
-          },
-          {
-            path: AppRoutes.logistics.compare,
-            component: Compare,
-          },
-          {
-            path: AppRoutes.logistics.events,
-            component: Events,
-          },
-        ],
-      },
-      {
-        path: AppRoutes.coordination.base,
-        children: [
-          {
-            path: '',
-            redirectTo: AppRoutes.coordination.planning,
-            pathMatch: 'full',
-          },
-          {
-            path: AppRoutes.coordination.planning,
-            component: Coordination,
-          },
-          {
-            path: AppRoutes.coordination.events,
-            component: Coordination,
-          },
-        ],
-      },
-      {
-        path: AppRoutes.orders.base,
-        children: [
-          {
-            path: '',
-            redirectTo: AppRoutes.orders.preorders,
-            pathMatch: 'full',
-          },
-          {
-            path: AppRoutes.orders.preorders,
-            component: Orders,
-          },
-          {
-            path: AppRoutes.orders.statistics,
-            component: Orders,
-          },
-          {
-            path: AppRoutes.orders.history,
-            component: Orders,
-          },
-          {
-            path: AppRoutes.orders.kitchen,
-            component: Kitchen,
-          },
-        ],
-      },
-      {
-        path: AppRoutes.administration.base,
-        children: [
-          {
-            path: '',
-            redirectTo: AppRoutes.administration.members,
-            pathMatch: 'full',
-          },
-          {
-            path: AppRoutes.administration.members,
-            component: Administration,
-          },
-          {
-            path: AppRoutes.administration.cotisation,
-            component: Administration,
-          },
-        ],
-      },
+      { path: AppRoutes.home, component: Home },
+      { path: AppRoutes.presences, component: Presences },
+      { path: AppRoutes.stocks, component: Stocks },
+      { path: AppRoutes.recettes, component: Recettes },
+      { path: AppRoutes.coordination, component: Coordination },
+      { path: AppRoutes.logistique, component: Logistique },
+      { path: AppRoutes.caisse, component: Caisse },
+      { path: AppRoutes.paiements, component: Paiements },
+      { path: AppRoutes.analyse, component: Analyse },
+      { path: AppRoutes.tickets, component: Tickets },
+      { path: AppRoutes.parametres, component: Parametres },
     ],
   },
+  { path: '**', redirectTo: '' },
 ];

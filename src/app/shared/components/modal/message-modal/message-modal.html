@@ -3,58 +3,62 @@
   aria-modal="true"
   [attr.aria-labelledby]="'modal-title-' + config().id"
   tabindex="-1"
-  class="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col max-h-[90vh] focus:outline-none"
+  class="w-full max-w-[560px] bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
 >
-  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-    <div class="flex items-center gap-3">
-      <span [class]="'p-1.5 rounded-lg ' + meta().iconBg">
-        <svg [lucideIcon]="meta().icon" [size]="18" [class]="meta().iconClass" aria-hidden="true"></svg>
-      </span>
-      <h2 [id]="'modal-title-' + config().id" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-        {{ config().title }}
-      </h2>
-    </div>
+  <div class="px-[22px] py-[18px] border-b border-border-s flex items-center gap-3">
+    <span
+      [class]="'w-9 h-9 rounded-[10px] inline-flex items-center justify-center ' + meta().iconBg"
+    >
+      <svg
+        [lucideIcon]="meta().icon"
+        [size]="18"
+        [class]="meta().iconClass"
+        aria-hidden="true"
+      ></svg>
+    </span>
+    <h2
+      [id]="'modal-title-' + config().id"
+      class="text-[15px] font-semibold text-text flex-1 min-w-0 truncate"
+    >
+      {{ config().title }}
+    </h2>
     <button
       type="button"
       (click)="onClose()"
       aria-label="Fermer"
-      class="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+      class="text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded"
     >
       <svg lucideX [size]="16" aria-hidden="true"></svg>
     </button>
   </div>
 
-  <div class="px-5 py-4 flex flex-col gap-3 overflow-y-auto">
-    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{{ config().message }}</p>
+  <div class="p-[22px] flex flex-col gap-3.5 overflow-y-auto">
+    <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
     @if (config().details) {
       <button
         type="button"
         (click)="toggleDetails()"
-        class="text-xs text-left text-violet-600 dark:text-violet-400 self-start focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded"
+        class="text-xs text-left text-muted hover:text-text self-start focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded"
       >
         {{ showDetails() ? '▾ Masquer les détails' : '▸ Afficher les détails' }}
       </button>
       @if (showDetails()) {
-        <pre class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all font-mono">{{ config().details }}</pre>
+        <pre
+          class="text-xs text-text-2 bg-surface-2 border border-border-s rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all font-mono"
+          >{{ config().details }}</pre
+        >
       }
     }
   </div>
 
-  <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
     @for (a of actions(); track $index) {
-      @if (a.variant === 'primary') {
-        <button
-          type="button"
-          (click)="onAction(a.action)"
-          class="px-4 py-2 text-sm font-medium text-white bg-violet-500 dark:bg-violet-600 hover:opacity-90 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-        >{{ a.label }}</button>
-      } @else {
-        <button
-          type="button"
-          (click)="onAction(a.action)"
-          class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-        >{{ a.label }}</button>
-      }
+      <bfd-btn
+        [kind]="a.variant === 'primary' ? 'primary' : 'ghost'"
+        size="md"
+        (clicked)="onAction(a.action)"
+        >{{ a.label }}</bfd-btn
+      >
     }
   </div>
 </div>

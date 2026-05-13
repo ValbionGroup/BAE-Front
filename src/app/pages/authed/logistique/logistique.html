@@ -1,0 +1,92 @@
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- KPI row -->
+  <div class="mb-4 grid grid-cols-4 gap-3">
+    @for (s of stats; track s.label) {
+      <div class="rounded-md border border-border-s bg-surface p-3.5">
+        <div class="mb-1 text-[11px] text-muted">{{ s.label }}</div>
+        <div [class]="'mono tnum text-[19px] font-semibold ' + s.colorClass">{{ s.value }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- Cart table -->
+  <div class="mono mb-2 text-[10px] tracking-wider text-muted">
+    LISTE DE COURSES · COMPARATIF ENSEIGNE
+  </div>
+  <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+    <div
+      class="grid grid-cols-[24px_1.7fr_70px_90px_90px_90px_80px] gap-3 bg-surface-2 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+    >
+      <span></span>
+      <span>Produit</span>
+      <span class="text-right">Qté</span>
+      <span class="text-right">Auchan</span>
+      <span class="text-right">Carrefour</span>
+      <span class="text-right">Leclerc</span>
+      <span class="text-right">Optimum</span>
+    </div>
+    @for (g of cart; track g.p; let i = $index) {
+      <div
+        [class]="
+          'grid grid-cols-[24px_1.7fr_70px_90px_90px_90px_80px] items-center gap-3 px-3.5 py-2.5 text-[12.5px] ' +
+          (i ? 'border-t border-border-s' : '')
+        "
+      >
+        <input type="checkbox" [checked]="g.checked" style="accent-color: var(--bae-blue)" />
+        <span class="text-text">{{ g.p }}</span>
+        <span class="mono tnum text-right text-text-2">{{ g.q }}</span>
+        <span [class]="'mono tnum text-right ' + enseignePriceClass('Auchan', g.best)"
+          >{{ formatPrice(g.auchan) }} €</span
+        >
+        <span [class]="'mono tnum text-right ' + enseignePriceClass('Carrefour', g.best)"
+          >{{ formatPrice(g.carrefour) }} €</span
+        >
+        <span [class]="'mono tnum text-right ' + enseignePriceClass('Leclerc', g.best)"
+          >{{ formatPrice(g.leclerc) }} €</span
+        >
+        <span class="justify-self-end"
+          ><bfd-badge kind="ok">{{ g.best }}</bfd-badge></span
+        >
+      </div>
+    }
+    <div
+      class="grid grid-cols-[24px_1.7fr_70px_90px_90px_90px_80px] items-center gap-3 border-t-2 border-border bg-surface-2 px-3.5 py-3"
+    >
+      <span></span>
+      <span class="text-[12.5px] font-semibold text-text">Total enseigne</span>
+      <span></span>
+      <span class="mono tnum text-right text-[13px] text-text-2">27,50 €</span>
+      <span class="mono tnum text-right text-[13px] text-text-2">27,70 €</span>
+      <span class="mono tnum text-right text-[13px] font-semibold text-ok">25,38 €</span>
+      <span class="mono tnum text-right text-[13px] font-bold text-text">25,38 €</span>
+    </div>
+  </div>
+
+  <!-- Bons d'achat -->
+  <div class="mono mt-6 mb-2 text-[10px] tracking-wider text-muted">
+    BONS D'ACHAT · ACCÈS VERROUILLÉ
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    @for (b of vouchers; track b.e) {
+      <div
+        [class]="
+          'relative rounded-md border border-dashed bg-surface p-3.5 ' +
+          (b.warn ? 'border-warn' : 'border-border')
+        "
+      >
+        <svg
+          [lucideIcon]="icLock"
+          [size]="12"
+          class="absolute top-3 right-3 text-muted"
+          aria-hidden="true"
+        ></svg>
+        <div class="mb-1.5 flex items-baseline gap-2">
+          <span class="text-sm font-semibold text-text">{{ b.e }}</span>
+          <span class="mono tnum text-[22px] font-bold text-blue">{{ b.v }} €</span>
+        </div>
+        <div class="mb-0.5 text-[11px] text-muted">Expire le {{ b.expire }}</div>
+        <div [class]="'text-[11px] ' + (b.warn ? 'text-warn' : 'text-text-2')">{{ b.cond }}</div>
+      </div>
+    }
+  </div>
+</div>

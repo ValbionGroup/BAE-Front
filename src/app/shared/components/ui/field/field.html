@@ -1,0 +1,9 @@
+<label class="flex flex-col gap-1.5">
+  @if (label(); as l) {
+    <span class="text-xs font-medium text-text-2">{{ l }}</span>
+  }
+  <ng-content />
+  @if (hint(); as h) {
+    <span class="text-[11px] text-muted">{{ h }}</span>
+  }
+</label>

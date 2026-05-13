@@ -1,17 +1,11 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { LucideTrash2, LucideX } from '@lucide/angular';
+import { Btn } from '#shared/components/ui/btn/btn';
 import { DeleteModalConfig } from '../modal.models';
 
 @Component({
   selector: 'bfd-delete-modal',
-  imports: [LucideTrash2, LucideX],
+  imports: [LucideTrash2, LucideX, Btn],
   templateUrl: './delete-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

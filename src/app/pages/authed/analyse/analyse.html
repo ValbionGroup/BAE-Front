@@ -1,0 +1,124 @@
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- KPI row -->
+  <div class="mb-4 grid grid-cols-4 gap-3">
+    @for (k of kpis; track k.label) {
+      <div class="rounded-md border border-border-s bg-surface p-3.5">
+        <div class="mb-1 text-[11px] text-muted">{{ k.label }}</div>
+        <div class="mono tnum text-[21px] font-semibold text-text">{{ k.value }}</div>
+        <div [class]="'mt-1 text-[11px] ' + k.deltaClass">{{ k.delta }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- Bar chart -->
+  <div class="mb-4 rounded-md border border-border-s bg-surface p-4">
+    <div class="mb-3.5 flex items-baseline">
+      <span class="text-[13px] font-semibold text-text">Commandes par soirée</span>
+      <span class="ml-2 text-[11px] text-muted">6 dernières soirées</span>
+      <div class="flex-1"></div>
+      <div class="flex gap-3 text-[11px] text-muted">
+        <span> <span class="mr-1.5 inline-block h-2 w-2 rounded-sm bg-blue"></span>Réalisé </span>
+        <span>
+          <span
+            class="mr-1.5 inline-block h-2 w-2 rounded-sm border-[1.5px] border-dashed border-blue"
+          ></span
+          >Prédiction
+        </span>
+      </div>
+    </div>
+
+    <div class="relative flex h-[180px] items-end gap-3.5 pb-[22px]">
+      @for (tick of axisTicks; track tick) {
+        <div
+          class="pointer-events-none absolute left-0 right-0 h-px bg-border-s"
+          [style.bottom.px]="tickBottom(tick)"
+        >
+          <span
+            class="mono tnum absolute -left-0.5 -top-[7px] bg-surface px-1 text-[9px] text-muted"
+            >{{ tick }}</span
+          >
+        </div>
+      }
+      @for (col of chart; track col.d) {
+        <div class="flex flex-1 flex-col items-center gap-1.5">
+          <span
+            [class]="
+              'mono tnum text-[11px] font-semibold ' + (col.pred ? 'text-blue' : 'text-text-2')
+            "
+            >{{ col.cmd }}</span
+          >
+          <div
+            class="w-full rounded-t-[4px]"
+            [style.height.px]="barHeight(col.cmd)"
+            [style.background]="
+              col.pred
+                ? 'transparent'
+                : 'linear-gradient(180deg, var(--bae-blue) 0%, color-mix(in oklch, var(--bae-blue) 60%, var(--bae-surface)) 100%)'
+            "
+            [style.border]="col.pred ? '1.5px dashed var(--bae-blue)' : 'none'"
+          ></div>
+          <span class="text-[10px] text-muted">{{ col.d }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Prediction + history -->
+  <div class="grid grid-cols-[1fr_1.6fr] gap-3.5">
+    <div class="relative overflow-hidden rounded-md border border-blue bg-surface p-4">
+      <span
+        class="absolute -top-8 -right-8 h-[120px] w-[120px] rounded-full bg-blue opacity-[.08]"
+      ></span>
+      <div class="mono mb-1.5 text-[10px] tracking-wider text-blue">
+        PRÉDICTION · SOIRÉE HIVERNALE
+      </div>
+      <div class="mb-4 text-[13px] text-text-2">
+        Estimation basée sur l'historique, les précommandes en cours et la météo.
+      </div>
+      <div class="mb-1 flex items-baseline gap-2">
+        <span class="mono tnum text-[38px] font-bold -tracking-[1px] text-text">290</span>
+        <span class="text-[13px] text-muted">commandes (± 35)</span>
+      </div>
+      <div class="mt-4 grid grid-cols-2 gap-2.5">
+        <div>
+          <div class="mb-0.5 text-[10px] text-muted">Revenu estimé</div>
+          <div class="mono tnum text-[15px] font-semibold text-text">1 680 €</div>
+        </div>
+        <div>
+          <div class="mb-0.5 text-[10px] text-muted">Précommandes</div>
+          <div class="mono tnum text-[15px] font-semibold text-blue">47</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+      <div class="border-b border-border-s px-3.5 py-3 text-[13px] font-semibold text-text">
+        Historique des soirées
+      </div>
+      @for (s of soirees; track s.n; let i = $index) {
+        <div
+          [class]="
+            'grid grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+            (i ? 'border-t border-border-s' : '')
+          "
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-text">{{ s.n }}</span>
+            @if (s.pred) {
+              <bfd-badge kind="blue">À venir</bfd-badge>
+            }
+          </div>
+          <span class="mono text-[11px] text-muted">{{ s.d }}</span>
+          <span class="mono tnum text-right text-[13px] text-text">{{ s.rev }}</span>
+          <span class="mono tnum text-right text-[12px] text-text-2">{{ s.cmd }} cmd</span>
+          <svg
+            [lucideIcon]="icChevronRight"
+            [size]="14"
+            class="justify-self-end text-muted"
+            aria-hidden="true"
+          ></svg>
+        </div>
+      }
+    </div>
+  </div>
+</div>

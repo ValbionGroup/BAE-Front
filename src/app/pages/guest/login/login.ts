@@ -2,13 +2,24 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  LucideArrowRight,
+  LucideDynamicIcon,
+  LucideShield,
+  LucideTriangleAlert,
+} from '@lucide/angular';
 import * as AuthActions from '#core/store/auth/auth.actions';
 import { selectLoginError } from '#core/store/auth/auth.selector';
 import { TextInput } from '#shared/components/text-input/text-input';
+import { Logo } from '#shared/components/ui/logo/logo';
+import { Btn } from '#shared/components/ui/btn/btn';
+import { Badge } from '#shared/components/ui/badge/badge';
+import { Field } from '#shared/components/ui/field/field';
+import { Toggle } from '#shared/components/ui/toggle/toggle';
 
 @Component({
   selector: 'bfd-login',
-  imports: [ReactiveFormsModule, TextInput],
+  imports: [ReactiveFormsModule, TextInput, Logo, Btn, Badge, Field, Toggle, LucideDynamicIcon],
   templateUrl: './login.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,6 +34,18 @@ export class Login {
     password: ['', Validators.required],
   });
 
+  protected readonly icShield = LucideShield;
+  protected readonly icArrowRight = LucideArrowRight;
+  protected readonly icAlert = LucideTriangleAlert;
+
+  protected readonly brandTags = [
+    'Stocks par lot',
+    'Algo de répartition',
+    'Caisse temps réel',
+    'QR Lydia',
+    'Précommandes publiques',
+  ];
+
   protected onSubmit(): void {
     if (this.form.invalid) return;
     const { email, password } = this.form.value;
@@ -30,6 +53,6 @@ export class Login {
   }
 
   protected loginWithEirbConnect(): void {
-    // TODO: redirect to EirbConnect OAuth endpoint
+    // TODO: redirect to EirbConnect / ENT Bordeaux INP OAuth endpoint
   }
 }

@@ -10,7 +10,7 @@ export class RsvpService {
   }
 
   setRsvp(memberId: string, eventId: string, status: RsvpStatus): void {
-    this._rsvps.update(map => {
+    this._rsvps.update((map) => {
       const next = new Map(map);
       next.set(`${memberId}:${eventId}`, status);
       return next;
