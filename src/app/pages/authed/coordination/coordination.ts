@@ -1,151 +1,150 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
-  LucideArrowRight,
+  ChangeDetectionStrategy,
+  Component,
+  TemplateRef,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
+import {
   LucideCheck,
+  LucideChefHat,
+  LucideClock,
   LucideDynamicIcon,
+  LucideEuro,
   LucideIconInput,
   LucideLock,
   LucideMoreHorizontal,
+  LucidePackage,
   LucidePlus,
+  LucideSettings,
   LucideShoppingCart,
-  LucideTriangleAlert,
+  LucideTruck,
   LucideUsers,
   LucideZap,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 
-interface Role {
+type SemColor = 'red' | 'blue' | 'ok' | 'warn';
+
+interface Poste {
   readonly id: string;
-  readonly name: string;
+  readonly label: string;
   readonly icon: LucideIconInput;
-  readonly required: number;
-  readonly assigned: readonly { name: string; locked: boolean; score: number }[];
+  readonly need: number;
+  readonly color: SemColor;
 }
 
-interface Member {
+interface Membre {
   readonly name: string;
-  readonly role: string;
-  readonly preferred: string;
-  readonly available: boolean;
+  readonly poste: string;
+  readonly score: number;
+  readonly lock: boolean;
+  readonly bonus: '+' | '−' | '';
 }
 
 @Component({
   selector: 'bfd-coordination',
-  imports: [Btn, Badge, Card, Avatar, LucideDynamicIcon],
+  imports: [Btn, Badge, Avatar, LucideDynamicIcon],
   templateUrl: './coordination.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Coordination {
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Coordination',
-      subtitle: 'Soirée Hivernale · 18 postes · algo prêt',
-      breadcrumb: ['Préparation', 'Coordination'],
+      subtitle: 'Soirée Hivernale · 18 membres présents',
+      breadcrumb: ['Préparation', 'Coordination', 'Soirée Hivernale'],
       activeNavId: 'coord',
+    });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 
-  protected readonly icPlus = LucidePlus;
+  protected readonly icSettings = LucideSettings;
   protected readonly icZap = LucideZap;
   protected readonly icCheck = LucideCheck;
+  protected readonly icClock = LucideClock;
   protected readonly icLock = LucideLock;
   protected readonly icMore = LucideMoreHorizontal;
-  protected readonly icArrowRight = LucideArrowRight;
-  protected readonly icAlert = LucideTriangleAlert;
+  protected readonly icPlus = LucidePlus;
 
-  protected readonly algoRunning = signal(false);
-  protected readonly affectedScore = signal(88);
-
-  protected readonly stats = [
-    { label: 'Postes affectés', value: '11/18', kind: 'warn' as const },
-    { label: 'Score moyen', value: '88/100', kind: 'ok' as const },
-    { label: 'Verrouillés', value: '4', kind: 'blue' as const },
-    { label: 'Conflits', value: '2', kind: 'danger' as const },
+  protected readonly postes: readonly Poste[] = [
+    { id: 'cuis', label: 'Cuisine', icon: LucideChefHat, need: 4, color: 'red' },
+    { id: 'asse', label: 'Assemblage', icon: LucidePackage, need: 4, color: 'warn' },
+    { id: 'cais', label: 'Caisse', icon: LucideShoppingCart, need: 3, color: 'blue' },
+    { id: 'serv', label: 'Service', icon: LucideUsers, need: 4, color: 'ok' },
+    { id: 'bar', label: 'Bar', icon: LucideEuro, need: 2, color: 'red' },
+    { id: 'logi', label: 'Logistique', icon: LucideTruck, need: 1, color: 'blue' },
   ];
 
-  protected readonly roles: readonly Role[] = [
-    {
-      id: 'cuisine',
-      name: 'Cuisine',
-      icon: LucideUsers,
-      required: 4,
-      assigned: [
-        { name: 'Maxime Roussel', locked: true, score: 94 },
-        { name: 'Inès Berthier', locked: false, score: 88 },
-        { name: 'Hugo Martelli', locked: false, score: 76 },
-      ],
-    },
-    {
-      id: 'caisse',
-      name: 'Caisse',
-      icon: LucideShoppingCart,
-      required: 3,
-      assigned: [
-        { name: 'Léa Marchand', locked: true, score: 96 },
-        { name: 'Tom Bessière', locked: true, score: 92 },
-        { name: 'Yanis Demir', locked: false, score: 81 },
-      ],
-    },
-    {
-      id: 'service',
-      name: 'Service salle',
-      icon: LucideUsers,
-      required: 4,
-      assigned: [
-        { name: 'Sarah Kamiyana', locked: true, score: 90 },
-        { name: 'Romain Joly', locked: false, score: 78 },
-      ],
-    },
-    {
-      id: 'bar',
-      name: 'Bar',
-      icon: LucideUsers,
-      required: 3,
-      assigned: [
-        { name: 'Pierre Lavigne', locked: false, score: 84 },
-        { name: 'Camille Astier', locked: false, score: 79 },
-        { name: 'Élise Pradel', locked: false, score: 72 },
-      ],
-    },
+  protected readonly membres: readonly Membre[] = [
+    { name: 'Tom Bernard', poste: 'Cuisine', score: 92, lock: false, bonus: '+' },
+    { name: 'Léa Marchand', poste: 'Caisse', score: 88, lock: true, bonus: '' },
+    { name: 'Maxime Dupont', poste: 'Cuisine', score: 84, lock: false, bonus: '' },
+    { name: 'Camille Rouvier', poste: 'Service', score: 78, lock: false, bonus: '+' },
+    { name: 'Hugo Lefevre', poste: 'Bar', score: 91, lock: true, bonus: '' },
+    { name: 'Élise Pichon', poste: 'Assemblage', score: 71, lock: false, bonus: '' },
+    { name: 'Antoine Renard', poste: 'Service', score: 65, lock: false, bonus: '−' },
+    { name: 'Sarah Mercier', poste: 'Assemblage', score: 82, lock: false, bonus: '' },
+    { name: 'Julien Faure', poste: 'Caisse', score: 76, lock: false, bonus: '' },
+    { name: 'Noé Garcia', poste: 'Bar', score: 88, lock: false, bonus: '+' },
   ];
 
-  protected readonly available: readonly Member[] = [
-    { name: 'Camille Roy', role: 'Membre', preferred: 'Service', available: true },
-    { name: 'Antoine Lefèvre', role: 'Membre', preferred: 'Bar', available: true },
-    { name: 'Julie Dumas', role: 'Membre', preferred: 'Cuisine', available: true },
-    { name: 'Nathan Picard', role: 'Membre', preferred: 'Caisse', available: true },
-  ];
-
-  protected readonly progress = computed(() => {
-    const total = this.roles.reduce((s, r) => s + r.required, 0);
-    const filled = this.roles.reduce((s, r) => s + r.assigned.length, 0);
-    return Math.round((filled / total) * 100);
-  });
-
-  protected scoreColor(score: number): string {
-    if (score >= 90) return 'text-ok';
-    if (score >= 75) return 'text-blue';
-    return 'text-warn';
+  protected assignedTo(label: string): readonly Membre[] {
+    return this.membres.filter((m) => m.poste === label);
   }
 
-  protected roleStatus(role: Role): { label: string; kind: 'ok' | 'warn' | 'danger' } {
-    const filled = role.assigned.length;
-    if (filled >= role.required) return { label: 'Complet', kind: 'ok' };
-    if (filled >= role.required - 1) return { label: 'Presque', kind: 'warn' };
-    return { label: 'Incomplet', kind: 'danger' };
-  }
-
-  protected runAlgo(): void {
-    this.algoRunning.set(true);
-    setTimeout(() => this.algoRunning.set(false), 1500);
-  }
-
-  protected vacant(role: Role): readonly null[] {
-    const n = Math.max(0, role.required - role.assigned.length);
+  protected vacantSlots(p: Poste): readonly null[] {
+    const assigned = this.assignedTo(p.label).length;
+    const n = Math.max(0, p.need - assigned);
     return Array.from({ length: n }, () => null);
+  }
+
+  protected isFull(p: Poste): boolean {
+    return this.assignedTo(p.label).length >= p.need;
+  }
+
+  protected toFill(p: Poste): number {
+    return Math.max(0, p.need - this.assignedTo(p.label).length);
+  }
+
+  protected posteBgClass(c: SemColor): string {
+    return c === 'red'
+      ? 'bg-red-soft text-red'
+      : c === 'blue'
+        ? 'bg-blue-soft text-blue'
+        : c === 'ok'
+          ? 'bg-ok-soft text-ok'
+          : 'bg-warn-soft text-warn';
+  }
+
+  protected scoreClass(score: number): string {
+    if (score > 80) return 'text-ok';
+    if (score > 70) return 'text-warn';
+    return 'text-red';
+  }
+
+  protected scoreClassSmall(score: number): string {
+    return score > 80 ? 'text-ok' : 'text-warn';
+  }
+
+  protected bonusClass(b: Membre['bonus']): string {
+    return b === '+' ? 'text-ok' : b === '−' ? 'text-red' : 'text-muted';
+  }
+
+  protected prefsFor(m: Membre): readonly string[] {
+    if (m.poste === 'Cuisine') return ['Cuisine', 'Bar', 'Assemblage'];
+    if (m.poste === 'Caisse') return ['Caisse', 'Service', 'Bar'];
+    if (m.poste === 'Bar') return ['Bar', 'Caisse', 'Cuisine'];
+    return ['Service', 'Assemblage', 'Caisse'];
   }
 }

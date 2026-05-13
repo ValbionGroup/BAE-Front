@@ -1,145 +1,112 @@
+<!-- Topbar actions, projected via PageHeaderService -->
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icSettings">Postes</bfd-btn>
+  <bfd-btn kind="secondary" size="md" [icon]="icZap">Lancer l'algo</bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icCheck">Valider l'affectation</bfd-btn>
+</ng-template>
+
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
-  <div class="grid grid-cols-[1fr_360px] gap-[18px]">
-    <!-- LEFT -->
-    <div class="flex flex-col gap-[18px]">
-      <!-- KPIs -->
-      <div class="grid grid-cols-4 gap-3">
-        @for (s of stats; track s.label) {
-          <bfd-card [padding]="14">
-            <div class="text-[11px] text-muted">{{ s.label }}</div>
-            <div [class]="'tnum mt-1 text-[22px] font-semibold -tracking-[0.3px] text-' + s.kind">
-              {{ s.value }}
-            </div>
-          </bfd-card>
-        }
-      </div>
-
-      <!-- Algo bar -->
-      <div class="flex items-center gap-3 rounded-md border border-border-s bg-surface px-4 py-3.5">
-        <div
-          class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-blue-soft text-blue"
-        >
-          <svg [lucideIcon]="icZap" [size]="18" aria-hidden="true"></svg>
-        </div>
-        <div class="flex-1">
-          <div class="text-[13px] font-semibold text-text">Algorithme de répartition</div>
-          <div class="text-[11.5px] text-muted">
-            Affecte automatiquement les postes selon préférences + historique. Score moyen attendu :
-            <span class="text-text font-medium">{{ affectedScore() }}/100</span>
-          </div>
-        </div>
-        <bfd-btn kind="outline" size="md">Paramètres</bfd-btn>
-        <bfd-btn
-          kind="primary"
-          size="md"
-          [icon]="icZap"
-          (clicked)="runAlgo()"
-          [disabled]="algoRunning()"
-        >
-          @if (algoRunning()) {
-            Calcul…
-          } @else {
-            Lancer l'algo
-          }
-        </bfd-btn>
-      </div>
-
-      <!-- Roles grid -->
-      <div class="grid grid-cols-2 gap-[18px]">
-        @for (role of roles; track role.id) {
-          <bfd-card [padding]="0">
-            <div class="flex items-center gap-2.5 border-b border-border-s px-4 py-3">
-              <div
-                class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-2 text-text"
-              >
-                <svg [lucideIcon]="role.icon" [size]="15" aria-hidden="true"></svg>
-              </div>
-              <div class="flex-1">
-                <div class="text-[13.5px] font-semibold text-text">{{ role.name }}</div>
-                <div class="text-[11px] text-muted">
-                  {{ role.assigned.length }} / {{ role.required }} postes
-                </div>
-              </div>
-              <bfd-badge [kind]="roleStatus(role).kind">{{ roleStatus(role).label }}</bfd-badge>
-            </div>
-
-            <div class="flex flex-col gap-1.5 p-3">
-              @for (a of role.assigned; track a.name) {
-                <div class="flex items-center gap-2.5 rounded-md bg-surface-2 px-2.5 py-2">
-                  <bfd-avatar [name]="a.name" [size]="22" />
-                  <span class="flex-1 text-[12.5px] text-text">{{ a.name }}</span>
-                  <span [class]="'tnum text-[11.5px] font-medium ' + scoreColor(a.score)">{{
-                    a.score
-                  }}</span>
-                  @if (a.locked) {
-                    <svg
-                      [lucideIcon]="icLock"
-                      [size]="13"
-                      class="text-muted"
-                      aria-hidden="true"
-                    ></svg>
-                  }
-                  <svg
-                    [lucideIcon]="icMore"
-                    [size]="14"
-                    class="text-muted cursor-pointer"
-                    aria-hidden="true"
-                  ></svg>
-                </div>
-              }
-              @for (slot of vacant(role); track $index) {
-                <div
-                  class="flex items-center gap-2.5 rounded-md border border-dashed border-border px-2.5 py-2 text-[12.5px] text-muted"
-                >
-                  <div
-                    class="h-[22px] w-[22px] rounded-full border border-dashed border-border"
-                  ></div>
-                  <span class="flex-1">Poste vacant</span>
-                  <bfd-btn kind="ghost" size="sm" [icon]="icPlus">Affecter</bfd-btn>
-                </div>
-              }
-            </div>
-          </bfd-card>
-        }
+  <!-- Algo result banner -->
+  <div class="mb-[18px] flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-[18px] py-3.5">
+    <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15 text-ok">
+      <svg [lucideIcon]="icCheck" [size]="18" aria-hidden="true"></svg>
+    </span>
+    <div class="flex-1">
+      <div class="text-[13.5px] font-semibold text-text">Algorithme exécuté · il y a 4 min</div>
+      <div class="mt-0.5 text-[12px] text-text-2">
+        18 affectations · score moyen <span class="mono tnum text-text">83/100</span> · 2 verrouillées manuellement · 1 conflit résolu
       </div>
     </div>
+    <bfd-btn kind="ghost" size="sm" [icon]="icClock">Historique</bfd-btn>
+  </div>
 
-    <!-- RIGHT -->
-    <aside class="flex flex-col gap-3">
-      <div class="text-[13px] font-semibold text-text">Disponibles · pas encore affectés</div>
-      <div class="flex flex-col rounded-md border border-border-s bg-surface">
-        @for (m of available; track m.name; let last = $last) {
-          <div
-            [class]="
-              'flex items-center gap-2.5 px-3 py-2.5 ' + (last ? '' : 'border-b border-border-s')
-            "
-          >
-            <bfd-avatar [name]="m.name" [size]="26" />
-            <div class="min-w-0 flex-1">
-              <div class="text-[12.5px] font-medium text-text">{{ m.name }}</div>
-              <div class="text-[10.5px] text-muted">
-                {{ m.role }} · préfère <span class="text-text-2">{{ m.preferred }}</span>
-              </div>
+  <!-- Postes grid -->
+  <div class="mb-[22px] grid grid-cols-3 gap-3">
+    @for (p of postes; track p.id) {
+      @let assigned = assignedTo(p.label);
+      @let full = isFull(p);
+      <div class="rounded-md border border-border-s bg-surface p-3.5">
+        <div class="mb-3 flex items-center gap-2.5">
+          <span [class]="'inline-flex h-8 w-8 items-center justify-center rounded-lg ' + posteBgClass(p.color)">
+            <svg [lucideIcon]="p.icon" [size]="15" aria-hidden="true"></svg>
+          </span>
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold text-text">{{ p.label }}</div>
+            <div class="mono tnum mt-px text-[11px] text-muted">
+              {{ assigned.length }}/{{ p.need }} affectés
             </div>
-            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight">Affecter</bfd-btn>
           </div>
-        }
-      </div>
-
-      <bfd-card>
-        <div class="flex items-start gap-2.5">
-          <svg [lucideIcon]="icAlert" [size]="15" class="mt-0.5 text-warn" aria-hidden="true"></svg>
-          <div class="text-[12px] text-text-2">
-            <div class="font-medium text-text">2 conflits détectés</div>
-            <div class="mt-1">
-              Yanis et Tom partagent la zone B en caisse — l'algo recommande de les séparer.
-            </div>
-            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight" class="mt-2 inline-block"
-              >Voir</bfd-btn
-            >
-          </div>
+          @if (full) {
+            <bfd-badge kind="ok">Complet</bfd-badge>
+          } @else {
+            <bfd-badge kind="warn">{{ toFill(p) }} à pourvoir</bfd-badge>
+          }
         </div>
-      </bfd-card>
-    </aside>
+        <div class="flex flex-col gap-1.5">
+          @for (m of assigned; track m.name) {
+            <div class="flex items-center gap-2 rounded-sm bg-surface-2 px-2 py-1.5">
+              <bfd-avatar [name]="m.name" [size]="20" />
+              <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
+              @if (m.lock) {
+                <svg [lucideIcon]="icLock" [size]="11" class="text-muted" aria-hidden="true"></svg>
+              }
+              <span [class]="'mono tnum text-[10.5px] ' + scoreClassSmall(m.score)">{{ m.score }}</span>
+            </div>
+          }
+          @for (_ of vacantSlots(p); track $index) {
+            <div class="flex items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-[12px] text-muted">
+              <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
+              <span>Affecter…</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Member preferences table -->
+  <div class="mono mb-2.5 text-[10px] tracking-wider text-muted">
+    AFFECTATIONS · PRÉFÉRENCES & SCORE
+  </div>
+  <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+    <div class="grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] gap-3 bg-surface-2 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+      <span></span>
+      <span>Membre</span>
+      <span>Préférences (1-3)</span>
+      <span>Affecté à</span>
+      <span class="text-right">Score</span>
+      <span class="text-right">Bonus</span>
+      <span></span>
+    </div>
+    @for (m of membres; track m.name) {
+      <div class="grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5">
+        <bfd-avatar [name]="m.name" [size]="22" />
+        <div>
+          <div class="text-[13px] text-text">{{ m.name }}</div>
+          <div class="mt-px text-[11px] text-muted">2A · INFO</div>
+        </div>
+        <div class="flex gap-1">
+          @for (pr of prefsFor(m); track $index; let j = $index) {
+            <span
+              [class]="
+                'mono rounded-[3px] px-1.5 py-0.5 text-[10px] ' +
+                (pr === m.poste ? 'bg-blue-soft text-blue font-semibold' : 'bg-surface-2 text-muted font-medium')
+              "
+            >
+              {{ j + 1 }}·{{ pr.slice(0, 4) }}
+            </span>
+          }
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[12.5px] text-text">{{ m.poste }}</span>
+          @if (m.lock) {
+            <svg [lucideIcon]="icLock" [size]="11" class="text-muted" aria-hidden="true"></svg>
+          }
+        </div>
+        <span [class]="'mono tnum text-right text-[13px] font-semibold ' + scoreClass(m.score)">{{ m.score }}</span>
+        <span [class]="'mono text-right text-[12px] ' + bonusClass(m.bonus)">{{ m.bonus || '·' }}</span>
+        <svg [lucideIcon]="icMore" [size]="14" class="cursor-pointer justify-self-end text-muted" aria-hidden="true"></svg>
+      </div>
+    }
   </div>
 </div>

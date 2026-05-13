@@ -22,7 +22,11 @@
       </div>
     }
   </div>
-  <ng-content select="[actions]" />
+  @if (actions(); as tpl) {
+    <div class="flex items-center gap-2">
+      <ng-container [ngTemplateOutlet]="tpl" />
+    </div>
+  }
   <span class="w-px h-[22px] bg-border" aria-hidden="true"></span>
   <button
     type="button"
