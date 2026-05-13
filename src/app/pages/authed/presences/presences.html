@@ -18,15 +18,17 @@
         }
       </div>
       <div class="flex-1"></div>
-      <bfd-btn kind="ghost" size="sm">Aujourd'hui</bfd-btn>
+      <bfd-btn kind="ghost" size="sm" (clicked)="goToToday()">Aujourd'hui</bfd-btn>
       <button
+        (click)="previousMonth()"
         type="button"
         class="flex h-7.5 w-7.5 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
       >
         <svg [lucideIcon]="icChevronRight" [size]="14" class="rotate-180" aria-hidden="true"></svg>
       </button>
-      <div class="px-2 text-[15px] font-semibold -tracking-[0.2px] text-text">{{ monthName }}</div>
+      <div class="px-2 text-[15px] font-semibold -tracking-[0.2px] text-text">{{ activeMonthDisplay() }}</div>
       <button
+        (click)="nextMonth()"
         type="button"
         class="flex h-7.5 w-7.5 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
       >
@@ -47,7 +49,7 @@
 
     <!-- Days grid -->
     <div class="grid flex-1 grid-cols-7 auto-rows-fr border-l border-border-s">
-      @for (d of days; track $index) {
+      @for (d of days(); track $index) {
         @let ev = eventFor(d);
         @let im = inMonth(d);
         <div

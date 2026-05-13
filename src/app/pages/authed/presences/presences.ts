@@ -1,17 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {
   LucideBell,
   LucideCalendar,
   LucideChevronRight,
   LucideDownload,
   LucideDynamicIcon,
-  LucideFilter,
+  LucideFunnel,
   LucidePlus,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
+import {startOfMonth, startOfToday} from 'date-fns';
 
 interface CalEvent {
   readonly name: string;
@@ -44,25 +45,39 @@ export class Presences {
   }
 
   protected readonly icCalendar = LucideCalendar;
-  protected readonly icFilter = LucideFilter;
+  protected readonly icFilter = LucideFunnel;
   protected readonly icDownload = LucideDownload;
   protected readonly icPlus = LucidePlus;
   protected readonly icChevronRight = LucideChevronRight;
   protected readonly icBell = LucideBell;
 
-  protected readonly monthName = 'Février 2026';
+  protected readonly today = startOfToday();
+  protected readonly currentMonth = signal<Date>(startOfMonth(this.today));
+  protected readonly activeMonthDisplay = computed(() => {
+    const currentMonth = this.currentMonth();
+
+    const m = currentMonth.getMonth();
+    return [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+    ][m] + ' ' + currentMonth.getFullYear();
+  })
+
   protected readonly weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-  protected readonly viewTabs = ['Mois', 'Semaine', 'Liste', 'Récap'];
+  protected readonly viewTabs = ['Mois', 'Liste', 'Récap'];
   protected readonly activeTab = signal(0);
 
-  protected readonly days: readonly Date[] = (() => {
-    const start = new Date(2026, 0, 26);
+  protected readonly days = computed(() => {
+    const currentMonth = this.currentMonth();
+    const start = new Date(startOfMonth(currentMonth));
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+
     return Array.from({ length: 42 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
     });
-  })();
+  });
 
   private readonly events: Record<string, CalEvent> = {
     '2026-2-14': { name: 'Soirée Hivernale', kind: 'red', resp: 'yes' },
@@ -93,21 +108,20 @@ export class Presences {
   ];
 
   protected eventFor(d: Date): CalEvent | undefined {
-    return this.events[`2026-${d.getMonth() + 1}-${d.getDate()}`];
+    return this.events[`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`];
   }
 
   protected inMonth(d: Date): boolean {
-    return d.getMonth() === 1;
+    return d.getMonth() === this.currentMonth().getMonth() && d.getFullYear() === this.currentMonth().getFullYear();
   }
 
   protected isToday(d: Date): boolean {
-    return d.getDate() === 12 && d.getMonth() === 1;
+    return d.getDate() === this.today.getDate() && d.getMonth() === this.today.getMonth() && d.getFullYear() === this.today.getFullYear();
   }
 
   protected respLabel(resp: CalEvent['resp']): string {
     if (resp === 'yes') return '✓ Présent';
     if (resp === 'no') return '✗ Absent';
-    if (resp === 'past') return 'Passée';
     return '— Non répondu';
   }
 
@@ -124,5 +138,21 @@ export class Presences {
     if (r.status === 'no') return { label: 'Absent·e', kind: 'red', dot: false };
     if (r.late) return { label: 'Rappelé·e', kind: 'warn', dot: true };
     return { label: '—', kind: 'neutral', dot: false };
+  }
+
+  protected previousMonth() {
+    const d = new Date(this.currentMonth());
+    d.setMonth(d.getMonth() - 1);
+    this.currentMonth.set(d);
+  }
+
+  protected nextMonth() {
+    const d = new Date(this.currentMonth());
+    d.setMonth(d.getMonth() + 1);
+    this.currentMonth.set(d);
+  }
+
+  protected goToToday() {
+    this.currentMonth.set(this.today);
   }
 }
