@@ -89,7 +89,7 @@ export class OrdersService {
   private readonly _allOrders = signal<Order[]>([]);
 
   readonly orders: Signal<Order[]> = computed(() => {
-    const activeId = this.eventsService.currentActiveEvent()?.event.id;
+    const activeId = this.eventsService.currentActiveEvent()?.id;
     if (!activeId) return [];
     return this._allOrders().filter((o) => o.eventId === activeId);
   });

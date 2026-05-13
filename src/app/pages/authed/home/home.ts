@@ -19,14 +19,14 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
-import {StatsStore} from '#core/store/home-data/stats.store';
-import {EncaissementsStore} from '#core/store/home-data/encaissements.store';
-import {QuickActionsStore} from '#core/store/home-data/quick-actions.store';
-import {ActivityFeedStore} from '#core/store/home-data/activity-feed.store';
-import {RoleAssignmentStore} from '#core/store/home-data/role-assignment.store';
-import {AgendaStore} from '#core/store/home-data/agenda.store';
-import {AlertsStore} from '#core/store/home-data/alerts.store';
-import {NextEventStore} from '#core/store/home-data/next-event.store';
+import { StatsStore } from '#core/store/home-data/stats.store';
+import { EncaissementsStore } from '#core/store/home-data/encaissements.store';
+import { QuickActionsStore } from '#core/store/home-data/quick-actions.store';
+import { ActivityFeedStore } from '#core/store/home-data/activity-feed.store';
+import { RoleAssignmentStore } from '#core/store/home-data/role-assignment.store';
+import { AgendaStore } from '#core/store/home-data/agenda.store';
+import { AlertsStore } from '#core/store/home-data/alerts.store';
+import { NextEventStore } from '#core/store/home-data/next-event.store';
 
 @Component({
   selector: 'bfd-home',

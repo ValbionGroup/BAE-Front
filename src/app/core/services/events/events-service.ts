@@ -7,6 +7,8 @@ import {
   MEMBERS,
   AVATAR_COLORS,
 } from '#core/models/coordination.model';
+import { isNil } from '#shared/utils/base-function';
+import { of } from 'rxjs';
 
 function buildInitialEvents(): EventDetail[] {
   const base = createInitialEventsData();
@@ -67,8 +69,8 @@ function buildInitialEvents(): EventDetail[] {
 
   return base.map((ed) => ({
     ...ed,
-    location: locations[ed.event.id] ?? 'Foyer Centrale Lyon',
-    menu: menus[ed.event.id] ?? [],
+    location: locations[ed.id] ?? 'Foyer Centrale Lyon',
+    menu: menus[ed.id] ?? [],
   }));
 }
 
@@ -85,7 +87,7 @@ export class EventsService {
     const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
     return (
       this._events().find((ed) => {
-        const d = ed.event.date;
+        const d = ed.date;
         const dStr = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
         return dStr === todayStr;
       }) ?? null
@@ -96,22 +98,30 @@ export class EventsService {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return this._events()
-      .filter((ed) => ed.event.date > now)
-      .sort((a, b) => a.event.date.getTime() - b.event.date.getTime());
+      .filter((ed) => ed.date > now)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
   });
 
   readonly nextUpcomingEvent: Signal<EventDetail | null> = computed(
     () => this.upcomingEvents()[0] ?? null,
   );
 
+  fetchAll() {
+    return of(this._events());
+  }
+
+  fetchRosterForEvent(id: string) {
+    return of(this._events());
+  }
+
   stationForMember(memberId: string, eventId: string): Role | null {
-    const eventDetail = this._events().find((ed) => ed.event.id === eventId);
-    if (!eventDetail) return null;
-    return eventDetail.roles.find((r) => r.assignedMemberIds.includes(memberId)) ?? null;
+    const eventDetail = this._events().find((ed) => ed.id === eventId);
+    if (!eventDetail || isNil(eventDetail.roles)) return null;
+    return eventDetail.roles!.find((r) => r.assignedMemberIds.includes(memberId)) ?? null;
   }
 
   menuForEvent(eventId: string): MenuItem[] {
-    return this._events().find((ed) => ed.event.id === eventId)?.menu ?? [];
+    return this._events().find((ed) => ed.id === eventId)?.menu ?? [];
   }
 
   getAvatarColor(memberId: string): string {
@@ -123,10 +133,11 @@ export class EventsService {
   assignMember(eventId: string, roleId: string, memberId: string): void {
     this._events.update((events) =>
       events.map((ed) => {
-        if (ed.event.id !== eventId) return ed;
+        if (ed.id !== eventId) return ed;
+        if (isNil(ed.roles)) return ed;
         return {
           ...ed,
-          roles: ed.roles.map((r) => {
+          roles: ed.roles?.map((r) => {
             if (r.id !== roleId || r.assignedMemberIds.includes(memberId)) return r;
             return { ...r, assignedMemberIds: [...r.assignedMemberIds, memberId] };
           }),
@@ -139,10 +150,11 @@ export class EventsService {
   removeAssignment(eventId: string, roleId: string, memberId: string): void {
     this._events.update((events) =>
       events.map((ed) => {
-        if (ed.event.id !== eventId) return ed;
+        if (ed.id !== eventId) return ed;
+        if (isNil(ed.roles)) return ed;
         return {
           ...ed,
-          roles: ed.roles.map((r) => {
+          roles: ed.roles?.map((r) => {
             if (r.id !== roleId) return r;
             return { ...r, assignedMemberIds: r.assignedMemberIds.filter((id) => id !== memberId) };
           }),

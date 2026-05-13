@@ -1,4 +1,43 @@
-import { EventData, Role } from '#core/models/coordination.model';
+import { Role } from '#core/models/coordination.model';
+import { LoadingStatus } from '#core/models/global.model';
+
+export enum Presence {
+  PENDING = -1,
+  PRESENT = 1,
+  ABSENT = 0,
+}
+
+export interface EventData {
+  id: string;
+  name: string;
+  location: string;
+  date: Date;
+  description?: string;
+  duration?: number;
+}
+
+export interface EventDetail extends EventData {
+  memberPresence?: Presence;
+  memberPresenceStatus?: LoadingStatus;
+
+  roster?: RosterRow[];
+  rosterStatus?: LoadingStatus;
+
+  menu?: MenuItem[];
+  menuStatus?: LoadingStatus;
+
+  roles?: Role[];
+  rolesStatus?: LoadingStatus;
+}
+
+export interface RosterRow {
+  id: string;
+  name: string;
+  role: string;
+  status: Presence;
+  when: Date;
+  late: boolean;
+}
 
 export interface MenuItem {
   recipeId: string;
@@ -6,12 +45,3 @@ export interface MenuItem {
   servings: number;
   prepNotes?: string;
 }
-
-/** Extended event with location and menu — used by EventsService and homepage/kitchen. */
-export interface EventDetail extends EventData {
-  location: string;
-  menu: MenuItem[];
-}
-
-/** Re-export for convenience. */
-export type { Role };
