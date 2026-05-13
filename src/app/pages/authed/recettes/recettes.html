@@ -37,7 +37,7 @@
         <span class="text-right">Vente</span>
         <span class="text-right">Marge</span>
       </div>
-      @for (r of recettes; track r.id; let i = $index) {
+      @for (r of recettes(); track r.id; let i = $index) {
         <div
           (click)="selectedIdx.set(i)"
           [class]="

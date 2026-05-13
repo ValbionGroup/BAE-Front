@@ -3,15 +3,17 @@ import { RouterLink } from '@angular/router';
 import {
   LucideArrowRight,
   LucideChefHat,
-  LucideChevronRight,
   LucideDynamicIcon,
   LucideMinus,
   LucidePlus,
   LucideTrash2,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { Recipe, RecipesService } from '#core/services/recipes/recipes-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
+import { DropdownService } from '#shared/components/dropdown/dropdown.service';
+import { DropdownItem } from '#shared/components/dropdown/dropdown.models';
 
 interface RecipeLine {
   readonly id: string;
@@ -37,6 +39,9 @@ interface EventBlock {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LogistiqueEvents {
+  private readonly recipesService = inject(RecipesService);
+  private readonly dropdown = inject(DropdownService);
+
   constructor() {
     inject(PageHeaderService).set({
       title: 'Logistique',
@@ -51,7 +56,8 @@ export class LogistiqueEvents {
   protected readonly icMinus = LucideMinus;
   protected readonly icTrash = LucideTrash2;
   protected readonly icArrowRight = LucideArrowRight;
-  protected readonly icChevronRight = LucideChevronRight;
+
+  protected readonly catalog = this.recipesService.recipes;
 
   protected readonly events = signal<EventBlock[]>([
     {
@@ -61,12 +67,12 @@ export class LogistiqueEvents {
       name: 'Soirée Hivernale',
       time: '19:30 — 23:00',
       status: 'preparation',
-      recipes: [
-        { id: 'hd-clas', name: 'Hot-dog classique', unitCost: 1.12, count: 80 },
-        { id: 'hd-veg', name: 'Hot-dog veggie', unitCost: 1.34, count: 30 },
-        { id: 'frites', name: 'Frites portion', unitCost: 0.42, count: 50 },
-        { id: 'crepe-n', name: 'Crêpe Nutella', unitCost: 0.55, count: 40 },
-      ],
+      recipes: this.seed([
+        ['hd-clas', 80],
+        ['hd-veg', 30],
+        ['frites', 50],
+        ['crepe-n', 40],
+      ]),
     },
     {
       id: 'soiree-carnaval',
@@ -75,10 +81,10 @@ export class LogistiqueEvents {
       name: 'Soirée Carnaval',
       time: '20:00 — 23:30',
       status: 'preparation',
-      recipes: [
-        { id: 'tapas', name: 'Plateau tapas', unitCost: 2.4, count: 18 },
-        { id: 'sangria', name: 'Sangria (verre)', unitCost: 0.65, count: 90 },
-      ],
+      recipes: this.seed([
+        ['tapas', 18],
+        ['sangria', 90],
+      ]),
     },
     {
       id: 'repas-alternants',
@@ -87,12 +93,19 @@ export class LogistiqueEvents {
       name: 'Repas Alternant·e·s',
       time: '19:00 — 22:00',
       status: 'preparation',
-      recipes: [
-        { id: 'carbonara', name: 'Pâtes carbonara', unitCost: 1.05, count: 60 },
-        { id: 'salade', name: 'Salade verte', unitCost: 0.4, count: 60 },
-      ],
+      recipes: this.seed([
+        ['carbonara', 60],
+        ['salade', 60],
+      ]),
     },
   ]);
+
+  private seed(entries: readonly (readonly [string, number])[]): RecipeLine[] {
+    return entries.flatMap(([id, count]) => {
+      const r = this.recipesService.byId(id);
+      return r ? [{ id: r.id, name: r.nom, unitCost: r.cout, count }] : [];
+    });
+  }
 
   protected formatPrice(n: number): string {
     return n.toFixed(2).replace('.', ',');
@@ -109,6 +122,54 @@ export class LogistiqueEvents {
   protected statusBadge(e: EventBlock): { label: string; kind: BadgeKind; dot: boolean } {
     if (e.status === 'past') return { label: 'Terminée', kind: 'neutral', dot: false };
     return { label: 'En préparation', kind: 'warn', dot: true };
+  }
+
+  protected openRecipePicker(e: EventBlock, ev: MouseEvent): void {
+    ev.stopPropagation();
+    // Resolve the actual <button> the user clicked (bfd-btn renders a <button> child).
+    const anchor = this.resolveAnchor(ev.currentTarget);
+    if (!anchor) return;
+
+    const taken = new Set(e.recipes.map((r) => r.id));
+    const available = this.catalog().filter((c) => !taken.has(c.id));
+
+    const items: readonly DropdownItem[] = available.map((c) => ({
+      type: 'action',
+      icon: LucideChefHat,
+      label: c.nom,
+      description: c.usage,
+      trailing: `${this.formatPrice(c.cout)} €`,
+      onClick: () => this.addFromCatalog(e, c),
+    }));
+
+    this.dropdown.toggle({
+      anchor,
+      placement: 'bottom-end',
+      width: 320,
+      header: `Recettes disponibles (${available.length})`,
+      emptyLabel: 'Toutes les recettes sont déjà ajoutées.',
+      items,
+    });
+  }
+
+  private resolveAnchor(target: EventTarget | null): HTMLElement | null {
+    if (!(target instanceof HTMLElement)) return null;
+    // Closest <button> is the actual interactive anchor floating-ui should
+    // position against (bfd-btn host is just a wrapper).
+    return target.closest('button') ?? target;
+  }
+
+  private addFromCatalog(e: EventBlock, c: Recipe): void {
+    this.events.update((list) =>
+      list.map((ev) =>
+        ev.id !== e.id
+          ? ev
+          : {
+              ...ev,
+              recipes: [...ev.recipes, { id: c.id, name: c.nom, unitCost: c.cout, count: 10 }],
+            },
+      ),
+    );
   }
 
   protected inc(e: EventBlock, r: RecipeLine): void {
@@ -143,21 +204,6 @@ export class LogistiqueEvents {
     this.events.update((list) =>
       list.map((ev) =>
         ev.id !== e.id ? ev : { ...ev, recipes: ev.recipes.filter((x) => x.id !== r.id) },
-      ),
-    );
-  }
-
-  protected add(e: EventBlock): void {
-    // Add a placeholder new recipe — picker UI is out of scope for the mock.
-    const id = `rec-${Math.random().toString(36).slice(2, 8)}`;
-    this.events.update((list) =>
-      list.map((ev) =>
-        ev.id !== e.id
-          ? ev
-          : {
-              ...ev,
-              recipes: [...ev.recipes, { id, name: 'Nouvelle recette', unitCost: 1.0, count: 10 }],
-            },
       ),
     );
   }

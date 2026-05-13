@@ -10,20 +10,10 @@ import {
   LucideStar,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { RecipesService } from '#core/services/recipes/recipes-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
-
-interface Recette {
-  readonly id: string;
-  readonly nom: string;
-  readonly ing: number;
-  readonly cout: number;
-  readonly prix: number;
-  readonly marge: number;
-  readonly star: boolean;
-  readonly usage: string;
-}
 
 interface Ingredient {
   readonly n: string;
@@ -61,88 +51,7 @@ export class Recettes {
   protected readonly activeFilter = signal(0);
   protected readonly selectedIdx = signal(0);
 
-  protected readonly recettes: readonly Recette[] = [
-    {
-      id: 'hd-clas',
-      nom: 'Hot-dog classique',
-      ing: 5,
-      cout: 1.12,
-      prix: 3.0,
-      marge: 1.88,
-      star: true,
-      usage: 'Plat principal',
-    },
-    {
-      id: 'hd-veg',
-      nom: 'Hot-dog veggie',
-      ing: 6,
-      cout: 1.34,
-      prix: 3.5,
-      marge: 2.16,
-      star: false,
-      usage: 'Végé',
-    },
-    {
-      id: 'crq',
-      nom: 'Croque-monsieur',
-      ing: 4,
-      cout: 0.85,
-      prix: 2.5,
-      marge: 1.65,
-      star: false,
-      usage: 'Plat principal',
-    },
-    {
-      id: 'frt-pkt',
-      nom: 'Frites portion',
-      ing: 2,
-      cout: 0.42,
-      prix: 2.0,
-      marge: 1.58,
-      star: true,
-      usage: 'Accompagnement',
-    },
-    {
-      id: 'crepe-s',
-      nom: 'Crêpe sucre',
-      ing: 3,
-      cout: 0.3,
-      prix: 1.5,
-      marge: 1.2,
-      star: false,
-      usage: 'Dessert',
-    },
-    {
-      id: 'crepe-n',
-      nom: 'Crêpe Nutella',
-      ing: 4,
-      cout: 0.55,
-      prix: 2.0,
-      marge: 1.45,
-      star: false,
-      usage: 'Dessert',
-    },
-    {
-      id: 'kir',
-      nom: 'Kir cassis (1 v.)',
-      ing: 2,
-      cout: 0.65,
-      prix: 2.5,
-      marge: 1.85,
-      star: false,
-      usage: 'Boisson',
-    },
-    {
-      id: 'pano',
-      nom: 'Panaché 25cl',
-      ing: 2,
-      cout: 0.95,
-      prix: 2.5,
-      marge: 1.55,
-      star: false,
-      usage: 'Boisson',
-    },
-  ];
+  protected readonly recettes = inject(RecipesService).recipes;
 
   protected readonly ingredients: readonly Ingredient[] = [
     { n: 'Saucisse Strasbourg', q: '1 pc', c: 0.35, lot: 'L23-117', stock: 24, warn: true },

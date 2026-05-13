@@ -32,7 +32,9 @@
     type="button"
     (click)="theme.toggle()"
     class="w-8 h-8 rounded-md border border-border bg-surface text-text-2 inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
-    [attr.aria-label]="theme.mode() === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'"
+    [attr.aria-label]="themeTooltip()"
+    [bfdTooltip]="themeTooltip()"
+    bfdTooltipPlacement="bottom"
   >
     @if (theme.mode() === 'dark') {
       <svg lucideSun [size]="15" aria-hidden="true"></svg>
@@ -44,6 +46,9 @@
     type="button"
     class="relative w-8 h-8 rounded-md border border-border bg-surface text-text-2 inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
     aria-label="Notifications"
+    bfdTooltip="Notifications"
+    bfdTooltipDescription="3 nouvelles · cliquez pour ouvrir"
+    bfdTooltipPlacement="bottom-end"
   >
     <svg lucideBell [size]="15" aria-hidden="true"></svg>
     <span

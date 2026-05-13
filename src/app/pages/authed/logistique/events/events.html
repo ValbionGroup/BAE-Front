@@ -100,9 +100,9 @@
           </div>
         }
 
-        <!-- Add recipe -->
+        <!-- Add recipe — opens the global Dropdown anchored to the button -->
         <div class="flex justify-end border-t border-border-s px-4 py-2.5">
-          <bfd-btn kind="ghost" size="sm" [icon]="icPlus" (clicked)="add(e)">
+          <bfd-btn kind="ghost" size="sm" [icon]="icPlus" (clicked)="openRecipePicker(e, $event)">
             Ajouter une recette
           </bfd-btn>
         </div>
