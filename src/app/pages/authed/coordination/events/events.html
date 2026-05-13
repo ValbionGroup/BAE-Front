@@ -44,10 +44,7 @@
             <span class="tnum text-text">{{ e.assigned }}/{{ e.required }}</span>
           </div>
           <div class="h-1.5 overflow-hidden rounded-sm bg-border">
-            <div
-              [class]="'h-full ' + progressClass(e)"
-              [style.width.%]="progressPct(e)"
-            ></div>
+            <div [class]="'h-full ' + progressClass(e)" [style.width.%]="progressPct(e)"></div>
           </div>
         </div>
 

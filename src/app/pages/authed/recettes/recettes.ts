@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
   LucideChefHat,
-  LucideDynamicIcon, LucideEllipsis,
+  LucideDynamicIcon,
+  LucideEllipsis,
   LucideMoreHorizontal,
   LucidePencil,
   LucidePlus,

@@ -7,11 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  LucideChevronRight,
-  LucideDynamicIcon,
-  LucidePlus,
-} from '@lucide/angular';
+import { LucideChevronRight, LucideDynamicIcon, LucidePlus } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
@@ -81,7 +77,7 @@ export class CoordinationEvents {
       id: 'repas-alternants',
       day: '28',
       month: 'mar',
-      name: "Repas Alternant·e·s",
+      name: 'Repas Alternant·e·s',
       sub: 'Pâtes carbonara',
       assigned: 0,
       required: 12,

@@ -116,7 +116,10 @@ export class LogistiqueEvents {
       list.map((ev) =>
         ev.id !== e.id
           ? ev
-          : { ...ev, recipes: ev.recipes.map((x) => (x.id === r.id ? { ...x, count: x.count + 1 } : x)) },
+          : {
+              ...ev,
+              recipes: ev.recipes.map((x) => (x.id === r.id ? { ...x, count: x.count + 1 } : x)),
+            },
       ),
     );
   }
@@ -151,7 +154,10 @@ export class LogistiqueEvents {
       list.map((ev) =>
         ev.id !== e.id
           ? ev
-          : { ...ev, recipes: [...ev.recipes, { id, name: 'Nouvelle recette', unitCost: 1.0, count: 10 }] },
+          : {
+              ...ev,
+              recipes: [...ev.recipes, { id, name: 'Nouvelle recette', unitCost: 1.0, count: 10 }],
+            },
       ),
     );
   }

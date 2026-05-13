@@ -261,7 +261,7 @@ export class Home {
   }
 
   private formatDateForDisplay(date: Date): string {
-    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: "long" };
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'long' };
     const res = date.toLocaleDateString('fr-FR', options);
     return res.charAt(0).toUpperCase() + res.slice(1);
   }

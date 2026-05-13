@@ -24,12 +24,12 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-[1fr_320px] gap-[18px]">
+  <div class="grid grid-cols-[1fr_320px] gap-4.5">
     <!-- MAIN -->
-    <div class="flex flex-col gap-[18px]">
+    <div class="flex flex-col gap-4.5">
       <!-- Hero next event -->
       <div
-        class="relative overflow-hidden rounded-lg border border-border-s p-[22px]"
+        class="relative overflow-hidden rounded-lg border border-border-s p-5.5"
         style="
           background: linear-gradient(
             135deg,
@@ -40,7 +40,7 @@
         "
       >
         <div
-          class="absolute -top-10 -right-10 h-[220px] w-[220px] rounded-full opacity-[.18]"
+          class="absolute -top-10 -right-10 h-55 w-55 rounded-full opacity-[.18]"
           style="background: radial-gradient(circle, var(--bae-red) 0%, transparent 70%)"
           aria-hidden="true"
         ></div>
@@ -55,7 +55,7 @@
             <h3 class="m-0 text-[28px] font-semibold -tracking-[0.5px] text-text">
               {{ next.name }}
             </h3>
-            <div class="mt-2.5 flex gap-[18px] text-[13px] text-text-2">
+            <div class="mt-2.5 flex gap-4.5 text-[13px] text-text-2">
               <span class="inline-flex items-center gap-1.5">
                 <svg
                   [lucideIcon]="icCalendar"
@@ -76,12 +76,11 @@
             </div>
           </div>
 
-          <div class="flex min-w-[240px] flex-col items-end gap-1.5">
+          <div class="flex min-w-60 flex-col items-end gap-1.5">
             <div class="mb-0.5 text-[11px] text-muted">Votre réponse</div>
             <div class="flex gap-1.5">
-              <bfd-btn kind="primary" size="sm" [icon]="icCheck">Présente</bfd-btn>
-              <bfd-btn kind="outline" size="sm">Absente</bfd-btn>
-              <bfd-btn kind="ghost" size="sm">Indécise</bfd-btn>
+              <bfd-btn kind="primary" size="sm" [icon]="icCheck">Présent</bfd-btn>
+              <bfd-btn kind="outline" size="sm">Absent</bfd-btn>
             </div>
             <div class="mt-1 text-[11px] text-muted">
               Poste préférentiel : <span class="text-text">Caisse</span>
@@ -89,7 +88,7 @@
           </div>
         </div>
 
-        <div class="mt-[18px] grid grid-cols-4 gap-3">
+        <div class="mt-4.5 grid grid-cols-4 gap-3">
           @for (cell of prepCells; track cell.label) {
             <div class="rounded-md border border-border-s bg-surface-2 p-3">
               <div class="mb-1 text-[11px] text-muted">{{ cell.label }}</div>
@@ -109,7 +108,7 @@
       </div>
 
       <!-- Agenda + Alerts -->
-      <div class="grid grid-cols-2 gap-[18px]">
+      <div class="grid grid-cols-2 gap-4.5">
         <bfd-card [padding]="0">
           <div class="flex items-center border-b border-border-s px-4 py-3.5">
             <div class="flex-1">
@@ -125,7 +124,7 @@
               "
             >
               <div
-                class="w-[42px] rounded-md border border-border-s bg-surface-2 px-0 py-1 text-center"
+                class="w-10.5 rounded-md border border-border-s bg-surface-2 px-0 py-1 text-center"
               >
                 <div class="tnum text-[16px] font-semibold leading-none text-text">{{ e.day }}</div>
                 <div class="mt-0.5 text-[9px] uppercase tracking-widest text-muted">
@@ -157,7 +156,7 @@
             >
               <div
                 [class]="
-                  'inline-flex h-[30px] w-[30px] items-center justify-center rounded-md ' +
+                  'inline-flex h-7.5 w-7.5 items-center justify-center rounded-md ' +
                   a.bgClass +
                   ' ' +
                   a.fgClass
@@ -202,10 +201,10 @@
             }
           </div>
         </div>
-        <div class="flex h-[140px] items-end gap-2 p-4">
+        <div class="flex h-35 items-end gap-2 p-4">
           @for (b of chartBars; track b.label) {
             <div class="flex flex-1 flex-col items-center gap-1.5">
-              <div class="flex h-[88px] w-full items-end justify-center gap-[3px]">
+              <div class="flex h-22 w-full items-end justify-center gap-0.75">
                 @if (b.isNext) {
                   <div
                     class="rounded-t-[3px] border border-dashed border-blue"
@@ -232,7 +231,7 @@
             </div>
           }
         </div>
-        <div class="flex gap-[18px] px-4 pb-3.5 text-[11px] text-muted">
+        <div class="flex gap-4.5 px-4 pb-3.5 text-[11px] text-muted">
           <span class="inline-flex items-center gap-1.5">
             <span class="h-2.5 w-2.5 rounded-sm bg-blue"></span>Caisse sur place
           </span>
@@ -245,7 +244,7 @@
     </div>
 
     <!-- RIGHT rail -->
-    <div class="flex flex-col gap-[18px]">
+    <div class="flex flex-col gap-4.5">
       <bfd-card>
         <div class="text-[13px] font-semibold text-text">Votre rôle ce soir-là</div>
         <div class="mt-0.5 text-[11px] text-muted">Affectation · Soirée Hivernale</div>
@@ -259,7 +258,7 @@
               </div>
             </div>
             <div
-              class="inline-flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-blue-soft text-blue"
+              class="inline-flex h-9.5 w-9.5 items-center justify-center rounded-lg bg-blue-soft text-blue"
             >
               <svg [lucideIcon]="icCart" [size]="18" aria-hidden="true"></svg>
             </div>
@@ -288,7 +287,7 @@
       <bfd-card>
         <div class="mb-3 flex items-center">
           <div class="flex-1 text-[13px] font-semibold text-text">Accès rapides</div>
-          <svg [lucideIcon]="icSettings" [size]="14" class="text-muted" aria-hidden="true"></svg>
+          <!--<svg [lucideIcon]="icSettings" [size]="14" class="text-muted" aria-hidden="true"></svg>-->
         </div>
         <div class="grid grid-cols-2 gap-2">
           @for (qa of quickActions; track qa.label) {

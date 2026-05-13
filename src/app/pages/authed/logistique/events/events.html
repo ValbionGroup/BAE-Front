@@ -40,7 +40,9 @@
         </div>
 
         <!-- Recipes table -->
-        <div class="grid grid-cols-[28px_1fr_110px_120px_28px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <div
+          class="grid grid-cols-[28px_1fr_110px_120px_28px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+        >
           <span></span>
           <span>Recette</span>
           <span class="text-right">Coût unité</span>
@@ -54,13 +56,19 @@
           </div>
         }
         @for (r of e.recipes; track r.id) {
-          <div class="grid grid-cols-[28px_1fr_110px_120px_28px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]">
-            <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-surface-2 text-text-2">
+          <div
+            class="grid grid-cols-[28px_1fr_110px_120px_28px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
+          >
+            <span
+              class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-surface-2 text-text-2"
+            >
               <svg [lucideIcon]="icChef" [size]="14" aria-hidden="true"></svg>
             </span>
             <span class="text-text">{{ r.name }}</span>
             <span class="mono tnum text-right text-text-2">{{ formatPrice(r.unitCost) }} €</span>
-            <div class="inline-flex items-center justify-center gap-px rounded-md border border-border bg-surface-2 p-0.5 justify-self-center">
+            <div
+              class="inline-flex items-center justify-center gap-px rounded-md border border-border bg-surface-2 p-0.5 justify-self-center"
+            >
               <button
                 type="button"
                 (click)="dec(e, r)"
@@ -69,7 +77,9 @@
               >
                 <svg [lucideIcon]="icMinus" [size]="12" aria-hidden="true"></svg>
               </button>
-              <span class="tnum w-8 text-center text-[13px] font-semibold text-text">{{ r.count }}</span>
+              <span class="tnum w-8 text-center text-[13px] font-semibold text-text">{{
+                r.count
+              }}</span>
               <button
                 type="button"
                 (click)="inc(e, r)"

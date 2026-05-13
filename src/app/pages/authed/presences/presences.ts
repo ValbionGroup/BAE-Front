@@ -105,8 +105,8 @@ export class Presences {
   }
 
   protected respLabel(resp: CalEvent['resp']): string {
-    if (resp === 'yes') return '✓ Présente';
-    if (resp === 'no') return '✗ Absente';
+    if (resp === 'yes') return '✓ Présent';
+    if (resp === 'no') return '✗ Absent';
     if (resp === 'past') return 'Passée';
     return '— Non répondu';
   }
