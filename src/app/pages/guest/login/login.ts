@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -29,10 +29,11 @@ export class Login {
 
   protected readonly loginError = toSignal(this.store.select(selectLoginError));
   protected readonly year = computed(() => new Date().getFullYear());
+  protected readonly rememberMe = signal<boolean>(false);
 
   protected form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', Validators.required],
+    password: ['', Validators.required]
   });
 
   protected readonly icShield = LucideShield;
@@ -55,5 +56,9 @@ export class Login {
 
   protected loginWithEirbConnect(): void {
     // TODO: redirect to EirbConnect / ENT Bordeaux INP OAuth endpoint
+  }
+
+  protected switchRemember() {
+    this.rememberMe.set(!this.rememberMe());
   }
 }
