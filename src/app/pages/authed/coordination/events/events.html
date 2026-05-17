@@ -2,7 +2,7 @@
 <ng-template #actions>
   <bfd-btn kind="ghost" size="md" [icon]="icCalendar">Calendrier</bfd-btn>
   <bfd-btn kind="ghost" size="md" [icon]="icDownload">Exporter</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus">Nouvelle soirée</bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openNew()">Nouvelle soirée</bfd-btn>
 </ng-template>
 
 <div class="grid h-full grid-cols-[1.5fr_1fr] overflow-hidden">
@@ -101,10 +101,11 @@
             </button>
             <button
               type="button"
-              title="Plus"
-              class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
+              title="Supprimer"
+              (click)="openDelete(e.id)"
+              class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-muted hover:bg-danger-soft hover:text-danger"
             >
-              <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
+              <svg [lucideIcon]="icTrash" [size]="14" aria-hidden="true"></svg>
             </button>
           </span>
         </div>

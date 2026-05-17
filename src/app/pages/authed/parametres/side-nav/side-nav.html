@@ -1,0 +1,20 @@
+<nav class="flex flex-col gap-px">
+  @for (it of items; track it.id; let i = $index) {
+    @if (showAdmHead(i)) {
+      <div
+        class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-3.5 pb-1 uppercase"
+      >
+        Admin BAE
+      </div>
+    }
+    <a
+      [routerLink]="it.route"
+      routerLinkActive="bg-surface-2 text-text font-medium [&_.bae-snav-icon]:text-blue"
+      [routerLinkActiveOptions]="{ exact: it.exact ?? false }"
+      class="flex items-center gap-2.5 px-3 py-2 text-[12.5px] rounded-md cursor-pointer text-text-2 hover:bg-surface-2"
+    >
+      <svg [lucideIcon]="it.icon" [size]="14" class="bae-snav-icon text-muted"></svg>
+      {{ it.l }}
+    </a>
+  }
+</nav>

@@ -15,6 +15,8 @@ import {
   LucideTrash2,
   LucideTriangleAlert,
 } from '@lucide/angular';
+import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
@@ -59,7 +61,12 @@ interface Lot {
 })
 export class Stocks {
   private readonly pageHeader = inject(PageHeaderService);
+  private readonly router = inject(Router);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected openScanner(): void {
+    this.router.navigate(['/stocks/scanner']);
+  }
 
   constructor() {
     this.pageHeader.set({

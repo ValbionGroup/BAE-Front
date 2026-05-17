@@ -1,0 +1,238 @@
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icX">Quitter</bfd-btn>
+  <bfd-btn kind="ghost" size="md" [icon]="icSettings">Paramètres scanner</bfd-btn>
+</ng-template>
+
+<div class="h-full grid grid-cols-[1.4fr_1fr] overflow-hidden">
+  <!-- LEFT: camera viewport -->
+  <div class="relative overflow-hidden flex flex-col bg-[#0a0a0c]">
+    <div class="absolute inset-0">
+      <div
+        class="absolute inset-0"
+        style="background: radial-gradient(circle at 30% 20%, #2a2a32 0%, #14141a 60%), linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 100%);"
+      ></div>
+      <div class="absolute left-0 right-0 h-px bg-white/5" style="bottom: 30%"></div>
+      <div
+        class="absolute left-1/2 top-1/2 rounded-md flex flex-col justify-between p-3.5"
+        style="
+          transform: translate(-50%, -50%) rotate(-2deg);
+          width: 380px; height: 200px;
+          background: linear-gradient(180deg, #d5d2cd 0%, #a8a39a 100%);
+          box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.5);
+        "
+      >
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-sm bg-[#8a1c1c]"></div>
+          <div
+            class="font-sans font-bold text-sm text-[#2a2a2e] uppercase"
+            style="letter-spacing: 1px"
+          >
+            Strasbourg
+          </div>
+        </div>
+        <div class="mono text-[10px] text-[#3a3a3e] text-right">10 pces · 500 g</div>
+      </div>
+    </div>
+
+    <div
+      class="absolute inset-0 pointer-events-none"
+      style="background: radial-gradient(ellipse 360px 240px at 50% 48%, transparent 50%, rgba(0,0,0,.75) 100%);"
+    ></div>
+
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+      style="width: 460px; height: 230px;"
+    >
+      <div
+        class="absolute top-0 left-0 w-8 h-8 rounded-tl-md"
+        style="border-top: 3px solid var(--bae-blue); border-left: 3px solid var(--bae-blue);"
+      ></div>
+      <div
+        class="absolute top-0 right-0 w-8 h-8 rounded-tr-md"
+        style="border-top: 3px solid var(--bae-blue); border-right: 3px solid var(--bae-blue);"
+      ></div>
+      <div
+        class="absolute bottom-0 left-0 w-8 h-8 rounded-bl-md"
+        style="border-bottom: 3px solid var(--bae-blue); border-left: 3px solid var(--bae-blue);"
+      ></div>
+      <div
+        class="absolute bottom-0 right-0 w-8 h-8 rounded-br-md"
+        style="border-bottom: 3px solid var(--bae-blue); border-right: 3px solid var(--bae-blue);"
+      ></div>
+      <div
+        class="absolute top-1/2 left-3 right-3 h-0.5"
+        style="background: linear-gradient(90deg, transparent 0%, var(--bae-blue) 50%, transparent 100%); box-shadow: 0 0 12px var(--bae-blue), 0 0 24px var(--bae-blue); opacity: 0.85;"
+      ></div>
+    </div>
+
+    <div class="absolute top-4 left-4 flex gap-2 z-10">
+      <span
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-white border"
+        style="background: rgba(0,0,0,.6); border-color: rgba(255,255,255,.2)"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-red"></span>
+        CAMÉRA · LIVE
+      </span>
+      <span
+        class="inline-flex items-center px-2 py-1 rounded-full text-[11px] text-white/85 border"
+        style="background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.2)"
+      >
+        FaceTime HD
+      </span>
+    </div>
+
+    <div
+      class="absolute bottom-0 left-0 right-0 p-4 flex items-center gap-3 z-10"
+      style="background: linear-gradient(0deg, rgba(0,0,0,.7) 0%, transparent 100%)"
+    >
+      <div class="flex-1 text-white/85 text-xs">
+        <div class="flex items-center gap-2">
+          <svg [lucideIcon]="icScan" [size]="14" aria-hidden="true"></svg>
+          <span class="font-semibold">Visez un code-barres</span>
+        </div>
+        <div class="mono text-[11px] opacity-70 mt-1">
+          EAN-13, EAN-8, CODE-128 supportés · auto-focus actif
+        </div>
+      </div>
+      <button
+        type="button"
+        class="inline-flex items-center justify-center cursor-pointer text-white"
+        style="width: 38px; height: 38px; border-radius: 19px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1)"
+      >
+        <svg [lucideIcon]="icZap" [size]="16" aria-hidden="true"></svg>
+      </button>
+      <button
+        type="button"
+        class="inline-flex items-center justify-center cursor-pointer text-white"
+        style="width: 38px; height: 38px; border-radius: 19px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1)"
+      >
+        <svg [lucideIcon]="icSettings" [size]="16" aria-hidden="true"></svg>
+      </button>
+      <button
+        type="button"
+        class="px-3.5 py-2.5 rounded-full text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer text-white"
+        style="border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1)"
+      >
+        <svg [lucideIcon]="icEdit" [size]="14" aria-hidden="true"></svg>
+        Saisir à la main
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT: results -->
+  <aside class="flex flex-col border-l border-border-s bg-surface">
+    <div class="px-5 py-4 border-b border-border-s">
+      <div class="flex items-center gap-2.5">
+        <span
+          class="w-9 h-9 rounded-lg bg-blue-soft text-blue inline-flex items-center justify-center"
+        >
+          <svg [lucideIcon]="icScan" [size]="17" aria-hidden="true"></svg>
+        </span>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-text">Session de scan</div>
+          <div class="text-[11.5px] text-muted mt-0.5">4 articles · démarrée à 14:08</div>
+        </div>
+        <bfd-badge kind="ok" [dot]="true">2 m 14</bfd-badge>
+      </div>
+    </div>
+
+    <div class="p-5 border-b border-border-s">
+      <div class="mono text-[10px] text-blue tracking-wider mb-1.5">DERNIER SCAN · IL Y A 1 S</div>
+      <div class="p-3.5 bg-blue-soft border-[1.5px] border-blue rounded-md relative overflow-hidden">
+        <svg
+          [lucideIcon]="icCheck"
+          [size]="14"
+          class="absolute top-3 right-3 text-blue"
+          aria-hidden="true"
+        ></svg>
+        <div class="flex items-baseline gap-2.5 mb-1">
+          <span class="text-base font-semibold text-text">Saucisses Strasbourg x10</span>
+          <bfd-badge kind="ghost">Frais</bfd-badge>
+        </div>
+        <div class="mono text-[11px] text-muted">3 268 754 117 904 · réf. SAU-STRAS-1</div>
+
+        <div class="grid grid-cols-3 gap-3 mt-3.5">
+          <bfd-field label="Quantité">
+            <bfd-input value="4" suffix="pq" size="md" />
+          </bfd-field>
+          <bfd-field label="DLC">
+            <bfd-input [icon]="icCalendar" value="28/02/2026" size="md" />
+          </bfd-field>
+          <bfd-field label="Emplacement">
+            <div
+              class="flex items-center h-9 px-2.5 bg-surface border border-border rounded-md text-[13px] text-text"
+            >
+              Frigo A
+              <span class="flex-1"></span>
+              <svg [lucideIcon]="icChevDown" [size]="14" class="text-muted"></svg>
+            </div>
+          </bfd-field>
+        </div>
+
+        <div class="flex gap-2 mt-3.5">
+          <bfd-btn kind="primary" size="sm" [icon]="icCheck">Ajouter au stock</bfd-btn>
+          <bfd-btn kind="ghost" size="sm" [icon]="icEdit">Modifier la fiche</bfd-btn>
+          <div class="flex-1"></div>
+          <bfd-btn kind="quiet" size="sm">Ignorer</bfd-btn>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 pt-3 pb-5">
+      <div class="mono text-[10px] text-muted tracking-wider mb-2">DÉJÀ SCANNÉS</div>
+      @for (s of history; track s.code; let i = $index) {
+        <div
+          [class]="
+            'flex items-center gap-2.5 py-2.5 ' + (i ? 'border-t border-border-s' : '')
+          "
+        >
+          <span
+            [class]="
+              'w-7 h-7 rounded-[7px] inline-flex items-center justify-center ' +
+              (s.unknown ? 'bg-warn-soft text-warn' : 'bg-ok-soft text-ok')
+            "
+          >
+            <svg
+              [lucideIcon]="s.unknown ? icAlert : icCheck"
+              [size]="13"
+              aria-hidden="true"
+            ></svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span
+                [class]="
+                  'text-[12.5px] font-medium ' + (s.unknown ? 'text-warn' : 'text-text')
+                "
+                >{{ s.n }}</span
+              >
+              @if (s.unknown) {
+                <bfd-badge kind="warn">À créer</bfd-badge>
+              }
+            </div>
+            <div class="mono text-[10.5px] text-muted mt-0.5">{{ s.code }}</div>
+          </div>
+          @if (s.unknown) {
+            <bfd-btn kind="outline" size="sm" [icon]="icPlus" (clicked)="openUnknown(s.code)"
+              >Créer</bfd-btn
+            >
+          } @else {
+            <div class="text-right">
+              <div class="mono tnum text-[12.5px] text-text font-semibold">{{ s.q }}</div>
+              <div class="text-[10px] text-muted">DLC {{ s.dlc }}</div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="flex items-center gap-2 px-5 py-3.5 border-t border-border-s bg-bg">
+      <div class="flex-1">
+        <div class="mono tnum text-[17px] font-bold text-text">17 articles</div>
+        <div class="text-[11px] text-muted mt-0.5">en attente de validation</div>
+      </div>
+      <bfd-btn kind="ghost" size="sm">Tout effacer</bfd-btn>
+      <bfd-btn kind="primary" size="md" [icon]="icCheck">Valider la session</bfd-btn>
+    </div>
+  </aside>
+</div>

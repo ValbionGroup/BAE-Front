@@ -1,0 +1,88 @@
+<div class="h-full overflow-y-auto px-6 pt-5 pb-10">
+  <div class="flex justify-end mb-3.5">
+    <bfd-btn kind="primary" [icon]="icPlus">Ajouter</bfd-btn>
+  </div>
+
+  <div class="grid grid-cols-[220px_1fr] gap-7">
+    <bfd-parametres-side-nav />
+
+    <div class="max-w-[920px]">
+      <!-- Category filter -->
+      <div class="flex gap-1.5 mb-3.5">
+        @for (c of cats; track c; let i = $index) {
+          <button
+            type="button"
+            (click)="activeCat.set(i)"
+            [class]="
+              'px-2.5 py-1.5 text-xs font-medium rounded-md cursor-pointer border ' +
+              (i === activeCat()
+                ? 'bg-surface-2 text-text border-border'
+                : 'bg-transparent text-text-2 border-transparent')
+            "
+          >
+            {{ c }}
+          </button>
+        }
+      </div>
+
+      <!-- Cards grid -->
+      <div class="grid grid-cols-2 gap-3">
+        @for (it of integrations; track it.n) {
+          <div
+            [class]="
+              'p-4 bg-surface border border-border-s rounded-lg ' +
+              (it.s === 'off' ? 'opacity-70' : '')
+            "
+          >
+            <div class="flex items-center gap-3">
+              <div
+                [class]="
+                  'w-10 h-10 rounded-md inline-flex items-center justify-center mono font-bold text-base ' +
+                  it.cls
+                "
+              >
+                {{ it.logo }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-[13.5px] font-semibold text-text">{{ it.n }}</span>
+                  <bfd-badge kind="neutral">{{ it.cat }}</bfd-badge>
+                </div>
+                <div class="text-[11px] text-muted mt-1">{{ it.acc }}</div>
+              </div>
+              <bfd-toggle [on]="it.s === 'on'" />
+            </div>
+            <div
+              class="mt-3 pt-2.5 border-t border-border-s flex items-center gap-2 text-[11px] text-muted"
+            >
+              <span [class]="'w-1.5 h-1.5 rounded-full ' + (it.s === 'on' ? 'bg-ok' : 'bg-muted')"></span>
+              {{ it.last }}
+              <div class="flex-1"></div>
+              @if (it.s === 'on') {
+                <bfd-btn kind="ghost" size="sm">Configurer</bfd-btn>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- API & webhooks -->
+      <bfd-card class="mt-[18px] block">
+        <div class="text-sm font-semibold text-text">API &amp; webhooks</div>
+        <div class="text-[11.5px] text-muted mt-0.5">
+          Accès lecture seule pour les outils externes
+        </div>
+        <div
+          class="mt-3.5 p-3.5 bg-surface-2 border border-border-s rounded-md flex items-center gap-3"
+        >
+          <div class="flex-1">
+            <div class="text-[11px] text-muted mb-1">Clé API · lecture seule</div>
+            <div class="mono text-xs text-text-2">bae_sk_····················pe9F</div>
+          </div>
+          <bfd-btn kind="ghost" size="sm">Copier</bfd-btn>
+          <bfd-btn kind="secondary" size="sm">Régénérer</bfd-btn>
+        </div>
+      </bfd-card>
+    </div>
+  </div>
+</div>

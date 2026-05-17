@@ -1,0 +1,80 @@
+<ng-template #actions>
+  <span class="text-[12px] text-muted mr-1.5">
+    @if (unreadCount() === 0) {
+      Tout est lu
+    } @else {
+      <span class="tnum text-text font-medium">{{ unreadCount() }}</span> non
+      {{ unreadCount() > 1 ? 'lues' : 'lue' }}
+    }
+  </span>
+  <bfd-btn
+    kind="ghost"
+    size="md"
+    [icon]="icCheck"
+    [disabled]="unreadCount() === 0"
+    (clicked)="markAllRead()"
+    >Tout marquer lu</bfd-btn
+  >
+  <bfd-btn kind="ghost" size="md" [icon]="icSettings">Préférences</bfd-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto">
+  <!-- Tabs -->
+  <div class="flex gap-1 px-6 pt-3.5 border-b border-border-s">
+    @for (t of tabs(); track t[0]; let i = $index) {
+      <button
+        type="button"
+        (click)="activeTab.set(i)"
+        [class]="
+          'px-3.5 py-2.5 text-[13px] font-medium bg-transparent border-0 cursor-pointer -mb-px ' +
+          (i === activeTab()
+            ? 'text-text border-b-2 border-blue'
+            : 'text-text-2 border-b-2 border-transparent')
+        "
+      >
+        {{ t[0] }}
+        @if (t[1] > 0) {
+          <span class="tnum text-[11px] text-muted ml-1.5">{{ t[1] }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- List -->
+  <div>
+    @for (n of notifs(); track n.id) {
+      <button
+        type="button"
+        (click)="markRead(n.id)"
+        [class]="
+          'w-full text-left flex gap-3.5 px-6 py-3.5 border-b border-border-s relative bg-transparent border-x-0 border-t-0 cursor-pointer hover:bg-surface-2/40 ' +
+          (n.un ? 'bg-blue/[0.04]' : '')
+        "
+      >
+        @if (n.un) {
+          <span class="absolute left-2.5 top-[22px] w-1.5 h-1.5 rounded-full bg-blue"></span>
+        }
+        <span
+          [class]="
+            'w-9 h-9 rounded-md shrink-0 inline-flex items-center justify-center ' + iconBg(n.col)
+          "
+        >
+          <svg [lucideIcon]="n.icon" [size]="16" aria-hidden="true"></svg>
+        </span>
+        <div class="flex-1">
+          <div class="flex items-baseline gap-2">
+            <span
+              [class]="
+                'text-[13.5px] text-text ' + (n.un ? 'font-semibold' : 'font-medium')
+              "
+              >{{ n.t }}</span
+            >
+            <span class="flex-1"></span>
+            <span class="text-[11px] text-muted">{{ n.w }}</span>
+          </div>
+          <div class="text-[12.5px] text-text-2 mt-1 leading-snug">{{ n.s }}</div>
+        </div>
+      </button>
+    }
+  </div>
+</div>

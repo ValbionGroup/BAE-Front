@@ -91,6 +91,7 @@
               [kind]="e.recipes.length ? 'secondary' : 'primary'"
               size="sm"
               [icon]="e.recipes.length ? icEdit : icPlus"
+              (clicked)="openAssign(e.id)"
             >
               {{ e.recipes.length ? 'Gérer recettes' : 'Assigner recettes' }}
             </bfd-btn>
@@ -235,7 +236,12 @@
             </bfd-btn>
             <bfd-btn kind="ghost" size="sm" [icon]="icDownload">Fiche logistique</bfd-btn>
             @if (e.status !== 'past') {
-              <bfd-btn kind="primary" size="sm" [iconRight]="icArrowRight">
+              <bfd-btn
+                kind="primary"
+                size="sm"
+                [iconRight]="icArrowRight"
+                (clicked)="openGenerate()"
+              >
                 Générer liste de courses
               </bfd-btn>
             }

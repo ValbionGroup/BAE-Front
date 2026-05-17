@@ -1,0 +1,194 @@
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icPlus">Inviter un membre</bfd-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- Tabs -->
+  <div class="flex gap-4 border-b border-border-s mb-5">
+    @for (tab of tabs; track tab; let i = $index) {
+      <button
+        type="button"
+        (click)="activeTab.set(i)"
+        [class]="
+          'px-0 py-2.5 -mb-px bg-transparent border-0 border-b-2 cursor-pointer text-[13px] font-medium ' +
+          (i === activeTab()
+            ? 'border-blue text-text'
+            : 'border-transparent text-muted')
+        "
+      >
+        {{ tab }}
+        @if (i === 3) {
+          <bfd-badge kind="blue" class="ml-2">2</bfd-badge>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="grid grid-cols-[1fr_360px] gap-[18px]">
+    <!-- Members + permissions -->
+    <div>
+      <!-- Members table -->
+      <bfd-card [padding]="0">
+        <div class="flex items-center px-4 py-3.5 border-b border-border-s">
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold text-text">
+              Membres actifs · saison 2025-2026
+            </div>
+            <div class="text-[11px] text-muted mt-0.5">
+              3 en ligne · dernière connexion datée par fuseau Paris
+            </div>
+          </div>
+          <div class="w-[220px]">
+            <bfd-input [icon]="icSearch" placeholder="Filtrer…" size="sm" />
+          </div>
+        </div>
+
+        <div
+          class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
+        >
+          <span></span><span>Nom</span><span>Rôle</span><span>Scope</span
+          ><span>Dernière act.</span><span></span>
+        </div>
+
+        @for (m of team; track m.nom; let i = $index; let last = $last) {
+          <div
+            [class]="
+              'grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center px-4 py-3 text-[12.5px] ' +
+              (last ? '' : 'border-b border-border-s')
+            "
+          >
+            <div class="relative w-7">
+              <bfd-avatar [name]="m.nom" [size]="28" />
+              @if (m.on) {
+                <span
+                  class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-ok border-2 border-surface"
+                ></span>
+              }
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="font-medium text-text">{{ m.nom }}</span>
+                @if (m.star) {
+                  <svg
+                    [lucideIcon]="icStar"
+                    [size]="11"
+                    fill="var(--bae-warn)"
+                    class="text-warn"
+                    aria-hidden="true"
+                  ></svg>
+                }
+              </div>
+              <div class="text-[10.5px] text-muted mt-px">{{ m.prom }}</div>
+            </div>
+            <bfd-badge [kind]="roleKind(m.role)">{{ m.role }}</bfd-badge>
+            <span class="text-text-2 text-xs">{{ m.scope }}</span>
+            <span [class]="'text-[11.5px] ' + (m.on ? 'text-ok' : 'text-muted')">{{
+              m.last
+            }}</span>
+            <svg
+              [lucideIcon]="icMore"
+              [size]="14"
+              class="text-muted justify-self-end"
+              aria-hidden="true"
+            ></svg>
+          </div>
+        }
+      </bfd-card>
+
+      <!-- Permissions matrix -->
+      <bfd-card [padding]="0" class="mt-[18px] block">
+        <div class="px-4 py-3.5 border-b border-border-s">
+          <div class="text-[13px] font-semibold text-text">Matrice des permissions</div>
+          <div class="text-[11px] text-muted mt-0.5">
+            Par module et par rôle · cliquer une cellule pour modifier
+          </div>
+        </div>
+        <div class="overflow-auto">
+          <div
+            class="grid grid-cols-[160px_repeat(7,1fr)] gap-1 px-4 py-2.5 border-b border-border-s text-[10px] font-semibold text-muted uppercase tracking-wider"
+          >
+            <span>Module</span>
+            <span class="text-center">Présid.</span>
+            <span class="text-center">Trés.</span>
+            <span class="text-center">Log.</span>
+            <span class="text-center">Coordo</span>
+            <span class="text-center">Cuist.</span>
+            <span class="text-center">Com.</span>
+            <span class="text-center">Membre</span>
+          </div>
+          @for (p of perms; track p.mod; let i = $index; let last = $last) {
+            <div
+              [class]="
+                'grid grid-cols-[160px_repeat(7,1fr)] gap-1 px-4 py-2 text-[12.5px] items-center ' +
+                (last ? '' : 'border-b border-border-s')
+              "
+            >
+              <span class="text-text font-medium">{{ p.mod }}</span>
+              @for (cell of [p.pres, p.tres, p.log, p.coo, p.cui, p.com, p.mb]; track $index) {
+                <span class="text-center">
+                  <span
+                    [class]="
+                      'mono inline-flex items-center justify-center min-w-[38px] h-[22px] px-1.5 rounded-sm text-[10.5px] font-semibold ' +
+                      permClass(cell).wrap
+                    "
+                    >{{ permClass(cell).label }}</span
+                  >
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </bfd-card>
+    </div>
+
+    <!-- Right: invitations + audit -->
+    <div class="flex flex-col gap-[18px]">
+      <bfd-card>
+        <div class="flex items-center mb-2.5">
+          <div class="flex-1 text-[13px] font-semibold text-text">Invitations en attente</div>
+          <bfd-badge kind="blue">2</bfd-badge>
+        </div>
+        @for (iv of invitations; track iv.mail; let i = $index) {
+          <div [class]="'py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
+            <div class="text-[12.5px] text-text font-medium">{{ iv.mail }}</div>
+            <div class="text-[11px] text-muted mt-0.5">{{ iv.role }} · expire {{ iv.exp }}</div>
+            <div class="flex gap-1.5 mt-2">
+              <bfd-btn kind="ghost" size="sm">Renvoyer</bfd-btn>
+              <bfd-btn kind="ghost" size="sm">Annuler</bfd-btn>
+            </div>
+          </div>
+        }
+      </bfd-card>
+
+      <bfd-card [padding]="0">
+        <div class="px-4 py-3.5 border-b border-border-s">
+          <div class="text-[13px] font-semibold text-text">Audit log · récent</div>
+          <div class="text-[11px] text-muted mt-0.5">Actions sensibles tracées 12 mois</div>
+        </div>
+        @for (l of audit; track $index) {
+          <div class="flex gap-2.5 px-4 py-3 border-t border-border-s items-start">
+            <div
+              [class]="
+                'w-[26px] h-[26px] rounded-sm inline-flex items-center justify-center shrink-0 ' +
+                auditIconClass(l.c)
+              "
+            >
+              <svg [lucideIcon]="l.icon" [size]="13" aria-hidden="true"></svg>
+            </div>
+            <div class="flex-1 text-xs text-text-2 leading-relaxed min-w-0">
+              <span class="text-text font-medium">{{ l.who }}</span> {{ l.a }}
+              @if (l.em) {
+                <span class="mono text-blue">{{ l.em }}</span>
+              }
+              @if (l.s) {
+                {{ l.s }}
+              }
+              <div class="text-[10.5px] text-muted mt-0.5">{{ l.when }}</div>
+            </div>
+          </div>
+        }
+      </bfd-card>
+    </div>
+  </div>
+</div>

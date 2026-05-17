@@ -5,15 +5,18 @@ import {
   LucideCalendar,
   LucideChartLine,
   LucideChefHat,
+  LucideContact,
   LucideDynamicIcon,
   LucideEuro,
   LucideHouse,
   LucideIconInput,
   LucideLogOut,
   LucidePackage,
+  LucidePartyPopper,
   LucideQrCode,
   LucideSearch,
   LucideSettings,
+  LucideShield,
   LucideShoppingCart,
   LucideTicket,
   LucideTruck,
@@ -68,6 +71,7 @@ export class Sidebar {
   protected readonly espace: readonly NavItem[] = [
     { id: 'home', label: 'Accueil', icon: LucideHouse, route: '/' },
     { id: 'pres', label: 'Présences', icon: LucideCalendar, route: '/presences', badge: 2 },
+    { id: 'adh', label: 'Adhérents', icon: LucideContact, route: '/adherents' },
   ];
 
   protected readonly preparation: readonly NavItem[] = [
@@ -80,12 +84,14 @@ export class Sidebar {
   protected readonly soiree: readonly NavItem[] = [
     { id: 'cmd', label: 'Caisse', icon: LucideShoppingCart, route: '/caisse' },
     { id: 'pre', label: 'Précommandes', icon: LucideQrCode, route: '/precommandes', badge: 12 },
+    { id: 'soir', label: 'Pilotage soirée', icon: LucidePartyPopper, route: '/soiree' },
     { id: 'pay', label: 'Paiements', icon: LucideEuro, route: '/paiements' },
     { id: 'ana', label: 'Analyse', icon: LucideChartLine, route: '/analyse' },
   ];
 
   protected readonly footer: readonly NavItem[] = [
     { id: 'tick', label: 'Tickets', icon: LucideTicket, route: '/tickets' },
+    { id: 'team', label: 'Équipe BAE', icon: LucideShield, route: '/equipe' },
     { id: 'set', label: 'Paramètres', icon: LucideSettings, route: '/parametres' },
   ];
 

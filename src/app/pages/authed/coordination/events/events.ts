@@ -24,6 +24,9 @@ import {
   LucideX,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { CoordinationNewModal } from '#shared/components/modal/coordination-new-modal/coordination-new-modal';
+import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
@@ -80,7 +83,21 @@ interface EditState {
 })
 export class CoordinationEvents {
   private readonly pageHeader = inject(PageHeaderService);
+  private readonly modals = inject(ModalService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected openNew(): void {
+    this.modals.open({ type: 'component', component: CoordinationNewModal });
+  }
+
+  protected openDelete(eventId: string): void {
+    const ev = this.all.find((e) => e.id === eventId);
+    this.modals.open({
+      type: 'component',
+      component: CoordinationDeleteModal,
+      inputs: { eventName: ev?.name ?? 'cette soirée' },
+    });
+  }
 
   constructor() {
     this.pageHeader.set({

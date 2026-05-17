@@ -22,6 +22,9 @@ import {
   LucideTriangleAlert,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { LogistiqueAssignModal } from '#shared/components/modal/logistique-assign-modal/logistique-assign-modal';
+import { LogistiqueGenerateModal } from '#shared/components/modal/logistique-generate-modal/logistique-generate-modal';
 import { Recipe, RecipesService } from '#core/services/recipes/recipes-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
@@ -69,7 +72,22 @@ export class LogistiqueEvents {
   private readonly recipesService = inject(RecipesService);
   private readonly dropdown = inject(DropdownService);
   private readonly pageHeader = inject(PageHeaderService);
+  private readonly modals = inject(ModalService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected openAssign(eventId: string): void {
+    const ev = this.events().find((e) => e.id === eventId);
+    const label = ev ? `${ev.name.toUpperCase()} · ${ev.day}/${ev.month}` : 'SOIRÉE';
+    this.modals.open({
+      type: 'component',
+      component: LogistiqueAssignModal,
+      inputs: { eventLabel: label },
+    });
+  }
+
+  protected openGenerate(): void {
+    this.modals.open({ type: 'component', component: LogistiqueGenerateModal });
+  }
 
   constructor() {
     this.pageHeader.set({

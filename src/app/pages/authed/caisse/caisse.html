@@ -1,3 +1,8 @@
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icScan">Scanner</bfd-btn>
+  <bfd-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bfd-btn>
+</ng-template>
+
 <div class="grid h-full grid-cols-[1fr_360px]">
   <!-- LEFT: products -->
   <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-5">

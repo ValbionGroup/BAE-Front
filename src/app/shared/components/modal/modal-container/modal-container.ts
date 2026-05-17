@@ -8,15 +8,20 @@ import {
   Injector,
   signal,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgComponentOutlet } from '@angular/common';
 import { ModalService } from '../modal.service';
-import { DeleteModalConfig, ModalConfig, MessageModalConfig } from '../modal.models';
+import {
+  ComponentModalConfig,
+  DeleteModalConfig,
+  ModalConfig,
+  MessageModalConfig,
+} from '../modal.models';
 import { MessageModal } from '../message-modal/message-modal';
 import { DeleteModal } from '../delete-modal/delete-modal';
 
 @Component({
   selector: 'bfd-modal-container',
-  imports: [MessageModal, DeleteModal],
+  imports: [MessageModal, DeleteModal, NgComponentOutlet],
   templateUrl: './modal-container.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -110,5 +115,15 @@ export class ModalContainer {
 
   protected asDelete(config: ModalConfig): DeleteModalConfig {
     return config as DeleteModalConfig;
+  }
+
+  protected asComponent(config: ModalConfig): ComponentModalConfig {
+    return config as ComponentModalConfig;
+  }
+
+  /** Build NgComponentOutlet inputs by merging the caller's payload with the
+   *  modal id, which the component uses to call `modalService.close(id)`. */
+  protected componentInputs(config: ComponentModalConfig): Record<string, unknown> {
+    return { ...(config.inputs ?? {}), id: config.id };
   }
 }

@@ -1,6 +1,6 @@
 <!-- Topbar actions, projected via PageHeaderService -->
 <ng-template #actions>
-  <bfd-btn kind="secondary" size="md" [icon]="icScan">Scanner</bfd-btn>
+  <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
   <bfd-btn kind="secondary" size="md" [icon]="icDownload">Inventaire</bfd-btn>
   <bfd-btn kind="primary" size="md" [icon]="icPlus">Produit</bfd-btn>
 </ng-template>
