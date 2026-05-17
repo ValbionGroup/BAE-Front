@@ -2,31 +2,79 @@ import {
   ChangeDetectionStrategy,
   Component,
   TemplateRef,
+  computed,
   effect,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { LucideChevronRight, LucideDynamicIcon, LucidePlus } from '@lucide/angular';
+import {
+  LucideCalendar,
+  LucideCheck,
+  LucideChefHat,
+  LucideChevronDown,
+  LucideClock,
+  LucideDownload,
+  LucideDynamicIcon,
+  LucideMoreHorizontal,
+  LucidePencil,
+  LucidePlus,
+  LucideSearch,
+  LucideTrash2,
+  LucideX,
+} from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
+import { Input } from '#shared/components/ui/input/input';
+import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { Field } from '#shared/components/ui/field/field';
+import { Toggle } from '#shared/components/ui/toggle/toggle';
 
-interface CoordinationEvent {
+type EventStatus = 'preparing' | 'planning' | 'draft' | 'past';
+type TabKey = 'upcoming' | 'drafts' | 'past';
+
+interface CoordEvent {
   readonly id: string;
-  readonly day: string;
-  readonly month: string;
   readonly name: string;
-  readonly sub: string;
-  readonly assigned: number;
-  readonly required: number;
-  readonly status: 'preparation' | 'ready' | 'past';
-  readonly time: string;
+  readonly date: string;
+  readonly when: string;
+  readonly responsible: string;
+  readonly status: EventStatus;
+  readonly statusLabel: string;
+  readonly statusKind: BadgeKind;
+  readonly members: number;
+  readonly maxMembers: number;
+  readonly recipes: number;
+}
+
+interface OptionRow {
+  readonly key: string;
+  readonly label: string;
+  readonly hint: string;
+  enabled: boolean;
+}
+
+interface EditState {
+  readonly id: string;
+  readonly statusLabel: string;
+  readonly createdAt: string;
+  readonly createdBy: string;
+  name: string;
+  date: string;
+  time: string;
+  location: string;
+  expected: string;
+  description: string;
+  responsibleName: string;
+  responsibleRole: string;
+  recipes: string[];
+  readonly options: OptionRow[];
 }
 
 @Component({
   selector: 'bfd-coordination-events',
-  imports: [RouterLink, Btn, Badge, LucideDynamicIcon],
+  imports: [Btn, Badge, Input, Avatar, Field, Toggle, LucideDynamicIcon],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -37,8 +85,8 @@ export class CoordinationEvents {
   constructor() {
     this.pageHeader.set({
       title: 'Coordination',
-      subtitle: 'Sélectionnez une soirée',
-      breadcrumb: ['Préparation', 'Coordination'],
+      subtitle: 'Soirées · création & édition',
+      breadcrumb: ['Préparation', 'Coordination', 'Soirées'],
       activeNavId: 'coord',
     });
     effect(() => {
@@ -48,69 +96,220 @@ export class CoordinationEvents {
   }
 
   protected readonly icPlus = LucidePlus;
-  protected readonly icChevronRight = LucideChevronRight;
+  protected readonly icCalendar = LucideCalendar;
+  protected readonly icDownload = LucideDownload;
+  protected readonly icSearch = LucideSearch;
+  protected readonly icEdit = LucidePencil;
+  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icX = LucideX;
+  protected readonly icClock = LucideClock;
+  protected readonly icChef = LucideChefHat;
+  protected readonly icChevDown = LucideChevronDown;
+  protected readonly icTrash = LucideTrash2;
+  protected readonly icCheck = LucideCheck;
 
-  protected readonly events: readonly CoordinationEvent[] = [
+  private readonly all: readonly CoordEvent[] = [
     {
-      id: 'soiree-hivernale',
-      day: '14',
-      month: 'fév',
+      id: 'hiv26',
       name: 'Soirée Hivernale',
-      sub: 'Hot-dogs · Bières · Crêpes',
-      assigned: 11,
-      required: 18,
-      status: 'preparation',
-      time: '19:30 — 23:00',
+      date: '14/02',
+      when: 'Ven. 19:30 — 23:00',
+      responsible: 'Léa Marchand',
+      status: 'preparing',
+      statusLabel: 'En préparation',
+      statusKind: 'warn',
+      members: 18,
+      maxMembers: 22,
+      recipes: 5,
     },
     {
-      id: 'soiree-carnaval',
-      day: '07',
-      month: 'mar',
-      name: 'Soirée Carnaval',
-      sub: 'Tapas · Sangria',
-      assigned: 0,
-      required: 16,
-      status: 'preparation',
-      time: '20:00 — 23:30',
+      id: 'carn26',
+      name: 'Carnaval BAE',
+      date: '07/03',
+      when: 'Ven. 19:00 — 23:30',
+      responsible: 'Tom Bertrand',
+      status: 'planning',
+      statusLabel: 'À planifier',
+      statusKind: 'blue',
+      members: 0,
+      maxMembers: 24,
+      recipes: 2,
     },
     {
-      id: 'repas-alternants',
-      day: '28',
-      month: 'mar',
-      name: 'Repas Alternant·e·s',
-      sub: 'Pâtes carbonara',
-      assigned: 0,
-      required: 12,
-      status: 'preparation',
-      time: '19:00 — 22:00',
+      id: 'rep26',
+      name: 'Repas Alternants',
+      date: '28/03',
+      when: 'Jeu. 19:30 — 22:00',
+      responsible: 'Sarah Maurel',
+      status: 'planning',
+      statusLabel: 'À planifier',
+      statusKind: 'blue',
+      members: 0,
+      maxMembers: 20,
+      recipes: 0,
     },
     {
-      id: 'soiree-bienvenue',
-      day: '24',
-      month: 'jan',
-      name: 'Soirée Bienvenue 2026',
-      sub: 'Plateaux mixtes · cocktails',
-      assigned: 18,
-      required: 18,
+      id: 'prn26',
+      name: 'Soirée Printemps',
+      date: '12/04',
+      when: 'Ven. 19:30 — 23:00',
+      responsible: 'Hugo Lacroix',
+      status: 'draft',
+      statusLabel: 'Brouillon',
+      statusKind: 'neutral',
+      members: 0,
+      maxMembers: 24,
+      recipes: 0,
+    },
+    {
+      id: 'bv26',
+      name: 'Bienvenue 2026',
+      date: '24/01',
+      when: 'Passée · 218 commandes',
+      responsible: 'Léa Marchand',
       status: 'past',
-      time: '19:30 — 23:30',
+      statusLabel: 'Passée',
+      statusKind: 'ok',
+      members: 16,
+      maxMembers: 16,
+      recipes: 4,
+    },
+    {
+      id: 'noel25',
+      name: 'Noël BAE 2025',
+      date: '13/12',
+      when: 'Passée · 286 commandes',
+      responsible: 'Tom Bertrand',
+      status: 'past',
+      statusLabel: 'Passée',
+      statusKind: 'ok',
+      members: 19,
+      maxMembers: 19,
+      recipes: 6,
     },
   ];
 
-  protected progressClass(e: CoordinationEvent): string {
-    const pct = e.required > 0 ? e.assigned / e.required : 0;
-    if (pct >= 1) return 'bg-ok';
-    if (pct >= 0.5) return 'bg-warn';
-    return 'bg-red';
+  protected readonly activeTab = signal<TabKey>('upcoming');
+  protected readonly selectedId = signal<string>('hiv26');
+
+  protected readonly tabs = computed(() => {
+    const upcoming = this.all.filter((e) => e.status === 'preparing' || e.status === 'planning').length;
+    const drafts = this.all.filter((e) => e.status === 'draft').length;
+    const past = this.all.filter((e) => e.status === 'past').length;
+    return [
+      { key: 'upcoming' as TabKey, label: 'À venir', count: upcoming },
+      { key: 'drafts' as TabKey, label: 'Brouillons', count: drafts },
+      { key: 'past' as TabKey, label: 'Passées', count: past },
+    ];
+  });
+
+  protected readonly visibleEvents = computed<readonly CoordEvent[]>(() => {
+    const tab = this.activeTab();
+    return this.all.filter((e) => {
+      if (tab === 'upcoming') return e.status === 'preparing' || e.status === 'planning';
+      if (tab === 'drafts') return e.status === 'draft';
+      return e.status === 'past';
+    });
+  });
+
+  protected readonly edit = signal<EditState>({
+    id: 'hiv26',
+    statusLabel: 'EN PRÉPARATION',
+    createdAt: '02/02/2026',
+    createdBy: 'Léa M.',
+    name: 'Soirée Hivernale',
+    date: '14/02/2026',
+    time: '19:30 — 23:00',
+    location: 'Foyer ENSEIRB — Talence',
+    expected: '180',
+    description:
+      "Soirée d'hiver, hot-dogs + crêpes + boissons chaudes. Précommandes ouvertes jusqu'au 14/02 18:30.",
+    responsibleName: 'Léa Marchand',
+    responsibleRole: 'Trésorière',
+    recipes: [
+      'Hot-dog classique',
+      'Hot-dog veggie',
+      'Frites portion',
+      'Crêpe Nutella',
+      'Panaché 25cl',
+    ],
+    options: [
+      {
+        key: 'precommandes',
+        label: 'Précommandes en ligne',
+        hint: "Page publique active jusqu'à J-1 18:30",
+        enabled: true,
+      },
+      {
+        key: 'inscription',
+        label: 'Inscription obligatoire',
+        hint: 'Limite à 22 membres BAE pour le service',
+        enabled: true,
+      },
+      {
+        key: 'public',
+        label: 'Soirée publique',
+        hint: "Visible sur la page d'accueil publique",
+        enabled: true,
+      },
+      {
+        key: 'lock',
+        label: 'Verrouiller le menu',
+        hint: 'Empêche modification après J-2',
+        enabled: false,
+      },
+    ],
+  });
+
+  protected select(id: string): void {
+    this.selectedId.set(id);
   }
 
-  protected progressPct(e: CoordinationEvent): number {
-    return e.required > 0 ? Math.round((e.assigned / e.required) * 100) : 0;
+  protected setTab(key: TabKey): void {
+    this.activeTab.set(key);
   }
 
-  protected statusBadge(e: CoordinationEvent): { label: string; kind: BadgeKind; dot: boolean } {
-    if (e.status === 'past') return { label: 'Terminée', kind: 'neutral', dot: false };
-    if (e.assigned >= e.required) return { label: 'Prête', kind: 'ok', dot: true };
-    return { label: 'En préparation', kind: 'warn', dot: true };
+  protected rowAccent(e: CoordEvent): { bg: string; text: string } {
+    switch (e.status) {
+      case 'preparing':
+        return { bg: 'bg-red-soft', text: 'text-red' };
+      case 'past':
+        return { bg: 'bg-ok-soft', text: 'text-ok' };
+      case 'draft':
+        return { bg: 'bg-surface-3', text: 'text-muted' };
+      default:
+        return { bg: 'bg-blue-soft', text: 'text-blue' };
+    }
+  }
+
+  protected updateName(v: string): void {
+    this.edit.update((s) => ({ ...s, name: v }));
+  }
+  protected updateDate(v: string): void {
+    this.edit.update((s) => ({ ...s, date: v }));
+  }
+  protected updateTime(v: string): void {
+    this.edit.update((s) => ({ ...s, time: v }));
+  }
+  protected updateLocation(v: string): void {
+    this.edit.update((s) => ({ ...s, location: v }));
+  }
+  protected updateExpected(v: string): void {
+    this.edit.update((s) => ({ ...s, expected: v }));
+  }
+  protected updateDescription(ev: Event): void {
+    const v = (ev.target as HTMLTextAreaElement).value;
+    this.edit.update((s) => ({ ...s, description: v }));
+  }
+
+  protected toggleOption(key: string, enabled: boolean): void {
+    this.edit.update((s) => ({
+      ...s,
+      options: s.options.map((o) => (o.key === key ? { ...o, enabled } : o)),
+    }));
+  }
+
+  protected removeRecipe(name: string): void {
+    this.edit.update((s) => ({ ...s, recipes: s.recipes.filter((r) => r !== name) }));
   }
 }

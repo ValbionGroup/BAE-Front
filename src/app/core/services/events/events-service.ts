@@ -1,5 +1,14 @@
-import { Injectable, Signal, computed, signal } from '@angular/core';
-import {EventDetail, MenuItem, Presence, RosterRow} from '#core/models/event.model';
+import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { map, Observable, tap } from 'rxjs';
+import {
+  EventApiDto,
+  EventData,
+  EventDetail,
+  MenuItem,
+  RosterRow,
+  RosterRowApiDto,
+} from '#core/models/event.model';
 import {
   Member,
   Role,
@@ -8,9 +17,16 @@ import {
   AVATAR_COLORS,
 } from '#core/models/coordination.model';
 import { isNil } from '#shared/utils/base-function';
-import { of } from 'rxjs';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { ApiEndPointV1 } from '#core/models/endpoint.model';
 
-function buildInitialEvents(): EventDetail[] {
+interface LocalEventSeed {
+  roles?: Role[];
+  menu?: MenuItem[];
+  memberPresence?: EventDetail['memberPresence'];
+}
+
+function buildLocalSeedById(): Map<string, LocalEventSeed> {
   const base = createInitialEventsData();
 
   const menus: Record<string, MenuItem[]> = {
@@ -59,24 +75,25 @@ function buildInitialEvents(): EventDetail[] {
     ],
   };
 
-  const locations: Record<string, string> = {
-    e1: 'Foyer Centrale Lyon',
-    e2: 'Salle des fêtes — Campus La Doua',
-    e3: 'Foyer Centrale Lyon',
-    e4: 'Entrepôt 42, Lyon 7e',
-    e5: 'Foyer Centrale Lyon',
-  };
-
-  return base.map((ed) => ({
-    ...ed,
-    location: locations[ed.id] ?? 'Foyer Centrale Lyon',
-    menu: menus[ed.id] ?? [],
-  }));
+  return new Map(
+    base.map((ed) => [
+      ed.id,
+      {
+        roles: ed.roles,
+        memberPresence: ed.memberPresence,
+        menu: menus[ed.id] ?? [],
+      },
+    ]),
+  );
 }
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
-  private readonly _events = signal<EventDetail[]>(buildInitialEvents());
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
+
+  private readonly localSeedById = buildLocalSeedById();
+  private readonly _events = signal<EventDetail[]>([]);
 
   readonly events: Signal<EventDetail[]> = this._events.asReadonly();
 
@@ -106,49 +123,19 @@ export class EventsService {
     () => this.upcomingEvents()[0] ?? null,
   );
 
-  fetchAll() {
-    return of(this._events());
+  fetchAll(): Observable<EventDetail[]> {
+    const url = this.buildUrl(ApiEndPointV1.EVENTS);
+    return this.http.get<EventApiDto[]>(url).pipe(
+      map((dtos) => dtos.map((d) => this.mergeWithLocalSeed(this.toEventData(d)))),
+      tap((events) => this._events.set(events)),
+    );
   }
 
-  fetchRosterForEvent(id: string) {
-    return of([
-      {
-        id: 'a',
-        name: 'Person 1',
-        role: 'Role',
-        status: Presence.PRESENT,
-        when: new Date(),
-        late: false
-      },      {
-        id: 'b',
-        name: 'Person 2',
-        role: 'Role',
-        status: Presence.ABSENT,
-        when: new Date(),
-        late: false
-      },      {
-        id: 'c',
-        name: 'Person 3',
-        role: 'Role',
-        status: Presence.PENDING,
-        when: new Date(),
-        late: false
-      },      {
-        id: 'd',
-        name: 'Person 4',
-        role: 'Role',
-        status: Presence.PRESENT,
-        when: new Date(),
-        late: false
-      },      {
-        id: 'e',
-        name: 'Person 5',
-        role: 'Role',
-        status: Presence.PRESENT,
-        when: new Date(),
-        late: false
-      }
-    ] as RosterRow[] | undefined);
+  fetchRosterForEvent(id: string): Observable<RosterRow[]> {
+    const url = this.buildUrl(ApiEndPointV1.EVENT_ROSTER).replace(':id', id);
+    return this.http
+      .get<RosterRowApiDto[]>(url)
+      .pipe(map((dtos) => dtos.map((d) => this.toRosterRow(d))));
   }
 
   stationForMember(memberId: string, eventId: string): Role | null {
@@ -198,5 +185,41 @@ export class EventsService {
         };
       }),
     );
+  }
+
+  private toEventData(dto: EventApiDto): EventData {
+    return {
+      id: dto.id,
+      name: dto.name,
+      location: dto.location,
+      date: new Date(dto.date),
+      description: dto.description,
+      duration: dto.duration,
+    };
+  }
+
+  private toRosterRow(dto: RosterRowApiDto): RosterRow {
+    return {
+      id: dto.id,
+      name: dto.name,
+      role: dto.role,
+      status: dto.status,
+      when: new Date(dto.when),
+      late: dto.late,
+    };
+  }
+
+  private mergeWithLocalSeed(event: EventData): EventDetail {
+    const seed = this.localSeedById.get(event.id);
+    return {
+      ...event,
+      roles: seed?.roles,
+      menu: seed?.menu,
+      memberPresence: seed?.memberPresence,
+    };
+  }
+
+  private buildUrl(endpoint: ApiEndPointV1): string {
+    return `${this.baseUrl}${endpoint}`;
   }
 }

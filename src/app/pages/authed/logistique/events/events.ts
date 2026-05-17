@@ -1,25 +1,44 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  TemplateRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   LucideArrowRight,
+  LucideCalendar,
   LucideChefHat,
+  LucideDownload,
   LucideDynamicIcon,
-  LucideMinus,
+  LucideFilter,
+  LucideMoreHorizontal,
+  LucidePencil,
   LucidePlus,
-  LucideTrash2,
+  LucideSearch,
+  LucideTriangleAlert,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Recipe, RecipesService } from '#core/services/recipes/recipes-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
+import { Input } from '#shared/components/ui/input/input';
 import { DropdownService } from '#shared/components/dropdown/dropdown.service';
 import { DropdownItem } from '#shared/components/dropdown/dropdown.models';
+
+type EventStatus = 'preparing' | 'planning' | 'past';
+type RecipeStock = 'ok' | 'warn' | 'low' | 'todo' | 'past';
+type TabKey = 'upcoming' | 'preparing' | 'past' | 'all';
 
 interface RecipeLine {
   readonly id: string;
   readonly name: string;
   readonly unitCost: number;
   count: number;
+  stock: RecipeStock;
 }
 
 interface EventBlock {
@@ -27,106 +46,240 @@ interface EventBlock {
   readonly day: string;
   readonly month: string;
   readonly name: string;
-  readonly time: string;
-  readonly status: 'preparation' | 'ready' | 'past';
-  readonly recipes: RecipeLine[];
+  readonly when: string;
+  readonly status: EventStatus;
+  readonly statusLabel: string;
+  readonly statusKind: BadgeKind;
+  readonly expected: number;
+  recipes: RecipeLine[];
 }
+
+const MONTH_FR: readonly string[] = [
+  'JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN',
+  'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC',
+];
 
 @Component({
   selector: 'bfd-logistique-events',
-  imports: [RouterLink, Btn, Badge, LucideDynamicIcon],
+  imports: [Btn, Badge, Input, LucideDynamicIcon],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LogistiqueEvents {
   private readonly recipesService = inject(RecipesService);
   private readonly dropdown = inject(DropdownService);
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Logistique',
-      subtitle: 'Recettes & courses par soirée',
-      breadcrumb: ['Préparation', 'Logistique'],
+      subtitle: 'Vue par soirée · recettes & quantités',
+      breadcrumb: ['Préparation', 'Logistique', 'Soirées'],
       activeNavId: 'log',
+    });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 
-  protected readonly icChef = LucideChefHat;
   protected readonly icPlus = LucidePlus;
-  protected readonly icMinus = LucideMinus;
-  protected readonly icTrash = LucideTrash2;
+  protected readonly icEdit = LucidePencil;
+  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icChef = LucideChefHat;
+  protected readonly icAlert = LucideTriangleAlert;
   protected readonly icArrowRight = LucideArrowRight;
+  protected readonly icCalendar = LucideCalendar;
+  protected readonly icFilter = LucideFilter;
+  protected readonly icSearch = LucideSearch;
+  protected readonly icDownload = LucideDownload;
 
   protected readonly catalog = this.recipesService.recipes;
 
   protected readonly events = signal<EventBlock[]>([
     {
-      id: 'soiree-hivernale',
+      id: 'hiv26',
       day: '14',
-      month: 'fév',
+      month: 'FÉV',
       name: 'Soirée Hivernale',
-      time: '19:30 — 23:00',
-      status: 'preparation',
+      when: 'Ven. 19:30 — 23:00',
+      status: 'preparing',
+      statusLabel: 'En préparation',
+      statusKind: 'warn',
+      expected: 360,
       recipes: this.seed([
-        ['hd-clas', 80],
-        ['hd-veg', 30],
-        ['frites', 50],
-        ['crepe-n', 40],
+        ['hd-clas', 220, 'ok'],
+        ['hd-veg', 40, 'warn'],
+        ['frites', 180, 'ok'],
+        ['crepe-n', 90, 'ok'],
+        ['pano', 220, 'low'],
       ]),
     },
     {
-      id: 'soiree-carnaval',
+      id: 'carn26',
       day: '07',
-      month: 'mar',
-      name: 'Soirée Carnaval',
-      time: '20:00 — 23:30',
-      status: 'preparation',
+      month: 'MAR',
+      name: 'Carnaval BAE',
+      when: 'Ven. 19:00 — 23:30',
+      status: 'planning',
+      statusLabel: 'À planifier',
+      statusKind: 'blue',
+      expected: 280,
       recipes: this.seed([
-        ['tapas', 18],
-        ['sangria', 90],
+        ['tapas', 280, 'todo'],
+        ['sangria', 180, 'todo'],
       ]),
     },
     {
-      id: 'repas-alternants',
+      id: 'rep26',
       day: '28',
-      month: 'mar',
-      name: 'Repas Alternant·e·s',
-      time: '19:00 — 22:00',
-      status: 'preparation',
+      month: 'MAR',
+      name: 'Repas Alternants',
+      when: 'Jeu. 19:30 — 22:00',
+      status: 'planning',
+      statusLabel: 'À planifier',
+      statusKind: 'blue',
+      expected: 80,
+      recipes: [],
+    },
+    {
+      id: 'bv26',
+      day: '24',
+      month: 'JAN',
+      name: 'Bienvenue 2026',
+      when: 'Passée · 218 commandes',
+      status: 'past',
+      statusLabel: 'Passée',
+      statusKind: 'ok',
+      expected: 220,
       recipes: this.seed([
-        ['carbonara', 60],
-        ['salade', 60],
+        ['hd-clas', 150, 'past'],
+        ['crepe-s', 80, 'past'],
+        ['pano', 160, 'past'],
       ]),
     },
   ]);
 
-  private seed(entries: readonly (readonly [string, number])[]): RecipeLine[] {
-    return entries.flatMap(([id, count]) => {
+  protected readonly activeTab = signal<TabKey>('upcoming');
+
+  protected readonly tabs = computed(() => {
+    const list = this.events();
+    const upcoming = list.filter((e) => e.status !== 'past').length;
+    const preparing = list.filter((e) => e.status === 'preparing').length;
+    const past = list.filter((e) => e.status === 'past').length;
+    return [
+      { key: 'upcoming' as TabKey, label: 'À venir', count: upcoming },
+      { key: 'preparing' as TabKey, label: 'En préparation', count: preparing },
+      { key: 'past' as TabKey, label: 'Passées', count: past },
+      { key: 'all' as TabKey, label: 'Tout', count: list.length },
+    ];
+  });
+
+  protected readonly visibleEvents = computed<readonly EventBlock[]>(() => {
+    const tab = this.activeTab();
+    const list = this.events();
+    if (tab === 'all') return list;
+    if (tab === 'preparing') return list.filter((e) => e.status === 'preparing');
+    if (tab === 'past') return list.filter((e) => e.status === 'past');
+    return list.filter((e) => e.status !== 'past');
+  });
+
+  protected setTab(key: TabKey): void {
+    this.activeTab.set(key);
+  }
+
+  private seed(
+    entries: readonly (readonly [string, number, RecipeStock])[],
+  ): RecipeLine[] {
+    return entries.flatMap(([id, count, stock]) => {
       const r = this.recipesService.byId(id);
-      return r ? [{ id: r.id, name: r.nom, unitCost: r.cout, count }] : [];
+      return r ? [{ id: r.id, name: r.nom, unitCost: r.cout, count, stock }] : [];
     });
+  }
+
+  protected monthOf(day: string, month: string): string {
+    // month string may already be French short; pass through.
+    return month;
   }
 
   protected formatPrice(n: number): string {
     return n.toFixed(2).replace('.', ',');
   }
 
+  protected formatPriceInt(n: number): string {
+    return n.toFixed(0);
+  }
+
   protected totalCost(e: EventBlock): number {
     return e.recipes.reduce((s, r) => s + r.unitCost * r.count, 0);
   }
 
-  protected totalPortions(e: EventBlock): number {
-    return e.recipes.reduce((s, r) => s + r.count, 0);
+  protected hasMissing(e: EventBlock): boolean {
+    return e.recipes.some((r) => r.stock === 'warn' || r.stock === 'low');
   }
 
-  protected statusBadge(e: EventBlock): { label: string; kind: BadgeKind; dot: boolean } {
-    if (e.status === 'past') return { label: 'Terminée', kind: 'neutral', dot: false };
-    return { label: 'En préparation', kind: 'warn', dot: true };
+  protected missingCount(e: EventBlock): number {
+    return e.recipes.filter((r) => r.stock === 'warn' || r.stock === 'low').length;
+  }
+
+  protected eventBorderClass(e: EventBlock): string {
+    return e.status === 'preparing' ? 'border-warn' : 'border-border-s';
+  }
+
+  protected dateChipClass(e: EventBlock): string {
+    return e.status === 'preparing'
+      ? 'bg-red-soft text-red border-red'
+      : 'bg-surface-2 text-text-2 border-border-s';
+  }
+
+  protected stockText(r: RecipeLine): { label: string; tone: 'ok' | 'warn' | 'danger' | 'muted' } | null {
+    switch (r.stock) {
+      case 'ok':
+        return { label: 'Suffisant', tone: 'ok' };
+      case 'warn':
+        return { label: 'Manque 12 u.', tone: 'warn' };
+      case 'low':
+        return { label: 'Manque 40 u.', tone: 'danger' };
+      case 'todo':
+        return { label: 'À calculer', tone: 'muted' };
+      case 'past':
+        return null;
+    }
+  }
+
+  protected stockToneClass(tone: 'ok' | 'warn' | 'danger' | 'muted'): string {
+    switch (tone) {
+      case 'ok':
+        return 'text-ok';
+      case 'warn':
+        return 'text-warn';
+      case 'danger':
+        return 'text-danger';
+      case 'muted':
+        return 'text-muted';
+    }
+  }
+
+  protected validationBadge(
+    r: RecipeLine,
+  ): { label: string; kind: BadgeKind; dot: boolean } | null {
+    switch (r.stock) {
+      case 'past':
+        return { label: 'Servie', kind: 'ok', dot: false };
+      case 'todo':
+        return { label: 'Brouillon', kind: 'ghost', dot: false };
+      case 'ok':
+        return { label: 'Validée', kind: 'ok', dot: false };
+      case 'warn':
+        return { label: 'À recompter', kind: 'warn', dot: true };
+      case 'low':
+        return { label: 'Bloquant', kind: 'danger', dot: true };
+    }
   }
 
   protected openRecipePicker(e: EventBlock, ev: MouseEvent): void {
     ev.stopPropagation();
-    // Resolve the actual <button> the user clicked (bfd-btn renders a <button> child).
     const anchor = this.resolveAnchor(ev.currentTarget);
     if (!anchor) return;
 
@@ -154,8 +307,6 @@ export class LogistiqueEvents {
 
   private resolveAnchor(target: EventTarget | null): HTMLElement | null {
     if (!(target instanceof HTMLElement)) return null;
-    // Closest <button> is the actual interactive anchor floating-ui should
-    // position against (bfd-btn host is just a wrapper).
     return target.closest('button') ?? target;
   }
 
@@ -166,7 +317,10 @@ export class LogistiqueEvents {
           ? ev
           : {
               ...ev,
-              recipes: [...ev.recipes, { id: c.id, name: c.nom, unitCost: c.cout, count: 10 }],
+              recipes: [
+                ...ev.recipes,
+                { id: c.id, name: c.nom, unitCost: c.cout, count: 10, stock: 'todo' },
+              ],
             },
       ),
     );
@@ -179,7 +333,9 @@ export class LogistiqueEvents {
           ? ev
           : {
               ...ev,
-              recipes: ev.recipes.map((x) => (x.id === r.id ? { ...x, count: x.count + 1 } : x)),
+              recipes: ev.recipes.map((x) =>
+                x.id === r.id ? { ...x, count: x.count + 1 } : x,
+              ),
             },
       ),
     );
@@ -196,14 +352,6 @@ export class LogistiqueEvents {
                 x.id === r.id ? { ...x, count: Math.max(0, x.count - 1) } : x,
               ),
             },
-      ),
-    );
-  }
-
-  protected remove(e: EventBlock, r: RecipeLine): void {
-    this.events.update((list) =>
-      list.map((ev) =>
-        ev.id !== e.id ? ev : { ...ev, recipes: ev.recipes.filter((x) => x.id !== r.id) },
       ),
     );
   }

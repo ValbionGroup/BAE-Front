@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, inject, TemplateRef, viewChild} from '@angular/core';
 import {
   LucideClock,
   LucideDownload,
@@ -58,12 +58,19 @@ interface Lot {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Stocks {
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Stocks',
       subtitle: '142 produits · 318 lots · 1 880 € valorisés',
       breadcrumb: ['Préparation', 'Stocks'],
       activeNavId: 'stocks',
+    });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 

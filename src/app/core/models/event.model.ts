@@ -45,3 +45,21 @@ export interface MenuItem {
   servings: number;
   prepNotes?: string;
 }
+
+export interface EventApiDto {
+  id: string;
+  name: string;
+  location: string;
+  date: string;
+  description?: string;
+  duration?: number;
+}
+
+export interface RosterRowApiDto {
+  id: string;
+  name: string;
+  role: string;
+  status: Presence;
+  when: string;
+  late: boolean;
+}

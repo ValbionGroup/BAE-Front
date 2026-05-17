@@ -1,60 +1,238 @@
-<!-- Topbar action: add a new event -->
+<!-- Topbar actions -->
 <ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icCalendar">Calendrier</bfd-btn>
+  <bfd-btn kind="ghost" size="md" [icon]="icDownload">Exporter</bfd-btn>
   <bfd-btn kind="primary" size="md" [icon]="icPlus">Nouvelle soirée</bfd-btn>
 </ng-template>
 
-<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
-  <div class="mb-3 text-[13px] text-text-2">
-    {{ events.length }} soirées · cliquez pour gérer l'affectation des postes
-  </div>
+<div class="grid h-full grid-cols-[1.5fr_1fr] overflow-hidden">
+  <!-- LEFT: table -->
+  <div class="flex min-w-0 flex-col overflow-hidden border-r border-border-s">
+    <!-- Tabs + search -->
+    <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
+      <div class="flex gap-1.5">
+        @for (tab of tabs(); track tab.key) {
+          @let isActive = activeTab() === tab.key;
+          <button
+            type="button"
+            (click)="setTab(tab.key)"
+            [class]="
+              'inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-sans text-xs font-medium ' +
+              (isActive
+                ? 'border-border bg-surface-2 text-text'
+                : 'border-transparent bg-transparent text-text-2 hover:bg-surface-2/60')
+            "
+            [attr.aria-pressed]="isActive"
+          >
+            {{ tab.label }}
+            <span class="tnum rounded-lg bg-surface-3 px-1.5 py-px text-[11px] text-muted">
+              {{ tab.count }}
+            </span>
+          </button>
+        }
+      </div>
+      <div class="flex-1"></div>
+      <div class="w-60">
+        <bfd-input [icon]="icSearch" placeholder="Rechercher une soirée…" size="sm" />
+      </div>
+    </div>
 
-  <div class="flex flex-col gap-3">
-    @for (e of events; track e.id) {
-      @let badge = statusBadge(e);
-      <a
-        [routerLink]="['/coordination', e.id]"
-        class="group flex items-center gap-4 rounded-md border border-border-s bg-surface px-4 py-4 no-underline hover:bg-surface-2"
-      >
-        <!-- Date chip -->
+    <!-- Header row -->
+    <div
+      class="grid grid-cols-[36px_1.4fr_90px_1fr_90px_110px_60px] items-center gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+    >
+      <span></span>
+      <span>Soirée</span>
+      <span>Date</span>
+      <span>Responsable</span>
+      <span class="text-right">Équipe</span>
+      <span>État</span>
+      <span></span>
+    </div>
+
+    <!-- Rows -->
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      @for (e of visibleEvents(); track e.id; let i = $index) {
+        @let selected = selectedId() === e.id;
+        @let accent = rowAccent(e);
         <div
+          (click)="select(e.id)"
           [class]="
-            'w-14 shrink-0 rounded-md py-1.5 text-center border ' +
-            (e.status === 'past'
-              ? 'bg-surface-2 text-muted border-border-s'
-              : 'bg-red-soft text-red border-red')
+            'relative grid cursor-pointer grid-cols-[36px_1.4fr_90px_1fr_90px_110px_60px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+            (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50') +
+            (e.status === 'past' ? ' opacity-80' : '')
           "
         >
-          <div class="tnum text-xl font-semibold leading-none">{{ e.day }}</div>
-          <div class="mono mt-0.5 text-[9.5px] uppercase tracking-widest">{{ e.month }}</div>
+          @if (selected) {
+            <span class="absolute inset-y-0 left-0 w-[2.5px] bg-blue" aria-hidden="true"></span>
+          }
+          <span
+            [class]="
+              'inline-flex h-8 w-8 items-center justify-center rounded-md ' +
+              accent.bg +
+              ' ' +
+              accent.text
+            "
+          >
+            <svg [lucideIcon]="icCalendar" [size]="15" aria-hidden="true"></svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block truncate text-[13px] font-medium text-text">{{ e.name }}</span>
+            <span class="mt-0.5 block text-[11px] text-muted">
+              {{ e.recipes ? e.recipes + ' recettes' : 'aucune recette' }}
+            </span>
+          </span>
+          <span class="mono tnum text-[12px] text-text-2">{{ e.date }}</span>
+          <span class="flex items-center gap-2">
+            <bfd-avatar [name]="e.responsible" [size]="20" />
+            <span class="truncate text-[12px] text-text-2">{{ e.responsible }}</span>
+          </span>
+          <span class="mono tnum text-right text-[12px] text-text-2">
+            {{ e.members }}/{{ e.maxMembers }}
+          </span>
+          <bfd-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bfd-badge>
+          <span class="inline-flex justify-self-end" (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              title="Éditer"
+              class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
+            >
+              <svg [lucideIcon]="icEdit" [size]="14" aria-hidden="true"></svg>
+            </button>
+            <button
+              type="button"
+              title="Plus"
+              class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
+            >
+              <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
+            </button>
+          </span>
         </div>
-
-        <!-- Name + time + sub -->
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2.5">
-            <span class="text-[15px] font-semibold text-text">{{ e.name }}</span>
-            <bfd-badge [kind]="badge.kind" [dot]="badge.dot">{{ badge.label }}</bfd-badge>
-          </div>
-          <div class="mt-1 text-[12px] text-muted">{{ e.time }} · {{ e.sub }}</div>
+      } @empty {
+        <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+          Aucune soirée dans cette catégorie.
         </div>
+      }
+    </div>
+  </div>
 
-        <!-- Progress -->
-        <div class="w-48 shrink-0">
-          <div class="mb-1 flex justify-between text-[11px] text-muted">
-            <span>Postes affectés</span>
-            <span class="tnum text-text">{{ e.assigned }}/{{ e.required }}</span>
-          </div>
-          <div class="h-1.5 overflow-hidden rounded-sm bg-border">
-            <div [class]="'h-full ' + progressClass(e)" [style.width.%]="progressPct(e)"></div>
-          </div>
+  <!-- RIGHT: edit panel -->
+  @let s = edit();
+  <div class="flex min-w-0 flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center gap-2.5 border-b border-border-s bg-surface px-5 py-3">
+      <bfd-badge kind="warn" [dot]="true">{{ s.statusLabel }}</bfd-badge>
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-[14px] font-semibold text-text">Éditer · {{ s.name }}</div>
+        <div class="mono mt-0.5 truncate text-[10.5px] text-muted">
+          id: {{ s.id }} · créé le {{ s.createdAt }} par {{ s.createdBy }}
         </div>
+      </div>
+      <bfd-btn kind="ghost" size="sm" [icon]="icX" />
+    </div>
 
-        <svg
-          [lucideIcon]="icChevronRight"
-          [size]="16"
-          class="text-muted group-hover:text-text"
-          aria-hidden="true"
-        ></svg>
-      </a>
-    }
+    <!-- Body -->
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pb-6 pt-5">
+      <bfd-field label="Nom de la soirée">
+        <bfd-input [value]="s.name" (valueChange)="updateName($event)" />
+      </bfd-field>
+
+      <div class="grid grid-cols-2 gap-3">
+        <bfd-field label="Date">
+          <bfd-input [icon]="icCalendar" [value]="s.date" (valueChange)="updateDate($event)" />
+        </bfd-field>
+        <bfd-field label="Horaire">
+          <bfd-input [icon]="icClock" [value]="s.time" (valueChange)="updateTime($event)" />
+        </bfd-field>
+      </div>
+
+      <div class="grid grid-cols-[1.4fr_1fr] gap-3">
+        <bfd-field label="Lieu">
+          <bfd-input [value]="s.location" (valueChange)="updateLocation($event)" />
+        </bfd-field>
+        <bfd-field label="Convives attendus">
+          <bfd-input suffix="pers." [value]="s.expected" (valueChange)="updateExpected($event)" />
+        </bfd-field>
+      </div>
+
+      <bfd-field label="Description (interne)">
+        <textarea
+          [value]="s.description"
+          (input)="updateDescription($event)"
+          class="min-h-16 w-full resize-y rounded-md border border-border bg-surface-2 p-2.5 font-sans text-[12.5px] text-text outline-none focus:border-blue"
+        ></textarea>
+      </bfd-field>
+
+      <bfd-field label="Responsable de soirée">
+        <div
+          class="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-2.5 py-1.5"
+        >
+          <bfd-avatar [name]="s.responsibleName" [size]="22" />
+          <span class="flex-1 text-[13px] text-text">
+            {{ s.responsibleName }}
+            <span class="text-muted">· {{ s.responsibleRole }}</span>
+          </span>
+          <svg [lucideIcon]="icChevDown" [size]="14" class="text-muted" aria-hidden="true"></svg>
+        </div>
+      </bfd-field>
+
+      <bfd-field [label]="'Recettes assignées (' + s.recipes.length + ')'">
+        <div
+          class="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface-2 p-2"
+        >
+          @for (r of s.recipes; track r) {
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border border-border-s bg-surface px-2 py-1 text-[11.5px] text-text-2"
+            >
+              <svg [lucideIcon]="icChef" [size]="11" class="text-muted" aria-hidden="true"></svg>
+              {{ r }}
+              <button
+                type="button"
+                (click)="removeRecipe(r)"
+                class="inline-flex cursor-pointer items-center border-none bg-transparent p-0 text-muted hover:text-danger"
+                [attr.aria-label]="'Retirer ' + r"
+              >
+                <svg [lucideIcon]="icX" [size]="10" aria-hidden="true"></svg>
+              </button>
+            </span>
+          }
+          <button
+            type="button"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-border bg-transparent px-2 py-1 font-sans text-[11.5px] text-muted hover:bg-surface hover:text-text-2"
+          >
+            <svg [lucideIcon]="icPlus" [size]="10" aria-hidden="true"></svg>
+            Ajouter
+          </button>
+        </div>
+      </bfd-field>
+
+      <div class="rounded-md border border-border-s bg-surface p-1">
+        @for (o of s.options; track o.key; let i = $index) {
+          <div
+            [class]="
+              'flex items-center gap-3 px-3 py-2.5 ' +
+              (i ? 'border-t border-border-s' : '')
+            "
+          >
+            <div class="flex-1">
+              <div class="text-[12.5px] text-text">{{ o.label }}</div>
+              <div class="mt-0.5 text-[11px] text-muted">{{ o.hint }}</div>
+            </div>
+            <bfd-toggle [on]="o.enabled" (change)="toggleOption(o.key, $event)" />
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div
+      class="flex items-center gap-2 border-t border-border-s bg-surface px-5 py-3"
+    >
+      <bfd-btn kind="ghost" size="sm" [icon]="icTrash">Supprimer</bfd-btn>
+      <div class="flex-1"></div>
+      <bfd-btn kind="ghost" size="sm">Annuler</bfd-btn>
+      <bfd-btn kind="secondary" size="sm" [icon]="icCheck">Brouillon</bfd-btn>
+      <bfd-btn kind="primary" size="sm" [icon]="icCheck">Enregistrer</bfd-btn>
+    </div>
   </div>
 </div>

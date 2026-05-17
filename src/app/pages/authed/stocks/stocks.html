@@ -1,3 +1,10 @@
+<!-- Topbar actions, projected via PageHeaderService -->
+<ng-template #actions>
+  <bfd-btn kind="secondary" size="md" [icon]="icScan">Scanner</bfd-btn>
+  <bfd-btn kind="secondary" size="md" [icon]="icDownload">Inventaire</bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icPlus">Produit</bfd-btn>
+</ng-template>
+
 <div class="h-full grid grid-cols-[1fr_380px]">
   <!-- LEFT: list -->
   <div class="flex min-w-0 flex-col gap-3.5 p-5">
@@ -8,7 +15,7 @@
           <div class="mb-1.5 flex items-center gap-2.5">
             <span
               [class]="
-                'inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm bg-surface-2 ' +
+                'inline-flex h-6.5 w-6.5 items-center justify-center rounded-sm bg-surface-2 ' +
                 k.colorClass
               "
             >
