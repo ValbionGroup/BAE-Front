@@ -8,7 +8,7 @@ import {
 } from '@ngrx/signals';
 import { computed, inject } from '@angular/core';
 import { EventsService } from '#core/services/events/events-service';
-import { EventDetail, RosterRow } from '#core/models/event.model';
+import { EventDetail, Presence, RosterRow } from '#core/models/event.model';
 import { lastValueFrom } from 'rxjs';
 import { LoadingStatus } from '#core/models/global.model';
 
@@ -96,6 +96,16 @@ export const EventsStore = signalStore(
           },
         }));
       }
+    },
+    setMemberPresence(eventId: string, memberPresence: Presence): void {
+      const current = store.events()[eventId];
+      if (!current) return;
+      patchState(store, (state) => ({
+        events: {
+          ...state.events,
+          [eventId]: { ...state.events[eventId], memberPresence } as EventDetail,
+        },
+      }));
     },
     clear(): void {
       patchState(store, { loading: 'init', events: {} });

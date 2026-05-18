@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  TemplateRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   LucideCalendar,
   LucideChevronRight,
@@ -6,7 +15,9 @@ import {
   LucideDynamicIcon,
   LucideFunnel,
   LucidePlus,
+  LucideUser,
 } from '@lucide/angular';
+import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { isSameDay, startOfMonth, startOfToday } from 'date-fns';
@@ -21,12 +32,24 @@ import { RosterAside } from './roster-aside/roster-aside';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Presences {
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly router = inject(Router);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected openMyPresences(): void {
+    this.router.navigate(['/presences/my']);
+  }
+
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Présences',
       subtitle: "Vos réponses et celles de l'équipe",
       breadcrumb: ['Espace', 'Présences'],
       activeNavId: 'pres',
+    });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 
@@ -37,6 +60,7 @@ export class Presences {
   protected readonly icDownload = LucideDownload;
   protected readonly icPlus = LucidePlus;
   protected readonly icChevronRight = LucideChevronRight;
+  protected readonly icUser = LucideUser;
 
   protected readonly today = startOfToday();
   protected readonly currentMonth = signal<Date>(startOfMonth(this.today));
@@ -102,8 +126,8 @@ export class Presences {
   }
 
   protected respLabel(event: EventDetail): string {
-    if (event.memberPresence === Presence.PRESENT) return '✓ Présent';
-    if (event.memberPresence === Presence.ABSENT) return '✗ Absent';
+    if (event.memberPresence === Presence.PRESENT) return '✓ Présent·e';
+    if (event.memberPresence === Presence.ABSENT) return '✗ Absent·e';
     return '— Non répondu';
   }
 
