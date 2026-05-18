@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  TemplateRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import {
   LucideCalendar,
   LucideChevronRight,
@@ -6,28 +16,66 @@ import {
   LucideDynamicIcon,
   LucideFunnel,
   LucidePlus,
+  LucideUser,
 } from '@lucide/angular';
+import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
+import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { isSameDay, startOfMonth, startOfToday } from 'date-fns';
-import { EventData, EventDetail, Presence } from '#core/models/event.model';
+import { EventDetail, Presence } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
 import { RosterAside } from './roster-aside/roster-aside';
 
 @Component({
   selector: 'bfd-presences',
-  imports: [Btn, RosterAside, LucideDynamicIcon],
+  imports: [Btn, Skeleton, RosterAside, LucideDynamicIcon],
   templateUrl: './presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Presences {
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly router = inject(Router);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected openMyPresences(): void {
+    this.router.navigate(['/presences/my']);
+  }
+
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Présences',
       subtitle: "Vos réponses et celles de l'équipe",
       breadcrumb: ['Espace', 'Présences'],
       activeNavId: 'pres',
     });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
+    });
+    effect(() => {
+      const days = this.days();
+      const all = this.events.allEvents();
+      const visibleIds = new Set<string>();
+      for (const d of days) {
+        const ev = all.find((e) => isSameDay(d, e.date));
+        if (ev) visibleIds.add(ev.id);
+      }
+      const toFetch: string[] = [];
+      for (const id of visibleIds) {
+        const ev = this.events.events()[id];
+        if (ev?.memberPresenceStatus === 'init') toFetch.push(id);
+      }
+      if (toFetch.length === 0) return;
+      untracked(() => {
+        for (const id of toFetch) void this.events.loadMemberPresence(id);
+      });
+    });
+  }
+
+  protected isPresenceLoading(event: EventDetail): boolean {
+    const status = event.memberPresenceStatus;
+    return status === 'init' || status === 'loading' || status === 'refreshing';
   }
 
   private readonly events = inject(EventsStore);
@@ -37,6 +85,7 @@ export class Presences {
   protected readonly icDownload = LucideDownload;
   protected readonly icPlus = LucidePlus;
   protected readonly icChevronRight = LucideChevronRight;
+  protected readonly icUser = LucideUser;
 
   protected readonly today = startOfToday();
   protected readonly currentMonth = signal<Date>(startOfMonth(this.today));
@@ -82,7 +131,7 @@ export class Presences {
     });
   });
 
-  protected eventFor(d: Date): EventData | undefined {
+  protected eventFor(d: Date): EventDetail | undefined {
     return this.events.allEvents().find((e) => isSameDay(d, e.date));
   }
 
@@ -102,8 +151,8 @@ export class Presences {
   }
 
   protected respLabel(event: EventDetail): string {
-    if (event.memberPresence === Presence.PRESENT) return '✓ Présent';
-    if (event.memberPresence === Presence.ABSENT) return '✗ Absent';
+    if (event.memberPresence === Presence.PRESENT) return '✓ Présent·e';
+    if (event.memberPresence === Presence.ABSENT) return '✗ Absent·e';
     return '— Non répondu';
   }
 
@@ -128,6 +177,7 @@ export class Presences {
   }
 
   protected getEventColor(event: EventDetail): string {
+    if (this.isPresenceLoading(event)) return 'bg-surface-2 text-muted';
     if (event.memberPresence === Presence.PRESENT) return 'bg-ok-soft text-ok';
     if (event.memberPresence === Presence.ABSENT) return 'bg-danger-soft text-danger';
     return 'bg-warn-soft text-warn';
