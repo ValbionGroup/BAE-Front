@@ -23,7 +23,6 @@ import { ApiEndPointV1 } from '#core/models/endpoint.model';
 interface LocalEventSeed {
   roles?: Role[];
   menu?: MenuItem[];
-  memberPresence?: EventDetail['memberPresence'];
 }
 
 function buildLocalSeedById(): Map<string, LocalEventSeed> {
@@ -130,7 +129,6 @@ function buildLocalSeedById(): Map<string, LocalEventSeed> {
       ed.id,
       {
         roles: ed.roles,
-        memberPresence: ed.memberPresence,
         menu: menus[ed.id] ?? [],
       },
     ]),
@@ -186,6 +184,11 @@ export class EventsService {
     return this.http
       .get<RosterRowApiDto[]>(url)
       .pipe(map((dtos) => dtos.map((d) => this.toRosterRow(d))));
+  }
+
+  fetchPresenceForEvent(id: string): Observable<EventDetail['memberPresence']> {
+    const url = this.buildUrl(ApiEndPointV1.EVENT_MEMBER_RESPONSE).replace(':id', id);
+    return this.http.get<EventDetail['memberPresence']>(url);
   }
 
   stationForMember(memberId: string, eventId: string): Role | null {
@@ -265,7 +268,6 @@ export class EventsService {
       ...event,
       roles: seed?.roles,
       menu: seed?.menu,
-      memberPresence: seed?.memberPresence,
     };
   }
 

@@ -121,10 +121,31 @@
 
             <div class="flex min-w-60 flex-col items-end gap-1.5">
               <div class="mb-0.5 text-[11px] text-muted">Votre réponse</div>
-              <div class="flex gap-1.5">
-                <bfd-btn kind="primary" size="sm" [icon]="icCheck">Présent·e</bfd-btn>
-                <bfd-btn kind="outline" size="sm">Absent·e</bfd-btn>
-              </div>
+              @if (responseLoading()) {
+                <div class="flex gap-1.5">
+                  <bfd-skeleton width="92px" height="28px" rounded="md" />
+                  <bfd-skeleton width="92px" height="28px" rounded="md" />
+                </div>
+              } @else {
+                @let me = responseEvent()?.memberPresence;
+                <div class="flex gap-1.5">
+                  <bfd-btn
+                    [kind]="me === Presence.PRESENT ? 'primary' : 'outline'"
+                    size="sm"
+                    [icon]="icCheck"
+                    (clicked)="respondPresent()"
+                  >
+                    Présent·e
+                  </bfd-btn>
+                  <bfd-btn
+                    [kind]="me === Presence.ABSENT ? 'danger' : 'outline'"
+                    size="sm"
+                    (clicked)="respondAbsent()"
+                  >
+                    Absent·e
+                  </bfd-btn>
+                </div>
+              }
               <div class="mt-1 text-[11px] text-muted">
                 Poste préférentiel : <span class="text-text">Caisse</span>
               </div>

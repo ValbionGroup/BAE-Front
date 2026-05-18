@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import {
@@ -119,6 +120,10 @@ export class MyPresences {
     return `${this.upcomingCount()} soirée·s à venir · ${this.pastCount()} passée·s`;
   });
 
+  private readonly allPresencesLoaded = computed(() =>
+    this.pastEvents().every((e) => e.memberPresenceStatus === 'loaded'),
+  );
+
   protected readonly engagementScore = computed(() => {
     const past = this.pastEvents();
     if (past.length === 0) return 0;
@@ -126,20 +131,16 @@ export class MyPresences {
     return Math.round((present / past.length) * 100);
   });
 
+  protected readonly engagementLoading = computed(
+    () => this.loading() || !this.allPresencesLoaded(),
+  );
+
   protected readonly scoreRows = computed<readonly ScoreRow[]>(() => {
     const past = this.pastEvents();
     const total = past.length;
     const present = past.filter((e) => e.memberPresence === Presence.PRESENT).length;
     const presenceRate = total === 0 ? 0 : Math.round((present / total) * 100);
     return [
-      {
-        k: 'Présence',
-        v: presenceRate,
-        sub: total === 0 ? 'aucune donnée' : `${present}/${total} soirée·s`,
-      },
-      { k: 'Ponctualité', v: 96, sub: 'estimation' },
-      { k: 'Polyvalence', v: 64, sub: 'estimation' },
-      { k: 'Bonus coordo', v: 100, sub: 'estimation' },
     ];
   });
 
@@ -166,6 +167,19 @@ export class MyPresences {
         activeNavId: 'pres',
       });
     });
+    effect(() => {
+      const all = [...this.upcomingEvents(), ...this.pastEvents()];
+      const toFetch = all.filter((e) => e.memberPresenceStatus === 'init').map((e) => e.id);
+      if (toFetch.length === 0) return;
+      untracked(() => {
+        for (const id of toFetch) void this.events.loadMemberPresence(id);
+      });
+    });
+  }
+
+  protected isPresenceLoading(event: EventDetail): boolean {
+    const status = event.memberPresenceStatus;
+    return status === 'init' || status === 'loading' || status === 'refreshing';
   }
 
   protected daysFromToday(date: Date): number {
@@ -192,10 +206,6 @@ export class MyPresences {
 
   protected respondAbsent(event: EventDetail): void {
     this.events.setMemberPresence(event.id, Presence.ABSENT);
-  }
-
-  protected respondPending(event: EventDetail): void {
-    this.events.setMemberPresence(event.id, Presence.PENDING);
   }
 
   protected pointsFor(event: EventDetail): number {

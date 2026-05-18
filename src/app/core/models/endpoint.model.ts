@@ -3,5 +3,6 @@ export enum ApiEndPointV1 {
   LOGOUT = '/auth/logout',
   PROFILE = '/auth/profile',
   EVENTS = '/events',
+  EVENT_MEMBER_RESPONSE = '/events/:id/response',
   EVENT_ROSTER = '/events/:id/roster',
 }

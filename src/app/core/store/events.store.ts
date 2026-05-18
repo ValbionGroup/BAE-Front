@@ -97,6 +97,47 @@ export const EventsStore = signalStore(
         }));
       }
     },
+
+    async loadMemberPresence(eventId: string) {
+      const currentEvent = store.events()[eventId];
+      if (!currentEvent) return;
+
+      const currentStatus = currentEvent.memberPresenceStatus;
+      if (currentStatus === 'loading' || currentStatus === 'refreshing') {
+        return;
+      }
+
+      patchState(store, (state) => ({
+        events: {
+          ...state.events,
+          [eventId]: { ...state.events[eventId], memberPresenceStatus: 'refreshing' } as EventDetail,
+        },
+      }));
+
+      try {
+        const presence = await lastValueFrom(
+          eventService.fetchPresenceForEvent(eventId),
+        ) as unknown as Presence;
+        patchState(store, (state) => ({
+          events: {
+            ...state.events,
+            [eventId]: {
+              ...state.events[eventId],
+              memberPresence: presence,
+              memberPresenceStatus: 'loaded',
+            } as EventDetail,
+          },
+        }));
+      } catch (error) {
+        patchState(store, (state) => ({
+          events: {
+            ...state.events,
+            [eventId]: { ...state.events[eventId], memberPresenceStatus: 'error' } as EventDetail,
+          },
+        }));
+      }
+    },
+
     setMemberPresence(eventId: string, memberPresence: Presence): void {
       const current = store.events()[eventId];
       if (!current) return;
@@ -107,6 +148,7 @@ export const EventsStore = signalStore(
         },
       }));
     },
+
     clear(): void {
       patchState(store, { loading: 'init', events: {} });
     },
