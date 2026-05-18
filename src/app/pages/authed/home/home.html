@@ -78,7 +78,7 @@
           "
         >
           <div
-            class="absolute -top-10 -right-10 h-55 w-55 rounded-full opacity-[.18]"
+            class="pointer-events-none absolute -top-10 -right-10 h-55 w-55 rounded-full opacity-[.18]"
             style="background: radial-gradient(circle, var(--bae-red) 0%, transparent 70%)"
             aria-hidden="true"
           ></div>
@@ -195,7 +195,14 @@
                 </div>
               }
             </div>
-            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight">Tout voir</bfd-btn>
+            <bfd-btn
+              kind="ghost"
+              size="sm"
+              [iconRight]="icArrowRight"
+              (clicked)="goToAgenda()"
+            >
+              Tout voir
+            </bfd-btn>
           </div>
 
           @if (agenda.loading()) {
@@ -317,11 +324,12 @@
             @for (p of periods; track p; let i = $index) {
               <button
                 type="button"
+                (click)="setPeriod(i)"
                 [class]="
-                  'rounded-sm border px-2.5 py-1 text-[11px] ' +
-                  (i === activePeriodIndex
+                  'cursor-pointer rounded-sm border px-2.5 py-1 text-[11px] ' +
+                  (i === activePeriodIndex()
                     ? 'border-border bg-surface-3 text-text'
-                    : 'border-transparent bg-transparent text-muted')
+                    : 'border-transparent bg-transparent text-muted hover:bg-surface-2')
                 "
               >
                 {{ p }}
@@ -392,7 +400,13 @@
       <!-- ROLE -->
       <bfd-card>
         <div class="text-[13px] font-semibold text-text">Votre rôle ce soir-là</div>
-        <div class="mt-0.5 text-[11px] text-muted">Affectation · Soirée Hivernale</div>
+        <div class="mt-0.5 text-[11px] text-muted">
+          @if (responseEvent(); as ev) {
+            Affectation · {{ ev.name }}
+          } @else {
+            Affectation
+          }
+        </div>
 
         @if (role.loading()) {
           <div class="mt-3.5 rounded-md border border-border-s bg-surface-2 p-3.5">

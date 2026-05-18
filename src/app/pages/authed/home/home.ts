@@ -4,8 +4,10 @@ import {
   computed,
   effect,
   inject,
+  signal,
   untracked,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   LucideArrowRight,
   LucideCalendar,
@@ -21,6 +23,7 @@ import {
 import { Store } from '@ngrx/store';
 import { selectMember } from '#core/store/auth/auth.selector';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { AppRoutes } from '#app/app.routes';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
@@ -47,6 +50,7 @@ import { startOfDay } from 'date-fns';
 export class Home {
   private readonly store = inject(Store);
   private readonly events = inject(EventsStore);
+  private readonly router = inject(Router);
   private readonly currentDate = new Date();
 
   // Each card pulls from its own NgRx (signal) store with independent loading state.
@@ -114,7 +118,15 @@ export class Home {
   protected readonly icChevronRight = LucideChevronRight;
 
   protected readonly periods = ['1A', '3A', '6A', '12A'];
-  protected readonly activePeriodIndex = 2;
+  protected readonly activePeriodIndex = signal(2);
+
+  protected setPeriod(index: number): void {
+    this.activePeriodIndex.set(index);
+  }
+
+  protected goToAgenda(): void {
+    void this.router.navigateByUrl(`/${AppRoutes.presences}`);
+  }
 
   // Skeleton row counts (templates can't construct arrays inline).
   protected readonly r3: readonly null[] = [null, null, null];
