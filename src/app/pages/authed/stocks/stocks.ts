@@ -1,4 +1,11 @@
-import {ChangeDetectionStrategy, Component, effect, inject, TemplateRef, viewChild} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import {
   LucideClock,
   LucideDownload,

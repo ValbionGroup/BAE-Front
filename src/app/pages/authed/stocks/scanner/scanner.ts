@@ -73,7 +73,13 @@ export class StocksScanner {
   protected readonly history: readonly ScannedItem[] = [
     { n: 'Pains hot-dog x12', code: '3 168 421 988 011', q: '6', dlc: '20/02', unknown: false },
     { n: 'Moutarde Amora 270g', code: '8 712 100 712 408', q: '2', dlc: '08/2026', unknown: false },
-    { n: 'Frites surgelées 1kg', code: '3 256 211 905 117', q: '5', dlc: '04/2027', unknown: false },
+    {
+      n: 'Frites surgelées 1kg',
+      code: '3 256 211 905 117',
+      q: '5',
+      dlc: '04/2027',
+      unknown: false,
+    },
     { n: 'Produit inconnu', code: '4 102 884 002 110', q: '—', dlc: '—', unknown: true },
   ];
 

@@ -123,7 +123,13 @@ export class CaisseCloture {
 
   protected readonly channels: readonly Channel[] = [
     { k: 'Lydia / QR', v: '482,50 €', sub: '54 paiements', cls: 'text-blue', icon: LucideQrCode },
-    { k: 'Carte bleue', v: '215,00 €', sub: '8 paiements', cls: 'text-red', icon: LucideCreditCard },
+    {
+      k: 'Carte bleue',
+      v: '215,00 €',
+      sub: '8 paiements',
+      cls: 'text-red',
+      icon: LucideCreditCard,
+    },
     {
       k: 'Précommandes (déjà payées)',
       v: '318,00 €',

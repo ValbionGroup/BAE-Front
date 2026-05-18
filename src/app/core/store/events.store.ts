@@ -63,10 +63,7 @@ export const EventsStore = signalStore(
       if (!currentEvent) return;
 
       const currentStatus = currentEvent.rosterStatus;
-      if (
-        currentStatus === 'loading' ||
-        currentStatus === 'refreshing'
-      ) {
+      if (currentStatus === 'loading' || currentStatus === 'refreshing') {
         return;
       }
 

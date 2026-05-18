@@ -4,12 +4,37 @@ import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
-export interface ApiEvent { id: number; name: string; date: string; }
-export interface ApiMember { id: number; firstName: string; lastName: string; role: string; points: number; }
-export interface ApiJob { id: number; name: string; }
-export interface ApiEventJob { eventId: number; jobId: number; count: number; }
-export interface ApiAssignment { memberId: number; eventId: number; jobId: number; }
-export interface ApiAvailability { memberId: number; eventId: number; isAvailable: boolean; }
+export interface ApiEvent {
+  id: number;
+  name: string;
+  date: string;
+}
+export interface ApiMember {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+  points: number;
+}
+export interface ApiJob {
+  id: number;
+  name: string;
+}
+export interface ApiEventJob {
+  eventId: number;
+  jobId: number;
+  count: number;
+}
+export interface ApiAssignment {
+  memberId: number;
+  eventId: number;
+  jobId: number;
+}
+export interface ApiAvailability {
+  memberId: number;
+  eventId: number;
+  isAvailable: boolean;
+}
 
 export interface CoordinationApiData {
   events: ApiEvent[];
@@ -38,7 +63,11 @@ export class CoordinationService {
 
   // Body keys are camelCase: apiCaseRequestInterceptor converts them to snake_case before sending.
   assign(eventId: number, memberId: number, jobId: number): Observable<ApiAssignment> {
-    return this.http.post<ApiAssignment>(`${this.baseUrl}/assignments`, { eventId, memberId, jobId });
+    return this.http.post<ApiAssignment>(`${this.baseUrl}/assignments`, {
+      eventId,
+      memberId,
+      jobId,
+    });
   }
 
   // Params are NOT converted by the interceptor — use snake_case explicitly.

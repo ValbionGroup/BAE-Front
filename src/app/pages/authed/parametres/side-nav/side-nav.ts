@@ -12,7 +12,7 @@ import {
   LucideUsers,
   LucideZap,
 } from '@lucide/angular';
-import {AppRoutes} from '#app/app.routes';
+import { AppRoutes } from '#app/app.routes';
 
 interface NavItem {
   readonly id: string;
@@ -31,9 +31,25 @@ interface NavItem {
 })
 export class ParametresSideNav {
   protected readonly items: readonly NavItem[] = [
-    { id: 'profile', l: 'Profil', icon: LucideUser, route: `/${AppRoutes.parametres}`, exact: true },
-    { id: 'security', l: 'Sécurité & 2FA', icon: LucideShield, route: `/${AppRoutes.parametresSecurite}` },
-    { id: 'notifications', l: 'Notifications', icon: LucideBell, route: `/${AppRoutes.notifications}` },
+    {
+      id: 'profile',
+      l: 'Profil',
+      icon: LucideUser,
+      route: `/${AppRoutes.parametres}`,
+      exact: true,
+    },
+    {
+      id: 'security',
+      l: 'Sécurité & 2FA',
+      icon: LucideShield,
+      route: `/${AppRoutes.parametresSecurite}`,
+    },
+    {
+      id: 'notifications',
+      l: 'Notifications',
+      icon: LucideBell,
+      route: `/${AppRoutes.notifications}`,
+    },
     {
       id: 'integrations',
       l: 'Intégrations',
@@ -46,7 +62,7 @@ export class ParametresSideNav {
       icon: LucideSettings,
       route: `/${AppRoutes.parametresModules}`,
       adm: true,
-    }
+    },
   ];
 
   protected showAdmHead(idx: number): boolean {

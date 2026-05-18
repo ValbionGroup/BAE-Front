@@ -49,9 +49,7 @@
           (click)="toggleRecipe(r.n)"
           [class]="
             'w-3.5 h-3.5 rounded-[3px] inline-flex items-center justify-center cursor-pointer border-[1.4px] ' +
-            (r.sel
-              ? 'border-blue bg-blue text-white'
-              : 'border-border bg-transparent')
+            (r.sel ? 'border-blue bg-blue text-white' : 'border-border bg-transparent')
           "
         >
           @if (r.sel) {

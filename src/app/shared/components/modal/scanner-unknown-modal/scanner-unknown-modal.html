@@ -12,7 +12,10 @@
       class="relative w-[120px] h-[50px] bg-white rounded-sm overflow-hidden flex items-center justify-center"
     >
       <div class="flex items-center gap-px h-9">
-        @for (w of [3, 1, 2, 1, 3, 2, 1, 2, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3, 2]; track $index) {
+        @for (
+          w of [3, 1, 2, 1, 3, 2, 1, 2, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3, 2];
+          track $index
+        ) {
           <div [style.width.px]="w" class="h-9 bg-black"></div>
           <div class="w-px h-9"></div>
         }

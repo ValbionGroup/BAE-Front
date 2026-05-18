@@ -29,8 +29,7 @@ export class NotFound {
     });
 
     if (typeof window !== 'undefined') {
-      const onResize = () =>
-        this.viewport.set({ w: window.innerWidth, h: window.innerHeight });
+      const onResize = () => this.viewport.set({ w: window.innerWidth, h: window.innerHeight });
       window.addEventListener('resize', onResize);
       inject(DestroyRef).onDestroy(() => window.removeEventListener('resize', onResize));
     }
@@ -49,16 +48,10 @@ export class NotFound {
   });
 
   protected readonly rainRows = computed(() =>
-    Array.from(
-      { length: Math.ceil(this.viewport().h / RAIN_LINE_HEIGHT) + 2 },
-      (_, i) => i,
-    ),
+    Array.from({ length: Math.ceil(this.viewport().h / RAIN_LINE_HEIGHT) + 2 }, (_, i) => i),
   );
   protected readonly rainCols = computed(() =>
-    Array.from(
-      { length: Math.ceil(this.viewport().w / RAIN_CELL_WIDTH) + 2 },
-      (_, i) => i,
-    ),
+    Array.from({ length: Math.ceil(this.viewport().w / RAIN_CELL_WIDTH) + 2 }, (_, i) => i),
   );
 
   private formatTimestamp(date: Date): string {

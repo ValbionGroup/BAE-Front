@@ -100,25 +100,101 @@ export class Equipe {
   protected readonly activeTab = signal(0);
 
   protected readonly team: readonly TeamMember[] = [
-    { nom: 'Sarah Khelifi', role: 'Présidente', scope: 'Toute admin', prom: '4A · Alt.', last: 'Il y a 2 min', on: true, star: true },
-    { nom: 'Léa Marchand', role: 'Trésorière', scope: 'Paiements · Caisse', prom: '2A · Alt.', last: 'En ligne', on: true, star: true },
-    { nom: 'Maxime Toussaint', role: 'Logistique', scope: 'Stocks · Courses', prom: '3A · Alt.', last: 'Il y a 14 min', on: true },
-    { nom: 'Inès Dubreuil', role: 'Coordo', scope: 'Présences · Affect', prom: '2A · Alt.', last: 'Il y a 1h', on: false },
-    { nom: 'Tom Bessière', role: 'Cuistot référent', scope: 'Recettes', prom: '3A · Alt.', last: 'Hier', on: false },
-    { nom: 'Anaïs Roux', role: 'Communication', scope: 'Précommandes', prom: '1A · Init.', last: 'Hier', on: false },
-    { nom: 'Élise Vasseur', role: 'Membre actif', scope: 'Lecture · Caisse', prom: '5A · Alt.', last: 'Il y a 3 j', on: false },
-    { nom: 'Marwane B.', role: 'Membre actif', scope: 'Lecture', prom: '1A · Init.', last: 'Il y a 5 j', on: false },
+    {
+      nom: 'Sarah Khelifi',
+      role: 'Présidente',
+      scope: 'Toute admin',
+      prom: '4A · Alt.',
+      last: 'Il y a 2 min',
+      on: true,
+      star: true,
+    },
+    {
+      nom: 'Léa Marchand',
+      role: 'Trésorière',
+      scope: 'Paiements · Caisse',
+      prom: '2A · Alt.',
+      last: 'En ligne',
+      on: true,
+      star: true,
+    },
+    {
+      nom: 'Maxime Toussaint',
+      role: 'Logistique',
+      scope: 'Stocks · Courses',
+      prom: '3A · Alt.',
+      last: 'Il y a 14 min',
+      on: true,
+    },
+    {
+      nom: 'Inès Dubreuil',
+      role: 'Coordo',
+      scope: 'Présences · Affect',
+      prom: '2A · Alt.',
+      last: 'Il y a 1h',
+      on: false,
+    },
+    {
+      nom: 'Tom Bessière',
+      role: 'Cuistot référent',
+      scope: 'Recettes',
+      prom: '3A · Alt.',
+      last: 'Hier',
+      on: false,
+    },
+    {
+      nom: 'Anaïs Roux',
+      role: 'Communication',
+      scope: 'Précommandes',
+      prom: '1A · Init.',
+      last: 'Hier',
+      on: false,
+    },
+    {
+      nom: 'Élise Vasseur',
+      role: 'Membre actif',
+      scope: 'Lecture · Caisse',
+      prom: '5A · Alt.',
+      last: 'Il y a 3 j',
+      on: false,
+    },
+    {
+      nom: 'Marwane B.',
+      role: 'Membre actif',
+      scope: 'Lecture',
+      prom: '1A · Init.',
+      last: 'Il y a 5 j',
+      on: false,
+    },
   ];
 
   protected readonly perms: readonly PermsRow[] = [
     { mod: 'Adhérents', pres: 'rw', tres: 'rw', log: 'r', coo: 'r', cui: '—', com: 'r', mb: '—' },
     { mod: 'Stocks', pres: 'rw', tres: 'r', log: 'rw', coo: 'r', cui: 'rw', com: '—', mb: 'r' },
     { mod: 'Recettes', pres: 'rw', tres: 'r', log: 'r', coo: 'r', cui: 'rw', com: 'r', mb: 'r' },
-    { mod: 'Coordination', pres: 'rw', tres: 'r', log: 'r', coo: 'rw', cui: 'r', com: 'r', mb: '—' },
+    {
+      mod: 'Coordination',
+      pres: 'rw',
+      tres: 'r',
+      log: 'r',
+      coo: 'rw',
+      cui: 'r',
+      com: 'r',
+      mb: '—',
+    },
     { mod: 'Logistique', pres: 'rw', tres: 'rw', log: 'rw', coo: 'r', cui: 'r', com: '—', mb: '—' },
     { mod: 'Caisse', pres: 'rw', tres: 'rw', log: 'r', coo: 'r', cui: 'r', com: 'r', mb: 'rw' },
     { mod: 'Paiements', pres: 'rw', tres: 'rw', log: '—', coo: '—', cui: '—', com: '—', mb: '—' },
-    { mod: 'Précommandes', pres: 'rw', tres: 'rw', log: 'r', coo: 'r', cui: 'r', com: 'rw', mb: 'r' },
+    {
+      mod: 'Précommandes',
+      pres: 'rw',
+      tres: 'rw',
+      log: 'r',
+      coo: 'r',
+      cui: 'r',
+      com: 'rw',
+      mb: 'r',
+    },
     { mod: 'Analyse', pres: 'rw', tres: 'rw', log: 'r', coo: 'r', cui: 'r', com: 'r', mb: '—' },
   ];
 
@@ -128,11 +204,39 @@ export class Equipe {
   ];
 
   protected readonly audit: readonly AuditEntry[] = [
-    { who: 'Sarah K.', a: 'a modifié le rôle de ', em: 'Inès Dubreuil', s: ' → Coordo', when: '14:32', icon: LucidePencil, c: 'warn' },
-    { who: 'Léa M.', a: 'a validé un encaissement espèces ', em: '+148 €', when: '14:18', icon: LucideEuro, c: 'ok' },
-    { who: 'Maxime T.', a: 'a supprimé le lot ', em: '#L23-117', when: '11:04', icon: LucideTrash2, c: 'danger' },
+    {
+      who: 'Sarah K.',
+      a: 'a modifié le rôle de ',
+      em: 'Inès Dubreuil',
+      s: ' → Coordo',
+      when: '14:32',
+      icon: LucidePencil,
+      c: 'warn',
+    },
+    {
+      who: 'Léa M.',
+      a: 'a validé un encaissement espèces ',
+      em: '+148 €',
+      when: '14:18',
+      icon: LucideEuro,
+      c: 'ok',
+    },
+    {
+      who: 'Maxime T.',
+      a: 'a supprimé le lot ',
+      em: '#L23-117',
+      when: '11:04',
+      icon: LucideTrash2,
+      c: 'danger',
+    },
     { who: 'Sarah K.', a: "s'est connectée ", when: '09:12', icon: LucideShield, c: 'blue' },
-    { who: 'Système', a: 'a relancé 2 adhérents · soldes négatifs', when: 'Hier', icon: LucideZap, c: 'neutral' },
+    {
+      who: 'Système',
+      a: 'a relancé 2 adhérents · soldes négatifs',
+      when: 'Hier',
+      icon: LucideZap,
+      c: 'neutral',
+    },
   ];
 
   protected roleKind(role: string): BadgeKind {
@@ -142,8 +246,7 @@ export class Equipe {
   }
 
   protected permClass(p: Perm): { wrap: string; label: string } {
-    if (p === 'rw')
-      return { wrap: 'bg-ok-soft text-ok', label: 'R+W' };
+    if (p === 'rw') return { wrap: 'bg-ok-soft text-ok', label: 'R+W' };
     if (p === 'r') return { wrap: 'bg-surface-2 text-text-2', label: 'R' };
     return { wrap: 'border border-dashed border-border text-faint', label: '—' };
   }

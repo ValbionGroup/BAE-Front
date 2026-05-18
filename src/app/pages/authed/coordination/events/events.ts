@@ -210,7 +210,9 @@ export class CoordinationEvents {
   protected readonly selectedId = signal<string>('hiv26');
 
   protected readonly tabs = computed(() => {
-    const upcoming = this.all.filter((e) => e.status === 'preparing' || e.status === 'planning').length;
+    const upcoming = this.all.filter(
+      (e) => e.status === 'preparing' || e.status === 'planning',
+    ).length;
     const drafts = this.all.filter((e) => e.status === 'draft').length;
     const past = this.all.filter((e) => e.status === 'past').length;
     return [

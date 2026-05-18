@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, TemplateRef, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import {
   LucideDynamicIcon,
   LucideIconInput,
@@ -75,47 +85,47 @@ interface MemberView {
 }
 
 const AVATAR_COLORS = [
-  'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
-  'bg-rose-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500',
-  'bg-pink-500', 'bg-cyan-500',
+  'bg-violet-500',
+  'bg-blue-500',
+  'bg-emerald-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-indigo-500',
+  'bg-teal-500',
+  'bg-orange-500',
+  'bg-pink-500',
+  'bg-cyan-500',
 ];
 
-const POSTE_COLORS = [
-  'blue',
-  'emerald',
-  'amber',
-  'rose',
-  'indigo',
-  'teal',
-];
+const POSTE_COLORS = ['blue', 'emerald', 'amber', 'rose', 'indigo', 'teal'];
 
 const JOB_ICONS: Record<string, LucideIconInput> = {
-  'Barman': LucideWine,
-  'Caissier': LucideCreditCard,
-  'Serveur': LucideSmile,
-  'Sécurité': LucideShield,
-  'Logistique': LucideFlame,
-  'Sono': LucideMusic,
+  Barman: LucideWine,
+  Caissier: LucideCreditCard,
+  Serveur: LucideSmile,
+  Sécurité: LucideShield,
+  Logistique: LucideFlame,
+  Sono: LucideMusic,
 };
 
 function buildEventsData(raw: CoordinationApiData): EventData[] {
-  return raw.events.map(event => ({
+  return raw.events.map((event) => ({
     event: { id: event.id, name: event.name, date: new Date(event.date) },
     presentMemberIds: raw.responses
-      .filter(r => r.eventId === event.id && r.isAvailable)
-      .map(r => r.memberId),
+      .filter((r) => r.eventId === event.id && r.isAvailable)
+      .map((r) => r.memberId),
     roles: raw.eventJobs
-      .filter(ej => ej.eventId === event.id)
-      .map(ej => {
-        const job = raw.jobs.find(j => j.id === ej.jobId)!;
+      .filter((ej) => ej.eventId === event.id)
+      .map((ej) => {
+        const job = raw.jobs.find((j) => j.id === ej.jobId)!;
         return {
           id: ej.jobId,
           name: job.name,
           icon: JOB_ICONS[job.name] ?? LucideUsers,
           requiredCount: ej.count,
           assignedMemberIds: raw.assignments
-            .filter(a => a.eventId === event.id && a.jobId === ej.jobId)
-            .map(a => a.memberId),
+            .filter((a) => a.eventId === event.id && a.jobId === ej.jobId)
+            .map((a) => a.memberId),
         };
       }),
   }));
@@ -124,7 +134,7 @@ function buildEventsData(raw: CoordinationApiData): EventData[] {
 function findNextEventId(events: EventData[]): number | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const next = events.find(ed => ed.event.date >= today);
+  const next = events.find((ed) => ed.event.date >= today);
   return next?.event.id ?? events.at(-1)?.event.id ?? null;
 }
 
@@ -168,13 +178,15 @@ export class Coordination implements OnInit {
   ngOnInit(): void {
     this.svc.loadAll().subscribe({
       next: (raw) => {
-        this.allMembers.set(raw.members.map(m => ({
-          id: m.id,
-          firstName: m.firstName,
-          lastName: m.lastName,
-          role: m.role,
-          points: m.points,
-        })));
+        this.allMembers.set(
+          raw.members.map((m) => ({
+            id: m.id,
+            firstName: m.firstName,
+            lastName: m.lastName,
+            role: m.role,
+            points: m.points,
+          })),
+        );
         const events = buildEventsData(raw);
         this.eventsData.set(events);
         this.selectedEventId.set(findNextEventId(events));
@@ -188,13 +200,13 @@ export class Coordination implements OnInit {
   }
 
   protected readonly selectedEventData = computed(() =>
-    this.eventsData().find(ed => ed.event.id === this.selectedEventId())
+    this.eventsData().find((ed) => ed.event.id === this.selectedEventId()),
   );
 
   protected readonly presentMembers = computed(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
-    return this.allMembers().filter(m => eventData.presentMemberIds.includes(m.id));
+    return this.allMembers().filter((m) => eventData.presentMemberIds.includes(m.id));
   });
 
   protected readonly memberRoleMap = computed(() => {
@@ -223,15 +235,15 @@ export class Coordination implements OnInit {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
     const assigned = this.assignedMemberIds();
-    return this.allMembers().filter(m =>
-      eventData.presentMemberIds.includes(m.id) && !assigned.has(m.id)
+    return this.allMembers().filter(
+      (m) => eventData.presentMemberIds.includes(m.id) && !assigned.has(m.id),
     );
   });
 
   protected readonly unfulfilledCount = computed(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return 0;
-    return eventData.roles.filter(r => r.assignedMemberIds.length < r.requiredCount).length;
+    return eventData.roles.filter((r) => r.assignedMemberIds.length < r.requiredCount).length;
   });
 
   protected isFulfilled(role: Role): boolean {
@@ -245,7 +257,7 @@ export class Coordination implements OnInit {
   }
 
   protected getMember(id: number): Member | undefined {
-    return this.allMembers().find(m => m.id === id);
+    return this.allMembers().find((m) => m.id === id);
   }
 
   protected getMemberInitials(member: Member): string {
@@ -257,7 +269,12 @@ export class Coordination implements OnInit {
   }
 
   protected formatDate(date: Date): string {
-    return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   }
 
   protected formatEventDate(date: Date): string {
@@ -303,29 +320,29 @@ export class Coordination implements OnInit {
   }
 
   protected togglePicker(roleId: number): void {
-    this.openPickerRoleId.update(current => current === roleId ? null : roleId);
+    this.openPickerRoleId.update((current) => (current === roleId ? null : roleId));
   }
 
   protected assignMember(memberId: number, roleId: number): void {
     const eventId = this.selectedEventId();
     if (eventId === null) return;
 
-    this.eventsData.update(events =>
-      events.map(ed => {
+    this.eventsData.update((events) =>
+      events.map((ed) => {
         if (ed.event.id !== eventId) return ed;
         return {
           ...ed,
-          roles: ed.roles.map(r => {
+          roles: ed.roles.map((r) => {
             if (r.id !== roleId || r.assignedMemberIds.includes(memberId)) return r;
             return { ...r, assignedMemberIds: [...r.assignedMemberIds, memberId] };
           }),
         };
-      })
+      }),
     );
     this.openPickerRoleId.set(null);
 
     this.svc.assign(eventId, memberId, roleId).subscribe({
-      error: () => this.loadError.set('Erreur lors de l\'affectation.'),
+      error: () => this.loadError.set("Erreur lors de l'affectation."),
     });
   }
 
@@ -333,17 +350,17 @@ export class Coordination implements OnInit {
     const eventId = this.selectedEventId();
     if (eventId === null) return;
 
-    this.eventsData.update(events =>
-      events.map(ed => {
+    this.eventsData.update((events) =>
+      events.map((ed) => {
         if (ed.event.id !== eventId) return ed;
         return {
           ...ed,
-          roles: ed.roles.map(r => {
+          roles: ed.roles.map((r) => {
             if (r.id !== roleId) return r;
-            return { ...r, assignedMemberIds: r.assignedMemberIds.filter(id => id !== memberId) };
+            return { ...r, assignedMemberIds: r.assignedMemberIds.filter((id) => id !== memberId) };
           }),
         };
-      })
+      }),
     );
 
     this.svc.unassign(eventId, memberId, roleId).subscribe({
@@ -370,9 +387,13 @@ export class Coordination implements OnInit {
     if (!eventData) return [];
 
     return this.allMembers().map((member) => {
-      const assignedRole = eventData.roles.find(role => role.assignedMemberIds.includes(member.id));
+      const assignedRole = eventData.roles.find((role) =>
+        role.assignedMemberIds.includes(member.id),
+      );
       const score = member.points;
-      const bonus = assignedRole ? Math.max(0, assignedRole.requiredCount - assignedRole.assignedMemberIds.length) : 0;
+      const bonus = assignedRole
+        ? Math.max(0, assignedRole.requiredCount - assignedRole.assignedMemberIds.length)
+        : 0;
 
       return {
         id: member.id,
@@ -387,13 +408,13 @@ export class Coordination implements OnInit {
   }
 
   protected assignedTo(label: string): Array<{ name: string; lock: boolean; score: number }> {
-    const poste = this.postes.find(role => role.label === label);
+    const poste = this.postes.find((role) => role.label === label);
     if (!poste) return [];
 
     return poste.assignedMemberIds
-      .map(memberId => this.getMember(memberId))
+      .map((memberId) => this.getMember(memberId))
       .filter((member): member is Member => member !== undefined)
-      .map(member => ({
+      .map((member) => ({
         name: `${member.firstName} ${member.lastName}`,
         lock: member.points >= 90,
         score: member.points,
@@ -445,9 +466,12 @@ export class Coordination implements OnInit {
   private buildPreferences(member: Member, eventData: EventData): string[] {
     const ordered = [
       member.role,
-      ...eventData.roles.map(role => role.name).filter(roleName => roleName !== member.role),
+      ...eventData.roles.map((role) => role.name).filter((roleName) => roleName !== member.role),
     ];
-    return ordered.slice(0, 3).concat(Array.from({ length: Math.max(0, 3 - ordered.length) }, () => '—')).slice(0, 3);
+    return ordered
+      .slice(0, 3)
+      .concat(Array.from({ length: Math.max(0, 3 - ordered.length) }, () => '—'))
+      .slice(0, 3);
   }
 
   private getScoreClass(score: number): string {

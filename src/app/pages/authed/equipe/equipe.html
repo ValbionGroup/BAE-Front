@@ -12,9 +12,7 @@
         (click)="activeTab.set(i)"
         [class]="
           'px-0 py-2.5 -mb-px bg-transparent border-0 border-b-2 cursor-pointer text-[13px] font-medium ' +
-          (i === activeTab()
-            ? 'border-blue text-text'
-            : 'border-transparent text-muted')
+          (i === activeTab() ? 'border-blue text-text' : 'border-transparent text-muted')
         "
       >
         {{ tab }}
@@ -32,9 +30,7 @@
       <bfd-card [padding]="0">
         <div class="flex items-center px-4 py-3.5 border-b border-border-s">
           <div class="flex-1">
-            <div class="text-[13px] font-semibold text-text">
-              Membres actifs · saison 2025-2026
-            </div>
+            <div class="text-[13px] font-semibold text-text">Membres actifs · saison 2025-2026</div>
             <div class="text-[11px] text-muted mt-0.5">
               3 en ligne · dernière connexion datée par fuseau Paris
             </div>
@@ -47,8 +43,8 @@
         <div
           class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
         >
-          <span></span><span>Nom</span><span>Rôle</span><span>Scope</span
-          ><span>Dernière act.</span><span></span>
+          <span></span><span>Nom</span><span>Rôle</span><span>Scope</span><span>Dernière act.</span
+          ><span></span>
         </div>
 
         @for (m of team; track m.nom; let i = $index; let last = $last) {
@@ -83,9 +79,7 @@
             </div>
             <bfd-badge [kind]="roleKind(m.role)">{{ m.role }}</bfd-badge>
             <span class="text-text-2 text-xs">{{ m.scope }}</span>
-            <span [class]="'text-[11.5px] ' + (m.on ? 'text-ok' : 'text-muted')">{{
-              m.last
-            }}</span>
+            <span [class]="'text-[11.5px] ' + (m.on ? 'text-ok' : 'text-muted')">{{ m.last }}</span>
             <svg
               [lucideIcon]="icMore"
               [size]="14"

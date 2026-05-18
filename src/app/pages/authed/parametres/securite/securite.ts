@@ -44,8 +44,26 @@ export class ParametresSecurite {
   protected readonly icLogout = LucideLogOut;
 
   protected readonly sessions: readonly Session[] = [
-    { d: 'Mac · Chrome 121', loc: 'Paris · maintenant', ip: '92.184.x.x', cur: true, icon: LucideHouse },
-    { d: 'iPhone · Safari', loc: 'Paris · il y a 4 h', ip: '212.95.x.x', cur: false, icon: LucideBell },
-    { d: "iPad · BAE-ERP", loc: "Local d'école · hier", ip: '10.0.x.x', cur: false, icon: LucidePackage },
+    {
+      d: 'Mac · Chrome 121',
+      loc: 'Paris · maintenant',
+      ip: '92.184.x.x',
+      cur: true,
+      icon: LucideHouse,
+    },
+    {
+      d: 'iPhone · Safari',
+      loc: 'Paris · il y a 4 h',
+      ip: '212.95.x.x',
+      cur: false,
+      icon: LucideBell,
+    },
+    {
+      d: 'iPad · BAE-ERP',
+      loc: "Local d'école · hier",
+      ip: '10.0.x.x',
+      cur: false,
+      icon: LucidePackage,
+    },
   ];
 }

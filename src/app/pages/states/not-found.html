@@ -5,9 +5,21 @@
     class="absolute inset-0 opacity-70 pointer-events-none"
     style="
       background-image:
-        repeating-linear-gradient(0deg, transparent 0 22px, color-mix(in oklch, var(--bae-text) 5%, transparent) 22px 23px),
-        radial-gradient(circle at 80% 20%, color-mix(in oklch, var(--bae-blue) 14%, transparent) 0%, transparent 50%),
-        radial-gradient(circle at 18% 78%, color-mix(in oklch, var(--bae-red) 12%, transparent) 0%, transparent 50%);
+        repeating-linear-gradient(
+          0deg,
+          transparent 0 22px,
+          color-mix(in oklch, var(--bae-text) 5%, transparent) 22px 23px
+        ),
+        radial-gradient(
+          circle at 80% 20%,
+          color-mix(in oklch, var(--bae-blue) 14%, transparent) 0%,
+          transparent 50%
+        ),
+        radial-gradient(
+          circle at 18% 78%,
+          color-mix(in oklch, var(--bae-red) 12%, transparent) 0%,
+          transparent 50%
+        );
     "
   ></div>
 
@@ -17,7 +29,13 @@
     class="mono absolute inset-0 p-5 text-faint opacity-20 text-sm leading-6 overflow-hidden select-none"
     style="
       mask-image: linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%);
-      -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%);
+      -webkit-mask-image: linear-gradient(
+        180deg,
+        transparent 0%,
+        black 30%,
+        black 70%,
+        transparent 100%
+      );
     "
   >
     @for (i of rainRows(); track i) {
@@ -38,7 +56,11 @@
       >
         <span
           style="
-            background: linear-gradient(180deg, var(--bae-text) 0%, color-mix(in oklch, var(--bae-text) 60%, transparent) 100%);
+            background: linear-gradient(
+              180deg,
+              var(--bae-text) 0%,
+              color-mix(in oklch, var(--bae-text) 60%, transparent) 100%
+            );
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -48,11 +70,25 @@
         <span class="relative inline-block" style="width: 120px; height: 120px; margin: 0 -6px">
           <span
             class="absolute opacity-85 bg-red"
-            style="top: 8px; left: 8px; width: 70px; height: 70px; border-radius: 14px; transform: rotate(-6deg)"
+            style="
+              top: 8px;
+              left: 8px;
+              width: 70px;
+              height: 70px;
+              border-radius: 14px;
+              transform: rotate(-6deg);
+            "
           ></span>
           <span
             class="absolute bg-blue"
-            style="bottom: 6px; right: 6px; width: 76px; height: 76px; border-radius: 50%; opacity: 0.88"
+            style="
+              bottom: 6px;
+              right: 6px;
+              width: 76px;
+              height: 76px;
+              border-radius: 50%;
+              opacity: 0.88;
+            "
           ></span>
           <span
             class="absolute inset-0 border-2 border-dashed border-border"
@@ -61,7 +97,11 @@
         </span>
         <span
           style="
-            background: linear-gradient(180deg, var(--bae-text) 0%, color-mix(in oklch, var(--bae-text) 60%, transparent) 100%);
+            background: linear-gradient(
+              180deg,
+              var(--bae-text) 0%,
+              color-mix(in oklch, var(--bae-text) 60%, transparent) 100%
+            );
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -70,10 +110,7 @@
         >
       </div>
 
-      <div
-        class="mono mt-[22px] text-[11px] text-muted uppercase"
-        style="letter-spacing: 2px"
-      >
+      <div class="mono mt-[22px] text-[11px] text-muted uppercase" style="letter-spacing: 2px">
         <span class="text-red">●</span> ROUTE INTROUVABLE
         <span class="text-red">●</span>
       </div>

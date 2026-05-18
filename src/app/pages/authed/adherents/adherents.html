@@ -56,7 +56,11 @@
             <div class="mono text-[10.5px] text-muted mt-0.5">{{ a.id }}</div>
           </div>
           <span class="text-text-2">{{ a.prom }}</span>
-          <span><bfd-badge [kind]="statusKind(a.coti)" [dot]="a.coti !== 'Non-adhérent'">{{ a.coti }}</bfd-badge></span>
+          <span
+            ><bfd-badge [kind]="statusKind(a.coti)" [dot]="a.coti !== 'Non-adhérent'">{{
+              a.coti
+            }}</bfd-badge></span
+          >
           <span [class]="'mono tnum ' + expClass(a.coti)">{{ a.exp }}</span>
           <span [class]="'mono tnum text-right ' + soldeClass(a.sold)">{{ solde(a.sold) }}</span>
           <svg [lucideIcon]="icMore" [size]="14" class="text-muted justify-self-end"></svg>
@@ -130,10 +134,7 @@
       </div>
       @for (c of cotisations; track c.an; let i = $index) {
         <div
-          [class]="
-            'flex items-center gap-2.5 py-2 ' +
-            (i > 0 ? 'border-t border-border-s' : '')
-          "
+          [class]="'flex items-center gap-2.5 py-2 ' + (i > 0 ? 'border-t border-border-s' : '')"
         >
           <svg [lucideIcon]="icCheck" [size]="14" class="text-ok"></svg>
           <span class="mono tnum text-xs text-text">{{ c.an }}</span>
@@ -154,8 +155,7 @@
             <div class="text-[11px] text-muted">{{ s.k }}</div>
             <div
               [class]="
-                'tnum text-base font-semibold mt-0.5 ' +
-                (s.negative ? 'text-danger' : 'text-text')
+                'tnum text-base font-semibold mt-0.5 ' + (s.negative ? 'text-danger' : 'text-text')
               "
             >
               {{ s.v }}

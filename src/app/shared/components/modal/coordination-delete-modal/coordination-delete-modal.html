@@ -8,17 +8,13 @@
   (close)="close()"
 >
   <div class="p-3.5 bg-surface-2 border border-border rounded-md flex items-center gap-3 mb-4">
-    <div
-      class="w-12 px-0 py-1 rounded-md text-center bg-red-soft text-red border border-red"
-    >
+    <div class="w-12 px-0 py-1 rounded-md text-center bg-red-soft text-red border border-red">
       <div class="tnum text-[17px] font-semibold leading-none">14</div>
       <div class="mono text-[9px] mt-0.5 tracking-widest">FÉV</div>
     </div>
     <div class="flex-1">
       <div class="text-[13px] font-semibold text-text">{{ eventName() }}</div>
-      <div class="text-[11px] text-muted mt-0.5">
-        Ven. 19:30 — 23:00 · 18 membres affectés
-      </div>
+      <div class="text-[11px] text-muted mt-0.5">Ven. 19:30 — 23:00 · 18 membres affectés</div>
     </div>
     <bfd-badge kind="warn" [dot]="true">En préparation</bfd-badge>
   </div>
@@ -55,8 +51,6 @@
   <div modal-footer class="contents">
     <div class="flex-1"></div>
     <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="danger" [icon]="icTrash" (clicked)="close()"
-      >Supprimer définitivement</bfd-btn
-    >
+    <bfd-btn kind="danger" [icon]="icTrash" (clicked)="close()">Supprimer définitivement</bfd-btn>
   </div>
 </bfd-modal-shell>

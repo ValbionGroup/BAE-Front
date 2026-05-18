@@ -181,9 +181,7 @@ export class SoireeLive {
       { q: 1, n: 'Hot-dog classique', done: true },
       { q: 1, n: 'Heineken 33cl', done: true },
     ]),
-    mkTicket('A10', 'E. Vasseur', 'place', 222, [
-      { q: 1, n: 'Hot-dog fromage', done: true },
-    ]),
+    mkTicket('A10', 'E. Vasseur', 'place', 222, [{ q: 1, n: 'Hot-dog fromage', done: true }]),
     mkTicket(
       'A09',
       'M. Bensaid',
@@ -242,7 +240,8 @@ export class SoireeLive {
   ]);
 
   protected readonly cadence = [
-    20, 38, 52, 78, 95, 118, 142, 168, 188, 162, 154, 148, 132, 124, 138, 142, 158, 172, 160, 144, 132,
+    20, 38, 52, 78, 95, 118, 142, 168, 188, 162, 154, 148, 132, 124, 138, 142, 158, 172, 160, 144,
+    132,
   ];
 
   protected readonly transactions: readonly Tx[] = [
@@ -370,8 +369,7 @@ export class SoireeLive {
   /** Drop a ticket from any column. */
   protected cancel(t: Ticket, status: TicketStatus): void {
     if (status === 'waiting') this.waiting.update((a) => a.filter((x) => x.id !== t.id));
-    else if (status === 'preparing')
-      this.preparing.update((a) => a.filter((x) => x.id !== t.id));
+    else if (status === 'preparing') this.preparing.update((a) => a.filter((x) => x.id !== t.id));
     else this.ready.update((a) => a.filter((x) => x.id !== t.id));
   }
 

@@ -58,8 +58,18 @@ interface EventBlock {
 }
 
 const MONTH_FR: readonly string[] = [
-  'JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN',
-  'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC',
+  'JAN',
+  'FÉV',
+  'MAR',
+  'AVR',
+  'MAI',
+  'JUN',
+  'JUL',
+  'AOÛ',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DÉC',
 ];
 
 @Component({
@@ -207,9 +217,7 @@ export class LogistiqueEvents {
     this.activeTab.set(key);
   }
 
-  private seed(
-    entries: readonly (readonly [string, number, RecipeStock])[],
-  ): RecipeLine[] {
+  private seed(entries: readonly (readonly [string, number, RecipeStock])[]): RecipeLine[] {
     return entries.flatMap(([id, count, stock]) => {
       const r = this.recipesService.byId(id);
       return r ? [{ id: r.id, name: r.nom, unitCost: r.cout, count, stock }] : [];
@@ -251,7 +259,9 @@ export class LogistiqueEvents {
       : 'bg-surface-2 text-text-2 border-border-s';
   }
 
-  protected stockText(r: RecipeLine): { label: string; tone: 'ok' | 'warn' | 'danger' | 'muted' } | null {
+  protected stockText(
+    r: RecipeLine,
+  ): { label: string; tone: 'ok' | 'warn' | 'danger' | 'muted' } | null {
     switch (r.stock) {
       case 'ok':
         return { label: 'Suffisant', tone: 'ok' };
@@ -351,9 +361,7 @@ export class LogistiqueEvents {
           ? ev
           : {
               ...ev,
-              recipes: ev.recipes.map((x) =>
-                x.id === r.id ? { ...x, count: x.count + 1 } : x,
-              ),
+              recipes: ev.recipes.map((x) => (x.id === r.id ? { ...x, count: x.count + 1 } : x)),
             },
       ),
     );

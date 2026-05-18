@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import {
   LucideCheck,
   LucideChefHat,
@@ -72,9 +65,7 @@ export class LogistiqueAssignModal {
 
   protected readonly selected = computed(() => this.recipes().filter((r) => r.sel));
   protected readonly totalSelected = computed(() => this.selected().length);
-  protected readonly totalPortions = computed(() =>
-    this.selected().reduce((s, r) => s + r.q, 0),
-  );
+  protected readonly totalPortions = computed(() => this.selected().reduce((s, r) => s + r.q, 0));
   protected readonly totalCost = computed(() =>
     Math.round(this.selected().reduce((s, r) => s + r.q * r.cost, 0)),
   );

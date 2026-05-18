@@ -97,25 +97,92 @@ export class Adherents {
   protected readonly icEdit = LucidePencil;
   protected readonly icAlert = LucideTriangleAlert;
 
-  protected readonly filterTabs = [
-    'Tous · 342',
-    'À jour · 287',
-    'Expirés · 41',
-    'Externes · 14',
-  ];
+  protected readonly filterTabs = ['Tous · 342', 'À jour · 287', 'Expirés · 41', 'Externes · 14'];
   protected readonly activeFilter = signal(0);
   protected readonly selectedIdx = signal(0);
 
   protected readonly adherents: readonly Adherent[] = [
-    { id: 'ADH-2025-0142', nom: 'Camille Renard', prom: '2A · Alt.', email: 'c.renard@etu.ec.fr', coti: 'À jour', exp: '31/08/2026', sold: -2.5 },
-    { id: 'ADH-2025-0118', nom: 'Antoine Picard', prom: '3A · Init.', email: 'a.picard@etu.ec.fr', coti: 'À jour', exp: '31/08/2026', sold: 0 },
-    { id: 'ADH-2024-0871', nom: 'Sofia Lemaire', prom: '4A · Alt.', email: 's.lemaire@etu.ec.fr', coti: 'Expirée', exp: '31/08/2025', sold: 0 },
-    { id: 'ADH-2025-0203', nom: 'Marwane B.', prom: '1A · Init.', email: 'm.bensaid@etu.ec.fr', coti: 'À jour', exp: '31/08/2026', sold: 0 },
-    { id: 'ADH-2025-0089', nom: 'Élise Vasseur', prom: '5A · Alt.', email: 'e.vasseur@etu.ec.fr', coti: 'À jour', exp: '31/08/2026', sold: 12.0 },
-    { id: 'EXT-2025-0011', nom: 'Pierre Aubry', prom: 'Ext. (invité)', email: 'p.aubry@gmail.com', coti: 'Non-adhérent', exp: '—', sold: 0 },
-    { id: 'ADH-2025-0156', nom: 'Inès Dubreuil', prom: '2A · Alt.', email: 'i.dubreuil@etu.ec.fr', coti: 'À jour', exp: '31/08/2026', sold: -5.0 },
-    { id: 'ADH-2025-0044', nom: 'Tom Bessière', prom: '3A · Alt.', email: 't.bessiere@etu.ec.fr', coti: 'À jour', exp: '31/08/2026', sold: 0 },
-    { id: 'ADH-2024-0612', nom: 'Yasmine K.', prom: 'Alumni', email: 'yasmine.k@gmail.com', coti: 'Expirée', exp: '31/08/2025', sold: 0 },
+    {
+      id: 'ADH-2025-0142',
+      nom: 'Camille Renard',
+      prom: '2A · Alt.',
+      email: 'c.renard@etu.ec.fr',
+      coti: 'À jour',
+      exp: '31/08/2026',
+      sold: -2.5,
+    },
+    {
+      id: 'ADH-2025-0118',
+      nom: 'Antoine Picard',
+      prom: '3A · Init.',
+      email: 'a.picard@etu.ec.fr',
+      coti: 'À jour',
+      exp: '31/08/2026',
+      sold: 0,
+    },
+    {
+      id: 'ADH-2024-0871',
+      nom: 'Sofia Lemaire',
+      prom: '4A · Alt.',
+      email: 's.lemaire@etu.ec.fr',
+      coti: 'Expirée',
+      exp: '31/08/2025',
+      sold: 0,
+    },
+    {
+      id: 'ADH-2025-0203',
+      nom: 'Marwane B.',
+      prom: '1A · Init.',
+      email: 'm.bensaid@etu.ec.fr',
+      coti: 'À jour',
+      exp: '31/08/2026',
+      sold: 0,
+    },
+    {
+      id: 'ADH-2025-0089',
+      nom: 'Élise Vasseur',
+      prom: '5A · Alt.',
+      email: 'e.vasseur@etu.ec.fr',
+      coti: 'À jour',
+      exp: '31/08/2026',
+      sold: 12.0,
+    },
+    {
+      id: 'EXT-2025-0011',
+      nom: 'Pierre Aubry',
+      prom: 'Ext. (invité)',
+      email: 'p.aubry@gmail.com',
+      coti: 'Non-adhérent',
+      exp: '—',
+      sold: 0,
+    },
+    {
+      id: 'ADH-2025-0156',
+      nom: 'Inès Dubreuil',
+      prom: '2A · Alt.',
+      email: 'i.dubreuil@etu.ec.fr',
+      coti: 'À jour',
+      exp: '31/08/2026',
+      sold: -5.0,
+    },
+    {
+      id: 'ADH-2025-0044',
+      nom: 'Tom Bessière',
+      prom: '3A · Alt.',
+      email: 't.bessiere@etu.ec.fr',
+      coti: 'À jour',
+      exp: '31/08/2026',
+      sold: 0,
+    },
+    {
+      id: 'ADH-2024-0612',
+      nom: 'Yasmine K.',
+      prom: 'Alumni',
+      email: 'yasmine.k@gmail.com',
+      coti: 'Expirée',
+      exp: '31/08/2025',
+      sold: 0,
+    },
   ];
 
   protected readonly selected = computed<Adherent>(() => this.adherents[this.selectedIdx()]);

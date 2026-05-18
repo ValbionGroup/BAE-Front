@@ -19,17 +19,13 @@
           (click)="selectedType.set(o.key)"
           [class]="
             'text-left p-3 rounded-md cursor-pointer border-[1.5px] ' +
-            (o.key === selectedType()
-              ? 'bg-blue-soft border-blue'
-              : 'bg-surface-2 border-border')
+            (o.key === selectedType() ? 'bg-blue-soft border-blue' : 'bg-surface-2 border-border')
           "
         >
           <svg
             [lucideIcon]="o.icon"
             [size]="16"
-            [class]="
-              'mb-1.5 ' + (o.key === selectedType() ? 'text-blue' : 'text-text-2')
-            "
+            [class]="'mb-1.5 ' + (o.key === selectedType() ? 'text-blue' : 'text-text-2')"
             aria-hidden="true"
           ></svg>
           <div class="text-[12.5px] font-medium text-text">{{ o.l }}</div>

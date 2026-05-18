@@ -178,9 +178,7 @@
       </bfd-field>
 
       <bfd-field [label]="'Recettes assignées (' + s.recipes.length + ')'">
-        <div
-          class="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface-2 p-2"
-        >
+        <div class="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface-2 p-2">
           @for (r of s.recipes; track r) {
             <span
               class="inline-flex items-center gap-1.5 rounded-full border border-border-s bg-surface px-2 py-1 text-[11.5px] text-text-2"
@@ -210,10 +208,7 @@
       <div class="rounded-md border border-border-s bg-surface p-1">
         @for (o of s.options; track o.key; let i = $index) {
           <div
-            [class]="
-              'flex items-center gap-3 px-3 py-2.5 ' +
-              (i ? 'border-t border-border-s' : '')
-            "
+            [class]="'flex items-center gap-3 px-3 py-2.5 ' + (i ? 'border-t border-border-s' : '')"
           >
             <div class="flex-1">
               <div class="text-[12.5px] text-text">{{ o.label }}</div>
@@ -226,9 +221,7 @@
     </div>
 
     <!-- Footer actions -->
-    <div
-      class="flex items-center gap-2 border-t border-border-s bg-surface px-5 py-3"
-    >
+    <div class="flex items-center gap-2 border-t border-border-s bg-surface px-5 py-3">
       <bfd-btn kind="ghost" size="sm" [icon]="icTrash">Supprimer</bfd-btn>
       <div class="flex-1"></div>
       <bfd-btn kind="ghost" size="sm">Annuler</bfd-btn>

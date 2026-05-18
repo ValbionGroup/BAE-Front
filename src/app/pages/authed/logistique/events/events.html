@@ -52,11 +52,7 @@
       >
         <!-- Header -->
         <header class="flex items-center gap-3.5 border-b border-border-s p-4">
-          <div
-            [class]="
-              'w-14 shrink-0 rounded-md border py-1.5 text-center ' + dateChipClass(e)
-            "
-          >
+          <div [class]="'w-14 shrink-0 rounded-md border py-1.5 text-center ' + dateChipClass(e)">
             <div class="tnum text-[20px] font-semibold leading-none">{{ e.day }}</div>
             <div class="mono mt-0.5 text-[9.5px] tracking-widest">{{ e.month }}</div>
           </div>
@@ -226,12 +222,7 @@
               </div>
             }
             <div class="flex-1"></div>
-            <bfd-btn
-              kind="ghost"
-              size="sm"
-              [icon]="icPlus"
-              (clicked)="openRecipePicker(e, $event)"
-            >
+            <bfd-btn kind="ghost" size="sm" [icon]="icPlus" (clicked)="openRecipePicker(e, $event)">
               Ajouter une recette
             </bfd-btn>
             <bfd-btn kind="ghost" size="sm" [icon]="icDownload">Fiche logistique</bfd-btn>

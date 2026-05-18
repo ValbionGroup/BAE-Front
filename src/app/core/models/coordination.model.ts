@@ -7,7 +7,7 @@ import {
   LucideSmile,
   LucideIconInput,
 } from '@lucide/angular';
-import {EventData, EventDetail, Presence} from '#core/models/event.model';
+import { EventData, EventDetail, Presence } from '#core/models/event.model';
 
 export interface Member {
   id: string;

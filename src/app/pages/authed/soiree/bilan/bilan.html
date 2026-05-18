@@ -8,7 +8,13 @@
   <!-- Hero metrics -->
   <div
     class="p-[22px] mb-[18px] border border-border-s rounded-lg relative overflow-hidden"
-    style="background: linear-gradient(135deg, var(--bae-surface) 0%, color-mix(in oklch, var(--bae-ok) 14%, var(--bae-surface)) 100%);"
+    style="
+      background: linear-gradient(
+        135deg,
+        var(--bae-surface) 0%,
+        color-mix(in oklch, var(--bae-ok) 14%, var(--bae-surface)) 100%
+      );
+    "
   >
     <div
       class="absolute -top-16 -right-16 w-60 h-60 rounded-full opacity-20"
@@ -86,9 +92,7 @@
         <div class="flex items-center px-4 py-3.5 border-b border-border-s">
           <div class="flex-1">
             <div class="text-[13px] font-semibold text-text">Produits · classement</div>
-            <div class="text-[11px] text-muted mt-0.5">
-              Trié par CA · 8 produits actifs sur 12
-            </div>
+            <div class="text-[11px] text-muted mt-0.5">Trié par CA · 8 produits actifs sur 12</div>
           </div>
           <bfd-btn kind="ghost" size="sm" [iconRight]="icChevDown">CA</bfd-btn>
         </div>
@@ -107,7 +111,9 @@
               (last ? '' : 'border-b border-border-s')
             "
           >
-            <span class="mono text-muted text-[11px]">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</span>
+            <span class="mono text-muted text-[11px]">{{
+              i + 1 < 10 ? '0' + (i + 1) : i + 1
+            }}</span>
             <div class="min-w-0 flex items-center gap-2">
               <span class="text-text">{{ p.n }}</span>
               @if (p.tag === 'star') {
@@ -137,9 +143,7 @@
             <div
               [class]="
                 'p-3 rounded-md border ' +
-                (m.mvp
-                  ? 'bg-warn-soft border-warn'
-                  : 'bg-surface-2 border-border-s')
+                (m.mvp ? 'bg-warn-soft border-warn' : 'bg-surface-2 border-border-s')
               "
             >
               <div class="flex items-center gap-2">
@@ -153,8 +157,7 @@
               @if (m.k) {
                 <div
                   [class]="
-                    'mt-2 text-[11px] ' +
-                    (m.mvp ? 'text-warn font-semibold' : 'text-text-2')
+                    'mt-2 text-[11px] ' + (m.mvp ? 'text-warn font-semibold' : 'text-text-2')
                   "
                 >
                   @if (m.mvp) {
@@ -183,9 +186,7 @@
           <div class="text-[11px] text-muted mt-0.5">Décrément automatique appliqué</div>
         </div>
         @for (s of stockConsumed; track s.p) {
-          <div
-            class="flex items-center gap-2.5 px-4 py-2.5 border-t border-border-s"
-          >
+          <div class="flex items-center gap-2.5 px-4 py-2.5 border-t border-border-s">
             <div class="flex-1 min-w-0">
               <div class="text-[12.5px] text-text">{{ s.p }}</div>
               <div class="text-[10.5px] text-muted mt-0.5">
@@ -207,11 +208,7 @@
           <bfd-btn kind="ghost" size="sm" [icon]="icPlus">Ajouter</bfd-btn>
         </div>
         @for (r of retros; track r.t; let i = $index) {
-          <div
-            [class]="
-              'flex gap-2.5 py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')
-            "
-          >
+          <div [class]="'flex gap-2.5 py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
             <div
               [class]="
                 'w-6 h-6 rounded-sm inline-flex items-center justify-center shrink-0 ' +

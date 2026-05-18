@@ -35,11 +35,48 @@ export class ParametresModules {
   protected readonly icZap = LucideZap;
 
   protected readonly modules: readonly Module[] = [
-    { k: 'pre', n: 'Précommandes publiques', desc: 'Page publique sans connexion + paiement Lydia + QR retrait', on: true, role: 'Présidence' },
-    { k: 'ord', n: 'Caisse hors-ligne', desc: 'iPad sans réseau · réconciliation à la reconnexion', on: true, role: 'Trésorerie' },
-    { k: 'alg', n: 'Algo affectation auto', desc: 'Répartition basée sur historique, préférences et bonus/malus', on: true, role: 'Coordination' },
-    { k: 'rel', n: 'Relances automatiques', desc: 'Soldes négatifs, présences manquantes, lots périmés', on: true, role: 'Présidence' },
-    { k: 'gam', n: 'Gamification membres', desc: 'Points, classement saison, badges (bêta)', on: false, role: 'Coordination' },
-    { k: 'ai', n: 'Prédictions IA', desc: 'Estimation CA et stock pour la prochaine soirée', on: false, role: 'Présidence', beta: true },
+    {
+      k: 'pre',
+      n: 'Précommandes publiques',
+      desc: 'Page publique sans connexion + paiement Lydia + QR retrait',
+      on: true,
+      role: 'Présidence',
+    },
+    {
+      k: 'ord',
+      n: 'Caisse hors-ligne',
+      desc: 'iPad sans réseau · réconciliation à la reconnexion',
+      on: true,
+      role: 'Trésorerie',
+    },
+    {
+      k: 'alg',
+      n: 'Algo affectation auto',
+      desc: 'Répartition basée sur historique, préférences et bonus/malus',
+      on: true,
+      role: 'Coordination',
+    },
+    {
+      k: 'rel',
+      n: 'Relances automatiques',
+      desc: 'Soldes négatifs, présences manquantes, lots périmés',
+      on: true,
+      role: 'Présidence',
+    },
+    {
+      k: 'gam',
+      n: 'Gamification membres',
+      desc: 'Points, classement saison, badges (bêta)',
+      on: false,
+      role: 'Coordination',
+    },
+    {
+      k: 'ai',
+      n: 'Prédictions IA',
+      desc: 'Estimation CA et stock pour la prochaine soirée',
+      on: false,
+      role: 'Présidence',
+      beta: true,
+    },
   ];
 }

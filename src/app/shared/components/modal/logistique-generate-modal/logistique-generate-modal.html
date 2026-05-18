@@ -13,8 +13,7 @@
         <div class="text-[10px] text-muted uppercase tracking-wider">{{ s.l }}</div>
         <div
           [class]="
-            'mono tnum text-[17px] font-semibold mt-1 ' +
-            (s.accent ? 'text-ok' : 'text-text')
+            'mono tnum text-[17px] font-semibold mt-1 ' + (s.accent ? 'text-ok' : 'text-text')
           "
         >
           {{ s.v }}
@@ -30,9 +29,7 @@
         <div class="flex items-baseline gap-2.5">
           <span class="text-[13px] font-medium text-text flex-1">{{ s.e }}</span>
           <span class="mono tnum text-[11px] text-muted">{{ s.items }} produits</span>
-          <span class="mono tnum text-[13px] font-semibold text-text"
-            >{{ fmt(s.total) }} €</span
-          >
+          <span class="mono tnum text-[13px] font-semibold text-text">{{ fmt(s.total) }} €</span>
         </div>
         <div class="mt-2 h-1 rounded-sm bg-border overflow-hidden">
           <div [class]="'h-full ' + s.cls" [style.width.%]="s.frac"></div>
@@ -74,8 +71,6 @@
     <div class="flex-1"></div>
     <bfd-btn kind="ghost" (clicked)="close()">Plus tard</bfd-btn>
     <bfd-btn kind="secondary" [icon]="icDownload">Exporter PDF</bfd-btn>
-    <bfd-btn kind="primary" [iconRight]="icArrowRight" (clicked)="close()"
-      >Ouvrir la liste</bfd-btn
-    >
+    <bfd-btn kind="primary" [iconRight]="icArrowRight" (clicked)="close()">Ouvrir la liste</bfd-btn>
   </div>
 </bfd-modal-shell>

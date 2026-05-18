@@ -6,9 +6,7 @@
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
   <!-- Steps header -->
-  <div
-    class="flex gap-0 items-center mb-[22px] p-3.5 bg-surface border border-border-s rounded-lg"
-  >
+  <div class="flex gap-0 items-center mb-[22px] p-3.5 bg-surface border border-border-s rounded-lg">
     @for (s of steps; track s.n; let last = $last) {
       <div class="flex items-center gap-2.5 flex-1">
         <div
@@ -46,9 +44,7 @@
 
       <div class="p-[18px]">
         <!-- Billets -->
-        <div
-          class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-2.5"
-        >
+        <div class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-2.5">
           Billets
         </div>
         <div class="grid grid-cols-4 gap-2.5">
@@ -58,9 +54,7 @@
                 <span class="tnum text-[13px] font-semibold text-text">{{ denomLabel(d) }}</span>
                 <span class="mono text-[10px] text-muted">× {{ d.count }}</span>
               </div>
-              <div
-                class="flex items-center gap-1 bg-bg border border-border rounded-sm px-1 h-8"
-              >
+              <div class="flex items-center gap-1 bg-bg border border-border rounded-sm px-1 h-8">
                 <button
                   type="button"
                   (click)="dec(d.v)"
@@ -90,9 +84,7 @@
         </div>
 
         <!-- Pièces -->
-        <div
-          class="text-[11px] font-semibold tracking-wider text-muted uppercase my-2.5 mt-5"
-        >
+        <div class="text-[11px] font-semibold tracking-wider text-muted uppercase my-2.5 mt-5">
           Pièces
         </div>
         <div class="grid grid-cols-5 gap-2.5">
@@ -137,7 +129,13 @@
         <!-- Total -->
         <div
           class="mt-[22px] p-4 border border-blue rounded-lg flex items-center"
-          style="background: linear-gradient(135deg, var(--bae-surface2), color-mix(in oklch, var(--bae-blue) 10%, var(--bae-surface2)))"
+          style="
+            background: linear-gradient(
+              135deg,
+              var(--bae-surface2),
+              color-mix(in oklch, var(--bae-blue) 10%, var(--bae-surface2))
+            );
+          "
         >
           <div class="flex-1">
             <div class="text-[11px] text-muted">Total compté · espèces</div>
@@ -171,11 +169,7 @@
               <span
                 [class]="
                   'mono tnum ' +
-                  (row.c === 'plus'
-                    ? 'text-ok'
-                    : row.c === 'minus'
-                      ? 'text-red'
-                      : 'text-text')
+                  (row.c === 'plus' ? 'text-ok' : row.c === 'minus' ? 'text-red' : 'text-text')
                 "
                 >{{ row.v }} €</span
               >
@@ -208,11 +202,7 @@
               ></svg>
               <div class="flex-1">
                 <div class="text-xs text-muted">Écart</div>
-                <div
-                  [class]="
-                    'tnum text-[22px] font-semibold mt-px ' + diffStyles().text
-                  "
-                >
+                <div [class]="'tnum text-[22px] font-semibold mt-px ' + diffStyles().text">
                   {{ diff() >= 0 ? '+' : '' }}{{ formatMoney(diff()) }} €
                 </div>
               </div>
@@ -228,7 +218,9 @@
             <textarea
               class="w-full bg-surface-2 border border-border rounded-md p-2.5 text-text text-[12.5px] font-sans outline-none resize-y"
               rows="2"
-            >2 pièces de 1 € manquantes — possible erreur de rendu monnaie sur table 4.</textarea>
+            >
+2 pièces de 1 € manquantes — possible erreur de rendu monnaie sur table 4.</textarea
+            >
           </bfd-field>
         </div>
       </bfd-card>
@@ -238,14 +230,12 @@
         @for (c of channels; track c.k; let i = $index) {
           <div
             [class]="
-              'flex items-center gap-3 py-2.5 ' +
-              (i === 0 ? '' : 'border-t border-border-s')
+              'flex items-center gap-3 py-2.5 ' + (i === 0 ? '' : 'border-t border-border-s')
             "
           >
             <div
               [class]="
-                'w-8 h-8 rounded-md bg-surface-2 inline-flex items-center justify-center ' +
-                c.cls
+                'w-8 h-8 rounded-md bg-surface-2 inline-flex items-center justify-center ' + c.cls
               "
             >
               <svg [lucideIcon]="c.icon" [size]="15" aria-hidden="true"></svg>

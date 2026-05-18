@@ -38,7 +38,4 @@ export interface ComponentModalConfig<T = unknown> extends BaseModal {
   width?: number;
 }
 
-export type ModalConfig =
-  | MessageModalConfig
-  | DeleteModalConfig
-  | ComponentModalConfig;
+export type ModalConfig = MessageModalConfig | DeleteModalConfig | ComponentModalConfig;
