@@ -4,13 +4,43 @@ import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
-export interface ApiEvent { id: number; name: string; date: string; }
-export interface ApiMember { id: number; firstName: string; lastName: string; role: string; points: number; }
-export interface ApiJob { id: number; name: string; }
-export interface ApiEventJob { eventId: number; jobId: number; count: number; }
-export interface ApiAssignment { memberId: number; eventId: number; jobId: number; }
-export interface ApiAvailability { memberId: number; eventId: number; isAvailable: boolean; }
-export interface ApiPreference { memberId: number; jobId: number; preferenceRank: number; }
+export interface ApiEvent {
+  id: number;
+  name: string;
+  date: string;
+  duration: number | null;
+}
+export interface ApiMember {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+  points: number;
+}
+export interface ApiJob {
+  id: number;
+  name: string;
+}
+export interface ApiEventJob {
+  eventId: number;
+  jobId: number;
+  count: number;
+}
+export interface ApiAssignment {
+  memberId: number;
+  eventId: number;
+  jobId: number;
+}
+export interface ApiAvailability {
+  memberId: number;
+  eventId: number;
+  isAvailable: boolean;
+}
+export interface ApiPreference {
+  memberId: number;
+  jobId: number;
+  preferenceRank: number;
+}
 
 export interface CoordinationApiData {
   events: ApiEvent[];
@@ -59,8 +89,17 @@ export class CoordinationService {
     return this.http.post<ApiJob>(`${this.baseUrl}/jobs`, { name });
   }
 
-  createEvent(name: string, date: string): Observable<ApiEvent> {
-    return this.http.post<ApiEvent>(`${this.baseUrl}/events`, { name, date });
+  createEvent(name: string, date: string, duration: number | null): Observable<ApiEvent> {
+    return this.http.post<ApiEvent>(`${this.baseUrl}/events`, { name, date, duration });
+  }
+
+  updateEvent(
+    id: number,
+    name: string,
+    date: string,
+    duration: number | null,
+  ): Observable<ApiEvent> {
+    return this.http.put<ApiEvent>(`${this.baseUrl}/events/${id}`, { name, date, duration });
   }
 
   updateJob(id: number, name: string): Observable<ApiJob> {

@@ -8,65 +8,20 @@
   (close)="close()"
 >
   <bfd-field label="Nom de la soirée *">
-    <bfd-input placeholder="ex. Soirée Saint-Patrick" />
-  </bfd-field>
-
-  <bfd-field label="Type" class="block mt-3.5">
-    <div class="grid grid-cols-4 gap-2">
-      @for (o of types; track o.key) {
-        <button
-          type="button"
-          (click)="selectedType.set(o.key)"
-          [class]="
-            'text-left p-3 rounded-md cursor-pointer border-[1.5px] ' +
-            (o.key === selectedType() ? 'bg-blue-soft border-blue' : 'bg-surface-2 border-border')
-          "
-        >
-          <svg
-            [lucideIcon]="o.icon"
-            [size]="16"
-            [class]="'mb-1.5 ' + (o.key === selectedType() ? 'text-blue' : 'text-text-2')"
-            aria-hidden="true"
-          ></svg>
-          <div class="text-[12.5px] font-medium text-text">{{ o.l }}</div>
-          <div class="text-[10.5px] text-muted mt-0.5">{{ o.desc }}</div>
-        </button>
-      }
-    </div>
+    <bfd-input placeholder="ex. Soirée Saint-Patrick" (valueChange)="name.set($event)" />
   </bfd-field>
 
   <div class="grid grid-cols-3 gap-3 mt-3.5">
     <bfd-field label="Date *">
-      <bfd-input [icon]="icCalendar" value="17/03/2026" />
+      <bfd-input [icon]="icCalendar" placeholder="JJ/MM/AAAA" (valueChange)="date.set($event)" />
     </bfd-field>
     <bfd-field label="Début *">
-      <bfd-input [icon]="icClock" value="19:30" />
+      <bfd-input [icon]="icClock" placeholder="20:00" (valueChange)="time.set($event)" />
     </bfd-field>
     <bfd-field label="Fin (estimée)">
-      <bfd-input [icon]="icClock" value="23:30" />
+      <bfd-input [icon]="icClock" placeholder="23:30" (valueChange)="endTime.set($event)" />
     </bfd-field>
   </div>
-
-  <div class="grid grid-cols-[1.4fr_1fr] gap-3 mt-3.5">
-    <bfd-field label="Lieu *">
-      <bfd-input value="Foyer ENSEIRB — Talence" />
-    </bfd-field>
-    <bfd-field label="Convives attendus">
-      <bfd-input suffix="pers." value="180" />
-    </bfd-field>
-  </div>
-
-  <bfd-field label="Responsable de soirée *" class="block mt-3.5">
-    <div
-      class="flex items-center gap-2.5 px-2.5 py-1.5 bg-surface-2 border border-border rounded-md"
-    >
-      <bfd-avatar name="Hugo Lefevre" [size]="22" />
-      <span class="flex-1 text-[13px] text-text"
-        >Hugo Lefevre <span class="text-muted">· Bar</span></span
-      >
-      <svg [lucideIcon]="icChevDown" [size]="14" class="text-muted"></svg>
-    </div>
-  </bfd-field>
 
   <bfd-field label="Description (interne)" class="block mt-3.5">
     <textarea
@@ -85,7 +40,11 @@
       <span class="w-[22px] h-1 rounded-sm bg-border"></span>
     </div>
     <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" [iconRight]="icArrowRight" (clicked)="close()"
+    <bfd-btn
+      kind="primary"
+      [iconRight]="icArrowRight"
+      [disabled]="!canSubmit()"
+      (clicked)="submit()"
       >Suite · Recettes</bfd-btn
     >
   </div>

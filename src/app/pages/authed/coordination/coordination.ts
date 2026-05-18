@@ -93,6 +93,7 @@ interface MemberView {
   score: number;
   bonus: number;
   preferences: string[];
+  isPresent: boolean;
 }
 
 const AVATAR_COLORS = [
@@ -108,14 +109,7 @@ const AVATAR_COLORS = [
   'bg-cyan-500',
 ];
 
-const POSTE_COLORS = [
-  'blue',
-  'emerald',
-  'amber',
-  'rose',
-  'indigo',
-  'teal',
-];
+const POSTE_COLORS = ['blue', 'emerald', 'amber', 'rose', 'indigo', 'teal'];
 
 const LOCK_STORAGE_KEY = 'coordination-assignment-locks';
 
@@ -261,8 +255,8 @@ export class Coordination implements OnInit {
     );
   });
 
-  private readonly memberById = computed(() =>
-    new Map(this.allMembers().map(member => [member.id, member] as const)),
+  private readonly memberById = computed(
+    () => new Map(this.allMembers().map((member) => [member.id, member] as const)),
   );
 
   private readonly preferenceByMember = computed(() => {
@@ -422,7 +416,7 @@ export class Coordination implements OnInit {
       type: 'roles',
       title: 'Gérer les postes',
       message: 'Ajoutez, renommez ou ajustez le nombre de personnes par poste.',
-      roles: eventData.roles.map(role => ({
+      roles: eventData.roles.map((role) => ({
         id: role.id,
         name: role.name,
         requiredCount: role.requiredCount,
@@ -436,7 +430,7 @@ export class Coordination implements OnInit {
     if (!eventData) return;
 
     const members = this.availableMembers();
-    const items: DropdownItemAction[] = members.map(m => ({
+    const items: DropdownItemAction[] = members.map((m) => ({
       type: 'action',
       label: `${m.firstName} ${m.lastName}`,
       description: m.role,
@@ -462,11 +456,11 @@ export class Coordination implements OnInit {
     const lockedByRole = new Map<number, number[]>();
     const assignedMembers = new Set<number>();
     for (const role of eventData.roles) {
-      const locked = role.assignedMemberIds.filter(memberId =>
+      const locked = role.assignedMemberIds.filter((memberId) =>
         this.isLocked(eventId, role.id, memberId),
       );
       lockedByRole.set(role.id, locked);
-      locked.forEach(memberId => assignedMembers.add(memberId));
+      locked.forEach((memberId) => assignedMembers.add(memberId));
     }
 
     const nextAssignments = new Map<number, number[]>();
@@ -475,7 +469,7 @@ export class Coordination implements OnInit {
     }
 
     const available = new Set(
-      eventData.presentMemberIds.filter(memberId => !assignedMembers.has(memberId)),
+      eventData.presentMemberIds.filter((memberId) => !assignedMembers.has(memberId)),
     );
 
     const sortedRoles = [...eventData.roles].sort((a, b) => {
@@ -519,15 +513,19 @@ export class Coordination implements OnInit {
       }
     }
 
-    const currentKeys = new Set(currentAssignments.map(a => this.lockKey(eventId, a.roleId, a.memberId)));
+    const currentKeys = new Set(
+      currentAssignments.map((a) => this.lockKey(eventId, a.roleId, a.memberId)),
+    );
     const nextKeys = new Set(
       Array.from(nextAssignments.entries()).flatMap(([roleId, memberIds]) =>
-        memberIds.map(memberId => this.lockKey(eventId, roleId, memberId)),
+        memberIds.map((memberId) => this.lockKey(eventId, roleId, memberId)),
       ),
     );
 
-    const toUnassign = currentAssignments.filter(({ roleId, memberId }) =>
-      !this.isLocked(eventId, roleId, memberId) && !nextKeys.has(this.lockKey(eventId, roleId, memberId)),
+    const toUnassign = currentAssignments.filter(
+      ({ roleId, memberId }) =>
+        !this.isLocked(eventId, roleId, memberId) &&
+        !nextKeys.has(this.lockKey(eventId, roleId, memberId)),
     );
     const toAssign: Array<{ roleId: number; memberId: number }> = [];
     for (const [roleId, memberIds] of nextAssignments.entries()) {
@@ -542,8 +540,8 @@ export class Coordination implements OnInit {
     this.applyAssignments(eventId, nextAssignments);
 
     const ops = [
-      ...toUnassign.map(a => this.svc.unassign(eventId, a.memberId, a.roleId)),
-      ...toAssign.map(a => this.svc.assign(eventId, a.memberId, a.roleId)),
+      ...toUnassign.map((a) => this.svc.unassign(eventId, a.memberId, a.roleId)),
+      ...toAssign.map((a) => this.svc.assign(eventId, a.memberId, a.roleId)),
     ];
 
     this.algoRunning.set(true);
@@ -557,7 +555,7 @@ export class Coordination implements OnInit {
       .pipe(
         catchError(() => {
           success = false;
-          this.loadError.set('Erreur lors de l\'exécution de l\'algorithme.');
+          this.loadError.set("Erreur lors de l'exécution de l'algorithme.");
           return of(null);
         }),
         finalize(() => this.algoRunning.set(false)),
@@ -577,12 +575,12 @@ export class Coordination implements OnInit {
   }
 
   private applyAssignments(eventId: number, assignments: Map<number, number[]>): void {
-    this.eventsData.update(events =>
-      events.map(ed => {
+    this.eventsData.update((events) =>
+      events.map((ed) => {
         if (ed.event.id !== eventId) return ed;
         return {
           ...ed,
-          roles: ed.roles.map(role => ({
+          roles: ed.roles.map((role) => ({
             ...role,
             assignedMemberIds: assignments.get(role.id) ?? [],
           })),
@@ -609,14 +607,16 @@ export class Coordination implements OnInit {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
 
-    return this.allMembers().map((member) => {
-      const assignedRole = eventData.roles.find(role => role.assignedMemberIds.includes(member.id));
+    const views = this.allMembers().map((member) => {
+      const assignedRole = eventData.roles.find((role) =>
+        role.assignedMemberIds.includes(member.id),
+      );
       const roleId = assignedRole?.id ?? null;
       const score = member.points;
-      const bonus = assignedRole ? Math.max(0, assignedRole.requiredCount - assignedRole.assignedMemberIds.length) : 0;
-      const lock = roleId !== null
-        ? this.isLocked(eventData.event.id, roleId, member.id)
-        : false;
+      const bonus = assignedRole
+        ? Math.max(0, assignedRole.requiredCount - assignedRole.assignedMemberIds.length)
+        : 0;
+      const lock = roleId !== null ? this.isLocked(eventData.event.id, roleId, member.id) : false;
 
       return {
         id: member.id,
@@ -627,24 +627,27 @@ export class Coordination implements OnInit {
         score,
         bonus,
         preferences: this.buildPreferences(member, eventData),
+        isPresent: eventData.presentMemberIds.includes(member.id),
       };
     });
+
+    return views.sort((a, b) => Number(b.isPresent) - Number(a.isPresent));
   }
 
-  protected assignedTo(label: string): Array<{ id: number; name: string; lock: boolean; score: number }> {
-    const poste = this.postes.find(role => role.label === label);
+  protected assignedTo(
+    label: string,
+  ): Array<{ id: number; name: string; lock: boolean; score: number }> {
+    const poste = this.postes.find((role) => role.label === label);
     if (!poste) return [];
     const eventId = this.selectedEventId();
 
     return poste.assignedMemberIds
       .map((memberId) => this.getMember(memberId))
       .filter((member): member is Member => member !== undefined)
-      .map(member => ({
+      .map((member) => ({
         id: member.id,
         name: `${member.firstName} ${member.lastName}`,
-        lock: eventId !== null
-          ? this.isLocked(eventId, poste.id, member.id)
-          : false,
+        lock: eventId !== null ? this.isLocked(eventId, poste.id, member.id) : false,
         score: member.points,
       }));
   }
@@ -782,7 +785,7 @@ export class Coordination implements OnInit {
 
   private averageAssignedScore(eventData: EventData): number {
     const memberMap = this.memberById();
-    const assignedIds = eventData.roles.flatMap(role => role.assignedMemberIds);
+    const assignedIds = eventData.roles.flatMap((role) => role.assignedMemberIds);
     if (!assignedIds.length) return 0;
     const total = assignedIds.reduce((sum, memberId) => {
       return sum + (memberMap.get(memberId)?.points ?? 0);
@@ -811,7 +814,7 @@ export class Coordination implements OnInit {
 
   private buildPreferences(member: Member, eventData: EventData): string[] {
     const jobs = this.jobsById();
-    const eventJobIds = new Set(eventData.roles.map(role => role.id));
+    const eventJobIds = new Set(eventData.roles.map((role) => role.id));
     const prefMap = this.preferenceByMember().get(member.id);
     const preferred = prefMap
       ? Array.from(prefMap.entries())
@@ -822,8 +825,8 @@ export class Coordination implements OnInit {
 
     const uniquePreferred = preferred.filter((name, idx) => preferred.indexOf(name) === idx);
     const fallback = eventData.roles
-      .map(role => role.name)
-      .filter(roleName => !uniquePreferred.includes(roleName));
+      .map((role) => role.name)
+      .filter((roleName) => !uniquePreferred.includes(roleName));
 
     const merged = [...uniquePreferred, ...fallback].slice(0, 3);
     while (merged.length < 3) merged.push('—');
@@ -852,23 +855,26 @@ export class Coordination implements OnInit {
   }
 
   private applyLoadedData(raw: CoordinationApiData): void {
-    this.allMembers.set(raw.members.map(m => ({
-      id: m.id,
-      firstName: m.firstName,
-      lastName: m.lastName,
-      role: m.role,
-      points: m.points,
-    })));
-    this.jobsById.set(new Map(raw.jobs.map(job => [job.id, job] as const)));
+    this.allMembers.set(
+      raw.members.map((m) => ({
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        role: m.role,
+        points: m.points,
+      })),
+    );
+    this.jobsById.set(new Map(raw.jobs.map((job) => [job.id, job] as const)));
     this.preferences.set(raw.preferences);
     const events = buildEventsData(raw);
     this.eventsData.set(events);
     this.pruneLocks(events);
 
     const routeId = this.routeEventId();
-    const routeExists = routeId !== null && events.some(ed => ed.event.id === routeId);
+    const routeExists = routeId !== null && events.some((ed) => ed.event.id === routeId);
     const currentSelected = this.selectedEventId();
-    const currentExists = currentSelected !== null && events.some(ed => ed.event.id === currentSelected);
+    const currentExists =
+      currentSelected !== null && events.some((ed) => ed.event.id === currentSelected);
     const nextId = routeExists
       ? routeId
       : currentExists
@@ -887,28 +893,28 @@ export class Coordination implements OnInit {
     if (!eventData) return;
 
     const currentRoles = eventData.roles;
-    const currentById = new Map(currentRoles.map(role => [role.id, role] as const));
+    const currentById = new Map(currentRoles.map((role) => [role.id, role] as const));
     const incomingExistingIds = new Set(
-      roles.filter(role => role.id !== null).map(role => role.id as number),
+      roles.filter((role) => role.id !== null).map((role) => role.id as number),
     );
-    const removedRoles = currentRoles.filter(role => !incomingExistingIds.has(role.id));
+    const removedRoles = currentRoles.filter((role) => !incomingExistingIds.has(role.id));
     const usedInOtherEvents = new Set(
       this.eventsData()
-        .filter(ed => ed.event.id !== eventId)
-        .flatMap(ed => ed.roles.map(role => role.id)),
+        .filter((ed) => ed.event.id !== eventId)
+        .flatMap((ed) => ed.roles.map((role) => role.id)),
     );
 
     const ops: Observable<unknown>[] = [];
 
-    roles.forEach(role => {
+    roles.forEach((role) => {
       const trimmedName = role.name.trim();
       if (!trimmedName) return;
 
       if (role.id === null) {
         ops.push(
-          this.svc.createJob(trimmedName).pipe(
-            switchMap(job => this.svc.createEventJob(eventId, job.id, role.requiredCount)),
-          ),
+          this.svc
+            .createJob(trimmedName)
+            .pipe(switchMap((job) => this.svc.createEventJob(eventId, job.id, role.requiredCount))),
         );
         return;
       }
@@ -924,8 +930,8 @@ export class Coordination implements OnInit {
       }
     });
 
-    removedRoles.forEach(role => {
-      const unassignOps = role.assignedMemberIds.map(memberId =>
+    removedRoles.forEach((role) => {
+      const unassignOps = role.assignedMemberIds.map((memberId) =>
         this.svc.unassign(eventId, memberId, role.id),
       );
       const unassign$: Observable<unknown> = unassignOps.length ? forkJoin(unassignOps) : of(null);

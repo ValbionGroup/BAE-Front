@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  OnInit,
   TemplateRef,
   computed,
   effect,
@@ -8,80 +10,45 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import {
   LucideCalendar,
-  LucideCheck,
-  LucideChefHat,
-  LucideChevronDown,
-  LucideClock,
   LucideDownload,
   LucideDynamicIcon,
   LucidePencil,
   LucidePlus,
   LucideSearch,
   LucideTrash2,
-  LucideX,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { CoordinationNewModal } from '#shared/components/modal/coordination-new-modal/coordination-new-modal';
 import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
+import {
+  CoordinationService,
+  type ApiAssignment,
+  type ApiEvent,
+  type ApiEventJob,
+} from '#core/services/coordination/coordination-service';
 import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
+import { Badge } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
-import { Field } from '#shared/components/ui/field/field';
-import { Toggle } from '#shared/components/ui/toggle/toggle';
-
-type EventStatus = 'preparing' | 'planning' | 'draft' | 'past';
-type TabKey = 'upcoming' | 'drafts' | 'past';
-
-interface CoordinationEvent {
-  readonly id: string;
-  readonly name: string;
-  readonly date: string;
-  readonly responsible: string;
-  readonly status: EventStatus;
-  readonly statusLabel: string;
-  readonly statusKind: BadgeKind;
-  readonly members: number;
-  readonly maxMembers: number;
-  readonly recipes: number;
-}
-
-interface OptionRow {
-  readonly key: string;
-  readonly label: string;
-  readonly hint: string;
-  enabled: boolean;
-}
-
-interface EditState {
-  readonly id: string;
-  readonly statusLabel: string;
-  readonly createdAt: string;
-  readonly createdBy: string;
-  name: string;
-  date: string;
-  time: string;
-  location: string;
-  expected: string;
-  description: string;
-  responsibleName: string;
-  responsibleRole: string;
-  recipes: string[];
-  readonly options: OptionRow[];
-}
+import { CoordinationEventDetail } from './event-detail/event-detail';
+import type { CoordinationEvent, EventStatus, TabKey } from './events.types';
 
 @Component({
   selector: 'bfd-coordination-events',
-  imports: [Btn, Badge, Input, Avatar, Field, Toggle, LucideDynamicIcon],
+  imports: [Btn, Badge, Input, LucideDynamicIcon, CoordinationEventDetail],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CoordinationEvents {
+export class CoordinationEvents implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
+  private readonly router = inject(Router);
+  private readonly svc = inject(CoordinationService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
@@ -97,149 +64,75 @@ export class CoordinationEvents {
     });
   }
 
+  ngOnInit(): void {
+    this.svc
+      .loadAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (raw) => {
+          const list = raw.events
+            .map((e) => this.toCoordinationEvent(e, raw.assignments, raw.eventJobs))
+            .sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
+
+          this.events.set(list);
+          this.loading.set(false);
+
+          if (this.selectedId() === null) {
+            const nextUpcoming = list.find((e) => e.status !== 'past');
+            this.selectedId.set(nextUpcoming?.id ?? list.at(-1)?.id ?? null);
+          }
+        },
+        error: () => {
+          this.loadError.set('Impossible de charger les soirées.');
+          this.loading.set(false);
+        },
+      });
+  }
+
   protected readonly icCalendar = LucideCalendar;
   protected readonly icDownload = LucideDownload;
   protected readonly icPlus = LucidePlus;
   protected readonly icSearch = LucideSearch;
   protected readonly icEdit = LucidePencil;
   protected readonly icTrash = LucideTrash2;
-  protected readonly icX = LucideX;
-  protected readonly icCheck = LucideCheck;
-  protected readonly icChef = LucideChefHat;
-  protected readonly icChevDown = LucideChevronDown;
-  protected readonly icClock = LucideClock;
 
-  private readonly all: readonly CoordinationEvent[] = [
-    {
-      id: 'soiree-hivernale',
-      name: 'Soirée Hivernale',
-      date: '14/02/2026',
-      responsible: 'Léa Marchand',
-      status: 'preparing',
-      statusLabel: 'En préparation',
-      statusKind: 'warn',
-      members: 11,
-      maxMembers: 18,
-      recipes: 5,
-    },
-    {
-      id: 'soiree-carnaval',
-      name: 'Soirée Carnaval',
-      date: '07/03/2026',
-      responsible: 'Thomas R.',
-      status: 'preparing',
-      statusLabel: 'En préparation',
-      statusKind: 'warn',
-      members: 0,
-      maxMembers: 16,
-      recipes: 3,
-    },
-    {
-      id: 'repas-alternants',
-      name: 'Repas Alternant·e·s',
-      date: '28/03/2026',
-      responsible: 'Camille D.',
-      status: 'planning',
-      statusLabel: 'Planification',
-      statusKind: 'blue',
-      members: 0,
-      maxMembers: 12,
-      recipes: 0,
-    },
-    {
-      id: 'soiree-bienvenue',
-      name: 'Soirée Bienvenue 2026',
-      date: '24/01/2026',
-      responsible: 'Léa Marchand',
-      status: 'past',
-      statusLabel: 'Passée',
-      statusKind: 'ok',
-      members: 18,
-      maxMembers: 18,
-      recipes: 4,
-    },
-  ];
-
+  protected readonly loading = signal(true);
+  protected readonly loadError = signal<string | null>(null);
+  protected readonly events = signal<CoordinationEvent[]>([]);
   protected readonly activeTab = signal<TabKey>('upcoming');
-  protected readonly selectedId = signal<string>('soiree-hivernale');
+  protected readonly selectedId = signal<number | null>(null);
 
   protected readonly tabs = computed(() => {
-    const upcoming = this.all.filter(
-      (e) => e.status === 'preparing' || e.status === 'planning',
-    ).length;
-    const drafts = this.all.filter((e) => e.status === 'draft').length;
-    const past = this.all.filter((e) => e.status === 'past').length;
+    const all = this.events();
+    const upcoming = all.filter((e) => e.status !== 'past').length;
+    const past = all.filter((e) => e.status === 'past').length;
     return [
       { key: 'upcoming' as TabKey, label: 'À venir', count: upcoming },
-      { key: 'drafts' as TabKey, label: 'Brouillons', count: drafts },
       { key: 'past' as TabKey, label: 'Passées', count: past },
     ];
   });
 
   protected readonly visibleEvents = computed<readonly CoordinationEvent[]>(() => {
     const tab = this.activeTab();
-    return this.all.filter((e) => {
-      if (tab === 'upcoming') return e.status === 'preparing' || e.status === 'planning';
-      if (tab === 'drafts') return e.status === 'draft';
-      return e.status === 'past';
-    });
+    return this.events().filter((e) =>
+      tab === 'upcoming' ? e.status !== 'past' : e.status === 'past',
+    );
   });
 
-  protected readonly edit = signal<EditState>({
-    id: 'soiree-hivernale',
-    statusLabel: 'EN PRÉPARATION',
-    createdAt: '02/02/2026',
-    createdBy: 'Léa M.',
-    name: 'Soirée Hivernale',
-    date: '14/02/2026',
-    time: '19:30 — 23:00',
-    location: 'Foyer ENSEIRB — Talence',
-    expected: '180',
-    description:
-      "Soirée d'hiver, hot-dogs + crêpes + boissons chaudes. Précommandes ouvertes jusqu'au 14/02 18:30.",
-    responsibleName: 'Léa Marchand',
-    responsibleRole: 'Trésorière',
-    recipes: [
-      'Hot-dog classique',
-      'Hot-dog veggie',
-      'Frites portion',
-      'Crêpe Nutella',
-      'Panaché 25cl',
-    ],
-    options: [
-      {
-        key: 'precommandes',
-        label: 'Précommandes en ligne',
-        hint: "Page publique active jusqu'à J-1 18:30",
-        enabled: true,
-      },
-      {
-        key: 'inscription',
-        label: 'Inscription obligatoire',
-        hint: 'Limite à 22 membres BAE pour le service',
-        enabled: true,
-      },
-      {
-        key: 'public',
-        label: 'Soirée publique',
-        hint: "Visible sur la page d'accueil publique",
-        enabled: true,
-      },
-      {
-        key: 'lock',
-        label: 'Verrouiller le menu',
-        hint: 'Empêche modification après J-2',
-        enabled: false,
-      },
-    ],
-  });
+  protected readonly selectedEvent = computed(
+    () => this.events().find((e) => e.id === this.selectedId()) ?? null,
+  );
 
   protected openNew(): void {
-    this.modals.open({ type: 'component', component: CoordinationNewModal });
+    this.modals.open({
+      type: 'component',
+      component: CoordinationNewModal,
+      inputs: { onCreated: (ev: ApiEvent) => this.onEventCreated(ev) },
+    });
   }
 
-  protected openDelete(eventId: string): void {
-    const ev = this.all.find((e) => e.id === eventId);
+  protected openDelete(eventId: number): void {
+    const ev = this.events().find((e) => e.id === eventId);
     this.modals.open({
       type: 'component',
       component: CoordinationDeleteModal,
@@ -247,12 +140,52 @@ export class CoordinationEvents {
     });
   }
 
-  protected select(id: string): void {
+  protected select(id: number): void {
     this.selectedId.set(id);
+  }
+
+  protected deselect(): void {
+    this.selectedId.set(null);
   }
 
   protected setTab(key: TabKey): void {
     this.activeTab.set(key);
+  }
+
+  protected navigate(id: number): void {
+    this.router.navigate(['/coordination', id]);
+  }
+
+  protected onEventSaved(ev: ApiEvent): void {
+    const dt = new Date(ev.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPast = dt < today;
+    this.events.update((list) =>
+      list.map((e) => {
+        if (e.id !== ev.id) return e;
+        return {
+          ...e,
+          name: ev.name,
+          rawDate: ev.date,
+          date: dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
+          status: (isPast ? 'past' : e.status) as EventStatus,
+          statusLabel: isPast ? 'Passée' : e.statusLabel,
+          statusKind: isPast ? 'ok' : e.statusKind,
+          duration: ev.duration,
+        };
+      }),
+    );
+  }
+
+  private onEventCreated(ev: ApiEvent): void {
+    const newEvent = this.toCoordinationEvent(ev, [], []);
+    this.events.update((list) =>
+      [...list, newEvent].sort(
+        (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime(),
+      ),
+    );
+    this.selectedId.set(ev.id);
   }
 
   protected rowAccent(e: CoordinationEvent): { bg: string; text: string } {
@@ -268,39 +201,37 @@ export class CoordinationEvents {
     }
   }
 
-  protected updateName(v: string): void {
-    this.edit.update((s) => ({ ...s, name: v }));
-  }
+  private toCoordinationEvent(
+    apiEvent: ApiEvent,
+    assignments: ApiAssignment[],
+    eventJobs: ApiEventJob[],
+  ): CoordinationEvent {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dt = new Date(apiEvent.date);
+    const isPast = dt < today;
 
-  protected updateDate(v: string): void {
-    this.edit.update((s) => ({ ...s, date: v }));
-  }
+    const assignedCount = new Set(
+      assignments.filter((a) => a.eventId === apiEvent.id).map((a) => a.memberId),
+    ).size;
+    const maxMembers = eventJobs
+      .filter((ej) => ej.eventId === apiEvent.id)
+      .reduce((sum, ej) => sum + ej.count, 0);
 
-  protected updateTime(v: string): void {
-    this.edit.update((s) => ({ ...s, time: v }));
-  }
+    const status: EventStatus = isPast ? 'past' : 'preparing';
 
-  protected updateLocation(v: string): void {
-    this.edit.update((s) => ({ ...s, location: v }));
-  }
-
-  protected updateExpected(v: string): void {
-    this.edit.update((s) => ({ ...s, expected: v }));
-  }
-
-  protected updateDescription(ev: Event): void {
-    const v = (ev.target as HTMLTextAreaElement).value;
-    this.edit.update((s) => ({ ...s, description: v }));
-  }
-
-  protected toggleOption(key: string, enabled: boolean): void {
-    this.edit.update((s) => ({
-      ...s,
-      options: s.options.map((o) => (o.key === key ? { ...o, enabled } : o)),
-    }));
-  }
-
-  protected removeRecipe(name: string): void {
-    this.edit.update((s) => ({ ...s, recipes: s.recipes.filter((r) => r !== name) }));
+    return {
+      id: apiEvent.id,
+      name: apiEvent.name,
+      date: dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
+      rawDate: apiEvent.date,
+      status,
+      statusLabel: isPast ? 'Passée' : 'En préparation',
+      statusKind: isPast ? 'ok' : 'warn',
+      members: assignedCount,
+      maxMembers,
+      recipes: 0,
+      duration: apiEvent.duration,
+    };
   }
 }

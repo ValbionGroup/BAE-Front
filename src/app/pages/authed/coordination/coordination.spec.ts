@@ -3,7 +3,10 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 
 import { Coordination } from './coordination';
-import { CoordinationService, type CoordinationApiData } from '#core/services/coordination/coordination-service';
+import {
+  CoordinationService,
+  type CoordinationApiData,
+} from '#core/services/coordination/coordination-service';
 
 describe(Coordination.name, () => {
   let component: Coordination;

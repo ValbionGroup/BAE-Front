@@ -44,7 +44,6 @@ export const EventsStore = signalStore(
               ...ev,
               memberPresenceStatus: 'init',
               menuStatus: 'init',
-              rolesStatus: 'init',
               rosterStatus: 'init',
             };
             return acc;

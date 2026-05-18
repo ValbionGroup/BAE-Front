@@ -26,7 +26,14 @@ export interface MessageModalConfig extends BaseModal {
   type: 'error' | 'success' | 'warning' | 'info';
   title?: string;
   message?: string;
+  details?: string;
   actions?: ModalAction[];
+}
+
+export interface CreateEventModalConfig extends BaseModal {
+  title?: string;
+  message?: string;
+  onCreate: (data: { name: string; date: string; time: string }) => void;
 }
 
 export interface DeleteModalConfig extends MessageBase {

@@ -1,4 +1,3 @@
-import { Role } from '#core/models/coordination.model';
 import { LoadingStatus } from '#core/models/global.model';
 
 export enum Presence {
@@ -25,9 +24,6 @@ export interface EventDetail extends EventData {
 
   menu?: MenuItem[];
   menuStatus?: LoadingStatus;
-
-  roles?: Role[];
-  rolesStatus?: LoadingStatus;
 }
 
 export interface RosterRow {

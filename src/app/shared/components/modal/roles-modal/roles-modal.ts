@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { LucidePlus, LucideTrash2, LucideX } from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { RoleModalRole, RolesModalConfig } from '../modal.models';

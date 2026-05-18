@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   forwardRef,
   input,
   output,
@@ -46,6 +47,12 @@ export class Input implements ControlValueAccessor {
 
   private onChange: (v: string) => void = () => {};
   protected onTouched: () => void = () => {};
+
+  constructor() {
+    effect(() => {
+      this.innerValue = this.value();
+    });
+  }
 
   protected readonly wrapperClass = computed(() => {
     const base =

@@ -1,103 +1,18 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable, tap } from 'rxjs';
-import {
-  EventApiDto,
-  EventData,
-  EventDetail,
-  MenuItem,
-  RosterRow,
-  RosterRowApiDto,
-} from '#core/models/event.model';
-import {
-  Member,
-  Role,
-  createInitialEventsData,
-  MEMBERS,
-  AVATAR_COLORS,
-} from '#core/models/coordination.model';
-import { isNil } from '#shared/utils/base-function';
+import { EventApiDto, EventDetail, RosterRow, RosterRowApiDto } from '#core/models/event.model';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 import { ApiEndPointV1 } from '#core/models/endpoint.model';
-
-interface LocalEventSeed {
-  roles?: Role[];
-  menu?: MenuItem[];
-  memberPresence?: EventDetail['memberPresence'];
-}
-
-function buildLocalSeedById(): Map<string, LocalEventSeed> {
-  const base = createInitialEventsData();
-
-  const menus: Record<string, MenuItem[]> = {
-    e1: [
-      { recipeId: 'r6', recipeName: 'Merguez frites', servings: 80, prepNotes: 'Grill dès 19h' },
-      { recipeId: 'r1', recipeName: 'Mojito', servings: 120 },
-      { recipeId: 'r2', recipeName: 'Panaché', servings: 60 },
-      {
-        recipeId: 'r4',
-        recipeName: 'Plateau apéro',
-        servings: 30,
-        prepNotes: '4 personnes par plateau',
-      },
-    ],
-    e2: [
-      { recipeId: 'r6', recipeName: 'Merguez frites', servings: 70 },
-      { recipeId: 'r3', recipeName: 'Sangria', servings: 50, prepNotes: 'Préparer la veille' },
-      { recipeId: 'r5', recipeName: 'Vodka Orange', servings: 40 },
-    ],
-    e3: [
-      { recipeId: 'r1', recipeName: 'Mojito', servings: 100 },
-      { recipeId: 'r6', recipeName: 'Merguez frites', servings: 90 },
-      {
-        recipeId: 'r7',
-        recipeName: 'Crêpe au sucre',
-        servings: 50,
-        prepNotes: 'Pâte faite sur place',
-      },
-      { recipeId: 'r8', recipeName: 'Bière pression', servings: 150 },
-    ],
-    e4: [
-      { recipeId: 'r8', recipeName: 'Bière pression', servings: 200 },
-      { recipeId: 'r5', recipeName: 'Vodka Orange', servings: 60 },
-      { recipeId: 'r6', recipeName: 'Merguez frites', servings: 100 },
-    ],
-    e5: [
-      {
-        recipeId: 'r3',
-        recipeName: 'Sangria',
-        servings: 80,
-        prepNotes: 'Thème latin — prévoir fruits frais',
-      },
-      { recipeId: 'r9', recipeName: 'Tapas variées', servings: 50 },
-      { recipeId: 'r6', recipeName: 'Merguez frites', servings: 70 },
-      { recipeId: 'r1', recipeName: 'Mojito', servings: 60 },
-    ],
-  };
-
-  return new Map(
-    base.map((ed) => [
-      ed.id,
-      {
-        roles: ed.roles,
-        memberPresence: ed.memberPresence,
-        menu: menus[ed.id] ?? [],
-      },
-    ]),
-  );
-}
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
 
-  private readonly localSeedById = buildLocalSeedById();
   private readonly _events = signal<EventDetail[]>([]);
 
   readonly events: Signal<EventDetail[]> = this._events.asReadonly();
-
-  readonly members: Signal<Member[]> = computed(() => MEMBERS);
 
   readonly currentActiveEvent: Signal<EventDetail | null> = computed(() => {
     const now = new Date();
@@ -126,7 +41,7 @@ export class EventsService {
   fetchAll(): Observable<EventDetail[]> {
     const url = this.buildUrl(ApiEndPointV1.EVENTS);
     return this.http.get<EventApiDto[]>(url).pipe(
-      map((dtos) => dtos.map((d) => this.mergeWithLocalSeed(this.toEventData(d)))),
+      map((dtos) => dtos.map((d) => this.toEventDetail(d))),
       tap((events) => this._events.set(events)),
     );
   }
@@ -138,56 +53,7 @@ export class EventsService {
       .pipe(map((dtos) => dtos.map((d) => this.toRosterRow(d))));
   }
 
-  stationForMember(memberId: string, eventId: string): Role | null {
-    const eventDetail = this._events().find((ed) => ed.id === eventId);
-    if (!eventDetail || isNil(eventDetail.roles)) return null;
-    return eventDetail.roles!.find((r) => r.assignedMemberIds.includes(memberId)) ?? null;
-  }
-
-  menuForEvent(eventId: string): MenuItem[] {
-    return this._events().find((ed) => ed.id === eventId)?.menu ?? [];
-  }
-
-  getAvatarColor(memberId: string): string {
-    const idx = MEMBERS.findIndex((m) => m.id === memberId);
-    return AVATAR_COLORS[idx % AVATAR_COLORS.length];
-  }
-
-  /** Assign a member to a role within an event (used by Coordination). */
-  assignMember(eventId: string, roleId: string, memberId: string): void {
-    this._events.update((events) =>
-      events.map((ed) => {
-        if (ed.id !== eventId) return ed;
-        if (isNil(ed.roles)) return ed;
-        return {
-          ...ed,
-          roles: ed.roles?.map((r) => {
-            if (r.id !== roleId || r.assignedMemberIds.includes(memberId)) return r;
-            return { ...r, assignedMemberIds: [...r.assignedMemberIds, memberId] };
-          }),
-        };
-      }),
-    );
-  }
-
-  /** Remove a member from a role within an event (used by Coordination). */
-  removeAssignment(eventId: string, roleId: string, memberId: string): void {
-    this._events.update((events) =>
-      events.map((ed) => {
-        if (ed.id !== eventId) return ed;
-        if (isNil(ed.roles)) return ed;
-        return {
-          ...ed,
-          roles: ed.roles?.map((r) => {
-            if (r.id !== roleId) return r;
-            return { ...r, assignedMemberIds: r.assignedMemberIds.filter((id) => id !== memberId) };
-          }),
-        };
-      }),
-    );
-  }
-
-  private toEventData(dto: EventApiDto): EventData {
+  private toEventDetail(dto: EventApiDto): EventDetail {
     return {
       id: dto.id,
       name: dto.name,
@@ -206,16 +72,6 @@ export class EventsService {
       status: dto.status,
       when: new Date(dto.when),
       late: dto.late,
-    };
-  }
-
-  private mergeWithLocalSeed(event: EventData): EventDetail {
-    const seed = this.localSeedById.get(event.id);
-    return {
-      ...event,
-      roles: seed?.roles,
-      menu: seed?.menu,
-      memberPresence: seed?.memberPresence,
     };
   }
 

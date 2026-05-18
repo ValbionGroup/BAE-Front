@@ -17,8 +17,8 @@ export class CreateEventModal {
   protected readonly date = signal('');
   protected readonly time = signal('19:00');
 
-  protected readonly canSave = computed(() =>
-    this.name().trim().length > 0 && this.date().trim().length > 0,
+  protected readonly canSave = computed(
+    () => this.name().trim().length > 0 && this.date().trim().length > 0,
   );
 
   constructor() {

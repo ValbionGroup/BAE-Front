@@ -129,11 +129,37 @@
       <span class="text-right">Bonus</span>
       <span></span>
     </div>
-    @for (m of membres; track m.name) {
+    @let allMembres = membres;
+    @let presCount = presentMembers().length;
+    @if (presCount > 0) {
+      <div class="flex items-center gap-2 border-t border-border-s bg-surface-2/50 px-3.5 py-1.5">
+        <span class="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true"></span>
+        <span class="mono text-[10px] tracking-wider text-text-2">PRÉSENTS · {{ presCount }}</span>
+      </div>
+    }
+    @for (m of allMembres; track m.name; let i = $index) {
+      @if (i === presCount && presCount > 0 && presCount < allMembres.length) {
+        <div class="border-t border-border-s bg-surface-2/50 px-3.5 py-1.5">
+          <span class="mono text-[10px] tracking-wider text-muted"
+            >NON CONFIRMÉS · {{ allMembres.length - presCount }}</span
+          >
+        </div>
+      }
       <div
-        class="grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5"
+        [class]="
+          'grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5 transition-opacity ' +
+          (!m.isPresent ? 'opacity-50' : '')
+        "
       >
-        <bfd-avatar [name]="m.name" [size]="22" />
+        <div class="relative">
+          <bfd-avatar [name]="m.name" [size]="22" />
+          @if (m.isPresent) {
+            <span
+              class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-ok ring-1 ring-surface"
+              aria-label="Présent"
+            ></span>
+          }
+        </div>
         <div>
           <div class="text-[13px] text-text">{{ m.name }}</div>
           <div class="mt-px text-[11px] text-muted">2A · INFO</div>

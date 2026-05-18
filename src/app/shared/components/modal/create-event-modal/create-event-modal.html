@@ -25,7 +25,9 @@
   <div class="p-[22px] flex flex-col gap-4 overflow-y-auto">
     <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
 
-    <div class="grid grid-cols-[1fr_140px_110px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+    <div
+      class="grid grid-cols-[1fr_140px_110px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+    >
       <span>Nom</span>
       <span>Date</span>
       <span>Heure</span>
@@ -56,8 +58,6 @@
 
   <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
     <bfd-btn kind="ghost" size="md" (clicked)="onClose()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" size="md" [disabled]="!canSave()" (clicked)="onSave()">
-      Creer
-    </bfd-btn>
+    <bfd-btn kind="primary" size="md" [disabled]="!canSave()" (clicked)="onSave()"> Creer </bfd-btn>
   </div>
 </div>
