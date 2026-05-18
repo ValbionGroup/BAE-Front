@@ -1,28 +1,25 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   LucideChefHat,
   LucideDynamicIcon,
-  LucideEllipsis,
-  LucideMoreHorizontal,
+  LucideLeaf,
   LucidePencil,
   LucidePlus,
   LucideSearch,
-  LucideStar,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { RecipesService } from '#core/services/recipes/recipes-service';
+import { RecipesStore } from '#core/store/recipes.store';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
-
-interface Ingredient {
-  readonly n: string;
-  readonly q: string;
-  readonly c: number;
-  readonly lot: string;
-  readonly stock: string | number;
-  readonly warn: boolean;
-}
+import type { RecipeIngredient, RecipeProduct } from './recipes.types';
 
 @Component({
   selector: 'bfd-recettes',
@@ -31,44 +28,89 @@ interface Ingredient {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Recettes {
-  constructor() {
-    inject(PageHeaderService).set({
-      title: 'Recettes',
-      subtitle: '8 recettes actives · coût moyen 0,77 €',
-      breadcrumb: ['Préparation', 'Recettes'],
-      activeNavId: 'recettes',
-    });
-  }
+  protected readonly store = inject(RecipesStore);
 
   protected readonly icChef = LucideChefHat;
   protected readonly icSearch = LucideSearch;
   protected readonly icPlus = LucidePlus;
   protected readonly icEdit = LucidePencil;
-  protected readonly icMore = LucideEllipsis;
-  protected readonly icStar = LucideStar;
+  protected readonly icLeaf = LucideLeaf;
 
-  protected readonly filterTabs = ['Tout', 'Plats', 'Accompagnements', 'Boissons', 'Desserts'];
-  protected readonly activeFilter = signal(0);
-  protected readonly selectedIdx = signal(0);
+  protected readonly searchQuery = signal('');
+  protected readonly activeFilter = signal('Tout');
 
-  protected readonly recettes = inject(RecipesService).recipes;
+  protected readonly selectedId = signal<number | null>(null);
+  protected readonly selectedIngredients = signal<readonly RecipeIngredient[]>([]);
+  protected readonly ingredientsLoading = signal(false);
 
-  protected readonly ingredients: readonly Ingredient[] = [
-    { n: 'Saucisse Strasbourg', q: '1 pc', c: 0.35, lot: 'L23-117', stock: 24, warn: true },
-    { n: 'Pain hot-dog', q: '1 pc', c: 0.28, lot: 'L24-009', stock: 86, warn: false },
-    { n: 'Moutarde Amora', q: '5 g', c: 0.04, lot: '—', stock: 'OK', warn: false },
-    { n: 'Ketchup Heinz', q: '8 g', c: 0.05, lot: '—', stock: 'OK', warn: false },
-    { n: 'Oignons frits', q: '4 g', c: 0.4, lot: 'L24-016', stock: 12, warn: false },
-  ];
+  protected readonly loading = this.store.loading;
+  protected readonly loadError = this.store.loadError;
 
-  protected readonly methode = [
-    'Faire chauffer la plancha à 180°C.',
-    'Faire griller la saucisse 4 min en la retournant à mi-cuisson.',
-    'Pendant ce temps, ouvrir le pain et le passer 30s côté mie.',
-    "Disposer saucisse, moutarde, ketchup, finir avec une cuillère d'oignons frits.",
-  ];
+  protected readonly categoryTabs = computed(() => {
+    const cats = this.store
+      .products()
+      .map((p) => p.category)
+      .filter((c): c is string => c !== null);
+    return ['Tout', ...new Set(cats), 'Végé'];
+  });
+
+  protected readonly visibleProducts = computed(() => {
+    const filter = this.activeFilter();
+    const q = this.searchQuery().toLowerCase().trim();
+    return this.store.products().filter((p) => {
+      if (filter === 'Végé' && !p.isVegetarian) return false;
+      if (filter !== 'Tout' && filter !== 'Végé' && p.category !== filter) return false;
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  });
+
+  protected readonly selectedProduct = computed<RecipeProduct | null>(
+    () => this.store.products().find((p) => p.id === this.selectedId()) ?? null,
+  );
+
+  constructor() {
+    const pageHeader = inject(PageHeaderService);
+    pageHeader.set({
+      title: 'Recettes',
+      subtitle: 'Chargement…',
+      breadcrumb: ['Préparation', 'Recettes'],
+      activeNavId: 'recettes',
+    });
+
+    effect(() => {
+      const products = this.store.products();
+      pageHeader.set({
+        title: 'Recettes',
+        subtitle: `${products.length} produit${products.length !== 1 ? 's' : ''}`,
+        breadcrumb: ['Préparation', 'Recettes'],
+        activeNavId: 'recettes',
+      });
+    });
+
+    effect(() => {
+      const id = this.selectedId();
+      if (id === null) return;
+      this.ingredientsLoading.set(true);
+      void this.store.getIngredients(id).then((ingredients) => {
+        this.selectedIngredients.set(ingredients);
+        this.ingredientsLoading.set(false);
+      });
+    });
+
+    void this.store.load();
+  }
+
+  protected select(id: number): void {
+    this.selectedIngredients.set([]);
+    this.selectedId.set(id);
+  }
+
+  protected setSearch(q: string): void {
+    this.searchQuery.set(q);
+  }
 
   protected formatPrice(n: number): string {
-    return n.toFixed(2).replace('.', ',');
+    return Number(n).toFixed(2).replace('.', ',');
   }
 }

@@ -25,12 +25,29 @@ import { PageHeaderService } from '#core/services/page-header/page-header-servic
 import { ModalService } from '#shared/components/modal/modal.service';
 import { LogistiqueAssignModal } from '#shared/components/modal/logistique-assign-modal/logistique-assign-modal';
 import { LogistiqueGenerateModal } from '#shared/components/modal/logistique-generate-modal/logistique-generate-modal';
-import { Recipe, RecipesService } from '#core/services/recipes/recipes-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
 import { DropdownService } from '#shared/components/dropdown/dropdown.service';
 import { DropdownItem } from '#shared/components/dropdown/dropdown.models';
+
+interface Recipe {
+  readonly id: string;
+  readonly nom: string;
+  readonly cout: number;
+  readonly usage: string;
+}
+
+const RECIPE_CATALOG: readonly Recipe[] = [
+  { id: 'hd-clas',  nom: 'Burger Classic',     cout: 2.8,  usage: 'Plat principal' },
+  { id: 'hd-veg',   nom: 'Burger Végétarien',  cout: 2.5,  usage: 'Plat principal' },
+  { id: 'frites',   nom: 'Frites maison',       cout: 0.6,  usage: 'Accompagnement' },
+  { id: 'crepe-n',  nom: 'Crêpe Nutella',       cout: 0.9,  usage: 'Dessert' },
+  { id: 'crepe-s',  nom: 'Crêpe Sucre',         cout: 0.7,  usage: 'Dessert' },
+  { id: 'pano',     nom: 'Panoplie Boissons',   cout: 1.1,  usage: 'Boisson' },
+  { id: 'tapas',    nom: 'Tapas assortis',       cout: 3.2,  usage: 'Entrée' },
+  { id: 'sangria',  nom: 'Sangria maison',       cout: 1.4,  usage: 'Boisson' },
+];
 
 type EventStatus = 'preparing' | 'planning' | 'past';
 type RecipeStock = 'ok' | 'warn' | 'low' | 'todo' | 'past';
@@ -79,7 +96,6 @@ const MONTH_FR: readonly string[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LogistiqueEvents {
-  private readonly recipesService = inject(RecipesService);
   private readonly dropdown = inject(DropdownService);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
@@ -123,7 +139,7 @@ export class LogistiqueEvents {
   protected readonly icSearch = LucideSearch;
   protected readonly icDownload = LucideDownload;
 
-  protected readonly catalog = this.recipesService.recipes;
+  protected readonly catalog = signal<readonly Recipe[]>(RECIPE_CATALOG);
 
   protected readonly events = signal<EventBlock[]>([
     {
@@ -219,7 +235,7 @@ export class LogistiqueEvents {
 
   private seed(entries: readonly (readonly [string, number, RecipeStock])[]): RecipeLine[] {
     return entries.flatMap(([id, count, stock]) => {
-      const r = this.recipesService.byId(id);
+      const r = RECIPE_CATALOG.find((x) => x.id === id);
       return r ? [{ id: r.id, name: r.nom, unitCost: r.cout, count, stock }] : [];
     });
   }
@@ -312,9 +328,9 @@ export class LogistiqueEvents {
     if (!anchor) return;
 
     const taken = new Set(e.recipes.map((r) => r.id));
-    const available = this.catalog().filter((c) => !taken.has(c.id));
+    const available = this.catalog().filter((c: Recipe) => !taken.has(c.id));
 
-    const items: readonly DropdownItem[] = available.map((c) => ({
+    const items: readonly DropdownItem[] = available.map((c: Recipe) => ({
       type: 'action',
       icon: LucideChefHat,
       label: c.nom,

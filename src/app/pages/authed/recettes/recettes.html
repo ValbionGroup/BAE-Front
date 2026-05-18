@@ -2,176 +2,187 @@
   <!-- Filter bar -->
   <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
     <div class="flex gap-1.5">
-      @for (f of filterTabs; track f; let i = $index) {
+      @for (tab of categoryTabs(); track tab) {
         <button
           type="button"
-          (click)="activeFilter.set(i)"
+          (click)="activeFilter.set(tab)"
           [class]="
             'cursor-pointer rounded-md border px-2.5 py-1.5 text-xs font-medium ' +
-            (i === activeFilter()
+            (tab === activeFilter()
               ? 'border-border bg-surface-2 text-text'
               : 'border-transparent bg-transparent text-text-2')
           "
         >
-          {{ f }}
+          {{ tab }}
         </button>
       }
     </div>
     <div class="flex-1"></div>
     <div class="w-60">
-      <bfd-input [icon]="icSearch" placeholder="Rechercher une recette…" size="sm" />
+      <bfd-input
+        [icon]="icSearch"
+        placeholder="Rechercher une recette…"
+        size="sm"
+        (valueChange)="setSearch($event)"
+      />
     </div>
+    <bfd-btn kind="primary" size="sm" [icon]="icPlus">Produit</bfd-btn>
   </div>
 
   <!-- Two-column: list + detail -->
   <div class="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr]">
     <!-- LIST -->
     <div class="overflow-y-auto border-r border-border-s">
+      <!-- Header -->
       <div
-        class="grid grid-cols-[36px_1fr_90px_100px_100px_110px] gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+        class="grid grid-cols-[36px_1fr_90px_110px] gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
       >
         <span></span>
         <span>Recette</span>
         <span class="text-right">Ingrédients</span>
-        <span class="text-right">Coût</span>
-        <span class="text-right">Vente</span>
-        <span class="text-right">Marge</span>
+        <span class="text-right">Dernier prix</span>
       </div>
-      @for (r of recettes(); track r.id; let i = $index) {
-        <div
-          (click)="selectedIdx.set(i)"
-          [class]="
-            'relative grid cursor-pointer grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
-            (i === selectedIdx() ? 'bg-surface-2' : '')
-          "
-        >
-          @if (i === selectedIdx()) {
-            <span class="absolute left-0 top-0 bottom-0 w-[2.5px] bg-blue"></span>
-          }
-          <span
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-3 text-muted"
+
+      <!-- Body -->
+      @if (loading() === 'init' || loading() === 'loading') {
+        <div class="flex h-32 items-center justify-center text-[12.5px] text-muted">
+          Chargement…
+        </div>
+      } @else if (loadError()) {
+        <div class="px-6 py-10 text-center text-[12.5px] text-danger">{{ loadError() }}</div>
+      } @else {
+        @for (p of visibleProducts(); track p.id; let last = $last) {
+          @let selected = selectedId() === p.id;
+          <div
+            (click)="select(p.id)"
+            [class]="
+              'relative grid cursor-pointer grid-cols-[36px_1fr_90px_110px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+              (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50')
+            "
           >
-            <svg [lucideIcon]="icChef" [size]="15" aria-hidden="true"></svg>
-          </span>
-          <div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[13px] font-medium text-text">{{ r.nom }}</span>
-              @if (r.star) {
-                <svg
-                  [lucideIcon]="icStar"
-                  [size]="12"
-                  fill="var(--bae-warn)"
-                  class="text-warn"
-                  aria-hidden="true"
-                ></svg>
+            @if (selected) {
+              <span class="absolute inset-y-0 left-0 w-[2.5px] bg-blue" aria-hidden="true"></span>
+            }
+            <span
+              class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-3 text-muted"
+            >
+              @if (p.isVegetarian) {
+                <svg [lucideIcon]="icLeaf" [size]="15" class="text-ok" aria-hidden="true"></svg>
+              } @else {
+                <svg [lucideIcon]="icChef" [size]="15" aria-hidden="true"></svg>
+              }
+            </span>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[13px] font-medium text-text">{{ p.name }}</span>
+                @if (p.isVegetarian) {
+                  <bfd-badge kind="ok">Végé</bfd-badge>
+                }
+              </div>
+              @if (p.category) {
+                <div class="mt-0.5 text-[11px] text-muted">{{ p.category }}</div>
               }
             </div>
-            <div class="mt-0.5 text-[11px] text-muted">{{ r.usage }}</div>
+            <span class="tnum text-right text-[12.5px] text-text-2">{{ p.ingredientCount }}</span>
+            <span class="mono tnum text-right text-[12.5px] font-semibold text-text">
+              @if (p.lastPrice !== null) {
+                {{ formatPrice(p.lastPrice) }} €
+              } @else {
+                <span class="font-normal text-muted">—</span>
+              }
+            </span>
           </div>
-          <span class="tnum text-right text-[12.5px] text-text-2">{{ r.ing }}</span>
-          <span class="mono tnum text-right text-[12px] text-text-2"
-            >{{ formatPrice(r.cout) }} €</span
-          >
-          <span class="mono tnum text-right text-[12.5px] font-semibold text-text"
-            >{{ formatPrice(r.prix) }} €</span
-          >
-          <span class="mono tnum text-right text-[12px] text-ok"
-            >+{{ formatPrice(r.marge) }} €</span
-          >
-        </div>
+        } @empty {
+          <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+            Aucune recette dans cette catégorie.
+          </div>
+        }
       }
     </div>
 
     <!-- DETAIL -->
     <div class="overflow-y-auto px-6 pt-5 pb-8">
-      <div class="mb-4 flex items-start gap-3">
-        <span
-          class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-soft text-blue"
-        >
-          <svg [lucideIcon]="icChef" [size]="22" aria-hidden="true"></svg>
-        </span>
-        <div class="flex-1">
-          <div class="flex items-center gap-2">
-            <h2 class="m-0 text-lg font-semibold text-text">Hot-dog classique</h2>
-            <svg
-              [lucideIcon]="icStar"
-              [size]="14"
-              fill="var(--bae-warn)"
-              class="text-warn"
-              aria-hidden="true"
-            ></svg>
-          </div>
-          <div class="mt-0.5 text-xs text-muted">
-            Plat principal · 5 ingrédients · utilisée 14 fois cette saison
-          </div>
-        </div>
-        <bfd-btn kind="ghost" size="sm" [icon]="icEdit">Éditer</bfd-btn>
-        <bfd-btn kind="ghost" size="sm" [icon]="icMore"></bfd-btn>
-      </div>
-
-      <!-- Cost summary -->
-      <div class="mb-4 grid grid-cols-3 gap-2.5 rounded-md border border-border-s bg-surface p-3.5">
-        <div>
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Coût revient
-          </div>
-          <div class="mono tnum mt-1 text-lg font-semibold text-text-2">1,12 €</div>
-        </div>
-        <div>
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Prix vente
-          </div>
-          <div class="mono tnum mt-1 text-lg font-semibold text-text">3,00 €</div>
-        </div>
-        <div>
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Marge nette
-          </div>
-          <div class="mono tnum mt-1 text-lg font-semibold text-ok">+1,88 €</div>
-        </div>
-      </div>
-
-      <div class="mono mb-2 text-[10px] tracking-wider text-muted">INGRÉDIENTS PAR PORTION</div>
-      <div class="overflow-hidden rounded-md border border-border-s bg-surface">
-        @for (g of ingredients; track g.n; let i = $index) {
-          <div
-            [class]="
-              'grid grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
-              (i ? 'border-t border-border-s' : '')
-            "
+      @if (selectedProduct(); as p) {
+        <div class="mb-4 flex items-start gap-3">
+          <span
+            class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-surface-2 text-muted"
           >
-            <div>
-              <span class="text-text">{{ g.n }}</span>
-              @if (g.lot !== '—') {
-                <span class="mono ml-2 text-[10.5px] text-muted">{{ g.lot }}</span>
-              }
-            </div>
-            <span class="mono tnum text-right text-text-2">{{ g.q }}</span>
-            <span class="mono tnum text-right text-muted">{{ formatPrice(g.c) }} €</span>
-            <div class="text-right">
-              @if (g.warn) {
-                <bfd-badge kind="warn">Lot DLC J-2</bfd-badge>
-              } @else {
-                <span class="tnum text-[11px] text-muted">{{ g.stock }} stock</span>
-              }
+            @if (p.isVegetarian) {
+              <svg [lucideIcon]="icLeaf" [size]="22" class="text-ok" aria-hidden="true"></svg>
+            } @else {
+              <svg [lucideIcon]="icChef" [size]="22" aria-hidden="true"></svg>
+            }
+          </span>
+          <div class="flex-1">
+            <h2 class="m-0 text-lg font-semibold text-text">{{ p.name }}</h2>
+            <div class="mt-0.5 text-xs text-muted">
+              {{ p.category ?? 'Sans catégorie' }} · {{ p.ingredientCount }} ingrédient{{
+                p.ingredientCount !== 1 ? 's' : ''
+              }}
             </div>
           </div>
-        }
-      </div>
+          <bfd-btn kind="ghost" size="sm" [icon]="icEdit">Éditer</bfd-btn>
+        </div>
 
-      <div class="mono mt-5 mb-2 text-[10px] tracking-wider text-muted">MÉTHODE</div>
-      <ol class="m-0 flex list-none flex-col gap-2 p-0">
-        @for (s of methode; track $index; let i = $index) {
-          <li class="flex items-start gap-2.5">
-            <span
-              class="mono inline-flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-sm bg-surface-2 text-[11px] font-semibold text-text-2"
-            >
-              {{ i + 1 }}
-            </span>
-            <span class="text-[12.5px] leading-relaxed text-text-2">{{ s }}</span>
-          </li>
+        <!-- Price summary -->
+        <div
+          class="mb-4 rounded-md border border-border-s bg-surface p-3.5"
+        >
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
+            Dernier prix de vente
+          </div>
+          @if (p.lastPrice !== null) {
+            <div class="mono tnum mt-1 text-lg font-semibold text-text">
+              {{ formatPrice(p.lastPrice) }} €
+            </div>
+            <div class="mt-0.5 text-[11px] text-muted">
+              Prix lors de la dernière soirée où ce produit a été vendu
+            </div>
+          } @else {
+            <div class="mt-1 text-[12.5px] text-muted">
+              Ce produit n'a encore été vendu à aucune soirée.
+            </div>
+          }
+        </div>
+
+        <!-- Ingredients -->
+        <div class="mono mb-2 text-[10px] tracking-wider text-muted">INGRÉDIENTS</div>
+        @if (ingredientsLoading()) {
+          <div class="py-4 text-center text-[12px] text-muted">Chargement des ingrédients…</div>
+        } @else {
+          <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+            @for (g of selectedIngredients(); track g.id; let i = $index) {
+              <div
+                [class]="
+                  'grid grid-cols-[1fr_80px_100px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+                  (i ? 'border-t border-border-s' : '')
+                "
+              >
+                <div>
+                  <span class="text-text">{{ g.name }}</span>
+                  @if (g.brand) {
+                    <span class="ml-1.5 text-[11px] text-muted">{{ g.brand }}</span>
+                  }
+                </div>
+                <span class="mono tnum text-right text-text-2">{{ g.unit }}</span>
+                <div class="text-right">
+                  @if (g.stockQty === 0) {
+                    <bfd-badge kind="danger">Rupture</bfd-badge>
+                  } @else {
+                    <span class="tnum text-[11px] text-muted">{{ g.stockQty }} en stock</span>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <div class="px-3.5 py-3 text-[12px] text-muted">Aucun ingrédient enregistré.</div>
+            }
+          </div>
         }
-      </ol>
+      } @else {
+        <div class="flex h-full items-center justify-center text-[12.5px] text-muted">
+          Sélectionnez une recette pour voir le détail.
+        </div>
+      }
     </div>
   </div>
 </div>
