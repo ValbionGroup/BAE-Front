@@ -1,64 +1,36 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
+  TemplateRef,
+  computed,
   effect,
   inject,
-  TemplateRef,
+  signal,
   viewChild,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import {
+  LucideArrowDownUp,
   LucideClock,
   LucideDownload,
   LucideDynamicIcon,
-  LucideEuro,
   LucideFunnel,
-  LucideIconInput,
-  LucideEllipsis,
   LucidePackage,
-  LucidePencil,
   LucidePlus,
   LucideScanLine,
   LucideSearch,
   LucideTrash2,
   LucideTriangleAlert,
 } from '@lucide/angular';
-import { RouterLink } from '@angular/router';
-import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { StocksStore } from '#core/store/stocks.store';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Input } from '#shared/components/ui/input/input';
-
-interface Kpi {
-  readonly label: string;
-  readonly value: string;
-  readonly colorClass: string;
-  readonly icon: LucideIconInput;
-  readonly sub: string;
-}
-
-interface Product {
-  readonly n: string;
-  readonly cat: string;
-  readonly qty: string;
-  readonly u: string;
-  readonly loc: string;
-  readonly dlc: string;
-  readonly dlcK: 'expired' | 'soon' | 'ok';
-  readonly lots: number;
-  readonly op: boolean;
-}
-
-interface Lot {
-  readonly id: string;
-  readonly dlc: string;
-  readonly open: string;
-  readonly qty: number;
-  readonly kind: 'expired' | 'soon' | 'ok';
-  readonly prio: boolean;
-}
+import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
   selector: 'bfd-stocks',
@@ -66,19 +38,16 @@ interface Lot {
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Stocks {
+export class Stocks implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
+  private readonly store = inject(StocksStore);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
-
-  protected openScanner(): void {
-    this.router.navigate(['/stocks/scanner']);
-  }
 
   constructor() {
     this.pageHeader.set({
       title: 'Stocks',
-      subtitle: '142 produits · 318 lots · 1 880 € valorisés',
+      subtitle: 'Chargement…',
       breadcrumb: ['Préparation', 'Stocks'],
       activeNavId: 'stocks',
     });
@@ -86,212 +55,208 @@ export class Stocks {
       const tpl = this.actionsTpl();
       if (tpl) this.pageHeader.setActions(tpl);
     });
+    effect(() => {
+      const products = this.store.products();
+      const batches = products.reduce((sum, p) => sum + p.batchCount, 0);
+      this.pageHeader.set({
+        title: 'Stocks',
+        subtitle: `${products.length} produits · ${batches} lots`,
+        breadcrumb: ['Préparation', 'Stocks'],
+        activeNavId: 'stocks',
+      });
+    });
   }
+
+  ngOnInit(): void {
+    void this.store.load();
+  }
+
+  protected readonly loading = this.store.loading;
+  protected readonly loadError = this.store.loadError;
 
   protected readonly icScan = LucideScanLine;
   protected readonly icDownload = LucideDownload;
   protected readonly icPlus = LucidePlus;
   protected readonly icSearch = LucideSearch;
   protected readonly icFilter = LucideFunnel;
-  protected readonly icMore = LucideEllipsis;
-  protected readonly icEdit = LucidePencil;
+  protected readonly icSort = LucideArrowDownUp;
   protected readonly icTrash = LucideTrash2;
 
-  protected readonly kpis: readonly Kpi[] = [
-    {
-      label: 'Périmés',
-      value: '3 lots',
-      colorClass: 'text-danger',
-      icon: LucideTriangleAlert,
-      sub: '14 €',
-    },
-    {
-      label: 'Proche péremption',
-      value: '8 lots',
-      colorClass: 'text-warn',
-      icon: LucideClock,
-      sub: '3 prod. en frais',
-    },
-    {
-      label: 'Lots entamés',
-      value: '11',
-      colorClass: 'text-text',
-      icon: LucidePackage,
-      sub: 'À utiliser en priorité',
-    },
-    {
-      label: 'Valeur stock',
-      value: '1 880 €',
-      colorClass: 'text-text',
-      icon: LucideEuro,
-      sub: '−6% vs sem. dern.',
-    },
-  ];
+  protected readonly searchQuery = signal('');
+  protected readonly activeCategory = signal('Tous');
+  protected readonly sortKey = signal<SortKey>('name');
+  protected readonly sortDir = signal<SortDir>('asc');
 
-  protected readonly filterTabs = ['Tous', 'Frais', 'Sec', 'Congel', 'Boisson'];
+  protected readonly selectedId = signal<number | null>(null);
+  protected readonly selectedBatches = signal<readonly StockBatchRow[]>([]);
+  protected readonly batchesLoading = signal(false);
 
-  protected readonly products: readonly Product[] = [
-    {
-      n: 'Saucisses Strasbourg',
-      cat: 'Frais',
-      qty: '24',
-      u: 'pc',
-      loc: 'Frigo A',
-      dlc: '09/02',
-      dlcK: 'expired',
-      lots: 2,
-      op: true,
-    },
-    {
-      n: 'Pains hot-dog x6',
-      cat: 'Sec',
-      qty: '8',
-      u: 'paq',
-      loc: 'Réserve',
-      dlc: '16/02',
-      dlcK: 'soon',
-      lots: 3,
-      op: false,
-    },
-    {
-      n: 'Heineken 33cl',
-      cat: 'Boisson',
-      qty: '96',
-      u: 'btl',
-      loc: 'Frigo B',
-      dlc: '09/2026',
-      dlcK: 'ok',
-      lots: 4,
-      op: false,
-    },
-    {
-      n: 'Kronenbourg 50cl',
-      cat: 'Boisson',
-      qty: '48',
-      u: 'btl',
-      loc: 'Réserve',
-      dlc: '11/2026',
-      dlcK: 'ok',
-      lots: 2,
-      op: false,
-    },
-    {
-      n: 'Coca-Cola 33cl',
-      cat: 'Boisson',
-      qty: '72',
-      u: 'cn',
-      loc: 'Frigo B',
-      dlc: '04/2027',
-      dlcK: 'ok',
-      lots: 1,
-      op: false,
-    },
-    {
-      n: 'Ketchup Heinz 875g',
-      cat: 'Sec',
-      qty: '4',
-      u: 'btl',
-      loc: 'Réserve',
-      dlc: '08/2026',
-      dlcK: 'ok',
-      lots: 2,
-      op: true,
-    },
-    {
-      n: 'Moutarde Maille 215g',
-      cat: 'Sec',
-      qty: '3',
-      u: 'btl',
-      loc: 'Réserve',
-      dlc: '12/2026',
-      dlcK: 'ok',
-      lots: 1,
-      op: true,
-    },
-    {
-      n: 'Frites surgelées 2,5kg',
-      cat: 'Congel',
-      qty: '6',
-      u: 'sac',
-      loc: 'Congél.',
-      dlc: '03/2027',
-      dlcK: 'ok',
-      lots: 2,
-      op: true,
-    },
-    {
-      n: 'Oignons rouges',
-      cat: 'Frais',
-      qty: '1,8',
-      u: 'kg',
-      loc: 'Frigo A',
-      dlc: '22/02',
-      dlcK: 'soon',
-      lots: 1,
-      op: false,
-    },
-    {
-      n: 'Cornichons 720g',
-      cat: 'Sec',
-      qty: '5',
-      u: 'bcl',
-      loc: 'Réserve',
-      dlc: '07/2027',
-      dlcK: 'ok',
-      lots: 1,
-      op: false,
-    },
-    {
-      n: 'Eau plate 1,5L',
-      cat: 'Boisson',
-      qty: '24',
-      u: 'btl',
-      loc: 'Réserve',
-      dlc: '11/2026',
-      dlcK: 'ok',
-      lots: 1,
-      op: false,
-    },
-    {
-      n: 'Crème fraîche 50cl',
-      cat: 'Frais',
-      qty: '2',
-      u: 'pot',
-      loc: 'Frigo A',
-      dlc: '18/02',
-      dlcK: 'soon',
-      lots: 1,
-      op: false,
-    },
-  ];
+  protected readonly selectedIds = signal<ReadonlySet<number>>(new Set<number>());
 
-  protected readonly lots: readonly Lot[] = [
-    { id: 'L23-117', dlc: '09/02/2026', open: '02/02', qty: 6, kind: 'expired', prio: false },
-    { id: 'L23-122', dlc: '24/02/2026', open: '—', qty: 6, kind: 'soon', prio: true },
-    { id: 'L23-128', dlc: '12/03/2026', open: '—', qty: 12, kind: 'ok', prio: false },
-  ];
+  protected readonly allSelected = computed(() => {
+    const visible = this.visibleProducts();
+    const ids = this.selectedIds();
+    return visible.length > 0 && visible.every((p) => ids.has(p.id));
+  });
 
-  protected range(n: number): readonly null[] {
-    return Array.from({ length: n }, () => null);
+  protected readonly someSelected = computed(() => {
+    const visible = this.visibleProducts();
+    const ids = this.selectedIds();
+    return visible.some((p) => ids.has(p.id));
+  });
+
+  protected readonly categoryTabs = computed(() => {
+    const cats = new Set(this.store.products().map((p) => p.categoryName));
+    return ['Tous', ...Array.from(cats).sort()];
+  });
+
+  protected readonly visibleProducts = computed<readonly StockProduct[]>(() => {
+    const q = this.searchQuery().trim().toLowerCase();
+    const cat = this.activeCategory();
+    const key = this.sortKey();
+    const dir = this.sortDir();
+
+    let list = this.store.products();
+
+    if (cat !== 'Tous') {
+      list = list.filter((p) => p.categoryName === cat);
+    }
+    if (q) {
+      list = list.filter((p) => p.name.toLowerCase().includes(q));
+    }
+
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (key === 'name') cmp = a.name.localeCompare(b.name, 'fr');
+      else if (key === 'qty') cmp = a.totalQty - b.totalQty;
+      else if (key === 'category') cmp = a.categoryName.localeCompare(b.categoryName, 'fr');
+      else if (key === 'dlc') {
+        const da = a.nearestDlc ?? '￿';
+        const db = b.nearestDlc ?? '￿';
+        cmp = da.localeCompare(db);
+      }
+      return dir === 'asc' ? cmp : -cmp;
+    });
+  });
+
+  protected readonly selectedProduct = computed(
+    () => this.store.products().find((p) => p.id === this.selectedId()) ?? null,
+  );
+
+  protected readonly kpis = computed(() => {
+    const products = this.store.products();
+    const expired = products.reduce((s, p) => s + p.expiredBatchCount, 0);
+    const soon = products.reduce((s, p) => s + p.soonBatchCount, 0);
+    const inStock = products.filter((p) => p.totalQty > 0).length;
+    const totalBatches = products.reduce((s, p) => s + p.batchCount, 0);
+    return [
+      { label: 'Périmés', value: `${expired} lots`, colorClass: 'text-danger', icon: LucideTriangleAlert },
+      { label: 'Proche péremption', value: `${soon} lots`, colorClass: 'text-warn', icon: LucideClock },
+      { label: 'Produits en stock', value: String(inStock), colorClass: 'text-text', icon: LucidePackage },
+      { label: 'Total lots', value: String(totalBatches), colorClass: 'text-text', icon: LucidePackage },
+    ];
+  });
+
+  protected openScanner(): void {
+    void this.router.navigate(['/stocks/scanner']);
   }
 
-  protected lotBarColor(idx: number, dlcK: Product['dlcK']): string {
-    if (idx === 0 && dlcK === 'expired') return 'var(--bae-danger)';
-    if (idx === 0 && dlcK === 'soon') return 'var(--bae-warn)';
-    return 'var(--bae-blueDeep)';
+  protected toggleSelect(id: number): void {
+    this.selectedIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
-  protected dlcDotColor(dlcK: Product['dlcK']): string {
-    return dlcK === 'expired' ? 'bg-danger' : dlcK === 'soon' ? 'bg-warn' : 'bg-ok';
+  protected toggleAll(): void {
+    const visible = this.visibleProducts();
+    if (this.allSelected()) {
+      this.selectedIds.update((set) => {
+        const next = new Set(set);
+        visible.forEach((p) => next.delete(p.id));
+        return next;
+      });
+    } else {
+      this.selectedIds.update((set) => {
+        const next = new Set(set);
+        visible.forEach((p) => next.add(p.id));
+        return next;
+      });
+    }
   }
 
-  protected dlcTextColor(dlcK: Product['dlcK']): string {
-    return dlcK === 'expired' ? 'text-danger' : 'text-text-2';
+  protected clearSelection(): void {
+    this.selectedIds.set(new Set());
   }
 
-  protected lotBorderClass(lot: Lot): string {
-    if (lot.kind === 'expired') return 'border-danger';
-    if (lot.prio) return 'border-warn';
+  protected setSearch(q: string): void {
+    this.searchQuery.set(q);
+  }
+
+  protected setCategory(cat: string): void {
+    this.activeCategory.set(cat);
+  }
+
+  protected setSort(key: SortKey): void {
+    if (this.sortKey() === key) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortKey.set(key);
+      this.sortDir.set('asc');
+    }
+  }
+
+  protected async discard(batch: StockBatchRow): Promise<void> {
+    const product = this.selectedProduct();
+    if (!product) return;
+    await this.store.discardBatch(product.id, batch.id, batch.remainingQty);
+    const batches = await this.store.getBatches(product.id);
+    this.selectedBatches.set(batches);
+  }
+
+  protected async select(id: number): Promise<void> {
+    this.selectedId.set(id);
+    this.selectedBatches.set([]);
+    this.batchesLoading.set(true);
+    try {
+      const batches = await this.store.getBatches(id);
+      this.selectedBatches.set(batches);
+    } finally {
+      this.batchesLoading.set(false);
+    }
+  }
+
+  protected dlcDotColor(status: DlcStatus): string {
+    if (status === 'expired') return 'bg-danger';
+    if (status === 'soon') return 'bg-warn';
+    if (status === 'ok') return 'bg-ok';
+    return 'bg-border';
+  }
+
+  protected dlcTextColor(status: DlcStatus): string {
+    return status === 'expired' ? 'text-danger' : 'text-text-2';
+  }
+
+  protected lotBorderClass(status: DlcStatus): string {
+    if (status === 'expired') return 'border-danger';
+    if (status === 'soon') return 'border-warn';
     return 'border-border-s';
+  }
+
+  protected lotBars(p: StockProduct): DlcStatus[] {
+    const bars: DlcStatus[] = [];
+    for (let i = 0; i < p.expiredBatchCount; i++) bars.push('expired');
+    for (let i = 0; i < p.soonBatchCount; i++) bars.push('soon');
+    const okCount = p.batchCount - p.expiredBatchCount - p.soonBatchCount;
+    for (let i = 0; i < Math.max(0, okCount); i++) bars.push('ok');
+    return bars;
+  }
+
+  protected lotBarColor(status: DlcStatus): string {
+    if (status === 'expired') return 'bg-danger';
+    if (status === 'soon') return 'bg-warn';
+    return 'bg-blue-deep';
   }
 }
