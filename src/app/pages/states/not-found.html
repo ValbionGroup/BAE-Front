@@ -20,12 +20,12 @@
       -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%);
     "
   >
-    @for (i of rainCells; track i) {
+    @for (i of rainRows(); track i) {
       <div class="whitespace-nowrap">
-                @for (j of rainCells.slice(rainCells.length/2); track j) {
-                  <span class="mr-3.5" [style.opacity]="(i + j) % 4 === 0 ? 1 : 0.5">404</span>
-                }
-        </div>
+        @for (j of rainCols(); track j) {
+          <span class="mr-3.5" [style.opacity]="(i + j) % 4 === 0 ? 1 : 0.5">404</span>
+        }
+      </div>
     }
   </div>
 

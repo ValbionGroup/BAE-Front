@@ -10,10 +10,8 @@ import {
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ThemeService } from '#core/services/theme/theme-service';
 import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
-import { Toggle } from '#shared/components/ui/toggle/toggle';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { ParametresSideNav } from './side-nav/side-nav';
 
@@ -26,7 +24,7 @@ interface Module {
 
 @Component({
   selector: 'bfd-parametres',
-  imports: [Btn, Badge, Field, Input, Toggle, Avatar, ParametresSideNav, LucideDynamicIcon],
+  imports: [Btn, Field, Input, Avatar, ParametresSideNav, LucideDynamicIcon],
   templateUrl: './parametres.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
