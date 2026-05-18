@@ -29,12 +29,13 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
+import { Toggle } from '#shared/components/ui/toggle/toggle';
 import { Input } from '#shared/components/ui/input/input';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
   selector: 'bfd-stocks',
-  imports: [Btn, Badge, Card, Checkbox, Input, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -65,6 +66,16 @@ export class Stocks implements OnInit {
         activeNavId: 'stocks',
       });
     });
+    effect(() => {
+      const id = this.selectedId();
+      const showEmpty = this.showEmptyBatches();
+      if (id === null) return;
+      this.batchesLoading.set(true);
+      void this.store.getBatches(id, showEmpty).then((batches) => {
+        this.selectedBatches.set(batches);
+        this.batchesLoading.set(false);
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -90,6 +101,7 @@ export class Stocks implements OnInit {
   protected readonly selectedId = signal<number | null>(null);
   protected readonly selectedBatches = signal<readonly StockBatchRow[]>([]);
   protected readonly batchesLoading = signal(false);
+  protected readonly showEmptyBatches = signal(false);
 
   protected readonly selectedIds = signal<ReadonlySet<number>>(new Set<number>());
 
@@ -212,20 +224,14 @@ export class Stocks implements OnInit {
     const product = this.selectedProduct();
     if (!product) return;
     await this.store.discardBatch(product.id, batch.id, batch.remainingQty);
-    const batches = await this.store.getBatches(product.id);
+    // l'effect se déclenche sur selectedId + showEmptyBatches, mais on force un reload
+    const batches = await this.store.getBatches(product.id, this.showEmptyBatches());
     this.selectedBatches.set(batches);
   }
 
   protected async select(id: number): Promise<void> {
-    this.selectedId.set(id);
     this.selectedBatches.set([]);
-    this.batchesLoading.set(true);
-    try {
-      const batches = await this.store.getBatches(id);
-      this.selectedBatches.set(batches);
-    } finally {
-      this.batchesLoading.set(false);
-    }
+    this.selectedId.set(id); // déclenche l'effect
   }
 
   protected dlcDotColor(status: DlcStatus): string {

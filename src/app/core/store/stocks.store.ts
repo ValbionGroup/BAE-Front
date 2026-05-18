@@ -78,10 +78,10 @@ export const StocksStore = signalStore(
       patchState(store, { products: items.map(toStockProduct) });
     },
 
-    async getBatches(goodsId: number): Promise<StockBatchRow[]> {
+    async getBatches(goodsId: number, showEmpty = false): Promise<StockBatchRow[]> {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const raw = await lastValueFrom(svc.getBatches(goodsId));
+      const raw = await lastValueFrom(svc.getBatches(goodsId, showEmpty));
       return raw.map((b) => ({
         id: b.id,
         restockId: b.restockId,

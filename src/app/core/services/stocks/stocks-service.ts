@@ -39,8 +39,9 @@ export class StocksService {
     return this.http.get<ApiStockItem[]>(`${this.baseUrl}/stocks`);
   }
 
-  getBatches(goodsId: number): Observable<ApiStockBatch[]> {
-    return this.http.get<ApiStockBatch[]>(`${this.baseUrl}/stocks/${goodsId}/batches`);
+  getBatches(goodsId: number, showEmpty = false): Observable<ApiStockBatch[]> {
+    const params = showEmpty ? { showEmpty: 'true' } : undefined;
+    return this.http.get<ApiStockBatch[]>(`${this.baseUrl}/stocks/${goodsId}/batches`, { params });
   }
 
   discardBatch(goodsId: number, batchId: number, remainingQty: number): Observable<void> {
