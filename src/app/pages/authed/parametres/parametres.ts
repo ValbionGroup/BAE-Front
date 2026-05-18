@@ -41,21 +41,6 @@ export class Parametres {
 
   protected readonly icUpload = LucideUpload;
 
-  protected readonly twofa = signal(true);
-
-  protected readonly modules: readonly Module[] = [
-    { l: 'Précommandes en ligne', s: 'Page publique + paiement Lydia', enabled: true, beta: false },
-    { l: 'Scan code-barres', s: 'Caméra mobile · ajout rapide', enabled: true, beta: false },
-    { l: 'Prédictions IA', s: 'Estimation des commandes par soirée', enabled: true, beta: false },
-    { l: 'Gestion des prêts', s: 'Bêta · matériel + caution', enabled: false, beta: true },
-    {
-      l: 'Connecteur HelloAsso',
-      s: 'Cotisations en alternative à Lydia',
-      enabled: false,
-      beta: true,
-    },
-  ];
-
   protected readonly themeOptions = [
     { id: 'light' as const, label: 'Clair', icon: LucideSun, sub: 'Jour' },
     { id: 'dark' as const, label: 'Sombre', icon: LucideMoon, sub: 'Recommandé pour les soirées' },

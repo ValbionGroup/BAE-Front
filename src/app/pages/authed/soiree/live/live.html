@@ -56,65 +56,67 @@
             >{{ waitingCount() }}</span
           >
         </div>
-        <div class="flex-1 overflow-y-auto p-2.5 flex flex-col gap-2.5">
-          @for (o of waiting(); track o.id) {
-            <div
-              [class]="
-                'rounded-md p-2.5 relative border ' +
-                ticketBg(o, 'waiting') +
-                ' ' +
-                ticketBorder(o, 'waiting')
-              "
-              [style.borderLeft.px]="3"
-            >
-              <div class="flex items-start gap-2.5">
-                <div
-                  class="min-w-[50px] px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
-                >
-                  <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
-                  <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-semibold text-text truncate">{{ o.client }}</div>
-                  <div class="flex items-center gap-1.5 mt-1">
-                    <bfd-badge [kind]="typeKind(o)">{{ typeLabel(o) }}</bfd-badge>
-                  </div>
-                </div>
-                <div class="text-right">
+        <div class="flex-1 overflow-y-auto">
+          <div class="p-2.5 flex flex-col gap-2.5">
+            @for (o of waiting(); track o.id) {
+              <div
+                [class]="
+                  'rounded-md p-2.5 relative border ' +
+                  ticketBg(o, 'waiting') +
+                  ' ' +
+                  ticketBorder(o, 'waiting')
+                "
+                [style.borderLeftWidth.px]="3"
+              >
+                <div class="flex items-start gap-2.5">
                   <div
-                    [class]="
-                      'mono tnum text-base font-bold leading-none ' + timerColor(o, 'waiting')
-                    "
+                    class="min-w-[50px] px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
                   >
-                    {{ elapsed(o) }}
+                    <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
+                    <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
                   </div>
-                  <div class="text-[9.5px] text-muted mt-1 uppercase tracking-wider">
-                    {{ statusLabel('waiting') }}
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[13px] font-semibold text-text truncate">{{ o.client }}</div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <bfd-badge [kind]="typeKind(o)">{{ typeLabel(o) }}</bfd-badge>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div
+                      [class]="
+                        'mono tnum text-base font-bold leading-none ' + timerColor(o, 'waiting')
+                      "
+                    >
+                      {{ elapsed(o) }}
+                    </div>
+                    <div class="text-[9.5px] text-muted mt-1 uppercase tracking-wider">
+                      {{ statusLabel('waiting') }}
+                    </div>
                   </div>
                 </div>
+                <div class="mt-2 flex flex-col gap-0.5">
+                  @for (it of o.items; track $index) {
+                    <div class="flex items-center gap-2 py-1 text-[12.5px] text-text">
+                      <span
+                        class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
+                        >×{{ it.q }}</span
+                      >
+                      <span class="flex-1 truncate">{{ it.n }}</span>
+                    </div>
+                  }
+                </div>
+                <div class="mt-2.5 flex gap-1.5">
+                  <button
+                    type="button"
+                    (click)="start(o)"
+                    class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-blue rounded-sm cursor-pointer border-0 hover:bg-blue-deep"
+                  >
+                    <svg [lucideIcon]="icZap" [size]="12" aria-hidden="true"></svg>Démarrer
+                  </button>
+                </div>
               </div>
-              <div class="mt-2 flex flex-col gap-0.5">
-                @for (it of o.items; track $index) {
-                  <div class="flex items-center gap-2 py-1 text-[12.5px] text-text">
-                    <span
-                      class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
-                      >×{{ it.q }}</span
-                    >
-                    <span class="flex-1 truncate">{{ it.n }}</span>
-                  </div>
-                }
-              </div>
-              <div class="mt-2.5 flex gap-1.5">
-                <button
-                  type="button"
-                  (click)="start(o)"
-                  class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-blue rounded-sm cursor-pointer border-0 hover:bg-blue-deep"
-                >
-                  <svg [lucideIcon]="icZap" [size]="12" aria-hidden="true"></svg>Démarrer
-                </button>
-              </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
 
@@ -131,110 +133,112 @@
             >{{ preparingCount() }}</span
           >
         </div>
-        <div class="flex-1 overflow-y-auto p-2.5 flex flex-col gap-2.5">
-          @for (o of preparing(); track o.id) {
-            <div
-              [class]="
-                'rounded-md p-2.5 relative border ' +
-                ticketBg(o, 'preparing') +
-                ' ' +
-                ticketBorder(o, 'preparing')
-              "
-              [style.borderLeft.px]="3"
-            >
-              <div class="flex items-start gap-2.5">
-                <div
-                  class="min-w-[50px] px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
-                >
-                  <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
-                  <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-semibold text-text truncate">{{ o.client }}</div>
-                  <div class="flex items-center gap-1.5 mt-1">
-                    <bfd-badge [kind]="typeKind(o)">{{ typeLabel(o) }}</bfd-badge>
-                    <bfd-badge [kind]="progressKind(o, 'preparing')"
-                      >{{ doneCount(o) }}/{{ o.items.length }}</bfd-badge
-                    >
-                  </div>
-                </div>
-                <div class="text-right">
+        <div class="flex-1 overflow-y-auto">
+          <div class="p-2.5 flex flex-col gap-2.5">
+            @for (o of preparing(); track o.id) {
+              <div
+                [class]="
+                  'rounded-md p-2.5 relative border ' +
+                  ticketBg(o, 'preparing') +
+                  ' ' +
+                  ticketBorder(o, 'preparing')
+                "
+                [style.borderLeftWidth.px]="3"
+              >
+                <div class="flex items-start gap-2.5">
                   <div
-                    [class]="
-                      'mono tnum text-base font-bold leading-none ' + timerColor(o, 'preparing')
-                    "
+                    class="min-w-[50px] px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
                   >
-                    {{ elapsed(o) }}
+                    <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
+                    <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
                   </div>
-                  <div class="text-[9.5px] text-muted mt-1 uppercase tracking-wider">
-                    {{ statusLabel('preparing') }}
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[13px] font-semibold text-text truncate">{{ o.client }}</div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <bfd-badge [kind]="typeKind(o)">{{ typeLabel(o) }}</bfd-badge>
+                      <bfd-badge [kind]="progressKind(o, 'preparing')"
+                        >{{ doneCount(o) }}/{{ o.items.length }}</bfd-badge
+                      >
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div class="mt-2 flex flex-col gap-0.5">
-                @for (it of o.items; track $index; let i = $index) {
-                  <button
-                    type="button"
-                    (click)="toggleItem(o, i)"
-                    [class]="
-                      'flex items-center gap-2 py-1 text-[12.5px] bg-transparent border-0 text-left cursor-pointer w-full ' +
-                      (it.done ? 'text-muted opacity-55 line-through' : 'text-text')
-                    "
-                  >
-                    <span
+                  <div class="text-right">
+                    <div
                       [class]="
-                        'w-3.5 h-3.5 rounded-[3px] border-[1.5px] inline-flex items-center justify-center shrink-0 ' +
-                        (it.done ? 'bg-ok border-ok' : 'bg-transparent border-border')
+                        'mono tnum text-base font-bold leading-none ' + timerColor(o, 'preparing')
                       "
                     >
-                      @if (it.done) {
-                        <svg
-                          [lucideIcon]="icCheck"
-                          [size]="9"
-                          class="text-white"
-                          aria-hidden="true"
-                        ></svg>
-                      }
-                    </span>
-                    <span
-                      class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
-                      >×{{ it.q }}</span
-                    >
-                    <span class="flex-1 truncate">{{ it.n }}</span>
-                  </button>
-                }
-              </div>
-              @if (o.warn) {
-                <div
-                  class="mt-2 px-2 py-1.5 bg-warn-soft border border-warn rounded-sm text-[10.5px] text-text-2 flex gap-1.5 items-start"
-                >
-                  <svg
-                    [lucideIcon]="icAlert"
-                    [size]="11"
-                    class="text-warn mt-px shrink-0"
-                    aria-hidden="true"
-                  ></svg>
-                  <span class="leading-snug">{{ o.warn }}</span>
+                      {{ elapsed(o) }}
+                    </div>
+                    <div class="text-[9.5px] text-muted mt-1 uppercase tracking-wider">
+                      {{ statusLabel('preparing') }}
+                    </div>
+                  </div>
                 </div>
-              }
-              <div class="mt-2.5 flex gap-1.5">
-                <button
-                  type="button"
-                  (click)="cancel(o, 'preparing')"
-                  class="inline-flex items-center justify-center gap-1.5 h-[26px] px-2.5 text-[11.5px] font-medium text-text-2 bg-transparent border border-border rounded-sm cursor-pointer hover:bg-surface-2"
-                >
-                  <svg [lucideIcon]="icX" [size]="12" aria-hidden="true"></svg>Annuler
-                </button>
-                <button
-                  type="button"
-                  (click)="markReady(o)"
-                  class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-ok rounded-sm cursor-pointer border-0 hover:opacity-90"
-                >
-                  <svg [lucideIcon]="icCheck" [size]="12" aria-hidden="true"></svg>Marquer prête
-                </button>
+                <div class="mt-2 flex flex-col gap-0.5">
+                  @for (it of o.items; track $index; let i = $index) {
+                    <button
+                      type="button"
+                      (click)="toggleItem(o, i)"
+                      [class]="
+                        'flex items-center gap-2 py-1 text-[12.5px] bg-transparent border-0 text-left cursor-pointer w-full ' +
+                        (it.done ? 'text-muted opacity-55 line-through' : 'text-text')
+                      "
+                    >
+                      <span
+                        [class]="
+                          'w-3.5 h-3.5 rounded-[3px] border-[1.5px] inline-flex items-center justify-center shrink-0 ' +
+                          (it.done ? 'bg-ok border-ok' : 'bg-transparent border-border')
+                        "
+                      >
+                        @if (it.done) {
+                          <svg
+                            [lucideIcon]="icCheck"
+                            [size]="9"
+                            class="text-white"
+                            aria-hidden="true"
+                          ></svg>
+                        }
+                      </span>
+                      <span
+                        class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
+                        >×{{ it.q }}</span
+                      >
+                      <span class="flex-1 truncate">{{ it.n }}</span>
+                    </button>
+                  }
+                </div>
+                @if (o.warn) {
+                  <div
+                    class="mt-2 px-2 py-1.5 bg-warn-soft border border-warn rounded-sm text-[10.5px] text-text-2 flex gap-1.5 items-start"
+                  >
+                    <svg
+                      [lucideIcon]="icAlert"
+                      [size]="11"
+                      class="text-warn mt-px shrink-0"
+                      aria-hidden="true"
+                    ></svg>
+                    <span class="leading-snug">{{ o.warn }}</span>
+                  </div>
+                }
+                <div class="mt-2.5 flex gap-1.5">
+                  <button
+                    type="button"
+                    (click)="cancel(o, 'preparing')"
+                    class="inline-flex items-center justify-center gap-1.5 h-[26px] px-2.5 text-[11.5px] font-medium text-text-2 bg-transparent border border-border rounded-sm cursor-pointer hover:bg-surface-2"
+                  >
+                    <svg [lucideIcon]="icX" [size]="12" aria-hidden="true"></svg>Annuler
+                  </button>
+                  <button
+                    type="button"
+                    (click)="markReady(o)"
+                    class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-ok rounded-sm cursor-pointer border-0 hover:opacity-90"
+                  >
+                    <svg [lucideIcon]="icCheck" [size]="12" aria-hidden="true"></svg>Marquer prête
+                  </button>
+                </div>
               </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
 
@@ -253,66 +257,69 @@
             >{{ readyCount() }}</span
           >
         </div>
-        <div class="flex-1 overflow-y-auto p-2.5 flex flex-col gap-2.5">
-          @for (o of ready(); track o.id) {
-            <div
-              class="rounded-md p-2.5 relative bg-ok-soft/40 border border-ok"
-              [style.borderLeft.px]="3"
-            >
-              <div class="flex items-start gap-2.5">
-                <div
-                  class="min-w-[50px] px-2 py-1 text-center bg-ok text-white border border-ok rounded-sm"
-                >
-                  <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
-                  <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-semibold text-text truncate">{{ o.client }}</div>
-                  <div class="flex items-center gap-1.5 mt-1">
-                    <bfd-badge [kind]="typeKind(o)">{{ typeLabel(o) }}</bfd-badge>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="mono tnum text-base font-bold leading-none text-ok">
-                    {{ elapsed(o) }}
-                  </div>
-                  <div class="text-[9.5px] text-muted mt-1 uppercase tracking-wider">prête</div>
-                </div>
-              </div>
-              <div class="mt-2 flex flex-col gap-0.5">
-                @for (it of o.items; track $index) {
-                  <div class="flex items-center gap-2 py-1 text-[12.5px] text-text-2">
-                    <span
-                      class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
-                      >×{{ it.q }}</span
-                    >
-                    <span class="flex-1 truncate">{{ it.n }}</span>
-                  </div>
-                }
-              </div>
-              <div class="mt-2.5 flex gap-1.5">
-                @if (o.call) {
+        <div class="flex-1 overflow-y-auto">
+          <div class="p-2.5 flex flex-col gap-2.5">
+            @for (o of ready(); track o.id) {
+              <div
+                class="rounded-md p-2.5 relative bg-ok-soft/40 border border-ok"
+                [style.borderLeftWidth.px]="3"
+              >
+                <div class="flex items-start gap-2.5">
                   <div
-                    class="flex-1 inline-flex items-center gap-1.5 px-2 bg-warn-soft text-warn rounded-sm text-[10.5px] font-semibold h-[26px]"
+                    class="min-w-[50px] px-2 py-1 text-center bg-ok text-white border border-ok rounded-sm"
                   >
-                    <svg [lucideIcon]="icBell" [size]="11" aria-hidden="true"></svg>Client appelé
+                    <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
+                    <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
                   </div>
-                }
-                <button
-                  type="button"
-                  (click)="handover(o)"
-                  class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-ok rounded-sm cursor-pointer border-0 hover:opacity-90"
-                >
-                  <svg [lucideIcon]="icCheck" [size]="12" aria-hidden="true"></svg>Remise au client
-                </button>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[13px] font-semibold text-text truncate">{{ o.client }}</div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <bfd-badge [kind]="typeKind(o)">{{ typeLabel(o) }}</bfd-badge>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="mono tnum text-base font-bold leading-none text-ok">
+                      {{ elapsed(o) }}
+                    </div>
+                    <div class="text-[9.5px] text-muted mt-1 uppercase tracking-wider">prête</div>
+                  </div>
+                </div>
+                <div class="mt-2 flex flex-col gap-0.5">
+                  @for (it of o.items; track $index) {
+                    <div class="flex items-center gap-2 py-1 text-[12.5px] text-text-2">
+                      <span
+                        class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
+                        >×{{ it.q }}</span
+                      >
+                      <span class="flex-1 truncate">{{ it.n }}</span>
+                    </div>
+                  }
+                </div>
+                <div class="mt-2.5 flex gap-1.5">
+                  @if (o.call) {
+                    <div
+                      class="flex-1 inline-flex items-center gap-1.5 px-2 bg-warn-soft text-warn rounded-sm text-[10.5px] font-semibold h-[26px]"
+                    >
+                      <svg [lucideIcon]="icBell" [size]="11" aria-hidden="true"></svg>Client appelé
+                    </div>
+                  }
+                  <button
+                    type="button"
+                    (click)="handover(o)"
+                    class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-ok rounded-sm cursor-pointer border-0 hover:opacity-90"
+                  >
+                    <svg [lucideIcon]="icCheck" [size]="12" aria-hidden="true"></svg>Remise au
+                    client
+                  </button>
+                </div>
               </div>
-            </div>
-          }
-          @if (readyCount() === 0) {
-            <div class="text-center text-muted text-xs py-8">
-              Aucune commande prête pour l'instant
-            </div>
-          }
+            }
+            @if (readyCount() === 0) {
+              <div class="text-center text-muted text-xs py-8">
+                Aucune commande prête pour l'instant
+              </div>
+            }
+          </div>
         </div>
       </div>
     </div>
