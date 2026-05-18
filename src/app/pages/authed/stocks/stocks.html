@@ -1,4 +1,4 @@
-<!-- Topbar actions, projected via PageHeaderService -->
+<!-- Topbar actions -->
 <ng-template #actions>
   <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
   <bfd-btn kind="secondary" size="md" [icon]="icDownload">Inventaire</bfd-btn>
@@ -10,7 +10,7 @@
   <div class="flex min-w-0 flex-col gap-3.5 p-5">
     <!-- KPI row -->
     <div class="grid grid-cols-4 gap-3">
-      @for (k of kpis; track k.label) {
+      @for (k of kpis(); track k.label) {
         <bfd-card [padding]="12">
           <div class="mb-1.5 flex items-center gap-2.5">
             <span
@@ -23,11 +23,8 @@
             </span>
             <span class="text-[11px] text-muted">{{ k.label }}</span>
           </div>
-          <div class="flex items-baseline justify-between">
-            <div [class]="'tnum text-[18px] font-semibold -tracking-[0.3px] ' + k.colorClass">
-              {{ k.value }}
-            </div>
-            <div class="text-[10.5px] text-muted">{{ k.sub }}</div>
+          <div class="tnum text-[18px] font-semibold -tracking-[0.3px]" [class]="k.colorClass">
+            {{ k.value }}
           </div>
         </bfd-card>
       }
@@ -36,194 +33,243 @@
     <!-- Filter bar -->
     <div class="flex items-center gap-2">
       <div class="flex-1">
-        <bfd-input [icon]="icSearch" placeholder="Rechercher un produit…" size="sm" />
+        <bfd-input
+          [icon]="icSearch"
+          placeholder="Rechercher un produit…"
+          size="sm"
+          (valueChange)="setSearch($event)"
+        />
       </div>
       <div class="inline-flex rounded-md border border-border bg-surface-2 p-0.5">
-        @for (s of filterTabs; track s; let i = $index) {
+        @for (tab of categoryTabs(); track tab) {
+          @let isActive = activeCategory() === tab;
           <button
             type="button"
+            (click)="setCategory(tab)"
             [class]="
               'cursor-pointer rounded-sm border-none px-2.5 py-1 text-[11.5px] ' +
-              (i === 0 ? 'bg-surface text-text' : 'bg-transparent text-muted')
+              (isActive ? 'bg-surface text-text' : 'bg-transparent text-muted hover:text-text-2')
             "
           >
-            {{ s }}
+            {{ tab }}
           </button>
         }
       </div>
-      <bfd-btn kind="outline" size="sm" [icon]="icFilter">3 filtres</bfd-btn>
     </div>
 
+    <!-- Bulk action bar -->
+    @if (someSelected()) {
+      <div class="flex items-center gap-2 rounded-md border border-border-s bg-surface-2 px-3.5 py-2">
+        <span class="text-[12.5px] text-text">
+          {{ selectedIds().size }} sélectionné{{ selectedIds().size !== 1 ? 's' : '' }}
+        </span>
+        <span class="flex-1"></span>
+        <bfd-btn kind="ghost" size="sm" (clicked)="clearSelection()">Annuler</bfd-btn>
+        <bfd-btn kind="danger" size="sm" [icon]="icTrash">Supprimer</bfd-btn>
+      </div>
+    }
+
     <!-- Products table -->
-    <bfd-card [padding]="0" class="flex min-h-0 flex-1 flex-col">
+    <bfd-card [padding]="0" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <!-- Header -->
       <div
-        class="grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.6fr_24px] gap-3 border-b border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
+        class="grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] gap-3 border-b border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
       >
-        <bfd-checkbox ariaLabel="Tout sélectionner" />
-        <span>Produit</span>
-        <span>Catégorie</span>
-        <span class="text-right">Quantité</span>
+        <div (click)="$event.stopPropagation()">
+          <bfd-checkbox [checked]="allSelected()" (change)="toggleAll()" />
+        </div>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-left font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('name')"
+        >
+          Produit
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-left font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('category')"
+        >
+          Catégorie
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-right font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('qty')"
+        >
+          Quantité
+        </button>
         <span>Lots</span>
-        <span>DLC la + proche</span>
-        <span>Stockage</span>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-left font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('dlc')"
+        >
+          DLC la + proche
+        </button>
         <span></span>
       </div>
-      <div class="flex-1 overflow-y-auto">
-        @for (p of products; track p.n; let i = $index; let last = $last) {
-          <div
-            [class]="
-              'grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.6fr_24px] items-center gap-3 px-3.5 py-2.5 text-[12.5px] text-text ' +
-              (last ? '' : 'border-b border-border-s') +
-              ' ' +
-              (i === 0 ? 'bg-surface-2' : '')
-            "
-          >
-            <bfd-checkbox [checked]="i === 0" ariaLabel="Sélectionner le produit" />
-            <div class="flex min-w-0 items-center gap-2.5">
-              <span class="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-text">{{
-                p.n
-              }}</span>
-              @if (p.op) {
-                <bfd-badge kind="warn">entamé</bfd-badge>
-              }
-            </div>
-            <bfd-badge kind="ghost">{{ p.cat }}</bfd-badge>
-            <span class="tnum text-right font-medium">
-              {{ p.qty }} <span class="text-[11px] text-muted">{{ p.u }}</span>
-            </span>
-            <div class="flex gap-[3px]">
-              @for (_ of range(p.lots); track $index; let k = $index) {
-                <span
-                  class="h-[5px] w-4 rounded-[1px] opacity-85"
-                  [style.background]="lotBarColor(k, p.dlcK)"
-                ></span>
-              }
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span [class]="'h-[7px] w-[7px] rounded-full ' + dlcDotColor(p.dlcK)"></span>
-              <span [class]="'tnum ' + dlcTextColor(p.dlcK)">{{ p.dlc }}</span>
-            </div>
-            <span class="text-[11.5px] text-muted">{{ p.loc }}</span>
-            <svg
-              [lucideIcon]="icMore"
-              [size]="14"
-              class="cursor-pointer text-muted"
-              aria-hidden="true"
-            ></svg>
+
+      <!-- Body -->
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        @if (loading() === 'init' || loading() === 'loading') {
+          <div class="flex h-32 items-center justify-center text-[12.5px] text-muted">
+            Chargement…
           </div>
+        } @else if (loadError()) {
+          <div class="px-6 py-10 text-center text-[12.5px] text-danger">{{ loadError() }}</div>
+        } @else {
+          @for (p of visibleProducts(); track p.id; let last = $last) {
+            @let selected = selectedId() === p.id;
+            <div
+              (click)="select(p.id)"
+              [class]="
+                'relative grid cursor-pointer grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] items-center gap-3 px-3.5 py-2.5 text-[12.5px] text-text ' +
+                (last ? '' : 'border-b border-border-s ') +
+                (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50')
+              "
+            >
+              @if (selected) {
+                <span class="absolute inset-y-0 left-0 w-[2.5px] bg-blue" aria-hidden="true"></span>
+              }
+              <div (click)="$event.stopPropagation()">
+                <bfd-checkbox [checked]="selectedIds().has(p.id)" (change)="toggleSelect(p.id)" />
+              </div>
+              <span class="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-text">
+                {{ p.name }}
+              </span>
+              <bfd-badge kind="ghost">{{ p.categoryName }}</bfd-badge>
+              <span class="tnum text-right font-medium">
+                {{ p.totalQty }} <span class="text-[11px] text-muted">{{ p.unit }}</span>
+              </span>
+              <div class="flex items-center gap-0.75">
+                @for (bar of lotBars(p); track $index) {
+                  <span [class]="'h-1.25 w-4 rounded-[1px] opacity-85 ' + lotBarColor(bar)"></span>
+                }
+              </div>
+              <div class="flex items-center gap-1.5">
+                @if (p.nearestDlc) {
+                  <span [class]="'h-[7px] w-[7px] rounded-full ' + dlcDotColor(p.nearestDlcStatus)"></span>
+                  <span [class]="'tnum ' + dlcTextColor(p.nearestDlcStatus)">{{ p.nearestDlc }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </div>
+              <span></span>
+            </div>
+          } @empty {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucun produit dans cette catégorie.
+            </div>
+          }
         }
       </div>
-      <div
-        class="flex items-center border-t border-border-s px-3.5 py-2.5 text-[11.5px] text-muted"
-      >
-        <span>12 produits affichés sur 142</span>
-        <span class="flex-1"></span>
-        <bfd-btn kind="ghost" size="sm">Charger plus</bfd-btn>
+
+      <!-- Footer count -->
+      <div class="flex items-center border-t border-border-s px-3.5 py-2.5 text-[11.5px] text-muted">
+        <span>{{ visibleProducts().length }} produit{{ visibleProducts().length !== 1 ? 's' : '' }} affiché{{ visibleProducts().length !== 1 ? 's' : '' }}</span>
       </div>
     </bfd-card>
   </div>
 
-  <!-- RIGHT: lot detail panel -->
+  <!-- RIGHT: detail panel -->
   <aside class="flex flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5">
-    <div class="flex items-start">
-      <div class="flex-1">
-        <bfd-badge kind="danger" [dot]="true">2 LOTS PÉRIMÉS</bfd-badge>
-        <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
-          Saucisses Strasbourg
-        </h3>
-        <div class="text-[12px] text-muted">
-          Frais · Frigo A · réf. <span class="mono">SAU-STRAS-1</span>
+    @if (selectedProduct(); as p) {
+      <div class="flex items-start gap-2">
+        <div class="flex-1">
+          @if (p.expiredBatchCount > 0) {
+            <bfd-badge kind="danger" [dot]="true">
+              {{ p.expiredBatchCount }} lot{{ p.expiredBatchCount !== 1 ? 's' : '' }} périmé{{ p.expiredBatchCount !== 1 ? 's' : '' }}
+            </bfd-badge>
+          } @else if (p.soonBatchCount > 0) {
+            <bfd-badge kind="warn" [dot]="true">
+              {{ p.soonBatchCount }} proche péremption
+            </bfd-badge>
+          } @else {
+            <bfd-badge kind="ok" [dot]="true">Stock OK</bfd-badge>
+          }
+          <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
+            {{ p.name }}
+          </h3>
+          <div class="text-[12px] text-muted">
+            {{ p.categoryName }}
+            @if (p.brand) { · {{ p.brand }} }
+          </div>
         </div>
       </div>
-      <bfd-btn kind="ghost" size="sm" [icon]="icEdit"></bfd-btn>
-      <bfd-btn kind="ghost" size="sm" [icon]="icMore"></bfd-btn>
-    </div>
 
-    <!-- Quick stats -->
-    <div class="grid grid-cols-3 gap-1.5">
-      <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-        <div class="text-[10px] uppercase tracking-wider text-muted">Total</div>
-        <div class="tnum text-[18px] font-semibold text-text">
-          24 <span class="text-[11px] text-muted">pc</span>
+      <!-- Quick stats -->
+      <div class="grid grid-cols-2 gap-1.5">
+        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+          <div class="text-[10px] uppercase tracking-wider text-muted">Total restant</div>
+          <div class="tnum text-[18px] font-semibold text-text">
+            {{ p.totalQty }} <span class="text-[11px] text-muted">{{ p.unit }}</span>
+          </div>
+        </div>
+        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+          <div class="text-[10px] uppercase tracking-wider text-muted">Lots actifs</div>
+          <div class="tnum text-[18px] font-semibold text-text">{{ p.batchCount }}</div>
         </div>
       </div>
-      <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-        <div class="text-[10px] uppercase tracking-wider text-muted">Utilisable</div>
-        <div class="tnum text-[18px] font-semibold text-ok">
-          18 <span class="text-[11px] text-muted">pc</span>
-        </div>
-      </div>
-      <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-        <div class="text-[10px] uppercase tracking-wider text-muted">À retirer</div>
-        <div class="tnum text-[18px] font-semibold text-danger">
-          6 <span class="text-[11px] text-muted">pc</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Lots -->
-    <div>
-      <div class="mb-2 text-[12px] font-semibold text-text">Lots · ordre FEFO</div>
-      <div class="flex flex-col gap-2">
-        @for (l of lots; track l.id) {
-          <div
-            [class]="'rounded-md border bg-surface-2 p-3 ' + lotBorderClass(l)"
-            [style.background]="
-              l.kind === 'expired'
-                ? 'color-mix(in oklch, var(--bae-dangerSoft) 60%, var(--bae-surface2))'
-                : ''
-            "
-          >
-            <div class="flex items-center gap-2">
-              <span class="mono text-[12px] font-semibold text-text">#{{ l.id }}</span>
-              @if (l.kind === 'expired') {
-                <bfd-badge kind="danger" [dot]="true">périmé</bfd-badge>
-              }
-              @if (l.prio) {
-                <bfd-badge kind="warn" [dot]="true">prendre en 1er</bfd-badge>
-              }
-              <span class="flex-1"></span>
-              <span class="tnum text-[13px] font-semibold text-text">{{ l.qty }} pc</span>
-            </div>
-            <div class="mt-2 flex gap-4 text-[11.5px] text-muted">
-              <span
-                >DLC
-                <span
-                  [class]="'mono tnum ' + (l.kind === 'expired' ? 'text-danger' : 'text-text-2')"
-                  >{{ l.dlc }}</span
-                ></span
+      <!-- Lots -->
+      <div>
+        <div class="mb-2 text-[12px] font-semibold text-text">Lots · ordre FEFO</div>
+        @if (batchesLoading()) {
+          <div class="py-4 text-center text-[12px] text-muted">Chargement des lots…</div>
+        } @else {
+          <div class="flex flex-col gap-2">
+            @for (b of selectedBatches(); track b.id) {
+              <div
+                [class]="'rounded-md border bg-surface-2 p-3 ' + lotBorderClass(b.dlcStatus)"
+                [style.background]="
+                  b.dlcStatus === 'expired'
+                    ? 'color-mix(in oklch, var(--bae-dangerSoft) 60%, var(--bae-surface2))'
+                    : ''
+                "
               >
-              <span
-                >Ouvert <span class="mono text-text-2">{{ l.open }}</span></span
-              >
-            </div>
-            @if (l.kind === 'expired') {
-              <div class="mt-2.5 flex gap-1.5">
-                <bfd-btn kind="danger" size="sm" [icon]="icTrash">Mettre au rebut</bfd-btn>
-                <bfd-btn kind="ghost" size="sm">Reporter</bfd-btn>
+                <div class="flex items-center gap-2">
+                  <span class="mono text-[12px] font-semibold text-text">#{{ b.id }}</span>
+                  @if (b.dlcStatus === 'expired') {
+                    <bfd-badge kind="danger" [dot]="true">périmé</bfd-badge>
+                  } @else if (b.dlcStatus === 'soon') {
+                    <bfd-badge kind="warn" [dot]="true">bientôt</bfd-badge>
+                  }
+                  <span class="flex-1"></span>
+                  <span class="tnum text-[13px] font-semibold text-text">
+                    {{ b.remainingQty }} {{ selectedProduct()?.unit }}
+                  </span>
+                </div>
+                <div class="mt-2 flex gap-4 text-[11.5px] text-muted">
+                  @if (b.dlcLabel) {
+                    <span>
+                      DLC
+                      <span [class]="'mono tnum ' + (b.dlcStatus === 'expired' ? 'text-danger' : 'text-text-2')">
+                        {{ b.dlcLabel }}
+                      </span>
+                    </span>
+                  }
+                  <span>
+                    Ouvert
+                    <span class="mono text-text-2">{{ b.openedAt ?? '—' }}</span>
+                  </span>
+                </div>
+                @if (b.dlcStatus === 'expired') {
+                  <div class="mt-2.5 flex gap-1.5">
+                    <bfd-btn kind="danger" size="sm" [icon]="icTrash" [disabled]="b.remainingQty === 0" (clicked)="discard(b)">Mettre au rebut</bfd-btn>
+                  </div>
+                }
               </div>
+            } @empty {
+              <div class="py-4 text-center text-[12px] text-muted">Aucun lot enregistré.</div>
             }
           </div>
         }
       </div>
-    </div>
-
-    <!-- Meta -->
-    <div
-      class="flex flex-col gap-1.5 rounded-md border border-border-s bg-surface-2 p-3 text-[12px] text-text-2"
-    >
-      <div class="flex justify-between">
-        <span class="text-muted">Code-barres</span><span class="mono">3 268 754 117 904</span>
+    } @else {
+      <div class="flex flex-1 items-center justify-center">
+        <span class="text-[13px] text-muted">Sélectionnez un produit pour voir ses lots</span>
       </div>
-      <div class="flex justify-between">
-        <span class="text-muted">Prix moyen unité</span><span class="tnum">0,58 €</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-muted">Enseigne préférée</span><span>Carrefour Talence</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-muted">Utilisé dans</span><span>Hot-dog (×1)</span>
-      </div>
-    </div>
+    }
   </aside>
 </div>

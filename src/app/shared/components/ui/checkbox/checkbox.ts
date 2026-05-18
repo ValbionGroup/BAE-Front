@@ -5,6 +5,7 @@ import {
   forwardRef,
   input,
   output,
+  signal,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { LucideCheck, LucideDynamicIcon } from '@lucide/angular';
@@ -31,7 +32,13 @@ export class Checkbox implements ControlValueAccessor {
 
   protected readonly icCheck = LucideCheck;
 
-  protected readonly internalChecked = computed(() => this.cvaValue ?? this.checked());
+  private readonly cvaValue = signal<boolean | null>(null);
+  private inCvaMode = false;
+  private cvaDisabled = false;
+  private onChange: (value: boolean) => void = () => {};
+  private onTouched: () => void = () => {};
+
+  protected readonly internalChecked = computed(() => this.cvaValue() ?? this.checked());
   protected readonly internalDisabled = computed(() => this.cvaDisabled || this.disabled());
 
   protected readonly boxClass = computed(
@@ -40,24 +47,22 @@ export class Checkbox implements ControlValueAccessor {
       (this.internalChecked() ? 'border-blue bg-blue text-white' : 'border-border bg-transparent'),
   );
 
-  private cvaValue: boolean | null = null;
-  private cvaDisabled = false;
-  private onChange: (value: boolean) => void = () => {};
-  private onTouched: () => void = () => {};
-
   protected toggle(): void {
     if (this.internalDisabled()) {
       return;
     }
     const next = !this.internalChecked();
-    this.cvaValue = next;
+    if (this.inCvaMode) {
+      this.cvaValue.set(next);
+    }
     this.onChange(next);
     this.onTouched();
     this.change.emit(next);
   }
 
   writeValue(value: boolean | null | undefined): void {
-    this.cvaValue = value ?? false;
+    this.inCvaMode = true;
+    this.cvaValue.set(value ?? false);
   }
 
   registerOnChange(fn: (value: boolean) => void): void {

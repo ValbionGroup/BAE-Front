@@ -5,6 +5,7 @@ import { EventApiDto, EventDetail, RosterRow, RosterRowApiDto } from '#core/mode
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 import { ApiEndPointV1 } from '#core/models/endpoint.model';
 
+
 @Injectable({ providedIn: 'root' })
 export class EventsService {
   private readonly http = inject(HttpClient);

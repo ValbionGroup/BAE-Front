@@ -3,6 +3,7 @@ import { Login } from '#pages/guest/login/login';
 import { AppShell } from '#pages/app-shell/app-shell';
 import { Home } from '#pages/authed/home/home';
 import { Presences } from '#pages/authed/presences/presences';
+import { MyPresences } from '#pages/authed/my-presences/my-presences';
 import { Stocks } from '#pages/authed/stocks/stocks';
 import { StocksScanner } from '#pages/authed/stocks/scanner/scanner';
 import { Recettes } from '#pages/authed/recettes/recettes';
@@ -34,6 +35,7 @@ import { guestGuard } from '#core/guards/auth/guest-guard';
 export const AppRoutes = {
   home: '',
   presences: 'presences',
+  myPresences: 'presences/my',
   adherents: 'adherents',
   stocks: 'stocks',
   stocksScanner: 'stocks/scanner',
@@ -76,7 +78,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: AppRoutes.home, component: Home },
-      { path: AppRoutes.presences, component: Presences },
+      {
+        path: AppRoutes.presences,
+        children: [
+          { path: '', component: Presences, pathMatch: 'full' },
+          { path: 'my', component: MyPresences },
+        ],
+      },
       { path: AppRoutes.adherents, component: Adherents },
       {
         path: AppRoutes.stocks,

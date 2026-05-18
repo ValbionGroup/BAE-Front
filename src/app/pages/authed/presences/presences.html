@@ -1,9 +1,15 @@
+<ng-template #actions>
+  <bfd-btn kind="secondary" size="md" [icon]="icUser" (clicked)="openMyPresences()">
+    Mes présences
+  </bfd-btn>
+</ng-template>
+
 <div class="h-full grid grid-cols-[1fr_360px]">
   <!-- LEFT: Calendar -->
   <div class="flex min-w-0 flex-col p-5">
     <!-- Tabs + month nav -->
     <div class="mb-3.5 flex items-center">
-      <div class="inline-flex gap-px rounded-md border border-border bg-surface-2 p-0.5">
+      <!--<div class="inline-flex gap-px rounded-md border border-border bg-surface-2 p-0.5">
         @for (s of viewTabs; track s; let i = $index) {
           <button
             type="button"
@@ -16,7 +22,7 @@
             {{ s }}
           </button>
         }
-      </div>
+      </div>-->
       <div class="flex-1"></div>
       <bfd-btn kind="ghost" size="sm" (clicked)="goToToday()">Aujourd'hui</bfd-btn>
       <button
