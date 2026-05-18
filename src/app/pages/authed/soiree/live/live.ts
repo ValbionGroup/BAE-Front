@@ -211,9 +211,7 @@ export class SoireeLive {
       { q: 1, n: 'Frites', done: true },
       { q: 1, n: 'Coca 33cl', done: true },
     ]),
-    mkTicket('A05', 'F. Henry', 'place', 162, [{ q: 1, n: 'Crêpe sucre', done: true }], {
-      call: true,
-    }),
+    mkTicket('A05', 'F. Henry', 'place', 162, [{ q: 1, n: 'Crêpe sucre', done: true }]),
   ]);
 
   /** Quick lookup so the host KPI strip reflects mutations. */

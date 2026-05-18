@@ -70,7 +70,7 @@
               >
                 <div class="flex items-start gap-2.5">
                   <div
-                    class="min-w-[50px] px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
+                    class="min-w-12.5 px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
                   >
                     <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
                     <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
@@ -98,7 +98,7 @@
                   @for (it of o.items; track $index) {
                     <div class="flex items-center gap-2 py-1 text-[12.5px] text-text">
                       <span
-                        class="mono tnum min-w-[24px] h-[18px] px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
+                        class="mono tnum min-w-6 h-4.5 px-1.5 bg-surface-2 text-text-2 rounded-[3px] inline-flex items-center justify-center text-[11px] font-semibold"
                         >×{{ it.q }}</span
                       >
                       <span class="flex-1 truncate">{{ it.n }}</span>
@@ -109,7 +109,7 @@
                   <button
                     type="button"
                     (click)="start(o)"
-                    class="flex-1 inline-flex items-center justify-center gap-1.5 h-[26px] px-2 text-[11.5px] font-semibold text-white bg-blue rounded-sm cursor-pointer border-0 hover:bg-blue-deep"
+                    class="flex-1 inline-flex items-center justify-center gap-1.5 h-6.5 px-2 text-[11.5px] font-semibold text-white bg-blue rounded-sm cursor-pointer border-0 hover:bg-blue-deep"
                   >
                     <svg [lucideIcon]="icZap" [size]="12" aria-hidden="true"></svg>Démarrer
                   </button>
@@ -121,7 +121,7 @@
       </div>
 
       <!-- PREPARING -->
-      <div class="flex flex-col overflow-hidden border-r border-border-s bg-warn-soft/[0.04]">
+      <div class="flex flex-col overflow-hidden border-r border-border-s bg-warn-soft/4">
         <div class="px-4 py-3 border-b-2 border-warn flex items-center gap-2.5 bg-warn-soft/30">
           <span class="w-2 h-2 rounded-full bg-warn"></span>
           <div class="flex-1 min-w-0">
@@ -129,7 +129,7 @@
             <div class="text-[10.5px] text-muted mt-px">en cuisine</div>
           </div>
           <span
-            class="mono tnum min-w-[28px] h-6 px-2 rounded-sm bg-warn text-white inline-flex items-center justify-center text-xs font-bold"
+            class="mono tnum min-w-7 h-6 px-2 rounded-sm bg-warn text-white inline-flex items-center justify-center text-xs font-bold"
             >{{ preparingCount() }}</span
           >
         </div>
@@ -147,7 +147,7 @@
               >
                 <div class="flex items-start gap-2.5">
                   <div
-                    class="min-w-[50px] px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
+                    class="min-w-12.5 px-2 py-1 text-center bg-bg text-text border border-border rounded-sm"
                   >
                     <div class="mono text-[9px] opacity-75 tracking-wide mb-px">N°</div>
                     <div class="mono tnum text-lg font-bold leading-none">{{ o.id }}</div>
@@ -296,13 +296,6 @@
                   }
                 </div>
                 <div class="mt-2.5 flex gap-1.5">
-                  @if (o.call) {
-                    <div
-                      class="flex-1 inline-flex items-center gap-1.5 px-2 bg-warn-soft text-warn rounded-sm text-[10.5px] font-semibold h-[26px]"
-                    >
-                      <svg [lucideIcon]="icBell" [size]="11" aria-hidden="true"></svg>Client appelé
-                    </div>
-                  }
                   <button
                     type="button"
                     (click)="handover(o)"
