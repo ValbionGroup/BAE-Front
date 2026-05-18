@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import {
   LucideArrowRight,
   LucideCalendar,
@@ -27,6 +34,9 @@ import { RoleAssignmentStore } from '#core/store/home-data/role-assignment.store
 import { AgendaStore } from '#core/store/home-data/agenda.store';
 import { AlertsStore } from '#core/store/home-data/alerts.store';
 import { NextEventStore } from '#core/store/home-data/next-event.store';
+import { EventsStore } from '#core/store/events.store';
+import { EventDetail, Presence } from '#core/models/event.model';
+import { startOfDay } from 'date-fns';
 
 @Component({
   selector: 'bfd-home',
@@ -36,6 +46,7 @@ import { NextEventStore } from '#core/store/home-data/next-event.store';
 })
 export class Home {
   private readonly store = inject(Store);
+  private readonly events = inject(EventsStore);
   private readonly currentDate = new Date();
 
   // Each card pulls from its own NgRx (signal) store with independent loading state.
@@ -48,6 +59,22 @@ export class Home {
   protected readonly quickActions = inject(QuickActionsStore);
   protected readonly activity = inject(ActivityFeedStore);
 
+  protected readonly Presence = Presence;
+
+  protected readonly responseEvent = computed<EventDetail | undefined>(() => {
+    const today = startOfDay(new Date()).getTime();
+    return [...this.events.allEvents()]
+      .filter((e) => e.date.getTime() >= today)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+  });
+
+  protected readonly responseLoading = computed(() => {
+    const e = this.responseEvent();
+    if (!e) return false;
+    const status = e.memberPresenceStatus;
+    return status === 'init' || status === 'loading' || status === 'refreshing';
+  });
+
   constructor() {
     inject(PageHeaderService).set({
       title: 'Accueil',
@@ -55,6 +82,21 @@ export class Home {
       breadcrumb: ['Espace', 'Accueil'],
       activeNavId: 'home',
     });
+    effect(() => {
+      const e = this.responseEvent();
+      if (!e || e.memberPresenceStatus !== 'init') return;
+      untracked(() => void this.events.loadMemberPresence(e.id));
+    });
+  }
+
+  protected respondPresent(): void {
+    const e = this.responseEvent();
+    if (e) this.events.setMemberPresence(e.id, Presence.PRESENT);
+  }
+
+  protected respondAbsent(): void {
+    const e = this.responseEvent();
+    if (e) this.events.setMemberPresence(e.id, Presence.ABSENT);
   }
 
   protected readonly memberData = this.store.selectSignal(selectMember);

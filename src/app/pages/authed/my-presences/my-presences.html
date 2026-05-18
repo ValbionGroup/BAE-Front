@@ -104,42 +104,47 @@
 
                 <!-- Response buttons -->
                 <div class="flex shrink-0 gap-1.5">
-                  <button
-                    type="button"
-                    (click)="respondPresent(e)"
-                    [class]="
-                      'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
-                      (e.memberPresence === Presence.PRESENT
-                        ? 'bg-ok text-white border-ok'
-                        : 'bg-transparent text-ok border-ok')
-                    "
-                  >
-                    <svg [lucideIcon]="icCheck" [size]="12"></svg>Présent·e
-                  </button>
-                  <button
-                    type="button"
-                    (click)="respondPending(e)"
-                    [class]="
-                      'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
-                      (e.memberPresence === Presence.PENDING || e.memberPresence === undefined
-                        ? 'bg-warn text-white border-warn'
-                        : 'bg-transparent text-warn border-warn')
-                    "
-                  >
-                    <svg [lucideIcon]="icClock" [size]="12"></svg>Indécis·e
-                  </button>
-                  <button
-                    type="button"
-                    (click)="respondAbsent(e)"
-                    [class]="
-                      'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
-                      (e.memberPresence === Presence.ABSENT
-                        ? 'bg-red text-white border-red'
-                        : 'bg-transparent text-red border-red')
-                    "
-                  >
-                    <svg [lucideIcon]="icX" [size]="12"></svg>Absent·e
-                  </button>
+                  @if (isPresenceLoading(e)) {
+                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="respondPresent(e)"
+                      [class]="
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
+                        (e.memberPresence === Presence.PRESENT
+                          ? 'bg-ok text-white border-ok'
+                          : 'bg-transparent text-ok border-ok')
+                      "
+                    >
+                      <svg [lucideIcon]="icCheck" [size]="12"></svg>Présent·e
+                    </button>
+                    <button
+                      type="button"
+                      [class]="
+                        'cursor-not-allowed inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium ' +
+                        (e.memberPresence === Presence.PENDING || e.memberPresence === undefined
+                          ? 'bg-warn text-white border-warn'
+                          : 'bg-transparent text-warn border-warn')
+                      "
+                    >
+                      <svg [lucideIcon]="icClock" [size]="12"></svg>Indécis·e
+                    </button>
+                    <button
+                      type="button"
+                      (click)="respondAbsent(e)"
+                      [class]="
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
+                        (e.memberPresence === Presence.ABSENT
+                          ? 'bg-red text-white border-red'
+                          : 'bg-transparent text-red border-red')
+                      "
+                    >
+                      <svg [lucideIcon]="icX" [size]="12"></svg>Absent·e
+                    </button>
+                  }
                 </div>
               </div>
             }
@@ -198,14 +203,19 @@
                 </div>
                 <span class="text-text">{{ p.name }}</span>
                 <span class="text-text-2">{{ postFor(p) ?? '—' }}</span>
-                <span>
-                  <bfd-badge [kind]="pastBadgeKind(p)" [dot]="true">
-                    {{ pastStatusLabel(p) }}
-                  </bfd-badge>
-                </span>
-                <span [class]="'mono tnum text-right font-semibold ' + ptsClass(pointsFor(p))">
-                  {{ ptsLabel(pointsFor(p)) }}
-                </span>
+                @if (isPresenceLoading(p)) {
+                  <span><bfd-skeleton width="64px" height="18px" rounded="pill" /></span>
+                  <span class="flex justify-end"><bfd-skeleton width="48px" height="12px" /></span>
+                } @else {
+                  <span>
+                    <bfd-badge [kind]="pastBadgeKind(p)" [dot]="true">
+                      {{ pastStatusLabel(p) }}
+                    </bfd-badge>
+                  </span>
+                  <span [class]="'mono tnum text-right font-semibold ' + ptsClass(pointsFor(p))">
+                    {{ ptsLabel(pointsFor(p)) }}
+                  </span>
+                }
               </div>
             }
           </bfd-card>
@@ -220,7 +230,7 @@
         <div class="text-[13px] font-semibold text-text">Score d’engagement</div>
         <div class="mt-0.5 text-[11px] text-muted">Influe sur l’algo d’affectation</div>
 
-        @if (loading()) {
+        @if (engagementLoading()) {
           <div class="mt-3.5 flex justify-center">
             <bfd-skeleton width="120px" height="48px" variant="surface-3" />
           </div>
@@ -243,7 +253,7 @@
             <div class="mt-1 text-[11px] text-muted">basé sur l’historique de la saison</div>
           </div>
 
-          <!--<div class="mt-4 flex flex-col gap-2.5">
+          <div class="mt-4 flex flex-col gap-2.5">
             @for (row of scoreRows(); track row.k) {
               <div>
                 <div class="mb-1 flex justify-between text-[11.5px] text-text-2">
@@ -256,12 +266,12 @@
                 <div class="mt-0.75 text-[10.5px] text-muted">{{ row.sub }}</div>
               </div>
             }
-          </div>-->
+          </div>
         }
       </bfd-card>
 
       <!-- Preferences -->
-      <bfd-card>
+      <!--<bfd-card>
         <div class="text-[13px] font-semibold text-text">Préférences</div>
         <div class="mt-0.5 mb-3.5 text-[11px] text-muted">L’algo essaie de respecter</div>
 
@@ -290,7 +300,7 @@
         <bfd-btn kind="ghost" size="sm" [icon]="icEdit" [full]="true" class="mt-3.5 block">
           Modifier
         </bfd-btn>
-      </bfd-card>
+      </bfd-card>-->
     </aside>
   </div>
 </div>

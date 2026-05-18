@@ -96,16 +96,69 @@ export const EventsStore = signalStore(
         }));
       }
     },
-    setMemberPresence(eventId: string, memberPresence: Presence): void {
-      const current = store.events()[eventId];
-      if (!current) return;
+
+    async loadMemberPresence(eventId: string) {
+      const currentEvent = store.events()[eventId];
+      if (!currentEvent) return;
+
+      const currentStatus = currentEvent.memberPresenceStatus;
+      if (currentStatus === 'loading' || currentStatus === 'refreshing') {
+        return;
+      }
+
       patchState(store, (state) => ({
         events: {
           ...state.events,
-          [eventId]: { ...state.events[eventId], memberPresence } as EventDetail,
+          [eventId]: { ...state.events[eventId], memberPresenceStatus: 'refreshing' } as EventDetail,
         },
       }));
+
+      try {
+        const presence = await lastValueFrom(
+          eventService.fetchPresenceForEvent(eventId),
+        ) as unknown as Presence;
+        patchState(store, (state) => ({
+          events: {
+            ...state.events,
+            [eventId]: {
+              ...state.events[eventId],
+              memberPresence: presence,
+              memberPresenceStatus: 'loaded',
+            } as EventDetail,
+          },
+        }));
+      } catch (error) {
+        patchState(store, (state) => ({
+          events: {
+            ...state.events,
+            [eventId]: { ...state.events[eventId], memberPresenceStatus: 'error' } as EventDetail,
+          },
+        }));
+      }
     },
+
+    async setMemberPresence(eventId: string, memberPresence: Presence) {
+      try {
+        await lastValueFrom(eventService.updatePresenceForEvent(eventId, memberPresence));
+
+        const current = store.events()[eventId];
+        if (!current) return;
+        patchState(store, (state) => ({
+          events: {
+            ...state.events,
+            [eventId]: { ...state.events[eventId], memberPresence, memberPresenceStatus: "loaded" } as EventDetail,
+          },
+        }));
+      } catch (error) {
+        patchState(store, (state) => ({
+          events: {
+            ...state.events,
+            [eventId]: { ...state.events[eventId], memberPresenceStatus: 'error' } as EventDetail,
+          },
+        }));
+      }
+    },
+
     clear(): void {
       patchState(store, { loading: 'init', events: {} });
     },
