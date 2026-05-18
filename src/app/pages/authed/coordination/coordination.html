@@ -1,26 +1,44 @@
 <!-- Topbar actions, projected via PageHeaderService -->
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icSettings">Postes</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icZap">Lancer l'algo</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icCheck">Valider l'affectation</bfd-btn>
+  <bfd-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
+    Postes
+  </bfd-btn>
+  <bfd-btn
+    kind="secondary"
+    size="md"
+    [icon]="icZap"
+    [disabled]="loading() || algoRunning()"
+    (clicked)="runAlgorithm()"
+  >
+    Lancer l'algo
+  </bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="validateAssignments()">
+    Valider l'affectation
+  </bfd-btn>
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
   <!-- Algo result banner -->
-  <div
-    class="mb-4.5 flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-4.5 py-3.5"
-  >
-    <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15 text-ok">
-      <svg [lucideIcon]="icCheck" [size]="18" aria-hidden="true"></svg>
-    </span>
-    <div class="flex-1">
-      <div class="text-[13.5px] font-semibold text-text">Algorithme exécuté · il y a 4 min</div>
-      <div class="mt-0.5 text-[12px] text-text-2">
-        18 affectations · score moyen <span class="mono tnum text-text">83/100</span> · 2
-        verrouillées manuellement
+  @if (algoRunAt()) {
+    @let summary = algoSummary();
+    <div
+      class="mb-4.5 flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-4.5 py-3.5"
+    >
+      <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15 text-ok">
+        <svg [lucideIcon]="icCheck" [size]="18" aria-hidden="true"></svg>
+      </span>
+      <div class="flex-1">
+        <div class="text-[13.5px] font-semibold text-text">
+          Algorithme exécuté · {{ algoRunLabel() }}
+        </div>
+        <div class="mt-0.5 text-[12px] text-text-2">
+          {{ summary?.assignedCount ?? 0 }} affectations · score moyen
+          <span class="mono tnum text-text">{{ summary?.avgScore ?? 0 }}/100</span> ·
+          {{ summary?.lockedCount ?? 0 }} verrouillées manuellement
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- Postes grid -->
   <div class="mb-5.5 grid grid-cols-3 gap-3">
@@ -53,9 +71,20 @@
             <div class="flex items-center gap-2 rounded-sm bg-surface-2 px-2 py-1.5">
               <bfd-avatar [name]="m.name" [size]="20" />
               <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
-              @if (m.lock) {
-                <svg [lucideIcon]="icLock" [size]="11" class="text-muted" aria-hidden="true"></svg>
-              } @else {
+              <button
+                type="button"
+                class="text-muted hover:text-text focus:outline-none"
+                aria-label="Verrouiller ou déverrouiller"
+                (click)="toggleLock(m.id, p.id); $event.stopPropagation()"
+              >
+                <svg
+                  [lucideIcon]="icLock"
+                  [size]="11"
+                  [class]="m.lock ? 'text-text' : 'text-muted'"
+                  aria-hidden="true"
+                ></svg>
+              </button>
+              @if (!m.lock) {
                 <svg
                   [lucideIcon]="icX"
                   [size]="12"
@@ -71,32 +100,12 @@
           }
           @for (_ of vacantSlots(p); track $index) {
             <div
+              #anchor
               class="flex items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-[12px] text-muted cursor-pointer"
-              (click)="togglePicker(p.id)"
+              (click)="openRoleDropdown(anchor, p.id)"
             >
               <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
               <span>Affecter…</span>
-            </div>
-          }
-
-          @let pickerOpen = openPickerRoleId() === p.id;
-          @if (pickerOpen) {
-            <div class="mt-2 rounded-md border border-border p-2 bg-white dark:bg-gray-800">
-              @for (am of availableMembers(); track am.id) {
-                <div
-                  class="flex items-center justify-between gap-2 px-2 py-1 cursor-pointer hover:bg-surface-2"
-                  (click)="assignMember(am.id, p.id); $event.stopPropagation()"
-                >
-                  <div class="flex items-center gap-2">
-                    <bfd-avatar [name]="am.firstName + ' ' + am.lastName" [size]="20" />
-                    <div class="text-[12px] text-text">{{ am.firstName }} {{ am.lastName }}</div>
-                  </div>
-                  <div [class]="'mono tnum text-[11px] ' + scoreClassSmall(am.points)">{{ am.points }}</div>
-                </div>
-              }
-              @if (availableMembers().length === 0) {
-                <div class="px-2 py-1 text-[12px] text-muted">Aucun membre disponible</div>
-              }
             </div>
           }
         </div>
@@ -145,8 +154,21 @@
         </div>
         <div class="flex items-center gap-1.5">
           <span class="text-[12.5px] text-text">{{ m.poste }}</span>
-          @if (m.lock) {
-            <svg [lucideIcon]="icLock" [size]="11" class="text-muted" aria-hidden="true"></svg>
+          @let roleId = m.roleId;
+          @if (roleId !== null) {
+            <button
+              type="button"
+              class="text-muted hover:text-text focus:outline-none"
+              aria-label="Verrouiller ou déverrouiller"
+              (click)="toggleLock(m.id, roleId); $event.stopPropagation()"
+            >
+              <svg
+                [lucideIcon]="icLock"
+                [size]="11"
+                [class]="m.lock ? 'text-text' : 'text-muted'"
+                aria-hidden="true"
+              ></svg>
+            </button>
           }
         </div>
         <span [class]="'mono tnum text-right text-[13px] font-semibold ' + scoreClass(m.score)">{{

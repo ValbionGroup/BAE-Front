@@ -13,6 +13,8 @@ describe('Pills', () => {
 
     fixture = TestBed.createComponent(Pills);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('pillListLabel', 'Filtres');
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

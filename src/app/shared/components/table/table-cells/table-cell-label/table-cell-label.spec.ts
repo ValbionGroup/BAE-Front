@@ -13,6 +13,8 @@ describe('TableCellLabel', () => {
 
     fixture = TestBed.createComponent(TableCellLabel);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('value', 'Label');
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

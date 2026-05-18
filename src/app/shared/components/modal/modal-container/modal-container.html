@@ -17,6 +17,10 @@
         >
           @if (modal.type === 'delete') {
             <bfd-delete-modal [config]="asDelete(modal)" (close)="close(modal.id)" />
+          } @else if (modal.type === 'roles') {
+            <bfd-roles-modal [config]="asRoles(modal)" (close)="close(modal.id)" />
+          } @else if (modal.type === 'create-event') {
+            <bfd-create-event-modal [config]="asCreateEvent(modal)" (close)="close(modal.id)" />
           } @else {
             <bfd-message-modal [config]="asMessage(modal)" (close)="close(modal.id)" />
           }

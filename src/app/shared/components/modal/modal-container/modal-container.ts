@@ -10,13 +10,21 @@ import {
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ModalService } from '../modal.service';
-import { DeleteModalConfig, ModalConfig, MessageModalConfig } from '../modal.models';
+import {
+  CreateEventModalConfig,
+  DeleteModalConfig,
+  ModalConfig,
+  MessageModalConfig,
+  RolesModalConfig,
+} from '../modal.models';
 import { MessageModal } from '../message-modal/message-modal';
 import { DeleteModal } from '../delete-modal/delete-modal';
+import { RolesModal } from '../roles-modal/roles-modal';
+import { CreateEventModal } from '../create-event-modal/create-event-modal';
 
 @Component({
   selector: 'bfd-modal-container',
-  imports: [MessageModal, DeleteModal],
+  imports: [MessageModal, DeleteModal, RolesModal, CreateEventModal],
   templateUrl: './modal-container.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -110,5 +118,13 @@ export class ModalContainer {
 
   protected asDelete(config: ModalConfig): DeleteModalConfig {
     return config as DeleteModalConfig;
+  }
+
+  protected asRoles(config: ModalConfig): RolesModalConfig {
+    return config as RolesModalConfig;
+  }
+
+  protected asCreateEvent(config: ModalConfig): CreateEventModalConfig {
+    return config as CreateEventModalConfig;
   }
 }

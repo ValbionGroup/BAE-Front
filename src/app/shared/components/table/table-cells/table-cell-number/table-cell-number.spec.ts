@@ -13,6 +13,8 @@ describe('TableCellNumber', () => {
 
     fixture = TestBed.createComponent(TableCellNumber);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('value', 12);
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

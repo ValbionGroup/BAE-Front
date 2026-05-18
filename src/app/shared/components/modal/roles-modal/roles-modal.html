@@ -1,0 +1,81 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="'modal-title-' + config().id"
+  tabindex="-1"
+  class="w-full max-w-[680px] bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
+>
+  <div class="px-[22px] py-[18px] border-b border-border-s flex items-center gap-3">
+    <h2
+      [id]="'modal-title-' + config().id"
+      class="text-[15px] font-semibold text-text flex-1 min-w-0 truncate"
+    >
+      {{ config().title }}
+    </h2>
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Fermer"
+      class="text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded"
+    >
+      <svg lucideX [size]="16" aria-hidden="true"></svg>
+    </button>
+  </div>
+
+  <div class="p-[22px] flex flex-col gap-4 overflow-y-auto">
+    <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
+
+    <div class="grid grid-cols-[1fr_110px_36px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+      <span>Poste</span>
+      <span>Besoin</span>
+      <span></span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      @for (role of draft(); track $index) {
+        @let nameInvalid = role.name.trim().length === 0;
+        @let countInvalid = role.requiredCount <= 0;
+        <div class="grid grid-cols-[1fr_110px_36px] gap-2 items-center">
+          <input
+            type="text"
+            [value]="role.name"
+            placeholder="Nom du poste"
+            [class]="inputClass(nameInvalid)"
+            (input)="onNameInput($index, $event)"
+          />
+          <input
+            type="number"
+            min="1"
+            [value]="role.requiredCount"
+            [class]="inputClass(countInvalid)"
+            (input)="onCountInput($index, $event)"
+          />
+          <button
+            type="button"
+            class="h-9 w-9 inline-flex items-center justify-center rounded-md border border-border bg-surface-2 text-muted hover:text-text"
+            (click)="removeRole($index)"
+            aria-label="Supprimer ce poste"
+          >
+            <svg lucideTrash2 [size]="14" aria-hidden="true"></svg>
+          </button>
+        </div>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="inline-flex items-center gap-2 text-[12px] text-blue hover:text-blue-600 self-start"
+      (click)="addRole()"
+    >
+      <svg lucidePlus [size]="14" aria-hidden="true"></svg>
+      Ajouter un poste
+    </button>
+  </div>
+
+  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
+    <bfd-btn kind="ghost" size="md" (clicked)="onClose()">Annuler</bfd-btn>
+    <bfd-btn kind="primary" size="md" [disabled]="!canSave()" (clicked)="onSave()">
+      Enregistrer
+    </bfd-btn>
+  </div>
+</div>

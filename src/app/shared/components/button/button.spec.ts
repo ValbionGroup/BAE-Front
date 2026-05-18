@@ -13,6 +13,9 @@ describe('Button', () => {
 
     fixture = TestBed.createComponent(Button);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('label', 'Action');
+    fixture.componentRef.setInput('action', () => {});
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

@@ -13,6 +13,7 @@ class HostComponent {
 
   onChange(value: boolean): void {
     this.received.push(value);
+    this.on.set(value);
   }
 }
 
