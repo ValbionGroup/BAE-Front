@@ -41,7 +41,7 @@
 
     <!-- Header row -->
     <div
-      class="grid grid-cols-[36px_1.4fr_90px_90px_110px_60px] items-center gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="grid grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
     >
       <span></span>
       <span>Soirée</span>
@@ -66,7 +66,7 @@
           <div
             (click)="select(e.id)"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1.4fr_90px_90px_110px_60px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+              'relative grid cursor-pointer grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
               (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50') +
               (e.status === 'past' ? ' opacity-80' : '')
             "
@@ -95,14 +95,14 @@
               {{ e.members }}/{{ e.maxMembers }}
             </span>
             <bfd-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bfd-badge>
-            <span class="inline-flex justify-self-end" (click)="$event.stopPropagation()">
+            <span class="inline-flex items-center gap-1 justify-self-end" (click)="$event.stopPropagation()">
               <button
                 type="button"
-                title="Éditer"
                 (click)="navigate(e.id)"
-                class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
+                class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 font-sans text-[11.5px] font-medium text-text-2 hover:border-blue hover:bg-blue-soft hover:text-blue"
               >
-                <svg [lucideIcon]="icEdit" [size]="14" aria-hidden="true"></svg>
+                <svg [lucideIcon]="icUsers" [size]="12" aria-hidden="true"></svg>
+                Gérer
               </button>
               <button
                 type="button"

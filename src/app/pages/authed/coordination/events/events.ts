@@ -18,6 +18,7 @@ import {
   LucidePlus,
   LucideSearch,
   LucideTrash2,
+  LucideUsers,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ModalService } from '#shared/components/modal/modal.service';
@@ -72,6 +73,7 @@ export class CoordinationEvents implements OnInit {
   protected readonly icSearch = LucideSearch;
   protected readonly icEdit = LucidePencil;
   protected readonly icTrash = LucideTrash2;
+  protected readonly icUsers = LucideUsers;
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;

@@ -15,6 +15,7 @@ import {
   LucideDynamicIcon,
   LucidePlus,
   LucideTrash2,
+  LucideUsers,
   LucideX,
 } from '@lucide/angular';
 import { Badge } from '#shared/components/ui/badge/badge';
@@ -22,6 +23,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { Toggle } from '#shared/components/ui/toggle/toggle';
+import { Router } from '@angular/router';
 import { CoordinationStore } from '#core/store/coordination.store';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
@@ -84,6 +86,7 @@ export class CoordinationEventDetail {
 
   private readonly store = inject(CoordinationStore);
   private readonly modals = inject(ModalService);
+  private readonly router = inject(Router);
 
   protected readonly icCalendar = LucideCalendar;
   protected readonly icClock = LucideClock;
@@ -92,6 +95,7 @@ export class CoordinationEventDetail {
   protected readonly icChef = LucideChefHat;
   protected readonly icPlus = LucidePlus;
   protected readonly icTrash = LucideTrash2;
+  protected readonly icUsers = LucideUsers;
 
   protected readonly state = signal<EditState | null>(null);
   protected readonly saving = signal(false);
@@ -132,6 +136,11 @@ export class CoordinationEventDetail {
 
   protected removeRecipe(name: string): void {
     this.state.update((s) => (s ? { ...s, recipes: s.recipes.filter((r) => r !== name) } : s));
+  }
+
+  protected navigate(): void {
+    const s = this.state();
+    if (s) void this.router.navigate(['/coordination', s.id]);
   }
 
   protected openDelete(): void {

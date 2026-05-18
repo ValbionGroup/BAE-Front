@@ -4,7 +4,6 @@ import { CreateEventModalConfig } from '../modal.models';
 
 const baseConfig: CreateEventModalConfig = {
   id: 'test-id',
-  type: 'create-event',
   title: 'Nouvelle soiree',
   message: 'Renseignez le nom et la date.',
   onCreate: () => {},
