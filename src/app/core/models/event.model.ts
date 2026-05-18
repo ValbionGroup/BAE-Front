@@ -43,6 +43,8 @@ export interface MenuItem {
   recipeId: string;
   recipeName: string;
   servings: number;
+  price: number;
+  category: string;
   prepNotes?: string;
 }
 
