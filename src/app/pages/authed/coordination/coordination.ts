@@ -46,6 +46,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
+import {ToastService} from '#shared/components/toast/toast.service';
 
 interface Member {
   id: number;
@@ -176,6 +177,7 @@ export class Coordination implements OnInit {
 
   protected readonly dropdown = inject(DropdownService);
   private readonly modal = inject(ModalService);
+  private readonly toast = inject(ToastService);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -224,18 +226,6 @@ export class Coordination implements OnInit {
     return this.allMembers().filter((m) => eventData.presentMemberIds.includes(m.id));
   });
 
-  protected readonly memberRoleMap = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return new Map<number, string>();
-    const map = new Map<number, string>();
-    for (const role of eventData.roles) {
-      for (const memberId of role.assignedMemberIds) {
-        map.set(memberId, role.name);
-      }
-    }
-    return map;
-  });
-
   protected readonly assignedMemberIds = computed(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return new Set<number>();
@@ -282,32 +272,8 @@ export class Coordination implements OnInit {
     return { assignedCount, lockedCount, avgScore };
   });
 
-  protected readonly unfulfilledCount = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return 0;
-    return eventData.roles.filter((r) => r.assignedMemberIds.length < r.requiredCount).length;
-  });
-
-  protected isFulfilled(role: Role): boolean {
-    return role.assignedMemberIds.length >= role.requiredCount;
-  }
-
-  protected isPast(date: Date): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
-  }
-
   protected getMember(id: number): Member | undefined {
     return this.allMembers().find((m) => m.id === id);
-  }
-
-  protected getMemberInitials(member: Member): string {
-    return member.firstName[0] + member.lastName[0];
-  }
-
-  protected getAvatarColor(memberId: number): string {
-    return AVATAR_COLORS[memberId % AVATAR_COLORS.length];
   }
 
   protected formatDate(date: Date): string {
@@ -317,48 +283,6 @@ export class Coordination implements OnInit {
       month: 'long',
       year: 'numeric',
     });
-  }
-
-  protected formatEventDate(date: Date): string {
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-  }
-
-  protected getEmptySlots(role: Role): number[] {
-    const count = Math.max(0, role.requiredCount - role.assignedMemberIds.length);
-    return Array.from({ length: count }, (_, i) => i);
-  }
-
-  protected getEventCardClass(ed: EventData): string {
-    if (this.selectedEventId() === ed.event.id) {
-      return 'border-violet-500 bg-violet-50 dark:bg-violet-950/30 text-violet-900 dark:text-violet-100 shadow-sm';
-    }
-    if (this.isPast(ed.event.date)) {
-      return 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600';
-    }
-    return 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-violet-300 dark:hover:border-violet-700 hover:shadow-sm';
-  }
-
-  protected getRoleCardClass(role: Role): string {
-    return this.isFulfilled(role)
-      ? 'border-emerald-200 dark:border-emerald-800/60'
-      : 'border-red-200 dark:border-red-800/60';
-  }
-
-  protected getRoleHeaderClass(role: Role): string {
-    return this.isFulfilled(role)
-      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
-      : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200';
-  }
-
-  protected getRoleCountClass(role: Role): string {
-    return this.isFulfilled(role)
-      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
-      : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300';
-  }
-
-  protected selectEvent(id: number): void {
-    this.selectedEventId.set(id);
-    this.router.navigate(['../', id], { relativeTo: this.route });
   }
 
   protected assignMember(memberId: number, roleId: number): void {
@@ -567,7 +491,7 @@ export class Coordination implements OnInit {
   }
 
   protected validateAssignments(): void {
-    this.modal.open({
+    this.toast.show({
       type: 'success',
       title: 'Affectations validées',
       message: 'Les affectations ont bien été enregistrées.',
