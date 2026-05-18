@@ -1,14 +1,12 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   effect,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideCalendar,
   LucideCheck,
@@ -24,10 +22,9 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { Toggle } from '#shared/components/ui/toggle/toggle';
-import {
-  CoordinationService,
-  type ApiEvent,
-} from '#core/services/coordination/coordination-service';
+import { CoordinationStore } from '#core/store/coordination.store';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
 import type { CoordinationEvent, EditState, OptionRow } from '../events.types';
 
 function calcDuration(startHHMM: string, endHHMM: string): number {
@@ -84,10 +81,9 @@ const DEFAULT_OPTIONS: ReadonlyArray<Readonly<OptionRow>> = [
 export class CoordinationEventDetail {
   readonly event = input<CoordinationEvent | null>(null);
   readonly close = output<void>();
-  readonly saved = output<ApiEvent>();
 
-  private readonly svc = inject(CoordinationService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(CoordinationStore);
+  private readonly modals = inject(ModalService);
 
   protected readonly icCalendar = LucideCalendar;
   protected readonly icClock = LucideClock;
@@ -138,6 +134,20 @@ export class CoordinationEventDetail {
     this.state.update((s) => (s ? { ...s, recipes: s.recipes.filter((r) => r !== name) } : s));
   }
 
+  protected openDelete(): void {
+    const s = this.state();
+    if (!s) return;
+    this.modals.open({
+      type: 'component',
+      component: CoordinationDeleteModal,
+      inputs: {
+        eventName: s.name,
+        eventId: Number(s.id),
+        onDeleted: () => this.close.emit(),
+      },
+    });
+  }
+
   protected save(): void {
     const s = this.state();
     if (!s || this.saving()) return;
@@ -147,18 +157,9 @@ export class CoordinationEventDetail {
     const duration = s.endTime.trim() ? calcDuration(s.time, s.endTime.trim()) : null;
 
     this.saving.set(true);
-    this.svc
+    this.store
       .updateEvent(Number(s.id), s.name, isoDate, duration)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (ev) => {
-          this.saving.set(false);
-          this.saved.emit(ev);
-        },
-        error: () => {
-          this.saving.set(false);
-        },
-      });
+      .finally(() => this.saving.set(false));
   }
 
   private buildState(event: CoordinationEvent): EditState {

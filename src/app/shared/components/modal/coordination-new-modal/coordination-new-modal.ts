@@ -1,27 +1,22 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   computed,
   inject,
   input,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideArrowRight,
   LucideCalendar,
   LucideCheck,
   LucideClock,
-  LucideDynamicIcon,
 } from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
-import {
-  CoordinationService,
-  type ApiEvent,
-} from '#core/services/coordination/coordination-service';
+import { type ApiEvent } from '#core/services/coordination/coordination-service';
+import { CoordinationStore } from '#core/store/coordination.store';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -45,8 +40,7 @@ export class CoordinationNewModal {
   readonly onCreated = input<((ev: ApiEvent) => void) | null>(null);
 
   private readonly modalService = inject(ModalService);
-  private readonly svc = inject(CoordinationService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(CoordinationStore);
 
   protected readonly icCalendar = LucideCalendar;
   protected readonly icClock = LucideClock;
@@ -72,17 +66,14 @@ export class CoordinationNewModal {
     const duration = end ? calcDuration(time, end) : null;
 
     this.saving.set(true);
-    this.svc
+    this.store
       .createEvent(this.name().trim(), isoDate, duration)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (ev) => {
-          this.onCreated()?.(ev);
-          this.close();
-        },
-        error: () => {
-          this.saving.set(false);
-        },
+      .then((ev) => {
+        this.onCreated()?.(ev);
+        this.close();
+      })
+      .catch(() => {
+        this.saving.set(false);
       });
   }
 

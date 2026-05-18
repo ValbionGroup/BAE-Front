@@ -106,6 +106,10 @@ export class CoordinationService {
     return this.http.put<ApiJob>(`${this.baseUrl}/jobs`, { name }, { params: { id } });
   }
 
+  deleteEvent(id: number): Observable<unknown> {
+    return this.http.delete(`${this.baseUrl}/events/${id}`);
+  }
+
   deleteJob(id: number): Observable<unknown> {
     return this.http.delete(`${this.baseUrl}/jobs`, { params: { id } });
   }

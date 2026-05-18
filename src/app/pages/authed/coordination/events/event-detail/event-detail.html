@@ -85,10 +85,9 @@
 
     <!-- Footer actions -->
     <div class="flex items-center gap-2 border-t border-border-s bg-surface px-5 py-3">
-      <bfd-btn kind="ghost" size="sm" [icon]="icTrash">Supprimer</bfd-btn>
+      <bfd-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="openDelete()">Supprimer</bfd-btn>
       <div class="flex-1"></div>
       <bfd-btn kind="ghost" size="sm" (clicked)="close.emit()">Annuler</bfd-btn>
-      <bfd-btn kind="secondary" size="sm" [icon]="icCheck">Brouillon</bfd-btn>
       <bfd-btn kind="primary" size="sm" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
         >Enregistrer</bfd-btn
       >

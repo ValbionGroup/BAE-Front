@@ -1,0 +1,117 @@
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import { inject } from '@angular/core';
+import { lastValueFrom } from 'rxjs';
+import {
+  CoordinationService,
+  type ApiAssignment,
+  type ApiEvent,
+  type ApiEventJob,
+} from '#core/services/coordination/coordination-service';
+import type { LoadingStatus } from '#core/models/global.model';
+import type { CoordinationEvent, EventStatus } from '#pages/authed/coordination/events/events.types';
+
+function toCoordinationEvent(
+  apiEvent: ApiEvent,
+  assignments: ApiAssignment[],
+  eventJobs: ApiEventJob[],
+): CoordinationEvent {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dt = new Date(apiEvent.date);
+  const isPast = dt < today;
+
+  const assignedCount = new Set(
+    assignments.filter((a) => a.eventId === apiEvent.id).map((a) => a.memberId),
+  ).size;
+  const maxMembers = eventJobs
+    .filter((ej) => ej.eventId === apiEvent.id)
+    .reduce((sum, ej) => sum + ej.count, 0);
+
+  const status: EventStatus = isPast ? 'past' : 'preparing';
+
+  return {
+    id: apiEvent.id,
+    name: apiEvent.name,
+    date: dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
+    rawDate: apiEvent.date,
+    status,
+    statusLabel: isPast ? 'Passée' : 'En préparation',
+    statusKind: isPast ? 'ok' : 'warn',
+    members: assignedCount,
+    maxMembers,
+    recipes: 0,
+    duration: apiEvent.duration,
+  };
+}
+
+interface CoordinationState {
+  loading: LoadingStatus;
+  loadError: string | null;
+  events: CoordinationEvent[];
+  assignments: ApiAssignment[];
+  eventJobs: ApiEventJob[];
+}
+
+const initialState: CoordinationState = {
+  loading: 'init',
+  loadError: null,
+  events: [],
+  assignments: [],
+  eventJobs: [],
+};
+
+export const CoordinationStore = signalStore(
+  { providedIn: 'root' },
+  withState<CoordinationState>(initialState),
+  withMethods((store, svc = inject(CoordinationService)) => ({
+    async load(): Promise<void> {
+      patchState(store, { loading: 'loading', loadError: null });
+      try {
+        const raw = await lastValueFrom(svc.loadAll());
+        const events = raw.events
+          .map((e) => toCoordinationEvent(e, raw.assignments, raw.eventJobs))
+          .sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
+        patchState(store, {
+          loading: 'loaded',
+          events,
+          assignments: raw.assignments,
+          eventJobs: raw.eventJobs,
+        });
+      } catch {
+        patchState(store, { loading: 'error', loadError: 'Impossible de charger les soirées.' });
+      }
+    },
+
+    async createEvent(name: string, date: string, duration: number | null): Promise<ApiEvent> {
+      const ev = await lastValueFrom(svc.createEvent(name, date, duration));
+      const newEvent = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
+      patchState(store, {
+        events: [...store.events(), newEvent].sort(
+          (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime(),
+        ),
+      });
+      return ev;
+    },
+
+    async updateEvent(
+      id: number,
+      name: string,
+      date: string,
+      duration: number | null,
+    ): Promise<ApiEvent> {
+      const ev = await lastValueFrom(svc.updateEvent(id, name, date, duration));
+      const updated = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
+      patchState(store, {
+        events: store.events().map((e) => (e.id === id ? updated : e)),
+      });
+      return ev;
+    },
+
+    async deleteEvent(id: number): Promise<void> {
+      await lastValueFrom(svc.deleteEvent(id));
+      patchState(store, {
+        events: store.events().filter((e) => e.id !== id),
+      });
+    },
+  })),
+);
