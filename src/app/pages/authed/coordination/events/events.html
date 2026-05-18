@@ -35,7 +35,7 @@
       </div>
       <div class="flex-1"></div>
       <div class="w-60">
-        <bfd-input [icon]="icSearch" placeholder="Rechercher une soirée…" size="sm" />
+        <bfd-input [icon]="icSearch" placeholder="Rechercher une soirée…" size="sm" (valueChange)="setSearch($event)" />
       </div>
     </div>
 

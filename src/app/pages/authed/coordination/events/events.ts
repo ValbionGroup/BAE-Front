@@ -80,6 +80,7 @@ export class CoordinationEvents implements OnInit {
 
   protected readonly activeTab = signal<TabKey>('upcoming');
   protected readonly selectedId = signal<number | null>(null);
+  protected readonly searchQuery = signal<string>('');
 
   protected readonly tabs = computed(() => {
     const all = this.store.events();
@@ -93,9 +94,11 @@ export class CoordinationEvents implements OnInit {
 
   protected readonly visibleEvents = computed<readonly CoordinationEvent[]>(() => {
     const tab = this.activeTab();
+    const q = this.searchQuery().trim().toLowerCase();
     return this.store
       .events()
-      .filter((e) => (tab === 'upcoming' ? e.status !== 'past' : e.status === 'past'));
+      .filter((e) => (tab === 'upcoming' ? e.status !== 'past' : e.status === 'past'))
+      .filter((e) => !q || e.name.toLowerCase().includes(q));
   });
 
   protected readonly selectedEvent = computed(
@@ -135,6 +138,10 @@ export class CoordinationEvents implements OnInit {
 
   protected setTab(key: TabKey): void {
     this.activeTab.set(key);
+  }
+
+  protected setSearch(q: string): void {
+    this.searchQuery.set(q);
   }
 
   protected navigate(id: number): void {
