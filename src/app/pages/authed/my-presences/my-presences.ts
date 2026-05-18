@@ -54,14 +54,9 @@ const MONTHS_SHORT_FR = [
   'déc.',
 ] as const;
 
-// Demo identity for the seeded member — the auth store stores numeric IDs
-// while coordination roles use string IDs like "m1", so the post lookup uses
-// this until the API exposes the real correspondence.
-const CURRENT_MEMBER_ROLE_ID = 'm1';
-
 @Component({
   selector: 'bfd-my-presences',
-  imports: [Btn, Badge, Card, Toggle, Skeleton, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Skeleton, LucideDynamicIcon],
   templateUrl: './my-presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -69,7 +64,6 @@ export class MyPresences {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly store = inject(Store);
   private readonly events = inject(EventsStore);
-  private readonly eventsService = inject(EventsService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   protected readonly skeletonRows = Array.from({ length: 3 });
@@ -197,7 +191,7 @@ export class MyPresences {
   }
 
   protected postFor(event: EventDetail): string | null {
-    return this.eventsService.stationForMember(CURRENT_MEMBER_ROLE_ID, event.id)?.name ?? null;
+    return null;
   }
 
   protected respondPresent(event: EventDetail): void {
