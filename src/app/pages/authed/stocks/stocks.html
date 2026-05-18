@@ -164,8 +164,30 @@
               <span></span>
             </div>
           } @empty {
-            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
-              Aucun produit dans cette catégorie.
+            <div
+              class="flex h-full flex-col items-center justify-center gap-3 px-6 py-16 text-center"
+            >
+              <span
+                class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
+              >
+                <svg [lucideIcon]="icPackage" [size]="22" aria-hidden="true"></svg>
+              </span>
+              <div>
+                <div class="text-[13px] font-semibold text-text">
+                  @if (activeCategory() === 'Tous' && !searchQuery()) {
+                    Aucun produit en stock
+                  } @else {
+                    Aucun produit trouvé
+                  }
+                </div>
+                <div class="mt-1 text-[12px] text-muted">
+                  @if (activeCategory() === 'Tous' && !searchQuery()) {
+                    Ajoutez un produit ou scannez un code-barres pour démarrer l'inventaire.
+                  } @else {
+                    Essayez une autre catégorie ou modifiez votre recherche.
+                  }
+                </div>
+              </div>
             </div>
           }
         }
@@ -295,14 +317,50 @@
                 }
               </div>
             } @empty {
-              <div class="py-4 text-center text-[12px] text-muted">Aucun lot enregistré.</div>
+              <div
+                class="flex flex-col items-center justify-center gap-2.5 rounded-md border border-dashed border-border-s bg-surface-2 px-4 py-6 text-center"
+              >
+                <span
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-muted"
+                >
+                  <svg [lucideIcon]="icPackage" [size]="18" aria-hidden="true"></svg>
+                </span>
+                <div>
+                  <div class="text-[12.5px] font-semibold text-text">
+                    @if (showEmptyBatches()) {
+                      Aucun lot enregistré
+                    } @else {
+                      Aucun lot actif
+                    }
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-muted">
+                    @if (showEmptyBatches()) {
+                      Scannez un code-barres pour ajouter un premier lot.
+                    } @else {
+                      Activez « Afficher les lots vides » pour voir les lots écoulés.
+                    }
+                  </div>
+                </div>
+              </div>
             }
           </div>
         }
       </div>
     } @else {
-      <div class="flex flex-1 items-center justify-center">
-        <span class="text-[13px] text-muted">Sélectionnez un produit pour voir ses lots</span>
+      <div
+        class="flex flex-1 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-8 text-center"
+      >
+        <span
+          class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
+        >
+          <svg [lucideIcon]="icPackage" [size]="22" aria-hidden="true"></svg>
+        </span>
+        <div>
+          <div class="text-[13px] font-semibold text-text">Aucun produit sélectionné</div>
+          <div class="mt-1 text-[12px] text-muted">
+            Choisissez un produit dans la liste pour consulter ses lots et leurs DLC.
+          </div>
+        </div>
       </div>
     }
   </aside>

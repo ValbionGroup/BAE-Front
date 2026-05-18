@@ -92,6 +92,7 @@ export class Stocks implements OnInit {
   protected readonly icFilter = LucideFunnel;
   protected readonly icSort = LucideArrowDownUp;
   protected readonly icTrash = LucideTrash2;
+  protected readonly icPackage = LucidePackage;
 
   protected readonly searchQuery = signal('');
   protected readonly activeCategory = signal('Tous');

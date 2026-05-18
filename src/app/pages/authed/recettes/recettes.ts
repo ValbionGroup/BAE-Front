@@ -11,10 +11,14 @@ import {
   LucideChefHat,
   LucideDynamicIcon,
   LucideEllipsis,
+  LucidePointer,
+  LucideListChecks,
   LucidePencil,
   LucidePlus,
   LucideSearch,
   LucideStar,
+  LucideTriangleAlert,
+  LucideUtensilsCrossed,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RecipesStore } from '#core/store/recipes.store';
@@ -59,6 +63,10 @@ export class Recettes {
   protected readonly icEdit = LucidePencil;
   protected readonly icMore = LucideEllipsis;
   protected readonly icStar = LucideStar;
+  protected readonly icAlert = LucideTriangleAlert;
+  protected readonly icHand = LucidePointer;
+  protected readonly icUtensils = LucideUtensilsCrossed;
+  protected readonly icList = LucideListChecks;
 
   protected readonly filterTabs = ['Tout', 'Plats', 'Accompagnements', 'Boissons', 'Desserts'];
   protected readonly activeFilter = signal(0);
@@ -89,7 +97,8 @@ export class Recettes {
     this.selectedId.set(id);
   }
 
-  protected formatPrice(n: number): string {
+  protected formatPrice(n: number | null | undefined): string {
+    if (n === null || n === undefined || Number.isNaN(n)) return '—';
     return n.toFixed(2).replace('.', ',');
   }
 }
