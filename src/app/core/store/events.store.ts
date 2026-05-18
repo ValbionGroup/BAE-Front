@@ -109,14 +109,17 @@ export const EventsStore = signalStore(
       patchState(store, (state) => ({
         events: {
           ...state.events,
-          [eventId]: { ...state.events[eventId], memberPresenceStatus: 'refreshing' } as EventDetail,
+          [eventId]: {
+            ...state.events[eventId],
+            memberPresenceStatus: 'refreshing',
+          } as EventDetail,
         },
       }));
 
       try {
-        const presence = await lastValueFrom(
+        const presence = (await lastValueFrom(
           eventService.fetchPresenceForEvent(eventId),
-        ) as unknown as Presence;
+        )) as unknown as Presence;
         patchState(store, (state) => ({
           events: {
             ...state.events,
@@ -146,7 +149,11 @@ export const EventsStore = signalStore(
         patchState(store, (state) => ({
           events: {
             ...state.events,
-            [eventId]: { ...state.events[eventId], memberPresence, memberPresenceStatus: "loaded" } as EventDetail,
+            [eventId]: {
+              ...state.events[eventId],
+              memberPresence,
+              memberPresenceStatus: 'loaded',
+            } as EventDetail,
           },
         }));
       } catch (error) {

@@ -150,10 +150,30 @@ export class Stocks implements OnInit {
     const inStock = products.filter((p) => p.totalQty > 0).length;
     const totalBatches = products.reduce((s, p) => s + p.batchCount, 0);
     return [
-      { label: 'Périmés', value: `${expired} lots`, colorClass: 'text-danger', icon: LucideTriangleAlert },
-      { label: 'Proche péremption', value: `${soon} lots`, colorClass: 'text-warn', icon: LucideClock },
-      { label: 'Produits en stock', value: String(inStock), colorClass: 'text-text', icon: LucidePackage },
-      { label: 'Total lots', value: String(totalBatches), colorClass: 'text-text', icon: LucidePackage },
+      {
+        label: 'Périmés',
+        value: `${expired} lots`,
+        colorClass: 'text-danger',
+        icon: LucideTriangleAlert,
+      },
+      {
+        label: 'Proche péremption',
+        value: `${soon} lots`,
+        colorClass: 'text-warn',
+        icon: LucideClock,
+      },
+      {
+        label: 'Produits en stock',
+        value: String(inStock),
+        colorClass: 'text-text',
+        icon: LucidePackage,
+      },
+      {
+        label: 'Total lots',
+        value: String(totalBatches),
+        colorClass: 'text-text',
+        icon: LucidePackage,
+      },
     ];
   });
 

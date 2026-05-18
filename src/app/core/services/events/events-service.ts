@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import {map, Observable} from 'rxjs';
+import { map, Observable } from 'rxjs';
 import {
   EventApiDto,
   EventData,
@@ -23,7 +23,9 @@ export class EventsService {
 
   fetchAll(): Observable<EventDetail[]> {
     const url = this.buildUrl(ApiEndPointV1.EVENTS);
-    return this.http.get<EventApiDto[]>(url).pipe(map((dtos) => dtos.map((d) => this.toEventData(d))));
+    return this.http
+      .get<EventApiDto[]>(url)
+      .pipe(map((dtos) => dtos.map((d) => this.toEventData(d))));
   }
 
   fetchRosterForEvent(id: string): Observable<RosterRow[]> {
@@ -38,7 +40,10 @@ export class EventsService {
     return this.http.get<EventDetail['memberPresence']>(url);
   }
 
-  updatePresenceForEvent(id: string, presence: Presence): Observable<EventDetail['memberPresence']> {
+  updatePresenceForEvent(
+    id: string,
+    presence: Presence,
+  ): Observable<EventDetail['memberPresence']> {
     const url = this.buildUrl(ApiEndPointV1.EVENT_MEMBER_RESPONSE).replace(':id', id);
     return this.http.post<EventDetail['memberPresence']>(url, { isAvailable: presence });
   }

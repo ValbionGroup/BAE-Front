@@ -51,6 +51,8 @@
   <div modal-footer class="contents">
     <div class="flex-1"></div>
     <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="danger" [icon]="icTrash" [disabled]="!canDelete()" (clicked)="confirmDelete()">Supprimer définitivement</bfd-btn>
+    <bfd-btn kind="danger" [icon]="icTrash" [disabled]="!canDelete()" (clicked)="confirmDelete()"
+      >Supprimer définitivement</bfd-btn
+    >
   </div>
 </bfd-modal-shell>

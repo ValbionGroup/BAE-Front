@@ -46,7 +46,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
-import {ToastService} from '#shared/components/toast/toast.service';
+import { ToastService } from '#shared/components/toast/toast.service';
 
 interface Member {
   id: number;

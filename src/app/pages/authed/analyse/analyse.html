@@ -115,9 +115,7 @@
       </div>
     } @else if (store.prediction(); as p) {
       <div class="relative overflow-hidden rounded-md border border-blue bg-surface p-4">
-        <span
-          class="absolute -top-8 -right-8 h-30 w-30 rounded-full bg-blue opacity-[.08]"
-        ></span>
+        <span class="absolute -top-8 -right-8 h-30 w-30 rounded-full bg-blue opacity-[.08]"></span>
         <div class="mono mb-1.5 text-[10px] tracking-wider text-blue">
           {{ p.label }}
         </div>
@@ -171,9 +169,7 @@
           </div>
         }
       } @else if (store.soirees().length === 0) {
-        <div class="px-3.5 py-8 text-center text-[12px] text-muted">
-          Aucune soirée à afficher.
-        </div>
+        <div class="px-3.5 py-8 text-center text-[12px] text-muted">Aucune soirée à afficher.</div>
       } @else {
         @for (s of store.soirees(); track s.n; let i = $index) {
           <div

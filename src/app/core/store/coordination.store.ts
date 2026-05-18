@@ -8,7 +8,10 @@ import {
   type ApiEventJob,
 } from '#core/services/coordination/coordination-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import type { CoordinationEvent, EventStatus } from '#pages/authed/coordination/events/events.types';
+import type {
+  CoordinationEvent,
+  EventStatus,
+} from '#pages/authed/coordination/events/events.types';
 
 function toCoordinationEvent(
   apiEvent: ApiEvent,

@@ -1,17 +1,5 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
-import {
-  LucideArrowRight,
-  LucideCalendar,
-  LucideCheck,
-  LucideClock,
-} from '@lucide/angular';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { LucideArrowRight, LucideCalendar, LucideCheck, LucideClock } from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';

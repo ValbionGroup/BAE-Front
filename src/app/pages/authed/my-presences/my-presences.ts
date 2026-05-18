@@ -134,8 +134,7 @@ export class MyPresences {
     const total = past.length;
     const present = past.filter((e) => e.memberPresence === Presence.PRESENT).length;
     const presenceRate = total === 0 ? 0 : Math.round((present / total) * 100);
-    return [
-    ];
+    return [];
   });
 
   protected readonly notifReminder = signal(true);

@@ -35,7 +35,12 @@
       </div>
       <div class="flex-1"></div>
       <div class="w-60">
-        <bfd-input [icon]="icSearch" placeholder="Rechercher une soirée…" size="sm" (valueChange)="setSearch($event)" />
+        <bfd-input
+          [icon]="icSearch"
+          placeholder="Rechercher une soirée…"
+          size="sm"
+          (valueChange)="setSearch($event)"
+        />
       </div>
     </div>
 
@@ -95,7 +100,10 @@
               {{ e.members }}/{{ e.maxMembers }}
             </span>
             <bfd-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bfd-badge>
-            <span class="inline-flex items-center gap-1 justify-self-end" (click)="$event.stopPropagation()">
+            <span
+              class="inline-flex items-center gap-1 justify-self-end"
+              (click)="$event.stopPropagation()"
+            >
               <button
                 type="button"
                 (click)="navigate(e.id)"
