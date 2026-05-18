@@ -8,10 +8,10 @@ import {
   Injector,
   signal,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgComponentOutlet } from '@angular/common';
 import { ModalService } from '../modal.service';
 import {
-  CreateEventModalConfig,
+  ComponentModalConfig,
   DeleteModalConfig,
   ModalConfig,
   MessageModalConfig,
@@ -20,11 +20,10 @@ import {
 import { MessageModal } from '../message-modal/message-modal';
 import { DeleteModal } from '../delete-modal/delete-modal';
 import { RolesModal } from '../roles-modal/roles-modal';
-import { CreateEventModal } from '../create-event-modal/create-event-modal';
 
 @Component({
   selector: 'bfd-modal-container',
-  imports: [MessageModal, DeleteModal, RolesModal, CreateEventModal],
+  imports: [MessageModal, DeleteModal, RolesModal, NgComponentOutlet],
   templateUrl: './modal-container.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -124,7 +123,11 @@ export class ModalContainer {
     return config as RolesModalConfig;
   }
 
-  protected asCreateEvent(config: ModalConfig): CreateEventModalConfig {
-    return config as CreateEventModalConfig;
+  protected asComponent(config: ModalConfig): ComponentModalConfig {
+    return config as ComponentModalConfig;
+  }
+
+  protected componentInputs(config: ComponentModalConfig): Record<string, unknown> {
+    return { id: config.id, ...(config.inputs ?? {}) };
   }
 }

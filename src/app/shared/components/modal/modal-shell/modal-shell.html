@@ -1,0 +1,49 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
+  [style.width.px]="width()"
+>
+  <div class="px-[22px] py-4 border-b border-border-s flex items-center gap-3.5">
+    @if (icon()) {
+      <span
+        [class]="
+          'w-9 h-9 rounded-[10px] shrink-0 inline-flex items-center justify-center ' +
+          toneClasses().bg +
+          ' ' +
+          toneClasses().fg
+        "
+      >
+        <svg [lucideIcon]="icon()!" [size]="18" aria-hidden="true"></svg>
+      </span>
+    }
+    <div class="flex-1 min-w-0">
+      @if (eyebrow()) {
+        <div [class]="'mono text-[10px] tracking-wider mb-0.5 ' + toneClasses().fg">
+          {{ eyebrow() }}
+        </div>
+      }
+      <div class="text-[15px] font-semibold text-text -tracking-[0.2px]">{{ title() }}</div>
+      @if (subtitle()) {
+        <div class="text-xs text-muted mt-0.5">{{ subtitle() }}</div>
+      }
+    </div>
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Fermer"
+      class="w-7 h-7 rounded-md inline-flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+    >
+      <svg lucideX [size]="15" aria-hidden="true"></svg>
+    </button>
+  </div>
+
+  <div class="p-[22px] flex-1 overflow-y-auto">
+    <ng-content />
+  </div>
+
+  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center gap-2">
+    <ng-content select="[modal-footer]" />
+  </div>
+</div>

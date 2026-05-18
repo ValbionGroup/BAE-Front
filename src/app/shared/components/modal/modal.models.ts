@@ -1,3 +1,5 @@
+import { Type } from '@angular/core';
+
 export interface ModalAction {
   label: string;
   action: () => void;
@@ -6,6 +8,9 @@ export interface ModalAction {
 
 interface BaseModal {
   id: string;
+}
+
+interface MessageBase extends BaseModal {
   title: string;
   message: string;
   details?: string;
@@ -19,10 +24,12 @@ export interface RoleModalRole {
 
 export interface MessageModalConfig extends BaseModal {
   type: 'error' | 'success' | 'warning' | 'info';
+  title?: string;
+  message?: string;
   actions?: ModalAction[];
 }
 
-export interface DeleteModalConfig extends BaseModal {
+export interface DeleteModalConfig extends MessageBase {
   type: 'delete';
   confirmationText?: string;
   onConfirm: () => void;
@@ -30,23 +37,21 @@ export interface DeleteModalConfig extends BaseModal {
 
 export interface RolesModalConfig extends BaseModal {
   type: 'roles';
+  title?: string;
+  message?: string;
   roles: RoleModalRole[];
   onSave: (roles: RoleModalRole[]) => void;
 }
 
-export interface CreateEventModalConfig extends BaseModal {
-  type: 'create-event';
-  onCreate: (payload: { name: string; date: string; time: string }) => void;
+export interface ComponentModalConfig<T = unknown> extends BaseModal {
+  type: 'component';
+  component: Type<T>;
+  inputs?: Record<string, unknown>;
+  width?: number;
 }
 
 export type ModalConfig =
   | MessageModalConfig
   | DeleteModalConfig
   | RolesModalConfig
-  | CreateEventModalConfig;
-
-export type ModalConfigInput =
-  | Omit<MessageModalConfig, 'id'>
-  | Omit<DeleteModalConfig, 'id'>
-  | Omit<RolesModalConfig, 'id'>
-  | Omit<CreateEventModalConfig, 'id'>;
+  | ComponentModalConfig;

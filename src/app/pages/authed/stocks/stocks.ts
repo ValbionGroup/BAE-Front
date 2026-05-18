@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import {
   LucideClock,
   LucideDownload,
@@ -15,6 +22,8 @@ import {
   LucideTrash2,
   LucideTriangleAlert,
 } from '@lucide/angular';
+import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
@@ -58,12 +67,24 @@ interface Lot {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Stocks {
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly router = inject(Router);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  protected openScanner(): void {
+    this.router.navigate(['/stocks/scanner']);
+  }
+
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Stocks',
       subtitle: '142 produits · 318 lots · 1 880 € valorisés',
       breadcrumb: ['Préparation', 'Stocks'],
       activeNavId: 'stocks',
+    });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 

@@ -1,5 +1,4 @@
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
-import { LucideShoppingCart } from '@lucide/angular';
 import { RoleAssignment } from './models';
 
 interface RoleAssignmentState {
@@ -13,22 +12,7 @@ export const RoleAssignmentStore = signalStore(
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: {
-            poste: 'Caisse · zone B',
-            icon: LucideShoppingCart,
-            algoScore: 92,
-            meta: [
-              { label: 'Service', value: '19:30 — 22:00' },
-              { label: 'Pause', value: '20:45 (15 min)' },
-              { label: 'Co-équipier', value: 'Tom Bessière' },
-              { label: 'Coordo', value: 'Sarah K.' },
-            ],
-          },
-        });
-      }, 1000);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: null });

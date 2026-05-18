@@ -13,14 +13,19 @@
           [attr.data-modal-id]="modal.id"
           [style.transform]="stackTransform(i, total)"
           [style.z-index]="50 + i"
-          class="absolute w-full max-w-[560px] pointer-events-auto"
+          class="absolute pointer-events-auto"
         >
           @if (modal.type === 'delete') {
             <bfd-delete-modal [config]="asDelete(modal)" (close)="close(modal.id)" />
           } @else if (modal.type === 'roles') {
             <bfd-roles-modal [config]="asRoles(modal)" (close)="close(modal.id)" />
-          } @else if (modal.type === 'create-event') {
-            <bfd-create-event-modal [config]="asCreateEvent(modal)" (close)="close(modal.id)" />
+          } @else if (modal.type === 'component') {
+            <ng-container
+              *ngComponentOutlet="
+                asComponent(modal).component;
+                inputs: componentInputs(asComponent(modal))
+              "
+            />
           } @else {
             <bfd-message-modal [config]="asMessage(modal)" (close)="close(modal.id)" />
           }

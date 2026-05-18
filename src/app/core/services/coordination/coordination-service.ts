@@ -41,7 +41,11 @@ export class CoordinationService {
 
   // Body keys are camelCase: apiCaseRequestInterceptor converts them to snake_case before sending.
   assign(eventId: number, memberId: number, jobId: number): Observable<ApiAssignment> {
-    return this.http.post<ApiAssignment>(`${this.baseUrl}/assignments`, { eventId, memberId, jobId });
+    return this.http.post<ApiAssignment>(`${this.baseUrl}/assignments`, {
+      eventId,
+      memberId,
+      jobId,
+    });
   }
 
   // Params are NOT converted by the interceptor — use snake_case explicitly.

@@ -1,9 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  TemplateRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { Router } from '@angular/router';
 import {
   LucideArrowRight,
   LucideCheck,
   LucideDynamicIcon,
   LucideEuro,
+  LucideLock,
   LucideQrCode,
   LucideScanLine,
   LucideSearch,
@@ -36,13 +47,25 @@ interface CartItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Caisse {
+  private readonly pageHeader = inject(PageHeaderService);
+  private readonly router = inject(Router);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Caisse',
       subtitle: 'Soirée Hivernale · Service en cours · 21:14',
       breadcrumb: ['Soirée', 'Caisse'],
       activeNavId: 'cmd',
     });
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
+    });
+  }
+
+  protected openCloture(): void {
+    this.router.navigate(['/caisse/cloture']);
   }
 
   protected readonly icUser = LucideUser;
@@ -54,6 +77,7 @@ export class Caisse {
   protected readonly icEuro = LucideEuro;
   protected readonly icQr = LucideQrCode;
   protected readonly icArrowRight = LucideArrowRight;
+  protected readonly icLock = LucideLock;
 
   protected readonly cats = ['Hot-dogs', 'Boissons', 'Snacks', 'Desserts'];
   protected readonly activeCat = signal(0);

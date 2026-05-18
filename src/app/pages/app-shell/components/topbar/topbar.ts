@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { LucideBell, LucideChevronRight, LucideMoon, LucideSun } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ThemeService } from '#core/services/theme/theme-service';
@@ -7,7 +8,15 @@ import { BfdTooltip } from '#shared/components/tooltip/bfd-tooltip.directive';
 
 @Component({
   selector: 'bfd-topbar',
-  imports: [NgTemplateOutlet, BfdTooltip, LucideBell, LucideChevronRight, LucideMoon, LucideSun],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    BfdTooltip,
+    LucideBell,
+    LucideChevronRight,
+    LucideMoon,
+    LucideSun,
+  ],
   templateUrl: './topbar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

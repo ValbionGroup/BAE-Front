@@ -1,0 +1,56 @@
+<bfd-modal-shell
+  tone="danger"
+  [icon]="icTrash"
+  eyebrow="COORDINATION · SUPPRESSION"
+  title="Supprimer la soirée ?"
+  subtitle="Cette action est irréversible et impacte plusieurs modules"
+  [width]="480"
+  (close)="close()"
+>
+  <div class="p-3.5 bg-surface-2 border border-border rounded-md flex items-center gap-3 mb-4">
+    <div class="w-12 px-0 py-1 rounded-md text-center bg-red-soft text-red border border-red">
+      <div class="tnum text-[17px] font-semibold leading-none">14</div>
+      <div class="mono text-[9px] mt-0.5 tracking-widest">FÉV</div>
+    </div>
+    <div class="flex-1">
+      <div class="text-[13px] font-semibold text-text">{{ eventName() }}</div>
+      <div class="text-[11px] text-muted mt-0.5">Ven. 19:30 — 23:00 · 18 membres affectés</div>
+    </div>
+    <bfd-badge kind="warn" [dot]="true">En préparation</bfd-badge>
+  </div>
+
+  <div class="mono text-[10px] text-muted tracking-wider mb-2">RÉPERCUSSIONS</div>
+  <div class="bg-surface-2 border border-border-s rounded-md p-2.5 mb-3.5">
+    @for (im of impacts; track im.a; let i = $index) {
+      <div
+        [class]="
+          'flex items-center gap-2.5 py-1.5 px-1 text-[12.5px] ' +
+          (i ? 'border-t border-dashed border-border-s' : '')
+        "
+      >
+        <svg [lucideIcon]="im.icon" [size]="14" class="text-muted"></svg>
+        <span class="text-text font-medium">{{ im.a }}</span>
+        <span class="text-muted">{{ im.b }}</span>
+      </div>
+    }
+  </div>
+
+  <bfd-field label='Tape "SUPPRIMER" pour confirmer'>
+    <bfd-input placeholder="SUPPRIMER" />
+  </bfd-field>
+
+  <label class="flex items-center gap-2.5 mt-3 text-[12.5px] text-text-2 cursor-pointer">
+    <span
+      class="w-3.5 h-3.5 rounded-[3px] border-[1.4px] border-blue bg-blue inline-flex items-center justify-center text-white"
+    >
+      <svg [lucideIcon]="icCheck" [size]="10" aria-hidden="true"></svg>
+    </span>
+    Notifier les 18 membres affectés par email
+  </label>
+
+  <div modal-footer class="contents">
+    <div class="flex-1"></div>
+    <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
+    <bfd-btn kind="danger" [icon]="icTrash" (clicked)="close()">Supprimer définitivement</bfd-btn>
+  </div>
+</bfd-modal-shell>

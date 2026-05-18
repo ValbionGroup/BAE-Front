@@ -12,16 +12,7 @@ export const StatsStore = signalStore(
   withMethods((store) => ({
     load(): void {
       patchState(store, { loading: true });
-      setTimeout(() => {
-        patchState(store, {
-          loading: false,
-          data: [
-            { label: 'Encaissé (cumul.)', value: '4 218 €', delta: '+12%', positive: true },
-            { label: 'Adhérents actifs', value: '142', delta: '+4', positive: true },
-            { label: 'Stocks valorisés', value: '1 880 €', delta: '−6%', positive: false },
-          ],
-        });
-      }, 600);
+      patchState(store, { loading: false });
     },
     clear(): void {
       patchState(store, { loading: false, data: [] });

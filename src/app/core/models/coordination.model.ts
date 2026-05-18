@@ -7,6 +7,7 @@ import {
   LucideSmile,
   LucideIconInput,
 } from '@lucide/angular';
+import { EventData, EventDetail, Presence } from '#core/models/event.model';
 
 export interface Member {
   id: string;
@@ -20,18 +21,6 @@ export interface Role {
   icon: LucideIconInput;
   requiredCount: number;
   assignedMemberIds: string[];
-}
-
-export interface SoireeEvent {
-  id: string;
-  name: string;
-  date: Date;
-}
-
-export interface EventData {
-  event: SoireeEvent;
-  presentMemberIds: string[];
-  roles: Role[];
 }
 
 export const MEMBERS: Member[] = [
@@ -60,7 +49,7 @@ export const AVATAR_COLORS: string[] = [
   'bg-cyan-500',
 ];
 
-export function createInitialEventsData(): EventData[] {
+export function createInitialEventsData(): EventDetail[] {
   // Build today's date at midnight for the active-event seed
   const now = new Date();
   const todayYear = now.getFullYear();
@@ -69,8 +58,11 @@ export function createInitialEventsData(): EventData[] {
 
   return [
     {
-      event: { id: 'e1', name: 'Soirée Electro', date: new Date(todayYear, todayMonth, todayDay) },
-      presentMemberIds: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8'],
+      id: 'e1',
+      name: 'Soirée Electro',
+      date: new Date(todayYear, todayMonth, todayDay),
+      location: 'A',
+      memberPresence: Presence.PRESENT,
       roles: [
         {
           id: 'barbecue',
@@ -117,8 +109,11 @@ export function createInitialEventsData(): EventData[] {
       ],
     },
     {
-      event: { id: 'e2', name: 'Soirée Hip-Hop', date: new Date(2026, 3, 11) },
-      presentMemberIds: ['m1', 'm3', 'm5', 'm7', 'm9', 'm2', 'm4', 'm6'],
+      id: 'e2',
+      name: 'Soirée Hip-Hop',
+      date: new Date(2026, 3, 11),
+      location: 'B',
+      memberPresence: Presence.ABSENT,
       roles: [
         {
           id: 'barbecue',
@@ -165,8 +160,11 @@ export function createInitialEventsData(): EventData[] {
       ],
     },
     {
-      event: { id: 'e3', name: 'Soirée Jungle', date: new Date(2026, 4, 16) },
-      presentMemberIds: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'],
+      id: 'e3',
+      name: 'Soirée Jungle',
+      date: new Date(2026, 4, 16),
+      location: 'C',
+      memberPresence: Presence.ABSENT,
       roles: [
         {
           id: 'barbecue',
@@ -207,8 +205,11 @@ export function createInitialEventsData(): EventData[] {
       ],
     },
     {
-      event: { id: 'e4', name: 'Soirée Techno', date: new Date(2026, 5, 13) },
-      presentMemberIds: [],
+      id: 'e4',
+      name: 'Soirée Techno',
+      date: new Date(2026, 5, 13),
+      location: 'D',
+      memberPresence: Presence.PENDING,
       roles: [
         {
           id: 'barbecue',
@@ -243,8 +244,11 @@ export function createInitialEventsData(): EventData[] {
       ],
     },
     {
-      event: { id: 'e5', name: 'Soirée Latino', date: new Date(2026, 6, 4) },
-      presentMemberIds: [],
+      id: 'e5',
+      name: 'Soirée Latino',
+      date: new Date(2026, 6, 4),
+      location: 'E',
+      memberPresence: Presence.PRESENT,
       roles: [
         {
           id: 'barbecue',

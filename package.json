@@ -31,6 +31,7 @@
     "@ngrx/signals": "^21.1.0",
     "@ngrx/store": "^21.1.0",
     "@primeuix/themes": "^2.0.3",
+    "date-fns": "^4.1.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.3",

@@ -18,17 +18,21 @@
         }
       </div>
       <div class="flex-1"></div>
-      <bfd-btn kind="ghost" size="sm">Aujourd'hui</bfd-btn>
+      <bfd-btn kind="ghost" size="sm" (clicked)="goToToday()">Aujourd'hui</bfd-btn>
       <button
+        (click)="previousMonth()"
         type="button"
-        class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
+        class="flex h-7.5 w-7.5 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
       >
         <svg [lucideIcon]="icChevronRight" [size]="14" class="rotate-180" aria-hidden="true"></svg>
       </button>
-      <div class="px-2 text-[15px] font-semibold -tracking-[0.2px] text-text">{{ monthName }}</div>
+      <div class="px-2 text-[15px] font-semibold -tracking-[0.2px] text-text">
+        {{ activeMonthDisplay() }}
+      </div>
       <button
+        (click)="nextMonth()"
         type="button"
-        class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
+        class="flex h-7.5 w-7.5 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted"
       >
         <svg [lucideIcon]="icChevronRight" [size]="14" aria-hidden="true"></svg>
       </button>
@@ -47,7 +51,7 @@
 
     <!-- Days grid -->
     <div class="grid flex-1 grid-cols-7 auto-rows-fr border-l border-border-s">
-      @for (d of days; track $index) {
+      @for (d of days(); track $index) {
         @let ev = eventFor(d);
         @let im = inMonth(d);
         <div
@@ -65,13 +69,11 @@
           </div>
           @if (ev) {
             <div
-              [class]="
-                'flex flex-col gap-[3px] rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug ' +
-                evBgClass(ev.kind)
-              "
+              (click)="selectEventView(ev.id)"
+              [class]="`flex flex-col gap-0.75 rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug cursor-pointer select-none ${getEventColor(ev)}`"
             >
               <span class="overflow-hidden text-ellipsis whitespace-nowrap">{{ ev.name }}</span>
-              <span class="mono text-[9.5px] opacity-85">{{ respLabel(ev.resp) }}</span>
+              <span class="mono text-[9.5px] opacity-85">{{ respLabel(ev) }}</span>
             </div>
           }
         </div>
@@ -80,74 +82,5 @@
   </div>
 
   <!-- RIGHT: Roster aside -->
-  <aside class="flex flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5">
-    <div>
-      <bfd-badge kind="red" [dot]="true">SOIRÉE EN PRÉPARATION</bfd-badge>
-      <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
-        Soirée Hivernale
-      </h3>
-      <div class="text-[12px] text-muted">Ven. 14 fév. · 19:30 — 23:00</div>
-    </div>
-
-    <!-- Response stats -->
-    <div class="grid grid-cols-3 gap-2">
-      @for (s of responseStats; track s.label) {
-        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-          <div class="text-[10px] uppercase tracking-wider text-muted">{{ s.label }}</div>
-          <div [class]="'tnum mt-0.5 text-[22px] font-semibold ' + s.colorClass">{{ s.value }}</div>
-        </div>
-      }
-    </div>
-
-    <!-- Response bar -->
-    <div>
-      <div class="mb-1.5 flex justify-between text-[11px] text-muted">
-        <span>Taux de réponse</span>
-        <span class="tnum">92% · 24 invités</span>
-      </div>
-      <div class="flex h-1.5 overflow-hidden rounded-sm bg-border">
-        <div class="bg-ok" style="width: 75%"></div>
-        <div class="bg-red" style="width: 17%"></div>
-        <div class="bg-warn" style="width: 8%"></div>
-      </div>
-    </div>
-
-    <!-- Roster -->
-    <div class="mt-1">
-      <div class="mb-2 flex items-center">
-        <div class="flex-1 text-[12px] font-semibold text-text">Réponses · 24 membres</div>
-        <bfd-btn kind="ghost" size="sm" [icon]="icBell">Relancer</bfd-btn>
-      </div>
-
-      <div class="flex flex-col overflow-hidden rounded-md border border-border-s">
-        @for (r of roster; track r.name; let i = $index; let last = $last) {
-          @let b = rosterStatusBadge(r);
-          <div
-            [class]="
-              'flex items-center gap-2.5 px-2.5 py-2 ' +
-              (last ? '' : 'border-b border-border-s') +
-              ' ' +
-              (i % 2 ? 'bg-surface-2' : '')
-            "
-          >
-            <bfd-avatar [name]="r.name" [size]="24" />
-            <div class="min-w-0 flex-1">
-              <div
-                class="overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium text-text"
-              >
-                {{ r.name }}
-              </div>
-              <div class="text-[10px] text-muted">
-                {{ r.role }}
-                @if (r.when) {
-                  · {{ r.when }}
-                }
-              </div>
-            </div>
-            <bfd-badge [kind]="b.kind" [dot]="b.dot">{{ b.label }}</bfd-badge>
-          </div>
-        }
-      </div>
-    </div>
-  </aside>
+  <bfd-presences-roster-aside [eventId]="activeEventView()" />
 </div>

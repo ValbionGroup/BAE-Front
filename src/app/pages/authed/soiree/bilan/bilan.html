@@ -1,0 +1,259 @@
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icTicket">Ouvrir rétro</bfd-btn>
+  <bfd-btn kind="secondary" size="md" [icon]="icDownload">Exporter PDF</bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icCheck">Valider &amp; archiver</bfd-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto px-6 pt-5 pb-10">
+  <!-- Hero metrics -->
+  <div
+    class="p-[22px] mb-[18px] border border-border-s rounded-lg relative overflow-hidden"
+    style="
+      background: linear-gradient(
+        135deg,
+        var(--bae-surface) 0%,
+        color-mix(in oklch, var(--bae-ok) 14%, var(--bae-surface)) 100%
+      );
+    "
+  >
+    <div
+      class="absolute -top-16 -right-16 w-60 h-60 rounded-full opacity-20"
+      style="background: radial-gradient(circle, var(--bae-ok) 0%, transparent 70%)"
+    ></div>
+
+    <div class="flex items-center gap-2.5 mb-3">
+      <bfd-badge kind="ok" [dot]="true">SOIRÉE CLÔTURÉE</bfd-badge>
+      <bfd-badge kind="ghost">9e SOIRÉE · SAISON 25-26</bfd-badge>
+      <bfd-badge kind="blue">RECORD BATTU · +18% vs Halloween</bfd-badge>
+    </div>
+
+    <div class="grid grid-cols-5 gap-[22px] mt-3.5">
+      @for (k of hero; track k.l) {
+        <div>
+          <div class="text-[11px] text-muted mb-1">{{ k.l }}</div>
+          <div
+            [class]="
+              'tnum font-semibold text-text -tracking-[0.5px] ' +
+              (k.big ? 'text-[32px]' : 'text-2xl')
+            "
+          >
+            {{ k.v }}
+          </div>
+          <div class="text-[11.5px] text-ok mt-1 font-medium">{{ k.d }}</div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="grid grid-cols-[1fr_360px] gap-[18px]">
+    <!-- MAIN -->
+    <div class="flex flex-col gap-[18px]">
+      <!-- Channel breakdown -->
+      <bfd-card [padding]="0">
+        <div class="flex items-center px-4 py-3.5 border-b border-border-s">
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold text-text">Répartition par canal</div>
+            <div class="text-[11px] text-muted mt-0.5">
+              Réconcilié à 100% · écart caisse −2,00 €
+            </div>
+          </div>
+          <bfd-badge kind="ok" [dot]="true">Vérifié</bfd-badge>
+        </div>
+        <div class="p-4">
+          <div class="flex h-9 rounded-md overflow-hidden border border-border-s">
+            @for (s of segments; track s.l) {
+              <div
+                [class]="
+                  'flex items-center justify-center text-white text-xs font-semibold ' + s.bg
+                "
+                [style.width.%]="s.p"
+              >
+                {{ s.p }}%
+              </div>
+            }
+          </div>
+          <div class="grid grid-cols-4 gap-3 mt-3.5">
+            @for (c of channels; track c.l) {
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span [class]="'w-2 h-2 rounded-sm ' + c.cls"></span>
+                  <span class="text-[11px] text-muted">{{ c.l }}</span>
+                </div>
+                <div class="tnum text-[15px] font-semibold text-text mt-1">{{ c.v }}</div>
+                <div class="text-[10.5px] text-muted mt-0.5">{{ c.sub }}</div>
+              </div>
+            }
+          </div>
+        </div>
+      </bfd-card>
+
+      <!-- Top products -->
+      <bfd-card [padding]="0">
+        <div class="flex items-center px-4 py-3.5 border-b border-border-s">
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold text-text">Produits · classement</div>
+            <div class="text-[11px] text-muted mt-0.5">Trié par CA · 8 produits actifs sur 12</div>
+          </div>
+          <bfd-btn kind="ghost" size="sm" [iconRight]="icChevDown">CA</bfd-btn>
+        </div>
+        <div
+          class="grid grid-cols-[32px_1fr_80px_100px_100px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
+        >
+          <span>#</span><span>Produit</span>
+          <span class="text-right">Qté</span>
+          <span class="text-right">CA</span>
+          <span class="text-right">Marge</span>
+        </div>
+        @for (p of products; track p.n; let i = $index; let last = $last) {
+          <div
+            [class]="
+              'grid grid-cols-[32px_1fr_80px_100px_100px] px-4 py-3 items-center text-[12.5px] relative ' +
+              (last ? '' : 'border-b border-border-s')
+            "
+          >
+            <span class="mono text-muted text-[11px]">{{
+              i + 1 < 10 ? '0' + (i + 1) : i + 1
+            }}</span>
+            <div class="min-w-0 flex items-center gap-2">
+              <span class="text-text">{{ p.n }}</span>
+              @if (p.tag === 'star') {
+                <bfd-badge kind="warn">TOP</bfd-badge>
+              }
+              @if (p.tag === 'new') {
+                <bfd-badge kind="blue">NEW</bfd-badge>
+              }
+            </div>
+            <span class="mono tnum text-right text-text-2">{{ p.q }}</span>
+            <span class="mono tnum text-right text-text font-medium">{{ p.v.toFixed(0) }} €</span>
+            <span class="mono tnum text-right text-ok font-medium">{{ p.marge }} €</span>
+          </div>
+        }
+      </bfd-card>
+
+      <!-- Team performance -->
+      <bfd-card [padding]="0">
+        <div class="px-4 py-3.5 border-b border-border-s">
+          <div class="text-[13px] font-semibold text-text">Performance équipe</div>
+          <div class="text-[11px] text-muted mt-0.5">
+            Score = ventes/h · ponctualité · qualité retours
+          </div>
+        </div>
+        <div class="p-4 grid grid-cols-3 gap-3">
+          @for (m of team; track m.who) {
+            <div
+              [class]="
+                'p-3 rounded-md border ' +
+                (m.mvp ? 'bg-warn-soft border-warn' : 'bg-surface-2 border-border-s')
+              "
+            >
+              <div class="flex items-center gap-2">
+                <bfd-avatar [name]="m.who" [size]="28" />
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] font-medium text-text">{{ m.who }}</div>
+                  <div class="text-[10.5px] text-muted mt-px">{{ m.role }}</div>
+                </div>
+                <div class="tnum text-lg font-semibold text-text">{{ m.score }}</div>
+              </div>
+              @if (m.k) {
+                <div
+                  [class]="
+                    'mt-2 text-[11px] ' + (m.mvp ? 'text-warn font-semibold' : 'text-text-2')
+                  "
+                >
+                  @if (m.mvp) {
+                    <svg
+                      [lucideIcon]="icStar"
+                      [size]="11"
+                      class="inline mr-1 -mt-px"
+                      fill="currentColor"
+                    ></svg>
+                  }
+                  {{ m.k }}
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </bfd-card>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="flex flex-col gap-[18px]">
+      <!-- Stock consumed -->
+      <bfd-card [padding]="0">
+        <div class="px-4 py-3.5 border-b border-border-s">
+          <div class="text-[13px] font-semibold text-text">Stock consommé</div>
+          <div class="text-[11px] text-muted mt-0.5">Décrément automatique appliqué</div>
+        </div>
+        @for (s of stockConsumed; track s.p) {
+          <div class="flex items-center gap-2.5 px-4 py-2.5 border-t border-border-s">
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-text">{{ s.p }}</div>
+              <div class="text-[10.5px] text-muted mt-0.5">
+                −{{ s.q }} · reste
+                <b [class]="s.ok ? 'text-text-2' : 'text-danger'">{{ s.r }}</b>
+              </div>
+            </div>
+            @if (!s.ok) {
+              <bfd-badge kind="danger" [dot]="true">À racheter</bfd-badge>
+            }
+          </div>
+        }
+      </bfd-card>
+
+      <!-- Retro -->
+      <bfd-card>
+        <div class="flex items-center mb-2.5">
+          <div class="flex-1 text-[13px] font-semibold text-text">Rétro · post-soirée</div>
+          <bfd-btn kind="ghost" size="sm" [icon]="icPlus">Ajouter</bfd-btn>
+        </div>
+        @for (r of retros; track r.t; let i = $index) {
+          <div [class]="'flex gap-2.5 py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
+            <div
+              [class]="
+                'w-6 h-6 rounded-sm inline-flex items-center justify-center shrink-0 ' +
+                retroIconClass(r.k)
+              "
+            >
+              <svg [lucideIcon]="r.icon" [size]="12" aria-hidden="true"></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] font-medium text-text">{{ r.t }}</div>
+              <div class="text-[11px] text-muted mt-0.5 leading-snug">{{ r.s }}</div>
+            </div>
+          </div>
+        }
+      </bfd-card>
+
+      <!-- Next event -->
+      <bfd-card>
+        <div class="text-[13px] font-semibold text-text mb-1">Prochaine soirée</div>
+        <div class="text-[11px] text-muted mb-3">Recommandation algo</div>
+        <div class="flex items-center gap-3">
+          <div
+            class="w-[50px] h-[50px] rounded-md bg-surface-2 border border-border-s flex flex-col items-center justify-center"
+          >
+            <span class="tnum text-lg font-semibold text-text">07</span>
+            <span class="text-[9px] text-muted uppercase">mars</span>
+          </div>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium text-text">Soirée Carnaval</div>
+            <div class="text-[11px] text-muted mt-0.5">
+              CA estimé <b class="text-text">2 850 €</b> · staffing 22 personnes
+            </div>
+          </div>
+        </div>
+        <bfd-btn
+          kind="primary"
+          size="sm"
+          [icon]="icArrow"
+          [full]="true"
+          (clicked)="planNext()"
+          class="mt-3.5 block"
+        >
+          Lancer la préparation
+        </bfd-btn>
+      </bfd-card>
+    </div>
+  </div>
+</div>
