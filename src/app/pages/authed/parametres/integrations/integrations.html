@@ -1,10 +1,14 @@
-<div class="h-full overflow-y-auto px-6 pt-5 pb-10">
-  <div class="flex justify-end mb-3.5">
-    <bfd-btn kind="primary" [icon]="icPlus">Ajouter</bfd-btn>
-  </div>
+<div class="flex h-full overflow-hidden">
+  <bfd-parametres-side-nav />
 
-  <div class="grid grid-cols-[220px_1fr] gap-7">
-    <bfd-parametres-side-nav />
+  <div class="flex-1 overflow-y-auto px-8 pt-6 pb-8">
+    <div class="flex items-start gap-3 mb-5">
+      <div class="flex-1">
+        <h2 class="m-0 mb-1 text-[19px] font-semibold -tracking-[0.2px] text-text">Intégrations</h2>
+        <p class="m-0 text-[12.5px] text-muted">6 actives sur 8 · connecte tes outils externes.</p>
+      </div>
+      <bfd-btn kind="primary" [icon]="icPlus">Ajouter</bfd-btn>
+    </div>
 
     <div class="max-w-[920px]">
       <!-- Category filter -->

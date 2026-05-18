@@ -1,26 +1,6 @@
 <div class="flex h-full overflow-hidden">
-  <!-- LEFT: section nav -->
-  <aside class="w-60 shrink-0 overflow-y-auto border-r border-border-s px-3 py-4">
-    @for (s of sections; track s.id) {
-      <div
-        (click)="activeSection.set(s.id)"
-        [class]="
-          'mb-px flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-[13px] ' +
-          (s.id === activeSection() ? 'bg-surface-2 text-text' : 'bg-transparent text-text-2')
-        "
-      >
-        <svg
-          [lucideIcon]="s.icon"
-          [size]="15"
-          [class]="s.id === activeSection() ? 'text-blue' : 'text-muted'"
-          aria-hidden="true"
-        ></svg>
-        <span>{{ s.l }}</span>
-      </div>
-    }
-  </aside>
+  <bfd-parametres-side-nav />
 
-  <!-- RIGHT: settings content -->
   <div class="flex-1 overflow-y-auto px-8 pt-6 pb-8">
     <h2 class="m-0 mb-1 text-[19px] font-semibold -tracking-[0.2px] text-text">Profil</h2>
     <p class="m-0 mb-5 text-[12.5px] text-muted">Mets à jour tes infos et tes préférences.</p>

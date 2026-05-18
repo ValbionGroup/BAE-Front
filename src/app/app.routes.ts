@@ -131,8 +131,7 @@ export const routes: Routes = [
       },
       { path: AppRoutes.equipe, component: Equipe },
       { path: AppRoutes.etats, component: Etats },
-      { path: '**', component: NotFound },
     ],
   },
-  { path: '**', redirectTo: '' },
+  { path: '**', component: NotFound },
 ];

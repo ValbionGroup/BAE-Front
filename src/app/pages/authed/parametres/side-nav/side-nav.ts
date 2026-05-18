@@ -12,6 +12,7 @@ import {
   LucideUsers,
   LucideZap,
 } from '@lucide/angular';
+import {AppRoutes} from '#app/app.routes';
 
 interface NavItem {
   readonly id: string;
@@ -30,32 +31,22 @@ interface NavItem {
 })
 export class ParametresSideNav {
   protected readonly items: readonly NavItem[] = [
-    { id: 'profile', l: 'Profil', icon: LucideUser, route: '/parametres', exact: true },
-    { id: 'security', l: 'Sécurité & 2FA', icon: LucideShield, route: '/parametres/securite' },
-    { id: 'notifications', l: 'Notifications', icon: LucideBell, route: '/notifications' },
-    { id: 'appearance', l: 'Apparence', icon: LucideSun, route: '/parametres', exact: true },
+    { id: 'profile', l: 'Profil', icon: LucideUser, route: `/${AppRoutes.parametres}`, exact: true },
+    { id: 'security', l: 'Sécurité & 2FA', icon: LucideShield, route: `/${AppRoutes.parametresSecurite}` },
+    { id: 'notifications', l: 'Notifications', icon: LucideBell, route: `/${AppRoutes.notifications}` },
     {
       id: 'integrations',
       l: 'Intégrations',
       icon: LucideZap,
-      route: '/parametres/integrations',
+      route: `/${AppRoutes.parametresIntegrations}`,
     },
-    { id: 'team', l: 'Équipe BAE', icon: LucideUsers, route: '/equipe' },
     {
       id: 'modules',
       l: 'Modules',
       icon: LucideSettings,
-      route: '/parametres/modules',
+      route: `/${AppRoutes.parametresModules}`,
       adm: true,
-    },
-    {
-      id: 'billing',
-      l: 'Cotisation BAE',
-      icon: LucideEuro,
-      route: '/parametres',
-      exact: true,
-      adm: true,
-    },
+    }
   ];
 
   protected showAdmHead(idx: number): boolean {

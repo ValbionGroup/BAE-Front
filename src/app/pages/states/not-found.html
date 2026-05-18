@@ -1,4 +1,4 @@
-<div class="h-full overflow-hidden relative">
+<div class="h-screen overflow-hidden relative">
   <!-- Background lines -->
   <div
     aria-hidden="true"
@@ -20,12 +20,12 @@
       -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%);
     "
   >
-    @for (i of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]; track i) {
+    @for (i of rainCells; track i) {
       <div class="whitespace-nowrap">
-        @for (j of [0,1,2,3,4,5,6,7,8,9,10,11,12,13]; track j) {
-          <span class="mr-3.5" [style.opacity]="(i + j) % 4 === 0 ? 1 : 0.5">404</span>
-        }
-      </div>
+                @for (j of rainCells.slice(rainCells.length/2); track j) {
+                  <span class="mr-3.5" [style.opacity]="(i + j) % 4 === 0 ? 1 : 0.5">404</span>
+                }
+        </div>
     }
   </div>
 
@@ -86,19 +86,17 @@
         terrain connu.
       </p>
 
-      <div class="inline-flex gap-2 mt-[22px]">
+      <div class="inline-flex gap-2 mt-5.5">
         <bfd-btn kind="primary" [icon]="icHome" routerLink="/">Retour au dashboard</bfd-btn>
-        <bfd-btn kind="secondary" [icon]="icSearch">Rechercher</bfd-btn>
-        <bfd-btn kind="ghost" [icon]="icTicket" routerLink="/tickets">Signaler</bfd-btn>
       </div>
 
       <div
-        class="mono mt-6 inline-flex items-center gap-2.5 px-3 py-1.5 bg-surface-2 border border-border-s rounded-full text-[10.5px] text-faint"
+        class="mono mt-6 inline-flex max-w-full items-center gap-2.5 px-3 py-1.5 bg-surface-2 border border-border-s rounded-full text-[10.5px] text-faint"
       >
-        <span>GET</span>
-        <span class="text-text-2">/api/v1/stocks/L23-991</span>
-        <span class="text-red">404</span>
-        <span>· req-2026-02-12-14:32:08-x91f</span>
+        <span class="shrink-0">GET</span>
+        <span class="text-text-2 min-w-0 truncate">{{ requestedUrl }}</span>
+        <span class="text-red shrink-0">404</span>
+        <span class="shrink-0">· req-{{ requestedAt }}</span>
       </div>
     </div>
   </div>

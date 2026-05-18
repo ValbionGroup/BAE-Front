@@ -1,18 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
-  LucideBell,
   LucideDynamicIcon,
-  LucideIconInput,
-  LucideLock,
   LucideMail,
   LucideMoon,
   LucideSettings,
-  LucideShield,
   LucideSun,
   LucideUpload,
-  LucideUser,
-  LucideUsers,
-  LucideZap,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ThemeService } from '#core/services/theme/theme-service';
@@ -22,12 +15,7 @@ import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { Toggle } from '#shared/components/ui/toggle/toggle';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
-
-interface Section {
-  readonly id: string;
-  readonly l: string;
-  readonly icon: LucideIconInput;
-}
+import { ParametresSideNav } from './side-nav/side-nav';
 
 interface Module {
   readonly l: string;
@@ -38,7 +26,7 @@ interface Module {
 
 @Component({
   selector: 'bfd-parametres',
-  imports: [Btn, Badge, Field, Input, Toggle, Avatar, LucideDynamicIcon],
+  imports: [Btn, Badge, Field, Input, Toggle, Avatar, ParametresSideNav, LucideDynamicIcon],
   templateUrl: './parametres.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,20 +42,6 @@ export class Parametres {
   }
 
   protected readonly icUpload = LucideUpload;
-  protected readonly icSun = LucideSun;
-  protected readonly icMoon = LucideMoon;
-  protected readonly icSettings = LucideSettings;
-
-  protected readonly sections: readonly Section[] = [
-    { id: 'profil', l: 'Profil', icon: LucideUser },
-    { id: 'secu', l: 'Sécurité & 2FA', icon: LucideShield },
-    { id: 'aff', l: 'Affichage', icon: LucideSun },
-    { id: 'notif', l: 'Notifications', icon: LucideBell },
-    { id: 'mods', l: 'Modules', icon: LucideSettings },
-    { id: 'eq', l: 'Équipe & rôles', icon: LucideUsers },
-    { id: 'int', l: 'Intégrations', icon: LucideZap },
-  ];
-  protected readonly activeSection = signal('profil');
 
   protected readonly twofa = signal(true);
 
@@ -92,9 +66,7 @@ export class Parametres {
 
   protected readonly activeTheme = computed(() => this.theme.mode());
 
-  // Lucide directives also need imports
   protected readonly icMail = LucideMail;
-  protected readonly icLock = LucideLock;
 
   protected setTheme(id: 'light' | 'dark' | 'system'): void {
     this.theme.set(id);
