@@ -656,16 +656,14 @@ export class Coordination implements OnInit {
     return p.assignedMemberIds.length >= p.need;
   }
 
-  protected posteBgClass(color: string): string {
-    const palette: Record<string, string> = {
-      blue: 'bg-blue-500',
-      emerald: 'bg-emerald-500',
-      amber: 'bg-amber-500',
-      rose: 'bg-rose-500',
-      indigo: 'bg-indigo-500',
-      teal: 'bg-teal-500',
-    };
-    return palette[color] ?? 'bg-blue-500';
+  protected posteBgClass(c: string): string {
+    return c === 'red'
+      ? 'bg-red-soft text-red'
+      : c === 'blue'
+        ? 'bg-blue-soft text-blue'
+        : c === 'green'
+          ? 'bg-ok-soft text-ok'
+          : 'bg-warn-soft text-warn';
   }
 
   protected toFill(p: PosteView): number {
