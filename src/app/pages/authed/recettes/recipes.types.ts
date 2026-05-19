@@ -5,6 +5,10 @@ export interface RecipeIngredient {
   readonly brand: string | null;
   readonly categoryName: string | null;
   readonly stockQty: number;
+  readonly rank: number;
+  readonly quantity: number | null;
+  readonly unitPrice: number | null;
+  readonly instruction: string | null;
 }
 
 export interface RecipeProduct {
@@ -14,4 +18,5 @@ export interface RecipeProduct {
   readonly category: string | null;
   readonly ingredientCount: number;
   readonly lastPrice: number | null;
+  readonly cost: number | null;
 }
