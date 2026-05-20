@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { map, take } from 'rxjs';
 import { TokensService } from '#core/services/tokens/tokens-service';
-import { AppRoutes } from '#app/app.routes';
+import { AppRoutes } from '#app/app-routes.const';
 
 export const guestGuard: CanActivateFn = () => {
   const router = inject(Router);

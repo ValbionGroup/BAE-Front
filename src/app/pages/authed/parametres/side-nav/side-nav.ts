@@ -12,7 +12,7 @@ import {
   LucideUsers,
   LucideZap,
 } from '@lucide/angular';
-import { AppRoutes } from '#app/app.routes';
+import { AppRoutes } from '#app/app-routes.const';
 
 interface NavItem {
   readonly id: string;

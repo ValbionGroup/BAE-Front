@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { ColumnType, TableColumn } from '../table';
+import { ColumnType, TableColumn } from '../table.types';
 import { TableCellLabel } from '../table-cells/table-cell-label/table-cell-label';
 import { TableCellNumber } from '../table-cells/table-cell-number/table-cell-number';
 import { TableCellPill } from '../table-cells/table-cell-pill/table-cell-pill';

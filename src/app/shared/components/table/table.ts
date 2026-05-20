@@ -1,28 +1,9 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ColumnType, TableColumn } from './table.types';
 import { TableContent } from './table-content/table-content';
 
-export enum ColumnType {
-  TEXT = 'text',
-  LABEL = 'label',
-  NUMBER = 'number',
-  DATE = 'date',
-  QUANTITY = 'quantity',
-  STATUS = 'status',
-  PILL = 'pill',
-  PILLS = 'pills',
-}
-
-export interface TableColumn<T> {
-  key: keyof T;
-  label: string;
-  type: ColumnType;
-  renderHook?: (value: unknown, row?: T) => unknown;
-  tooltip?: string;
-  responsive?: 'sm' | 'md';
-  hidden?: boolean;
-  unitKey?: keyof T;
-  subtitleKey?: keyof T;
-}
+export { ColumnType } from './table.types';
+export type { TableColumn } from './table.types';
 
 @Component({
   selector: 'bfd-table',

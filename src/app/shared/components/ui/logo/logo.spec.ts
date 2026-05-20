@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Logo } from './logo';
 
-describe('Logo', () => {
+describe(Logo.name, () => {
   let component: Logo;
   let fixture: ComponentFixture<Logo>;
 
@@ -17,7 +17,7 @@ describe('Logo', () => {
     fixture.detectChanges();
   });
 
-  it('should create with default size and render the BAE text', () => {
+  it('should create with default size and render the brand text', () => {
     expect(component).toBeTruthy();
     expect(component.size()).toBe(28);
     expect(component.showText()).toBe(true);
@@ -26,6 +26,6 @@ describe('Logo', () => {
     const svg = host.querySelector('svg');
     expect(svg?.getAttribute('width')).toBe('28');
     expect(svg?.getAttribute('height')).toBe('28');
-    expect(host.textContent).toContain('BAE');
+    expect(host.textContent).toContain("BA'ERP");
   });
 });

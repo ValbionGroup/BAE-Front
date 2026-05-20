@@ -1,15 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { Topbar } from './topbar';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 
-describe('Topbar', () => {
+describe(Topbar.name, () => {
   let fixture: ComponentFixture<Topbar>;
   let pageHeader: PageHeaderService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Topbar],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Topbar);

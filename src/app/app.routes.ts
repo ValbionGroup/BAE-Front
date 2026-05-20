@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AppRoutes } from './app-routes.const';
 import { Login } from '#pages/guest/login/login';
 import { AppShell } from '#pages/app-shell/app-shell';
 import { Home } from '#pages/authed/home/home';
@@ -32,35 +33,7 @@ import { NotFound } from '#pages/states/not-found';
 import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
 
-export const AppRoutes = {
-  home: '',
-  presences: 'presences',
-  myPresences: 'presences/my',
-  adherents: 'adherents',
-  stocks: 'stocks',
-  stocksScanner: 'stocks/scanner',
-  recettes: 'recettes',
-  coordination: 'coordination',
-  logistique: 'logistique',
-  caisse: 'caisse',
-  caisseCloture: 'caisse/cloture',
-  precommandes: 'public/precommandes',
-  precommandesAdmin: 'precommandes',
-  soiree: 'soiree',
-  soireeLive: 'soiree/live',
-  soireeBilan: 'soiree/bilan',
-  paiements: 'paiements',
-  analyse: 'analyse',
-  tickets: 'tickets',
-  notifications: 'notifications',
-  parametres: 'parametres',
-  parametresSecurite: 'parametres/securite',
-  parametresIntegrations: 'parametres/integrations',
-  parametresModules: 'parametres/modules',
-  equipe: 'equipe',
-  etats: 'etats',
-  login: 'login',
-} as const;
+export { AppRoutes } from './app-routes.const';
 
 export const routes: Routes = [
   {
