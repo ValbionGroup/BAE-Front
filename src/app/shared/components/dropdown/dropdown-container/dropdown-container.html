@@ -1,0 +1,61 @@
+@if (current(); as cfg) {
+  <div
+    [bfdFloating]="cfg.anchor"
+    [bfdPlacement]="cfg.placement ?? 'bottom-end'"
+    [bfdDistance]="6"
+    class="rounded-md border border-border bg-surface-3 p-1 shadow-[0_12px_32px_rgba(0,0,0,.4)]"
+    [style.width.px]="cfg.width ?? null"
+    role="menu"
+  >
+    @if (cfg.header) {
+      <div class="px-2.5 pt-2 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-muted">
+        {{ cfg.header }}
+      </div>
+    }
+
+    @if (cfg.items.length === 0 && cfg.emptyLabel) {
+      <div class="px-2.5 py-3 text-[12px] text-muted">{{ cfg.emptyLabel }}</div>
+    }
+
+    @for (item of cfg.items; track $index) {
+      @switch (item.type) {
+        @case ('separator') {
+          <hr class="my-1 border-t border-border" />
+        }
+        @case ('action') {
+          <button
+            type="button"
+            (click)="onItemClick(item)"
+            [disabled]="item.disabled"
+            [class]="
+              'flex w-full cursor-pointer items-center gap-2.5 rounded-sm border-none bg-transparent px-2.5 py-1.5 text-left text-[12.5px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50 ' +
+              (item.danger ? 'text-danger' : 'text-text')
+            "
+            role="menuitem"
+          >
+            @if (item.icon) {
+              <svg
+                [lucideIcon]="item.icon"
+                [size]="14"
+                [class]="item.danger ? 'text-danger' : 'text-muted'"
+                aria-hidden="true"
+              ></svg>
+            }
+            <div class="min-w-0 flex-1">
+              <div [class]="item.danger ? 'text-danger' : 'text-text'">{{ item.label }}</div>
+              @if (item.description) {
+                <div class="text-[10.5px] text-muted">{{ item.description }}</div>
+              }
+            </div>
+            @if (item.trailing) {
+              <span class="mono tnum text-[11px] text-muted">{{ item.trailing }}</span>
+            }
+            @if (item.kbd) {
+              <bfd-kbd>{{ item.kbd }}</bfd-kbd>
+            }
+          </button>
+        }
+      }
+    }
+  </div>
+}

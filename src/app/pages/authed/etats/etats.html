@@ -1,0 +1,412 @@
+<div class="h-full overflow-y-auto p-8 flex flex-col gap-4">
+  <div class="grid grid-cols-2 gap-4">
+    <!-- A · 404 -->
+    <article class="bg-surface border border-border-s rounded-lg overflow-hidden">
+      <div class="flex items-center gap-3 px-3.5 py-2 bg-surface-2 border-b border-border-s">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+        </div>
+        <span class="mono text-[10.5px] text-muted font-medium">Stocks · /lot/L23-991</span>
+        <div class="flex-1"></div>
+        <span
+          class="mono text-[9.5px] text-text-2 px-1.5 py-0.5 bg-bg border border-border rounded-sm font-semibold tracking-wider"
+          >404</span
+        >
+      </div>
+      <div class="px-3.5 pt-3 pb-1 text-[11px] text-muted font-medium">A · Page introuvable</div>
+      <div class="relative px-7 pt-10 pb-5 text-center" style="min-height: 380px">
+        <div
+          aria-hidden="true"
+          class="absolute inset-0 opacity-60"
+          style="
+            background-image:
+              repeating-linear-gradient(
+                0deg,
+                transparent 0 22px,
+                color-mix(in oklch, var(--bae-text) 5%, transparent) 22px 23px
+              ),
+              radial-gradient(
+                circle at 80% 20%,
+                color-mix(in oklch, var(--bae-blue) 14%, transparent) 0%,
+                transparent 50%
+              );
+          "
+        ></div>
+        <div
+          class="relative inline-flex items-center gap-1 font-bold text-text"
+          style="font-size: 96px; line-height: 0.9; letter-spacing: -5px"
+        >
+          <span>4</span>
+          <span class="relative inline-block" style="width: 80px; height: 80px; margin: 0 -4px">
+            <span
+              class="absolute opacity-85 bg-red"
+              style="
+                top: 6px;
+                left: 6px;
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
+                transform: rotate(-6deg);
+              "
+            ></span>
+            <span
+              class="absolute opacity-90 bg-blue"
+              style="bottom: 4px; right: 4px; width: 54px; height: 54px; border-radius: 50%"
+            ></span>
+          </span>
+          <span>4</span>
+        </div>
+        <div class="mono mt-4 text-[10.5px] text-muted uppercase" style="letter-spacing: 2px">
+          <span class="text-red">●</span> ROUTE INTROUVABLE <span class="text-red">●</span>
+        </div>
+        <h3 class="mt-2 text-lg font-semibold text-text">Cette page a quitté la soirée.</h3>
+        <p class="text-xs text-muted mt-2 max-w-[300px] mx-auto leading-relaxed">
+          Le lot recherché a peut-être été supprimé, archivé, ou l'URL est mal copiée.
+        </p>
+        <div class="inline-flex gap-1.5 mt-4 relative">
+          <bfd-btn kind="primary" size="sm" [icon]="icHome">Retour au dashboard</bfd-btn>
+          <bfd-btn kind="secondary" size="sm" [icon]="icSearch">Rechercher</bfd-btn>
+          <bfd-btn kind="ghost" size="sm" [icon]="icTicket">Signaler</bfd-btn>
+        </div>
+      </div>
+    </article>
+
+    <!-- B · 403 -->
+    <article class="bg-surface border border-border-s rounded-lg overflow-hidden">
+      <div class="flex items-center gap-3 px-3.5 py-2 bg-surface-2 border-b border-border-s">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+        </div>
+        <span class="mono text-[10.5px] text-muted font-medium">Paiements · transactions</span>
+        <div class="flex-1"></div>
+        <span
+          class="mono text-[9.5px] text-text-2 px-1.5 py-0.5 bg-bg border border-border rounded-sm font-semibold tracking-wider"
+          >403</span
+        >
+      </div>
+      <div class="px-3.5 pt-3 pb-1 text-[11px] text-muted font-medium">
+        B · Accès refusé · permissions
+      </div>
+      <div class="px-6 pt-10 pb-7 text-center" style="min-height: 380px">
+        <div
+          class="w-[84px] h-[84px] mx-auto rounded-full bg-danger-soft text-danger flex items-center justify-center relative"
+        >
+          <svg [lucideIcon]="icLock" [size]="38"></svg>
+          <span
+            class="absolute -inset-1.5 rounded-full border-2 border-dashed border-danger opacity-40"
+          ></span>
+        </div>
+        <div class="text-lg font-semibold text-text mt-5">Accès réservé</div>
+        <div class="text-xs text-muted mt-2 max-w-[340px] mx-auto leading-relaxed">
+          Ton rôle actuel <b class="text-text">Membre actif</b> ne permet pas de consulter les
+          transactions financières. Demande à la Trésorière de te déléguer un accès lecture.
+        </div>
+        <div
+          class="mt-4 p-3 bg-surface-2 border border-border-s rounded-md max-w-[340px] mx-auto flex items-center gap-2.5 text-left"
+        >
+          <bfd-avatar name="Léa Marchand" [size]="32" />
+          <div class="flex-1">
+            <div class="text-xs text-text font-medium">Léa Marchand</div>
+            <div class="text-[10.5px] text-muted">Trésorière · en ligne</div>
+          </div>
+          <bfd-btn kind="secondary" size="sm" [icon]="icMail">Demander</bfd-btn>
+        </div>
+        <div class="inline-flex gap-2 mt-5">
+          <bfd-btn kind="ghost" [icon]="icArrowRight">Retour</bfd-btn>
+        </div>
+      </div>
+    </article>
+
+    <!-- C · OFFLINE · nav -->
+    <article class="bg-surface border border-border-s rounded-lg overflow-hidden">
+      <div class="flex items-center gap-3 px-3.5 py-2 bg-surface-2 border-b border-border-s">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+        </div>
+        <span class="mono text-[10.5px] text-muted font-medium">BAE-ERP · navigation</span>
+        <div class="flex-1"></div>
+        <span
+          class="mono text-[9.5px] text-text-2 px-1.5 py-0.5 bg-bg border border-border rounded-sm font-semibold tracking-wider"
+          >OFFLINE</span
+        >
+      </div>
+      <div class="px-3.5 pt-3 pb-1 text-[11px] text-muted font-medium">
+        C · Hors-ligne · navigation
+      </div>
+      <div class="px-6 pt-8 pb-6" style="min-height: 380px">
+        <div class="text-center">
+          <div class="relative w-[100px] h-[100px] mx-auto">
+            <svg viewBox="0 0 100 100" width="100" height="100">
+              <path
+                d="M 14 59.4 A 36 36 0 0 1 86 59.4"
+                fill="none"
+                stroke="var(--bae-muted)"
+                stroke-width="3.5"
+                stroke-linecap="round"
+                opacity="0.35"
+              />
+              <path
+                d="M 24 62.9 A 26 26 0 0 1 76 62.9"
+                fill="none"
+                stroke="var(--bae-muted)"
+                stroke-width="3.5"
+                stroke-linecap="round"
+                opacity="0.28"
+              />
+              <path
+                d="M 34 66.4 A 16 16 0 0 1 66 66.4"
+                fill="none"
+                stroke="var(--bae-muted)"
+                stroke-width="3.5"
+                stroke-linecap="round"
+                opacity="0.21"
+              />
+              <circle cx="50" cy="74" r="4.5" fill="var(--bae-muted)" opacity="0.5" />
+              <line
+                x1="18"
+                y1="18"
+                x2="82"
+                y2="82"
+                stroke="var(--bae-red)"
+                stroke-width="5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div class="text-lg font-semibold text-text mt-3.5">Pas de connexion réseau</div>
+          <div class="text-xs text-muted mt-2 max-w-[320px] mx-auto leading-relaxed">
+            Tu peux toujours consulter les pages déjà chargées. Les actions qui nécessitent le
+            serveur seront mises en attente.
+          </div>
+        </div>
+        <div class="mt-5 bg-surface-2 border border-border-s rounded-md overflow-hidden">
+          @for (row of offlineRows; track row.l; let i = $index; let last = $last) {
+            <div
+              [class]="
+                'flex items-center gap-2.5 px-3.5 py-2.5 ' +
+                (last ? '' : 'border-b border-border-s')
+              "
+            >
+              <svg
+                [lucideIcon]="row.ok ? icCheck : icX"
+                [size]="13"
+                [class]="(row.ok ? 'text-ok' : 'text-muted') + ' shrink-0'"
+              ></svg>
+              <div class="flex-1 min-w-0">
+                <div [class]="'text-xs ' + (row.ok ? 'text-text' : 'text-muted line-through')">
+                  {{ row.l }}
+                </div>
+                <div class="text-[10.5px] text-muted mt-px">{{ row.s }}</div>
+              </div>
+            </div>
+          }
+        </div>
+        <div
+          class="mt-3.5 flex items-center gap-2.5 p-2.5 bg-surface border border-border-s rounded-md"
+        >
+          <div
+            class="w-7 h-7 rounded-full bg-blue-soft text-blue inline-flex items-center justify-center shrink-0"
+            style="animation: spin 2.4s linear infinite"
+          >
+            <svg [lucideIcon]="icZap" [size]="13" aria-hidden="true"></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11.5px] text-text">
+              Nouvelle tentative dans <b class="mono">8 s</b>…
+            </div>
+            <div class="text-[10.5px] text-muted mt-px">Dernière connexion : il y a 47 s</div>
+          </div>
+          <bfd-btn kind="secondary" size="sm" [icon]="icZap">Réessayer</bfd-btn>
+        </div>
+      </div>
+    </article>
+
+    <!-- D · OFFLINE · caisse -->
+    <article class="bg-surface border border-border-s rounded-lg overflow-hidden">
+      <div class="flex items-center gap-3 px-3.5 py-2 bg-surface-2 border-b border-border-s">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+        </div>
+        <span class="mono text-[10.5px] text-muted font-medium">Caisse · service en cours</span>
+        <div class="flex-1"></div>
+        <span
+          class="mono text-[9.5px] text-text-2 px-1.5 py-0.5 bg-bg border border-border rounded-sm font-semibold tracking-wider"
+          >OFFLINE</span
+        >
+      </div>
+      <div class="px-3.5 pt-3 pb-1 text-[11px] text-muted font-medium">
+        D · Hors-ligne · caisse (mode dégradé)
+      </div>
+      <div class="px-6 pt-6 pb-7" style="min-height: 380px">
+        <div class="flex items-center gap-3.5">
+          <div
+            class="w-14 h-14 rounded-lg bg-warn-soft text-warn flex items-center justify-center shrink-0"
+          >
+            <svg [lucideIcon]="icAlert" [size]="26" aria-hidden="true"></svg>
+          </div>
+          <div>
+            <div class="text-base font-semibold text-text">Connexion perdue — mode dégradé</div>
+            <div class="text-xs text-muted mt-1 leading-relaxed">
+              La caisse continue à encaisser localement. Tes transactions sont stockées sur l'iPad
+              et seront synchronisées à la reconnexion.
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 p-3.5 bg-surface-2 border border-border-s rounded-md">
+          <div class="flex justify-between mb-2.5">
+            <span class="text-[11.5px] text-muted">File d'attente locale</span>
+            <span class="mono text-[11.5px] text-warn">14 transactions · 47,80 €</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            @for (row of localQueue; track $index) {
+              <div class="flex gap-2.5 text-[11.5px] py-1">
+                <span class="mono text-muted">{{ row[0] }}</span>
+                <span class="flex-1 text-text-2 truncate">{{ row[1] }}</span>
+                <span class="mono tnum text-text">{{ row[2] }}</span>
+              </div>
+            }
+            <div class="text-[10.5px] text-muted mt-1">… et 10 autres</div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <bfd-btn kind="primary" [icon]="icZap" [full]="true">Réessayer la connexion</bfd-btn>
+          <bfd-btn kind="secondary" [icon]="icCheck">Continuer hors-ligne</bfd-btn>
+        </div>
+        <div class="mono mt-3 text-[10.5px] text-faint text-center">
+          dernier ping · 21:11:42 · réseau WLAN-CAFETARIA · −82 dBm
+        </div>
+      </div>
+    </article>
+
+    <!-- E · Empty -->
+    <article class="bg-surface border border-border-s rounded-lg overflow-hidden">
+      <div class="flex items-center gap-3 px-3.5 py-2 bg-surface-2 border-b border-border-s">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+        </div>
+        <span class="mono text-[10.5px] text-muted font-medium">Analyse · saison 2026-2027</span>
+        <div class="flex-1"></div>
+        <span
+          class="mono text-[9.5px] text-text-2 px-1.5 py-0.5 bg-bg border border-border rounded-sm font-semibold tracking-wider"
+          >EMPTY</span
+        >
+      </div>
+      <div class="px-3.5 pt-3 pb-1 text-[11px] text-muted font-medium">
+        E · État vide · première saison
+      </div>
+      <div class="px-6 pt-10 pb-7 text-center" style="min-height: 380px">
+        <div class="relative w-[140px] h-[90px] mx-auto">
+          <div
+            class="absolute inset-0 rounded-lg"
+            style="background: linear-gradient(135deg, var(--bae-blueSoft) 0%, transparent 60%)"
+          ></div>
+          <div
+            class="absolute bottom-0 bg-border rounded-t-sm opacity-60"
+            style="left: 8px; width: 20px; height: 16px"
+          ></div>
+          <div
+            class="absolute bottom-0 bg-border rounded-t-sm opacity-60"
+            style="left: 33px; width: 20px; height: 30px"
+          ></div>
+          <div
+            class="absolute bottom-0 bg-border rounded-t-sm opacity-60"
+            style="left: 58px; width: 20px; height: 44px"
+          ></div>
+          <div
+            class="absolute bottom-0 bg-border rounded-t-sm opacity-60"
+            style="left: 83px; width: 20px; height: 58px"
+          ></div>
+          <div
+            class="absolute bottom-0 bg-blue rounded-t-sm"
+            style="left: 108px; width: 20px; height: 78px"
+          ></div>
+        </div>
+        <div class="text-lg font-semibold text-text mt-5">Aucune donnée pour cette saison</div>
+        <div class="text-xs text-muted mt-2 max-w-[340px] mx-auto leading-relaxed">
+          La saison 2026-2027 commence officiellement le 1<sup>er</sup> septembre. Crée une première
+          soirée pour démarrer le tracking.
+        </div>
+        <div class="inline-flex gap-2 mt-5">
+          <bfd-btn kind="primary" [icon]="icPlus">Créer une soirée</bfd-btn>
+          <bfd-btn kind="ghost" [icon]="icChart">Voir saison 25-26</bfd-btn>
+        </div>
+        <div
+          class="mt-5 p-3 bg-surface-2 border border-dashed border-border rounded-md text-[11.5px] text-text-2 max-w-[340px] mx-auto flex items-start gap-2 text-left"
+        >
+          <svg [lucideIcon]="icLight" [size]="13" class="text-warn mt-0.5"></svg>
+          <span
+            >Astuce : duplique la planification de la saison précédente pour pré-remplir 8 soirées
+            d'un coup.</span
+          >
+        </div>
+      </div>
+    </article>
+
+    <!-- F · 500 -->
+    <article class="bg-surface border border-border-s rounded-lg overflow-hidden">
+      <div class="flex items-center gap-3 px-3.5 py-2 bg-surface-2 border-b border-border-s">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+          <span class="w-2 h-2 rounded-full bg-muted/50"></span>
+        </div>
+        <span class="mono text-[10.5px] text-muted font-medium">Coordination · /events/affect</span>
+        <div class="flex-1"></div>
+        <span
+          class="mono text-[9.5px] text-text-2 px-1.5 py-0.5 bg-bg border border-border rounded-sm font-semibold tracking-wider"
+          >500</span
+        >
+      </div>
+      <div class="px-3.5 pt-3 pb-1 text-[11px] text-muted font-medium">
+        F · Erreur serveur · 5xx
+      </div>
+      <div class="px-6 pt-9 pb-7 text-center" style="min-height: 380px">
+        <div class="w-[100px] h-[100px] mx-auto relative flex items-center justify-center">
+          <div
+            class="absolute w-20 h-20 bg-surface-2 border border-border-s rounded-md flex items-center justify-center text-muted"
+            style="transform: rotate(-12deg)"
+          ></div>
+          <div
+            class="absolute w-20 h-20 bg-surface-2 border border-border-s rounded-md flex items-center justify-center text-muted"
+            style="transform: rotate(-4deg)"
+          ></div>
+          <div
+            class="absolute w-20 h-20 bg-danger-soft border border-danger rounded-md flex items-center justify-center text-danger"
+            style="transform: rotate(4deg)"
+          >
+            <svg [lucideIcon]="icAlert" [size]="32" aria-hidden="true"></svg>
+          </div>
+        </div>
+        <div class="text-lg font-semibold text-text mt-6">Quelque chose s'est cassé</div>
+        <div class="text-xs text-muted mt-2 max-w-[340px] mx-auto leading-relaxed">
+          Le serveur n'a pas pu traiter ta demande. Nous sommes alertés automatiquement et
+          travaillons à corriger ça.
+        </div>
+        <div
+          class="mono mt-4 p-2.5 bg-surface-2 border border-border-s rounded-sm max-w-[340px] mx-auto text-left text-[10.5px] text-text-2 leading-relaxed"
+        >
+          <div><span class="text-muted">incident</span> · INC-2026-0214-0042</div>
+          <div><span class="text-muted">module</span> · coordination · affectation auto</div>
+          <div><span class="text-muted">trace</span> · 7b3a··e91f · capturé 14:32:08</div>
+        </div>
+        <div class="inline-flex gap-2 mt-5">
+          <bfd-btn kind="primary" [icon]="icZap">Réessayer</bfd-btn>
+          <bfd-btn kind="secondary" [icon]="icTicket">Ouvrir un ticket</bfd-btn>
+          <bfd-btn kind="ghost" [icon]="icHome">Accueil</bfd-btn>
+        </div>
+      </div>
+    </article>
+  </div>
+</div>

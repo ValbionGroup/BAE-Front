@@ -1,0 +1,13 @@
+<button
+  type="button"
+  role="checkbox"
+  [attr.aria-checked]="internalChecked()"
+  [attr.aria-label]="ariaLabel()"
+  [disabled]="internalDisabled()"
+  [class]="boxClass()"
+  (click)="toggle()"
+>
+  @if (internalChecked()) {
+    <svg [lucideIcon]="icCheck" [size]="10" stroke-width="2.5" aria-hidden="true"></svg>
+  }
+</button>

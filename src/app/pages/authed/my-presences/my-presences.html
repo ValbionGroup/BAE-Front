@@ -1,0 +1,306 @@
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icDownload">Exporter ICS</bfd-btn>
+  <bfd-btn kind="secondary" size="md" [icon]="icSettings">Préférences</bfd-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto p-5">
+  <div class="grid grid-cols-[1fr_320px] gap-4.5">
+    <!-- MAIN -->
+    <div class="flex flex-col gap-4.5">
+      <!-- Upcoming -->
+      <section>
+        <div class="mb-2.5 flex items-baseline">
+          <h3 class="m-0 flex-1 text-sm font-semibold text-text">À venir</h3>
+          @if (!loading()) {
+            <span class="text-[11px] text-muted">
+              {{ upcomingCount() }} soirée·s · réponses attendues sous 48 h
+            </span>
+          }
+        </div>
+
+        @if (loading()) {
+          <div class="flex flex-col gap-2.5">
+            @for (_ of skeletonRows; track $index) {
+              <div
+                class="flex items-center gap-4.5 rounded-lg border border-border-s bg-surface p-4"
+              >
+                <div class="w-13.5 py-2 text-center">
+                  <bfd-skeleton width="32px" height="20px" variant="surface-3" />
+                  <div class="mt-1.5 flex justify-center">
+                    <bfd-skeleton width="24px" height="8px" />
+                  </div>
+                </div>
+                <div class="flex flex-1 flex-col gap-1.5">
+                  <bfd-skeleton width="180px" height="14px" variant="surface-3" />
+                  <bfd-skeleton width="220px" height="11px" />
+                  <bfd-skeleton width="150px" height="11px" />
+                </div>
+                <div class="flex shrink-0 gap-1.5">
+                  <bfd-skeleton width="78px" height="26px" rounded="md" />
+                  <bfd-skeleton width="78px" height="26px" rounded="md" />
+                  <bfd-skeleton width="78px" height="26px" rounded="md" />
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (upcomingEvents().length === 0) {
+          <div
+            class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-6 py-10 text-center"
+          >
+            <svg [lucideIcon]="icCalendar" [size]="22" class="text-muted"></svg>
+            <div class="text-[13px] font-medium text-text">Aucune soirée à venir</div>
+            <div class="text-[11.5px] text-muted">
+              Les prochaines soirées planifiées apparaîtront ici.
+            </div>
+          </div>
+        } @else {
+          <div class="flex flex-col gap-2.5">
+            @for (e of upcomingEvents(); track e.id; let i = $index) {
+              @let isNext = i === 0;
+              @let post = postFor(e);
+              <div
+                [class]="
+                  'flex items-center gap-4.5 p-4 rounded-lg border ' +
+                  (isNext
+                    ? 'border-blue bg-linear-to-br from-surface to-blue-soft/40'
+                    : 'border-border-s bg-surface')
+                "
+              >
+                <!-- Date block -->
+                <div
+                  [class]="
+                    'w-13.5 py-2 text-center rounded-md border border-border-s ' +
+                    (isNext ? 'bg-bg' : 'bg-surface-2')
+                  "
+                >
+                  <div class="tnum text-xl font-semibold leading-none text-text">
+                    {{ dateDay(e.date) }}
+                  </div>
+                  <div class="mt-0.75 text-[9.5px] uppercase tracking-[1px] text-muted">
+                    {{ dateMonth(e.date) }}
+                  </div>
+                </div>
+
+                <!-- Info -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <div class="text-sm font-semibold text-text">{{ e.name }}</div>
+                    @if (isNext) {
+                      <bfd-badge kind="red" [dot]="true">J−{{ daysFromToday(e.date) }}</bfd-badge>
+                    }
+                  </div>
+                  @if (e.description) {
+                    <div class="mt-0.75 text-[11.5px] text-muted">{{ e.description }}</div>
+                  } @else {
+                    <div class="mt-0.75 text-[11.5px] text-muted">Lieu · {{ e.location }}</div>
+                  }
+                  @if (post) {
+                    <div class="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-text-2">
+                      <svg [lucideIcon]="icFlag" [size]="12" class="text-blue"></svg>
+                      Poste affecté : <b class="text-text">{{ post }}</b>
+                    </div>
+                  }
+                </div>
+
+                <!-- Response buttons -->
+                <div class="flex shrink-0 gap-1.5">
+                  @if (isPresenceLoading(e)) {
+                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="respondPresent(e)"
+                      [class]="
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
+                        (e.memberPresence === Presence.PRESENT
+                          ? 'bg-ok text-white border-ok'
+                          : 'bg-transparent text-ok border-ok')
+                      "
+                    >
+                      <svg [lucideIcon]="icCheck" [size]="12"></svg>Présent·e
+                    </button>
+                    <button
+                      type="button"
+                      [class]="
+                        'cursor-not-allowed inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium ' +
+                        (e.memberPresence === Presence.PENDING || e.memberPresence === undefined
+                          ? 'bg-warn text-white border-warn'
+                          : 'bg-transparent text-warn border-warn')
+                      "
+                    >
+                      <svg [lucideIcon]="icClock" [size]="12"></svg>Indécis·e
+                    </button>
+                    <button
+                      type="button"
+                      (click)="respondAbsent(e)"
+                      [class]="
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
+                        (e.memberPresence === Presence.ABSENT
+                          ? 'bg-red text-white border-red'
+                          : 'bg-transparent text-red border-red')
+                      "
+                    >
+                      <svg [lucideIcon]="icX" [size]="12"></svg>Absent·e
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- History -->
+      <section>
+        <div class="mb-2.5 flex items-baseline">
+          <h3 class="m-0 flex-1 text-sm font-semibold text-text">Historique · saison</h3>
+          @if (!loading()) {
+            <span class="text-[11px] text-muted">{{ pastCount() }} soirée·s passée·s</span>
+          }
+        </div>
+
+        @if (loading()) {
+          <bfd-card [padding]="0">
+            @for (_ of skeletonRows; track $index; let last = $last) {
+              <div
+                [class]="
+                  'grid grid-cols-[60px_1fr_130px_90px_90px] items-center gap-3 px-4 py-3 ' +
+                  (!last ? 'border-b border-border-s' : '')
+                "
+              >
+                <bfd-skeleton width="48px" height="14px" />
+                <bfd-skeleton width="60%" height="12px" variant="surface-3" />
+                <bfd-skeleton width="80px" height="12px" />
+                <bfd-skeleton width="64px" height="18px" rounded="pill" />
+                <bfd-skeleton width="48px" height="12px" />
+              </div>
+            }
+          </bfd-card>
+        } @else if (pastEvents().length === 0) {
+          <div
+            class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-6 py-10 text-center"
+          >
+            <svg [lucideIcon]="icCalendar" [size]="22" class="text-muted"></svg>
+            <div class="text-[13px] font-medium text-text">Aucun historique</div>
+            <div class="text-[11.5px] text-muted">
+              Les soirées passées s’afficheront ici dès la première soirée.
+            </div>
+          </div>
+        } @else {
+          <bfd-card [padding]="0">
+            @for (p of pastEvents(); track p.id; let last = $last) {
+              <div
+                [class]="
+                  'grid grid-cols-[60px_1fr_130px_90px_90px] items-center px-4 py-3 text-[12.5px] ' +
+                  (!last ? 'border-b border-border-s' : '')
+                "
+              >
+                <div class="flex items-baseline gap-1">
+                  <span class="tnum text-sm font-medium text-text">{{ dateDay(p.date) }}</span>
+                  <span class="text-[10.5px] text-muted">{{ dateMonth(p.date) }}</span>
+                </div>
+                <span class="text-text">{{ p.name }}</span>
+                <span class="text-text-2">{{ postFor(p) ?? '—' }}</span>
+                @if (isPresenceLoading(p)) {
+                  <span><bfd-skeleton width="64px" height="18px" rounded="pill" /></span>
+                  <span class="flex justify-end"><bfd-skeleton width="48px" height="12px" /></span>
+                } @else {
+                  <span>
+                    <bfd-badge [kind]="pastBadgeKind(p)" [dot]="true">
+                      {{ pastStatusLabel(p) }}
+                    </bfd-badge>
+                  </span>
+                  <span [class]="'mono tnum text-right font-semibold ' + ptsClass(pointsFor(p))">
+                    {{ ptsLabel(pointsFor(p)) }}
+                  </span>
+                }
+              </div>
+            }
+          </bfd-card>
+        }
+      </section>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <aside class="flex flex-col gap-4.5">
+      <!-- Engagement score -->
+      <bfd-card>
+        <div class="text-[13px] font-semibold text-text">Score d’engagement</div>
+        <div class="mt-0.5 text-[11px] text-muted">Influe sur l’algo d’affectation</div>
+
+        @if (engagementLoading()) {
+          <div class="mt-3.5 flex justify-center">
+            <bfd-skeleton width="120px" height="48px" variant="surface-3" />
+          </div>
+          <div class="mt-4 flex flex-col gap-2.5">
+            @for (_ of skeletonRows; track $index) {
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <bfd-skeleton width="60px" height="11px" />
+                  <bfd-skeleton width="24px" height="11px" />
+                </div>
+                <bfd-skeleton width="100%" height="4px" />
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="mt-3.5 text-center">
+            <div class="tnum text-[44px] font-semibold leading-none -tracking-[1px] text-text">
+              {{ engagementScore() }}<span class="text-lg font-normal text-muted">/100</span>
+            </div>
+            <div class="mt-1 text-[11px] text-muted">basé sur l’historique de la saison</div>
+          </div>
+
+          <div class="mt-4 flex flex-col gap-2.5">
+            @for (row of scoreRows(); track row.k) {
+              <div>
+                <div class="mb-1 flex justify-between text-[11.5px] text-text-2">
+                  <span>{{ row.k }}</span>
+                  <span class="mono tnum text-muted">{{ row.v }}</span>
+                </div>
+                <div class="h-1 overflow-hidden rounded-sm bg-border">
+                  <div [class]="'h-full ' + scoreColor(row.v)" [style.width.%]="row.v"></div>
+                </div>
+                <div class="mt-0.75 text-[10.5px] text-muted">{{ row.sub }}</div>
+              </div>
+            }
+          </div>
+        }
+      </bfd-card>
+
+      <!-- Preferences -->
+      <!--<bfd-card>
+        <div class="text-[13px] font-semibold text-text">Préférences</div>
+        <div class="mt-0.5 mb-3.5 text-[11px] text-muted">L’algo essaie de respecter</div>
+
+        <div class="flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[12.5px] text-text-2">Poste préféré</span>
+            <bfd-badge kind="blue">Caisse</bfd-badge>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-[12.5px] text-text-2">Poste évité</span>
+            <bfd-badge kind="neutral">Plonge</bfd-badge>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-[12.5px] text-text-2">Indisponibilités</span>
+            <span class="text-xs text-text">Mardis · Jeudis 18h+</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-[12.5px] text-text-2">Notif. relance</span>
+            <bfd-toggle
+              [on]="notifReminder()"
+              (change)="notifReminder.set($event)"
+              label="Notifications de relance"
+            />
+          </div>
+        </div>
+        <bfd-btn kind="ghost" size="sm" [icon]="icEdit" [full]="true" class="mt-3.5 block">
+          Modifier
+        </bfd-btn>
+      </bfd-card>-->
+    </aside>
+  </div>
+</div>

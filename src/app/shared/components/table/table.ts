@@ -1,41 +1,36 @@
-import {Component, input} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ColumnType, TableColumn } from './table.types';
+import { TableContent } from './table-content/table-content';
 
-export enum ColumnType {
-  TEXT = 'text',
-  NUMBER = 'number',
-  DATE = 'date',
-  QUANTITY = 'quantity',
-  STATUS = 'status',
-  PILL = 'pill',
-  PILLS = 'pills',
-}
-
-export interface TableColumn {
-  id: string;
-  label: string;
-  type: ColumnType;
-  responsive?: 'sm' | 'md';
-  hidden?: boolean;
-}
+export { ColumnType } from './table.types';
+export type { TableColumn } from './table.types';
 
 @Component({
   selector: 'bfd-table',
-  imports: [],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TableContent],
   templateUrl: './table.html',
 })
-export class Table {
+export class Table<T extends object> {
   name = input.required<string>();
-  columns = input.required<TableColumn[]>();
+  columns = input.required<TableColumn<T>[]>();
+  rows = input.required<T[]>();
+  emptyMessage = input<string>('Aucun résultat');
 
-  protected getTextAlignment(column: TableColumn) {
-    switch (column.type) {
-      case ColumnType.NUMBER:
-      case ColumnType.QUANTITY:
-        return 'text-right';
-      case ColumnType.STATUS:
-        return 'text-center';
-      default:
-        return 'text-left'
+  protected getThClasses(column: TableColumn<T>): string {
+    const parts = [
+      'px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
+    ];
+    if (column.type === ColumnType.NUMBER || column.type === ColumnType.QUANTITY) {
+      parts.push('text-right');
+    } else if (column.type === ColumnType.STATUS) {
+      parts.push('text-center');
+    } else {
+      parts.push('text-left');
     }
+    if (column.responsive === 'md') parts.push('hidden md:table-cell');
+    else if (column.responsive === 'sm') parts.push('hidden sm:table-cell');
+    if (column.hidden) parts.push('hidden');
+    return parts.join(' ');
   }
 }

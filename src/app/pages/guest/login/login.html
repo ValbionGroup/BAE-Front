@@ -1,98 +1,155 @@
-<div class="bg-gray-50 dark:bg-gray-950 min-h-screen flex items-center justify-center px-6 py-20">
+<div class="flex h-screen bg-bg text-text font-sans">
+  <!-- LEFT brand pane -->
   <div
-    class="bg-gray-100 dark:bg-gray-900 p-8 md:p-12 shadow-sm rounded-2xl w-full max-w-sm flex flex-col gap-8"
+    class="relative hidden w-[46%] flex-col justify-between overflow-hidden border-r border-border-s p-14 lg:flex"
+    style="
+      background:
+        radial-gradient(circle at 18% 12%, var(--bae-redSoft) 0%, transparent 45%),
+        radial-gradient(circle at 92% 88%, var(--bae-blueSoft) 0%, transparent 50%),
+        var(--bae-sidebar);
+    "
   >
-    <div class="flex flex-col items-center gap-4">
-      <div class="flex items-center gap-4">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-14 w-14"
-          width="33"
-          height="32"
-          viewBox="0 0 33 32"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M7.09219 2.87829C5.94766 3.67858 4.9127 4.62478 4.01426 5.68992C7.6857 5.34906 12.3501 5.90564 17.7655 8.61335C23.5484 11.5047 28.205 11.6025 31.4458 10.9773C31.1517 10.087 30.7815 9.23135 30.343 8.41791C26.6332 8.80919 21.8772 8.29127 16.3345 5.51998C12.8148 3.76014 9.71221 3.03521 7.09219 2.87829ZM28.1759 5.33332C25.2462 2.06 20.9887 0 16.25 0C14.8584 0 13.5081 0.177686 12.2209 0.511584C13.9643 0.987269 15.8163 1.68319 17.7655 2.65781C21.8236 4.68682 25.3271 5.34013 28.1759 5.33332ZM32.1387 14.1025C28.2235 14.8756 22.817 14.7168 16.3345 11.4755C10.274 8.44527 5.45035 8.48343 2.19712 9.20639C2.0292 9.24367 1.86523 9.28287 1.70522 9.32367C1.2793 10.25 0.939308 11.2241 0.695362 12.2356C0.955909 12.166 1.22514 12.0998 1.50293 12.0381C5.44966 11.161 11.0261 11.1991 17.7655 14.5689C23.8261 17.5991 28.6497 17.561 31.9029 16.838C32.0144 16.8133 32.1242 16.7877 32.2322 16.7613C32.2441 16.509 32.25 16.2552 32.25 16C32.25 15.358 32.2122 14.7248 32.1387 14.1025ZM31.7098 20.1378C27.8326 20.8157 22.5836 20.5555 16.3345 17.431C10.274 14.4008 5.45035 14.439 2.19712 15.1619C1.475 15.3223 0.825392 15.5178 0.252344 15.7241C0.250782 15.8158 0.25 15.9078 0.25 16C0.25 24.8366 7.41344 32 16.25 32C23.6557 32 29.8862 26.9687 31.7098 20.1378Z"
-            class="fill-gray-700 dark:fill-gray-200"
-          />
-        </svg>
+    <bfd-logo [size]="32" />
+
+    <div>
+      <div class="mono mb-4 text-[11px] tracking-widest text-muted">
+        BUREAU DES ALTERNANTS DE L'ENSEIRB
       </div>
-      <div class="flex flex-col items-center gap-2 w-full">
-        <h1 class="text-gray-900 dark:text-gray-100 text-2xl font-semibold leading-tight text-center w-full">
-          Welcome Back
-        </h1>
-        <p class="text-center w-full">
-          <span class="text-gray-700 dark:text-gray-200 leading-normal">Don't have an account?</span>
-          <a class="text-primary font-medium ml-1 cursor-pointer hover:text-primary-emphasis">Create today!</a>
-        </p>
+      <h2 class="m-0 text-[42px] font-semibold leading-[1.08] -tracking-[1px] text-text">
+        Stocks, présences,<br />caisse — une seule<br />
+        <span class="text-blue">console</span> pour la <span class="text-red">soirée</span>.
+      </h2>
+      <div class="mt-7 flex flex-wrap gap-2.5">
+        @for (tag of brandTags; track tag) {
+          <bfd-badge kind="ghost">{{ tag }}</bfd-badge>
+        }
       </div>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 w-full" novalidate>
-      <div class="flex flex-col gap-2 w-full">
-        <label for="email" class="text-gray-900 dark:text-gray-100 font-medium leading-normal">
-          Email Address
-        </label>
-        <input
-          pInputText
-          id="email"
-          type="email"
-          placeholder="Email address"
-          formControlName="email"
-          class="w-full"
-          autocomplete="email"
-          [attr.aria-describedby]="form.controls.email.invalid && form.controls.email.touched ? 'email-error' : null"
-        />
-        @if (form.controls.email.invalid && form.controls.email.touched) {
-          <span id="email-error" class="text-red-500 text-sm" role="alert">
-            @if (form.controls.email.errors?.['required']) { Email is required. }
-            @else if (form.controls.email.errors?.['email']) { Enter a valid email address. }
-          </span>
-        }
+    <div class="flex items-center gap-4 text-[11.5px] text-muted">
+      <span class="mono">© BAE {{ year() }}</span>
+      <span class="ml-auto inline-flex items-center gap-1.5">
+        <span class="h-1.5 w-1.5 rounded-full bg-ok"></span>
+        Tous les services sont opérationnels
+      </span>
+    </div>
+  </div>
+
+  <!-- RIGHT form pane -->
+  <div class="flex flex-1 items-center justify-center p-10">
+    <div class="w-95">
+      <div class="mono mb-2.5 text-[11px] font-semibold tracking-widest text-blue">CONNEXION</div>
+      <h1 class="m-0 text-[28px] font-semibold -tracking-[0.6px] text-text">
+        Bon retour parmi nous.
+      </h1>
+      <p class="mt-2 mb-7 text-sm text-muted">
+        Saisissez vos identifiants ou utilisez votre compte Bordeaux INP.
+      </p>
+
+      <div class="mb-5">
+        <bfd-btn
+          kind="secondary"
+          [full]="true"
+          size="lg"
+          [icon]="icShield"
+          (clicked)="loginWithEirbConnect()"
+        >
+          Se connecter via ENT Bordeaux INP
+        </bfd-btn>
       </div>
 
-      <div class="flex flex-col gap-2 w-full">
-        <label for="password" class="text-gray-900 dark:text-gray-100 font-medium leading-normal">
-          Password
-        </label>
-        <input
-          pInputText
-          id="password"
-          type="password"
-          placeholder="Password"
-          formControlName="password"
-          class="w-full"
-          autocomplete="current-password"
-          [attr.aria-describedby]="form.controls.password.invalid && form.controls.password.touched ? 'password-error' : null"
-        />
-        @if (form.controls.password.invalid && form.controls.password.touched) {
-          <span id="password-error" class="text-red-500 text-sm" role="alert">Password is required.</span>
-        }
+      <div class="my-5 flex items-center gap-3">
+        <span class="h-px flex-1 bg-border-s"></span>
+        <span class="text-[11px] uppercase tracking-widest text-muted">ou par email</span>
+        <span class="h-px flex-1 bg-border-s"></span>
       </div>
 
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-3 sm:gap-0">
-        <div class="flex items-center gap-2">
-          <p-checkbox inputId="rememberMe" formControlName="rememberMe" [binary]="true" />
-          <label for="rememberMe" class="text-gray-900 dark:text-gray-100 leading-normal cursor-pointer">
-            Remember me
-          </label>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="flex flex-col gap-3.5">
+        @if (loginError(); as err) {
+          <div
+            class="flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-sm text-danger"
+            role="alert"
+            aria-live="assertive"
+          >
+            <svg
+              [lucideIcon]="icAlert"
+              [size]="16"
+              class="mt-0.5 shrink-0"
+              aria-hidden="true"
+            ></svg>
+            <span>{{ err.message || 'Identifiants incorrects.' }}</span>
+          </div>
+        }
+
+        <bfd-field label="Email">
+          <bfd-text-input
+            formControlName="email"
+            id="login-email"
+            type="email"
+            placeholder="prenom.nom@enseirb-matmeca.fr"
+            autocomplete="email"
+            [invalid]="form.controls.email.invalid && form.controls.email.touched"
+            [errorId]="
+              form.controls.email.invalid && form.controls.email.touched
+                ? 'login-email-error'
+                : null
+            "
+          />
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <span id="login-email-error" class="text-[11px] text-danger" role="alert">
+              @if (form.controls.email.errors?.['required']) {
+                L'adresse e-mail est requise.
+              } @else if (form.controls.email.errors?.['email']) {
+                Saisissez une adresse e-mail valide.
+              }
+            </span>
+          }
+        </bfd-field>
+
+        <bfd-field label="Mot de passe">
+          <bfd-text-input
+            formControlName="password"
+            id="login-password"
+            type="password"
+            placeholder="••••••••••••"
+            autocomplete="current-password"
+            [invalid]="form.controls.password.invalid && form.controls.password.touched"
+            [errorId]="
+              form.controls.password.invalid && form.controls.password.touched
+                ? 'login-password-error'
+                : null
+            "
+          />
+          @if (form.controls.password.invalid && form.controls.password.touched) {
+            <span id="login-password-error" class="text-[11px] text-danger" role="alert">
+              Le mot de passe est requis.
+            </span>
+          }
+        </bfd-field>
+
+        <div class="mt-0.5 flex items-center justify-between">
+          <bfd-toggle [on]="rememberMe()" (change)="switchRemember()" label="Rester connecté" />
+          <a class="cursor-pointer text-xs text-blue">Mot de passe oublié ?</a>
         </div>
-        <a class="text-primary font-medium cursor-pointer hover:text-primary-emphasis">Forgot your password?</a>
-      </div>
 
-      <button
-        pButton
-        type="submit"
-        class="w-full py-2 rounded-lg flex justify-center items-center gap-2"
-        [disabled]="form.invalid"
-      >
-        <i pButtonIcon class="pi pi-user text-base! leading-normal!" aria-hidden="true"></i>
-        <span pButtonLabel>Sign In</span>
-      </button>
-    </form>
+        <div class="mt-2">
+          <bfd-btn
+            kind="primary"
+            [full]="true"
+            size="lg"
+            [iconRight]="icArrowRight"
+            type="submit"
+            [disabled]="form.invalid"
+          >
+            Se connecter
+          </bfd-btn>
+        </div>
+      </form>
+
+      <p class="mt-7 text-center text-xs text-muted">
+        Pas encore de compte ?
+        <a class="cursor-pointer font-medium text-text">Demander un accès</a>
+      </p>
+    </div>
   </div>
 </div>

@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Table } from './table';
+import { ColumnType, Table } from './table';
 
 describe('Table', () => {
-  let component: Table;
-  let fixture: ComponentFixture<Table>;
+  let component: Table<object>;
+  let fixture: ComponentFixture<Table<object>>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -13,6 +13,12 @@ describe('Table', () => {
 
     fixture = TestBed.createComponent(Table);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('name', 'Test table');
+    fixture.componentRef.setInput('columns', [
+      { key: 'name', label: 'Nom', type: ColumnType.TEXT },
+    ]);
+    fixture.componentRef.setInput('rows', [{ name: 'Ligne' }]);
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

@@ -1,0 +1,18 @@
+<span class="inline-flex items-center gap-2.5">
+  <button
+    type="button"
+    role="switch"
+    [attr.aria-checked]="internalOn()"
+    [disabled]="internalDisabled()"
+    [class]="trackClass()"
+    (click)="toggle()"
+  >
+    <span
+      class="w-3.5 h-3.5 rounded-[7px] bg-white transition-transform"
+      [style.transform]="knobTransform()"
+    ></span>
+  </button>
+  @if (label()) {
+    <span class="text-[13px] text-text-2">{{ label() }}</span>
+  }
+</span>

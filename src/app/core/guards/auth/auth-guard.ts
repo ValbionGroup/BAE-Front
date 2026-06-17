@@ -9,7 +9,7 @@ import {
 import { inject } from '@angular/core';
 import { TokensService } from '#core/services/tokens/tokens-service';
 import { map, take } from 'rxjs';
-import { AppRoutes } from '#app/app.routes';
+import { AppRoutes } from '#app/app-routes.const';
 
 export const authGuard: CanActivateFn = (
   _route: ActivatedRouteSnapshot,

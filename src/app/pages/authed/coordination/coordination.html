@@ -1,10 +1,215 @@
-<main class="p-6 md:p-8">
-  <div>
-    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Coordination</h1>
-    <p class="text-gray-600 dark:text-gray-400"></p>
+<!-- Topbar actions, projected via PageHeaderService -->
+<ng-template #actions>
+  <bfd-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
+    Postes
+  </bfd-btn>
+  <bfd-btn
+    kind="secondary"
+    size="md"
+    [icon]="icZap"
+    [disabled]="loading() || algoRunning()"
+    (clicked)="runAlgorithm()"
+  >
+    Lancer l'algo
+  </bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="validateAssignments()">
+    Valider l'affectation
+  </bfd-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- Algo result banner -->
+  @if (algoRunAt()) {
+    @let summary = algoSummary();
+    <div
+      class="mb-4.5 flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-4.5 py-3.5"
+    >
+      <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15 text-ok">
+        <svg [lucideIcon]="icCheck" [size]="18" aria-hidden="true"></svg>
+      </span>
+      <div class="flex-1">
+        <div class="text-[13.5px] font-semibold text-text">
+          Algorithme exécuté · {{ algoRunLabel() }}
+        </div>
+        <div class="mt-0.5 text-[12px] text-text-2">
+          {{ summary?.assignedCount ?? 0 }} affectations · score moyen
+          <span class="mono tnum text-text">{{ summary?.avgScore ?? 0 }}/100</span> ·
+          {{ summary?.lockedCount ?? 0 }} verrouillées manuellement
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Postes grid -->
+  <div class="mb-5.5 grid grid-cols-3 gap-3">
+    @for (p of postes; track p.id) {
+      @let assigned = assignedTo(p.label);
+      @let full = isFull(p);
+      <div class="rounded-md border border-border-s bg-surface p-3.5">
+        <div class="mb-3 flex items-center gap-2.5">
+          <span
+            [class]="
+              'inline-flex h-8 w-8 items-center justify-center rounded-lg ' + posteBgClass(p.color)
+            "
+          >
+            <svg [lucideIcon]="p.icon" [size]="15" aria-hidden="true"></svg>
+          </span>
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold text-text">{{ p.label }}</div>
+            <div class="mono tnum mt-px text-[11px] text-muted">
+              {{ assigned.length }}/{{ p.need }} affectés
+            </div>
+          </div>
+          @if (full) {
+            <bfd-badge kind="ok">Complet</bfd-badge>
+          } @else {
+            <bfd-badge kind="warn">{{ toFill(p) }} à pourvoir</bfd-badge>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          @for (m of assigned; track m.name) {
+            <div class="flex items-center gap-2 rounded-sm bg-surface-2 px-2 py-1.5">
+              <bfd-avatar [name]="m.name" [size]="20" />
+              <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
+              <button
+                type="button"
+                class="text-muted hover:text-text focus:outline-none"
+                aria-label="Verrouiller ou déverrouiller"
+                (click)="toggleLock(m.id, p.id); $event.stopPropagation()"
+              >
+                <svg
+                  [lucideIcon]="icLock"
+                  [size]="11"
+                  [class]="m.lock ? 'text-text' : 'text-muted'"
+                  aria-hidden="true"
+                ></svg>
+              </button>
+              @if (!m.lock) {
+                <svg
+                  [lucideIcon]="icX"
+                  [size]="12"
+                  class="text-muted cursor-pointer"
+                  (click)="removeAssignment(m.id, p.id); $event.stopPropagation()"
+                  aria-hidden="true"
+                ></svg>
+              }
+              <span [class]="'mono tnum text-[10.5px] ' + scoreClassSmall(m.score)">{{
+                m.score
+              }}</span>
+            </div>
+          }
+          @for (_ of vacantSlots(p); track $index) {
+            <div
+              #anchor
+              class="flex items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-[12px] text-muted cursor-pointer"
+              (click)="openRoleDropdown(anchor, p.id)"
+            >
+              <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
+              <span>Affecter…</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
   </div>
 
-  <div>
-
+  <!-- Member preferences table -->
+  <div class="mono mb-2.5 text-[10px] tracking-wider text-muted">
+    AFFECTATIONS · PRÉFÉRENCES & SCORE
   </div>
-</main>
+  <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+    <div
+      class="grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] gap-3 bg-surface-2 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+    >
+      <span></span>
+      <span>Membre</span>
+      <span>Préférences (1-3)</span>
+      <span>Affecté à</span>
+      <span class="text-right">Score</span>
+      <span class="text-right">Bonus</span>
+      <span></span>
+    </div>
+    @let allMembres = membres;
+    @let presCount = presentMembers().length;
+    @if (presCount > 0) {
+      <div class="flex items-center gap-2 border-t border-border-s bg-surface-2/50 px-3.5 py-1.5">
+        <span class="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true"></span>
+        <span class="mono text-[10px] tracking-wider text-text-2">PRÉSENTS · {{ presCount }}</span>
+      </div>
+    }
+    @for (m of allMembres; track m.name; let i = $index) {
+      @if (i === presCount && presCount > 0 && presCount < allMembres.length) {
+        <div class="border-t border-border-s bg-surface-2/50 px-3.5 py-1.5">
+          <span class="mono text-[10px] tracking-wider text-muted"
+            >NON CONFIRMÉS · {{ allMembres.length - presCount }}</span
+          >
+        </div>
+      }
+      <div
+        [class]="
+          'grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5 transition-opacity ' +
+          (!m.isPresent ? 'opacity-50' : '')
+        "
+      >
+        <div class="relative">
+          <bfd-avatar [name]="m.name" [size]="22" />
+          @if (m.isPresent) {
+            <span
+              class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-ok ring-1 ring-surface"
+              aria-label="Présent"
+            ></span>
+          }
+        </div>
+        <div>
+          <div class="text-[13px] text-text">{{ m.name }}</div>
+          <div class="mt-px text-[11px] text-muted">2A · INFO</div>
+        </div>
+        <div class="flex gap-1">
+          @for (pr of prefsFor(m); track $index; let j = $index) {
+            <span
+              [class]="
+                'mono rounded-[3px] px-1.5 py-0.5 text-[10px] ' +
+                (pr === m.poste
+                  ? 'bg-blue-soft text-blue font-semibold'
+                  : 'bg-surface-2 text-muted font-medium')
+              "
+            >
+              {{ j + 1 }}·{{ pr.slice(0, 4) }}
+            </span>
+          }
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[12.5px] text-text">{{ m.poste }}</span>
+          @let roleId = m.roleId;
+          @if (roleId !== null) {
+            <button
+              type="button"
+              class="text-muted hover:text-text focus:outline-none"
+              aria-label="Verrouiller ou déverrouiller"
+              (click)="toggleLock(m.id, roleId); $event.stopPropagation()"
+            >
+              <svg
+                [lucideIcon]="icLock"
+                [size]="11"
+                [class]="m.lock ? 'text-text' : 'text-muted'"
+                aria-hidden="true"
+              ></svg>
+            </button>
+          }
+        </div>
+        <span [class]="'mono tnum text-right text-[13px] font-semibold ' + scoreClass(m.score)">{{
+          m.score
+        }}</span>
+        <span [class]="'mono text-right text-[12px] ' + bonusClass(m.bonus)">{{
+          m.bonus || '·'
+        }}</span>
+        <svg
+          [lucideIcon]="icMore"
+          [size]="14"
+          class="cursor-pointer justify-self-end text-muted"
+          aria-hidden="true"
+        ></svg>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,92 @@
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- KPI row -->
+  <div class="mb-4 grid grid-cols-4 gap-3">
+    @for (k of kpis; track k.label) {
+      <div class="rounded-md border border-border-s bg-surface p-3.5">
+        <div class="mb-1 text-[11px] text-muted">{{ k.label }}</div>
+        <div class="mono tnum text-[21px] font-semibold text-text">{{ k.value }}</div>
+        <div [class]="'mt-1 text-[11px] ' + k.deltaClass">{{ k.delta }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- Two-col: tx table + QR panel -->
+  <div class="grid grid-cols-[1.6fr_1fr] gap-3.5">
+    <!-- Tx table -->
+    <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+      <div class="flex items-center border-b border-border-s px-3.5 py-3">
+        <span class="text-[13px] font-semibold text-text">Historique des transactions</span>
+        <span class="mono tnum ml-2 text-[11px] text-muted">103 ce soir</span>
+        <div class="flex-1"></div>
+        <bfd-badge kind="ok" [dot]="true">Live</bfd-badge>
+      </div>
+      @for (g of transactions; track g.id; let i = $index) {
+        <div
+          [class]="
+            'grid grid-cols-[24px_1.4fr_90px_1fr_80px_60px] items-center gap-3 px-3.5 py-2.5 text-[12.5px] ' +
+            (i ? 'border-t border-border-s' : '')
+          "
+        >
+          <span
+            [class]="
+              'inline-flex h-[22px] w-[22px] items-center justify-center rounded-md ' +
+              txBgClass(g.k)
+            "
+          >
+            <svg [lucideIcon]="txIcon(g.k)" [size]="11" stroke-width="2.4" aria-hidden="true"></svg>
+          </span>
+          <div>
+            <div class="text-text">{{ g.l }}</div>
+            <div class="mono mt-px text-[10.5px] text-muted">{{ g.id }} · {{ g.d }}</div>
+          </div>
+          <span class="text-[11px] text-text-2">{{ g.m }}</span>
+          <span class="text-[12px] text-text-2">{{ g.who }}</span>
+          <span [class]="'mono tnum text-right text-[13px] font-semibold ' + txAmountClass(g.k)">
+            {{ g.k === 'refund' ? '−' : '' }}{{ formatPrice(g.a) }} €
+          </span>
+          <svg
+            [lucideIcon]="icMore"
+            [size]="14"
+            class="justify-self-end text-muted"
+            aria-hidden="true"
+          ></svg>
+        </div>
+      }
+    </div>
+
+    <!-- QR encaissement panel -->
+    <div class="rounded-md border border-border-s bg-surface p-4">
+      <div class="mb-1 text-[13px] font-semibold text-text">Encaisser par QR · Lydia</div>
+      <div class="mb-4 text-[11.5px] text-muted">
+        Le montant est envoyé depuis l'app, pas le panel Lydia.
+      </div>
+
+      <bfd-field label="Montant">
+        <bfd-input value="12,00" suffix="€" size="lg" />
+      </bfd-field>
+      <div class="mt-3">
+        <bfd-field label="Référence (optionnel)">
+          <bfd-input placeholder="Soirée Hivernale · table 4" />
+        </bfd-field>
+      </div>
+
+      <div
+        class="mx-auto mt-4 mb-2 flex h-[180px] w-[180px] items-center justify-center rounded-md bg-white p-3"
+      >
+        <!-- Fake QR pattern -->
+        <div class="grid h-full w-full grid-cols-[repeat(17,1fr)] gap-px">
+          @for (cell of qrPattern(); track $index) {
+            <div [class]="cell ? 'bg-[#0a0a0c]' : 'bg-white'"></div>
+          }
+        </div>
+      </div>
+      <div class="mono mb-3 text-center text-[11px] tracking-widest text-muted">
+        BAE-2026-0219 · scanné 0 fois
+      </div>
+      <bfd-btn kind="primary" [full]="true" [icon]="icCheck">Confirmer l'encaissement</bfd-btn>
+      <div class="mt-1.5">
+        <bfd-btn kind="ghost" [full]="true">Annuler / régénérer</bfd-btn>
+      </div>
+    </div>
+  </div>
+</div>

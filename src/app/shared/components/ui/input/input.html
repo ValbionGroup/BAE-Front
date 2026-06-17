@@ -1,0 +1,18 @@
+<div [class]="wrapperClass()">
+  @if (icon(); as i) {
+    <svg [lucideIcon]="i" [size]="15" class="text-muted shrink-0" aria-hidden="true"></svg>
+  }
+  <input
+    [type]="type()"
+    [value]="innerValue"
+    [placeholder]="placeholder()"
+    [disabled]="disabled() || isDisabled"
+    [attr.aria-invalid]="invalid() ? 'true' : null"
+    (input)="onInput($event)"
+    (blur)="onTouched()"
+    class="flex-1 bg-transparent border-none outline-none text-text text-[13px] min-w-0"
+  />
+  @if (suffix(); as s) {
+    <span class="text-xs text-muted mono">{{ s }}</span>
+  }
+</div>

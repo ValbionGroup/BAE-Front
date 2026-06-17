@@ -1,0 +1,36 @@
+@if (modals().length > 0) {
+  <div class="fixed inset-0 z-50" role="presentation">
+    <div
+      class="absolute inset-0 bg-black/55 backdrop-blur-sm"
+      aria-hidden="true"
+      (click)="closeTop()"
+    ></div>
+
+    <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+      @let total = visibleModals().length;
+      @for (modal of visibleModals(); track modal.id; let i = $index) {
+        <div
+          [attr.data-modal-id]="modal.id"
+          [style.transform]="stackTransform(i, total)"
+          [style.z-index]="50 + i"
+          class="absolute pointer-events-auto"
+        >
+          @if (modal.type === 'delete') {
+            <bfd-delete-modal [config]="asDelete(modal)" (close)="close(modal.id)" />
+          } @else if (modal.type === 'roles') {
+            <bfd-roles-modal [config]="asRoles(modal)" (close)="close(modal.id)" />
+          } @else if (modal.type === 'component') {
+            <ng-container
+              *ngComponentOutlet="
+                asComponent(modal).component;
+                inputs: componentInputs(asComponent(modal))
+              "
+            />
+          } @else {
+            <bfd-message-modal [config]="asMessage(modal)" (close)="close(modal.id)" />
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

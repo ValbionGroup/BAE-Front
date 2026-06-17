@@ -1,0 +1,9 @@
+<button [type]="type()" [disabled]="disabled()" [class]="classes()" (click)="onClick($event)">
+  @if (icon(); as leftIcon) {
+    <svg [lucideIcon]="leftIcon" [size]="iconSize()" aria-hidden="true"></svg>
+  }
+  <ng-content />
+  @if (iconRight(); as rightIcon) {
+    <svg [lucideIcon]="rightIcon" [size]="iconSize()" aria-hidden="true"></svg>
+  }
+</button>

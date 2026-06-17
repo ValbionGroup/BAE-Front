@@ -1,0 +1,23 @@
+<div class="flex gap-2 flex-wrap" role="group" [aria-label]="pillListLabel()">
+  @if (isAllAvailable()) {
+    <button
+      type="button"
+      (click)="setActive('all')"
+      [class]="
+        currentActive() === 'all'
+          ? 'px-3 py-1.5 rounded-full text-xs font-medium bg-violet-500 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+          : 'px-3 py-1.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+      "
+    >
+      Tous
+    </button>
+  }
+
+  @for (pill of pills(); track pill.key) {
+    <bfd-pill
+      [label]="pill.label"
+      [active]="currentActive() === pill.key"
+      [action]="() => setActive(pill.key)"
+    />
+  }
+</div>

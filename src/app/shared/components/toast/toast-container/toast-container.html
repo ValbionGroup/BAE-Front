@@ -1,0 +1,50 @@
+<div
+  class="fixed top-6 right-6 z-[60] flex flex-col gap-2.5 w-80"
+  role="status"
+  aria-live="polite"
+  aria-atomic="false"
+>
+  @for (toast of toasts(); track toast.id) {
+    <div
+      [class]="
+        'flex items-start gap-3 p-3.5 rounded-md bg-surface-3 border border-border border-l-[3px] shadow-[0_8px_24px_rgba(0,0,0,.35)] ' +
+        typeMeta[toast.type].borderColor
+      "
+      [attr.role]="toast.type === 'error' ? 'alert' : null"
+      [attr.aria-live]="toast.type === 'error' ? 'assertive' : null"
+    >
+      <span
+        [class]="
+          'w-7 h-7 rounded-lg shrink-0 inline-flex items-center justify-center ' +
+          typeMeta[toast.type].iconBg +
+          ' ' +
+          typeMeta[toast.type].iconColor
+        "
+      >
+        <svg [lucideIcon]="typeMeta[toast.type].icon" [size]="14" aria-hidden="true"></svg>
+      </span>
+      <div class="flex-1 min-w-0">
+        <p class="text-[13px] font-semibold text-text">{{ toast.title }}</p>
+        @if (toast.message) {
+          <p class="text-[11.5px] text-text-2 mt-0.5 leading-snug">{{ toast.message }}</p>
+        }
+        @if (hasDuration(toast)) {
+          <div class="mt-2 h-0.5 rounded-full bg-border overflow-hidden">
+            <div
+              [class]="'h-full origin-left ' + typeMeta[toast.type].bar"
+              [style.animation]="animationStyle(toast)"
+            ></div>
+          </div>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="dismiss(toast.id)"
+        [attr.aria-label]="'Fermer: ' + toast.title"
+        class="shrink-0 text-muted hover:text-text"
+      >
+        <svg lucideX [size]="14" aria-hidden="true"></svg>
+      </button>
+    </div>
+  }
+</div>

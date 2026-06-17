@@ -1,0 +1,15 @@
+@if (current(); as t) {
+  <div
+    [bfdFloating]="t.anchor"
+    [bfdPlacement]="t.placement ?? 'top'"
+    [bfdDistance]="8"
+    class="pointer-events-none rounded-md bg-[#0c0c0e] px-2.5 py-[7px] text-[12px] font-medium text-white shadow-lg"
+    style="max-width: 280px"
+    role="tooltip"
+  >
+    <div>{{ t.title }}</div>
+    @if (t.description) {
+      <div class="mt-px text-[11px] text-white/60">{{ t.description }}</div>
+    }
+  </div>
+}

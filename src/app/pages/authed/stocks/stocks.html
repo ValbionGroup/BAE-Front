@@ -1,0 +1,367 @@
+<!-- Topbar actions -->
+<ng-template #actions>
+  <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
+  <bfd-btn kind="secondary" size="md" [icon]="icDownload">Inventaire</bfd-btn>
+  <bfd-btn kind="primary" size="md" [icon]="icPlus">Produit</bfd-btn>
+</ng-template>
+
+<div class="h-full grid grid-cols-[1fr_380px]">
+  <!-- LEFT: list -->
+  <div class="flex min-w-0 flex-col gap-3.5 p-5">
+    <!-- KPI row -->
+    <div class="grid grid-cols-4 gap-3">
+      @for (k of kpis(); track k.label) {
+        <bfd-card [padding]="12">
+          <div class="mb-1.5 flex items-center gap-2.5">
+            <span
+              [class]="
+                'inline-flex h-6.5 w-6.5 items-center justify-center rounded-sm bg-surface-2 ' +
+                k.colorClass
+              "
+            >
+              <svg [lucideIcon]="k.icon" [size]="14" aria-hidden="true"></svg>
+            </span>
+            <span class="text-[11px] text-muted">{{ k.label }}</span>
+          </div>
+          <div class="tnum text-[18px] font-semibold -tracking-[0.3px]" [class]="k.colorClass">
+            {{ k.value }}
+          </div>
+        </bfd-card>
+      }
+    </div>
+
+    <!-- Filter bar -->
+    <div class="flex items-center gap-2">
+      <div class="flex-1">
+        <bfd-input
+          [icon]="icSearch"
+          placeholder="Rechercher un produit…"
+          size="sm"
+          (valueChange)="setSearch($event)"
+        />
+      </div>
+      <div class="inline-flex rounded-md border border-border bg-surface-2 p-0.5">
+        @for (tab of categoryTabs(); track tab) {
+          @let isActive = activeCategory() === tab;
+          <button
+            type="button"
+            (click)="setCategory(tab)"
+            [class]="
+              'cursor-pointer rounded-sm border-none px-2.5 py-1 text-[11.5px] ' +
+              (isActive ? 'bg-surface text-text' : 'bg-transparent text-muted hover:text-text-2')
+            "
+          >
+            {{ tab }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Bulk action bar -->
+    @if (someSelected()) {
+      <div
+        class="flex items-center gap-2 rounded-md border border-border-s bg-surface-2 px-3.5 py-2"
+      >
+        <span class="text-[12.5px] text-text">
+          {{ selectedIds().size }} sélectionné{{ selectedIds().size !== 1 ? 's' : '' }}
+        </span>
+        <span class="flex-1"></span>
+        <bfd-btn kind="ghost" size="sm" (clicked)="clearSelection()">Annuler</bfd-btn>
+        <bfd-btn kind="danger" size="sm" [icon]="icTrash">Supprimer</bfd-btn>
+      </div>
+    }
+
+    <!-- Products table -->
+    <bfd-card [padding]="0" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <!-- Header -->
+      <div
+        class="grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] gap-3 border-b border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
+      >
+        <div (click)="$event.stopPropagation()">
+          <bfd-checkbox [checked]="allSelected()" (change)="toggleAll()" />
+        </div>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-left font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('name')"
+        >
+          Produit
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-left font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('category')"
+        >
+          Catégorie
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-right font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('qty')"
+        >
+          Quantité
+        </button>
+        <span>Lots</span>
+        <button
+          type="button"
+          class="cursor-pointer border-none bg-transparent p-0 text-left font-medium uppercase tracking-wider text-muted hover:text-text-2"
+          (click)="setSort('dlc')"
+        >
+          DLC
+        </button>
+        <span></span>
+      </div>
+
+      <!-- Body -->
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        @if (loading() === 'init' || loading() === 'loading') {
+          <div class="flex h-32 items-center justify-center text-[12.5px] text-muted">
+            Chargement…
+          </div>
+        } @else if (loadError()) {
+          <div class="px-6 py-10 text-center text-[12.5px] text-danger">{{ loadError() }}</div>
+        } @else {
+          @for (p of visibleProducts(); track p.id; let last = $last) {
+            @let selected = selectedId() === p.id;
+            <div
+              (click)="select(p.id)"
+              [class]="
+                'relative grid cursor-pointer grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] items-center gap-3 px-3.5 py-2.5 text-[12.5px] text-text ' +
+                (last ? '' : 'border-b border-border-s ') +
+                (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50')
+              "
+            >
+              @if (selected) {
+                <span class="absolute inset-y-0 left-0 w-[2.5px] bg-blue" aria-hidden="true"></span>
+              }
+              <div (click)="$event.stopPropagation()">
+                <bfd-checkbox [checked]="selectedIds().has(p.id)" (change)="toggleSelect(p.id)" />
+              </div>
+              <span class="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-text">
+                {{ p.name }}
+              </span>
+              <bfd-badge kind="ghost">{{ p.categoryName }}</bfd-badge>
+              <span class="tnum text-right font-medium">
+                {{ p.totalQty }} <span class="text-[11px] text-muted">{{ p.unit }}</span>
+              </span>
+              <div class="flex items-center gap-0.75">
+                @for (bar of lotBars(p); track $index) {
+                  <span [class]="'h-1.25 w-4 rounded-[1px] opacity-85 ' + lotBarColor(bar)"></span>
+                }
+              </div>
+              <div class="flex items-center gap-1.5">
+                @if (p.nearestDlc) {
+                  <span
+                    [class]="'h-[7px] w-[7px] rounded-full ' + dlcDotColor(p.nearestDlcStatus)"
+                  ></span>
+                  <span [class]="'tnum ' + dlcTextColor(p.nearestDlcStatus)">{{
+                    p.nearestDlc
+                  }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </div>
+              <span></span>
+            </div>
+          } @empty {
+            <div
+              class="flex h-full flex-col items-center justify-center gap-3 px-6 py-16 text-center"
+            >
+              <span
+                class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
+              >
+                <svg [lucideIcon]="icPackage" [size]="22" aria-hidden="true"></svg>
+              </span>
+              <div>
+                <div class="text-[13px] font-semibold text-text">
+                  @if (activeCategory() === 'Tous' && !searchQuery()) {
+                    Aucun produit en stock
+                  } @else {
+                    Aucun produit trouvé
+                  }
+                </div>
+                <div class="mt-1 text-[12px] text-muted">
+                  @if (activeCategory() === 'Tous' && !searchQuery()) {
+                    Ajoutez un produit ou scannez un code-barres pour démarrer l'inventaire.
+                  } @else {
+                    Essayez une autre catégorie ou modifiez votre recherche.
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Footer count -->
+      <div
+        class="flex items-center border-t border-border-s px-3.5 py-2.5 text-[11.5px] text-muted"
+      >
+        <span
+          >{{ visibleProducts().length }} produit{{
+            visibleProducts().length !== 1 ? 's' : ''
+          }}
+          affiché{{ visibleProducts().length !== 1 ? 's' : '' }}</span
+        >
+      </div>
+    </bfd-card>
+  </div>
+
+  <!-- RIGHT: detail panel -->
+  <aside class="flex flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5">
+    @if (selectedProduct(); as p) {
+      <div class="flex items-start gap-2">
+        <div class="flex-1">
+          @if (p.expiredBatchCount > 0) {
+            <bfd-badge kind="danger" [dot]="true">
+              {{ p.expiredBatchCount }} lot{{ p.expiredBatchCount !== 1 ? 's' : '' }} périmé{{
+                p.expiredBatchCount !== 1 ? 's' : ''
+              }}
+            </bfd-badge>
+          } @else if (p.soonBatchCount > 0) {
+            <bfd-badge kind="warn" [dot]="true">
+              {{ p.soonBatchCount }} proche péremption
+            </bfd-badge>
+          } @else {
+            <bfd-badge kind="ok" [dot]="true">Stock OK</bfd-badge>
+          }
+          <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
+            {{ p.name }}
+          </h3>
+          <div class="text-[12px] text-muted">
+            {{ p.categoryName }}
+            @if (p.brand) {
+              · {{ p.brand }}
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="grid grid-cols-2 gap-1.5">
+        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+          <div class="text-[10px] uppercase tracking-wider text-muted">Total restant</div>
+          <div class="tnum text-[18px] font-semibold text-text">
+            {{ p.totalQty }} <span class="text-[11px] text-muted">{{ p.unit }}</span>
+          </div>
+        </div>
+        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+          <div class="text-[10px] uppercase tracking-wider text-muted">Lots actifs</div>
+          <div class="tnum text-[18px] font-semibold text-text">{{ p.batchCount }}</div>
+        </div>
+      </div>
+
+      <!-- Lots -->
+      <div>
+        <div class="mb-2 flex items-center justify-between">
+          <span class="text-[12px] font-semibold text-text">Lots · ordre FEFO</span>
+          <label class="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted select-none">
+            <bfd-toggle [on]="showEmptyBatches()" (change)="showEmptyBatches.set($event)" />
+            Afficher les lots vides
+          </label>
+        </div>
+        @if (batchesLoading()) {
+          <div class="py-4 text-center text-[12px] text-muted">Chargement des lots…</div>
+        } @else {
+          <div class="flex flex-col gap-2">
+            @for (b of selectedBatches(); track b.id) {
+              <div
+                [class]="'rounded-md border bg-surface-2 p-3 ' + lotBorderClass(b.dlcStatus)"
+                [style.background]="
+                  b.dlcStatus === 'expired'
+                    ? 'color-mix(in oklch, var(--bae-dangerSoft) 60%, var(--bae-surface2))'
+                    : ''
+                "
+              >
+                <div class="flex items-center gap-2">
+                  <span class="mono text-[12px] font-semibold text-text">#{{ b.id }}</span>
+                  @if (b.dlcStatus === 'expired') {
+                    <bfd-badge kind="danger" [dot]="true">périmé</bfd-badge>
+                  } @else if (b.dlcStatus === 'soon') {
+                    <bfd-badge kind="warn" [dot]="true">bientôt</bfd-badge>
+                  }
+                  <span class="flex-1"></span>
+                  <span class="tnum text-[13px] font-semibold text-text">
+                    {{ b.remainingQty }} {{ selectedProduct()?.unit }}
+                  </span>
+                </div>
+                <div class="mt-2 flex gap-4 text-[11.5px] text-muted">
+                  @if (b.dlcLabel) {
+                    <span>
+                      DLC
+                      <span
+                        [class]="
+                          'mono tnum ' + (b.dlcStatus === 'expired' ? 'text-danger' : 'text-text-2')
+                        "
+                      >
+                        {{ b.dlcLabel }}
+                      </span>
+                    </span>
+                  }
+                  <span>
+                    Ouvert
+                    <span class="mono text-text-2">{{ b.openedAt ?? '—' }}</span>
+                  </span>
+                </div>
+                @if (b.dlcStatus === 'expired') {
+                  <div class="mt-2.5 flex gap-1.5">
+                    <bfd-btn
+                      kind="danger"
+                      size="sm"
+                      [icon]="icTrash"
+                      [disabled]="b.remainingQty === 0"
+                      (clicked)="discard(b)"
+                      >Mettre au rebut</bfd-btn
+                    >
+                  </div>
+                }
+              </div>
+            } @empty {
+              <div
+                class="flex flex-col items-center justify-center gap-2.5 rounded-md border border-dashed border-border-s bg-surface-2 px-4 py-6 text-center"
+              >
+                <span
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-muted"
+                >
+                  <svg [lucideIcon]="icPackage" [size]="18" aria-hidden="true"></svg>
+                </span>
+                <div>
+                  <div class="text-[12.5px] font-semibold text-text">
+                    @if (showEmptyBatches()) {
+                      Aucun lot enregistré
+                    } @else {
+                      Aucun lot actif
+                    }
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-muted">
+                    @if (showEmptyBatches()) {
+                      Scannez un code-barres pour ajouter un premier lot.
+                    } @else {
+                      Activez « Afficher les lots vides » pour voir les lots écoulés.
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div
+        class="flex flex-1 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-8 text-center"
+      >
+        <span
+          class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
+        >
+          <svg [lucideIcon]="icPackage" [size]="22" aria-hidden="true"></svg>
+        </span>
+        <div>
+          <div class="text-[13px] font-semibold text-text">Aucun produit sélectionné</div>
+          <div class="mt-1 text-[12px] text-muted">
+            Choisissez un produit dans la liste pour consulter ses lots et leurs DLC.
+          </div>
+        </div>
+      </div>
+    }
+  </aside>
+</div>

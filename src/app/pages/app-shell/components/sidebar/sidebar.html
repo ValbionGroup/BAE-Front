@@ -1,0 +1,139 @@
+<aside
+  class="w-58 shrink-0 h-full bg-sidebar border-r border-border-s flex flex-col px-3.5 py-4"
+  aria-label="Navigation principale"
+>
+  <!-- Logo -->
+  <div class="px-1 pb-4">
+    <bfd-logo />
+  </div>
+
+  <!-- Search -->
+  <div class="px-1 pb-3">
+    <div
+      class="flex items-center gap-2 px-2.5 py-1.5 bg-surface-2 border border-border rounded-md text-muted text-[12.5px]"
+    >
+      <svg lucideSearch [size]="14"></svg>
+      <span class="flex-1">Rechercher…</span>
+      <bfd-kbd>⌘K</bfd-kbd>
+    </div>
+  </div>
+
+  <!-- Espace -->
+  <nav class="flex flex-col">
+    <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
+      Espace
+    </div>
+    @for (item of espace; track item.id) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
+        [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
+      >
+        <span
+          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
+        ></span>
+        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
+        <span class="flex-1">{{ item.label }}</span>
+        @if (item.badge) {
+          <span
+            class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
+            >{{ item.badge }}</span
+          >
+        }
+        @if (item.alert) {
+          <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
+        }
+      </a>
+    }
+
+    <!-- Préparation -->
+    <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
+      Préparation
+    </div>
+    @for (item of preparation; track item.id) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
+        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
+      >
+        <span
+          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
+        ></span>
+        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
+        <span class="flex-1">{{ item.label }}</span>
+        @if (item.badge) {
+          <span
+            class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
+            >{{ item.badge }}</span
+          >
+        }
+        @if (item.alert) {
+          <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
+        }
+      </a>
+    }
+
+    <!-- Soirée -->
+    <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
+      Soirée
+    </div>
+    @for (item of soiree; track item.id) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
+        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
+      >
+        <span
+          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
+        ></span>
+        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
+        <span class="flex-1">{{ item.label }}</span>
+        @if (item.badge) {
+          <span
+            class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
+            >{{ item.badge }}</span
+          >
+        }
+        @if (item.alert) {
+          <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
+        }
+      </a>
+    }
+  </nav>
+
+  <!-- Footer nav (Tickets / Paramètres) -->
+  <div class="flex-1"></div>
+  <div class="pt-2.5 mt-2.5 border-t border-border-s flex flex-col">
+    @for (item of footer; track item.id) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
+        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
+      >
+        <span
+          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
+        ></span>
+        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
+        <span class="flex-1">{{ item.label }}</span>
+      </a>
+    }
+  </div>
+
+  <!-- User card -->
+  <div class="flex items-center gap-2.5 px-1.5 pt-2.5 mt-2 border-t border-border-s">
+    <bfd-avatar [name]="userName()" [size]="28" />
+    <div class="flex-1 min-w-0 leading-tight">
+      <div class="text-[13px] font-medium text-text truncate">{{ userName() }}</div>
+      <div class="text-[11px] text-muted">{{ userRole() }}</div>
+    </div>
+    <button
+      type="button"
+      (click)="logout()"
+      aria-label="Se déconnecter"
+      class="inline-flex h-7 w-7 items-center justify-center rounded-md cursor-pointer text-muted hover:bg-surface-2 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+    >
+      <svg lucideLogOut [size]="14"></svg>
+    </button>
+  </div>
+</aside>

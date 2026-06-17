@@ -1,0 +1,23 @@
+<aside class="w-60 shrink-0 overflow-y-auto border-r border-border-s px-3 py-4">
+  @for (it of items; track it.id; let i = $index) {
+    @if (showAdmHead(i)) {
+      <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-3.5 pb-1 uppercase">
+        Admin BAE
+      </div>
+    }
+    <a
+      [routerLink]="it.route"
+      routerLinkActive="bg-surface-2 text-text [&_.bae-snav-icon]:text-blue"
+      [routerLinkActiveOptions]="{ exact: it.exact ?? false }"
+      class="mb-px flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-[13px] text-text-2 hover:bg-surface-2"
+    >
+      <svg
+        [lucideIcon]="it.icon"
+        [size]="15"
+        class="bae-snav-icon text-muted"
+        aria-hidden="true"
+      ></svg>
+      <span>{{ it.l }}</span>
+    </a>
+  }
+</aside>

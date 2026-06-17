@@ -1,0 +1,63 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="'modal-title-' + config().id"
+  tabindex="-1"
+  class="w-full max-w-[560px] bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
+>
+  <div class="px-[22px] py-[18px] border-b border-border-s flex items-center gap-3">
+    <h2
+      [id]="'modal-title-' + config().id"
+      class="text-[15px] font-semibold text-text flex-1 min-w-0 truncate"
+    >
+      {{ config().title }}
+    </h2>
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Fermer"
+      class="text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded"
+    >
+      <svg lucideX [size]="16" aria-hidden="true"></svg>
+    </button>
+  </div>
+
+  <div class="p-[22px] flex flex-col gap-4 overflow-y-auto">
+    <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
+
+    <div
+      class="grid grid-cols-[1fr_140px_110px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+    >
+      <span>Nom</span>
+      <span>Date</span>
+      <span>Heure</span>
+    </div>
+
+    <div class="grid grid-cols-[1fr_140px_110px] gap-2 items-center">
+      <input
+        type="text"
+        [value]="name()"
+        placeholder="Nom de la soiree"
+        [class]="inputClass(name().trim().length === 0)"
+        (input)="onNameInput($event)"
+      />
+      <input
+        type="date"
+        [value]="date()"
+        [class]="inputClass(date().trim().length === 0)"
+        (input)="onDateInput($event)"
+      />
+      <input
+        type="time"
+        [value]="time()"
+        [class]="inputClass(false)"
+        (input)="onTimeInput($event)"
+      />
+    </div>
+  </div>
+
+  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
+    <bfd-btn kind="ghost" size="md" (clicked)="onClose()">Annuler</bfd-btn>
+    <bfd-btn kind="primary" size="md" [disabled]="!canSave()" (clicked)="onSave()"> Creer </bfd-btn>
+  </div>
+</div>

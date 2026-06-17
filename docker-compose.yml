@@ -1,0 +1,10 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bae-front:latest
+    container_name: bae-front
+    ports:
+      - "8080:80"
+    restart: unless-stopped

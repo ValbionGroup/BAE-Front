@@ -1,0 +1,59 @@
+<header class="flex items-center gap-4 px-6 py-3.5 border-b border-border-s bg-bg shrink-0">
+  <div class="flex-1 min-w-0">
+    @if (header(); as h) {
+      @if (h.breadcrumb && h.breadcrumb.length) {
+        <nav
+          class="flex items-center gap-1.5 text-[11px] text-muted mb-0.5"
+          aria-label="Fil d'Ariane"
+        >
+          @for (crumb of h.breadcrumb; track $index; let last = $last; let first = $first) {
+            @if (!first) {
+              <svg lucideChevronRight [size]="11" aria-hidden="true"></svg>
+            }
+            <span [class]="last ? 'text-text-2' : ''">{{ crumb }}</span>
+          }
+        </nav>
+      }
+      <div class="flex items-baseline gap-3">
+        <h1 class="text-[19px] font-semibold text-text m-0 -tracking-[0.3px]">{{ h.title }}</h1>
+        @if (h.subtitle) {
+          <span class="text-xs text-muted">{{ h.subtitle }}</span>
+        }
+      </div>
+    }
+  </div>
+  @if (actions(); as tpl) {
+    <div class="flex items-center gap-2">
+      <ng-container [ngTemplateOutlet]="tpl" />
+    </div>
+  }
+  <span class="w-px h-[22px] bg-border" aria-hidden="true"></span>
+  <button
+    type="button"
+    (click)="theme.toggle()"
+    class="w-8 h-8 rounded-md border border-border bg-surface text-text-2 inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
+    [attr.aria-label]="themeTooltip()"
+    [bfdTooltip]="themeTooltip()"
+    bfdTooltipPlacement="bottom"
+  >
+    @if (theme.mode() === 'dark') {
+      <svg lucideSun [size]="15" aria-hidden="true"></svg>
+    } @else {
+      <svg lucideMoon [size]="15" aria-hidden="true"></svg>
+    }
+  </button>
+  <a
+    routerLink="/notifications"
+    class="relative w-8 h-8 rounded-md border border-border bg-surface text-text-2 inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
+    aria-label="Notifications"
+    bfdTooltip="Notifications"
+    bfdTooltipDescription="3 nouvelles · cliquez pour ouvrir"
+    bfdTooltipPlacement="bottom-end"
+  >
+    <svg lucideBell [size]="15" aria-hidden="true"></svg>
+    <span
+      class="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full bg-red border-2 border-surface"
+      aria-hidden="true"
+    ></span>
+  </a>
+</header>

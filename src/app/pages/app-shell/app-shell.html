@@ -1,27 +1,14 @@
-<div class="relative flex h-screen w-screen flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
-  <!--
-    @if (isSearchPopupOpen()) {
-      <app-search-pop (closePopup)="isSearchPopupOpen.set(false)"></app-search-pop>
-    }
-  -->
-
-  <bfd-header />
-
-  <main class="h-full w-full overflow-auto pt-16">
-    <router-outlet />
+<div class="flex h-screen w-screen overflow-hidden bg-bg text-text font-sans">
+  <bfd-sidebar />
+  <main class="flex flex-1 min-w-0 flex-col overflow-hidden">
+    <bfd-topbar />
+    <div class="flex-1 overflow-auto">
+      <router-outlet />
+    </div>
   </main>
-
-<!--
-  <app-context-menu
-    (closeMenu)="isContextMenuOpen.set(false)"
-    [isVisible]="isContextMenuOpen()"
-    [options]="contextMenuOptions()"
-    [x]="contextMenuX()"
-    [y]="contextMenuY()" />
--->
-
-<!--  <app-notification-container />
-  <app-tooltip-singleton class="fixed z-100" #tooltip></app-tooltip-singleton>
-  <app-dropdown-singleton class="fixed z-90" #dropdown></app-dropdown-singleton>
-  <app-entity-auto-complete-dialog #entityAutoComplete></app-entity-auto-complete-dialog>-->
 </div>
+
+<bfd-modal-container />
+<bfd-toast-container />
+<bfd-dropdown-container />
+<bfd-tooltip-container />

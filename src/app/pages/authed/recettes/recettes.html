@@ -1,0 +1,343 @@
+<div class="flex h-full flex-col overflow-hidden">
+  <!-- Filter bar -->
+  <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
+    <div class="flex gap-1.5">
+      @for (f of filterTabs; track f; let i = $index) {
+        <button
+          type="button"
+          (click)="activeFilter.set(i)"
+          [class]="
+            'cursor-pointer rounded-md border px-2.5 py-1.5 text-xs font-medium ' +
+            (i === activeFilter()
+              ? 'border-border bg-surface-2 text-text'
+              : 'border-transparent bg-transparent text-text-2')
+          "
+        >
+          {{ f }}
+        </button>
+      }
+    </div>
+    <div class="flex-1"></div>
+    <div class="w-60">
+      <bfd-input
+        [icon]="icSearch"
+        placeholder="Rechercher une recette…"
+        size="sm"
+        (valueChange)="setSearch($event)"
+      />
+    </div>
+  </div>
+
+  <!-- Two-column: list + detail -->
+  <div class="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr]">
+    <!-- LIST -->
+    <div class="overflow-y-auto border-r border-border-s">
+      <div
+        class="grid grid-cols-[36px_1fr_90px_100px_100px_110px] gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      >
+        <span></span>
+        <span>Recette</span>
+        <span class="text-right">Ingrédients</span>
+        <span class="text-right">Coût</span>
+        <span class="text-right">Vente</span>
+        <span class="text-right">Marge</span>
+      </div>
+
+      @if (loading() === 'init' || loading() === 'loading') {
+        @for (_ of r5; track $index) {
+          <div
+            class="grid grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-6 py-3"
+          >
+            <bfd-skeleton width="32px" height="32px" rounded="md" variant="surface-3" />
+            <div class="flex flex-col gap-1.5">
+              <bfd-skeleton width="60%" height="12px" variant="surface-3" />
+              <bfd-skeleton width="40%" height="10px" />
+            </div>
+            <bfd-skeleton width="40%" height="10px" />
+            <bfd-skeleton width="60%" height="10px" />
+            <bfd-skeleton width="60%" height="10px" />
+            <bfd-skeleton width="70%" height="10px" />
+          </div>
+        }
+      } @else if (loading() === 'error') {
+        <div class="px-6 py-10 text-center text-[12.5px] text-danger">
+          {{ loadError() ?? 'Impossible de charger les recettes.' }}
+        </div>
+      } @else if (recettes().length === 0) {
+        <div class="flex h-full flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+          <span
+            class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
+          >
+            <svg [lucideIcon]="icChef" [size]="22" aria-hidden="true"></svg>
+          </span>
+          <div>
+            <div class="text-[13px] font-semibold text-text">
+              Aucune recette dans le catalogue
+            </div>
+            <div class="mt-1 text-[12px] text-muted">
+              Créez votre première recette pour la voir apparaître ici.
+            </div>
+          </div>
+        </div>
+      } @else {
+        @for (r of recettes(); track r.id) {
+          @let selected = selectedId() === r.id;
+          <div
+            (click)="select(r.id)"
+            [class]="
+              'relative grid cursor-pointer grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+              (selected ? 'bg-surface-2' : '')
+            "
+          >
+            @if (selected) {
+              <span class="absolute left-0 top-0 bottom-0 w-[2.5px] bg-blue"></span>
+            }
+            <span
+              class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-3 text-muted"
+            >
+              <svg [lucideIcon]="icChef" [size]="15" aria-hidden="true"></svg>
+            </span>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[13px] font-medium text-text">{{ r.nom }}</span>
+                @if (r.star) {
+                  <svg
+                    [lucideIcon]="icStar"
+                    [size]="12"
+                    fill="var(--bae-warn)"
+                    class="text-warn"
+                    aria-hidden="true"
+                  ></svg>
+                }
+              </div>
+              <div class="mt-0.5 text-[11px] text-muted">{{ r.usage }}</div>
+            </div>
+            <span class="tnum text-right text-[12.5px] text-text-2">{{ r.ing }}</span>
+            <span class="mono tnum text-right text-[12px] text-text-2">
+              @if (r.cout !== null) { {{ formatPrice(r.cout) }} € } @else { — }
+            </span>
+            <span class="mono tnum text-right text-[12.5px] font-semibold text-text">
+              @if (r.prix !== null) { {{ formatPrice(r.prix) }} € } @else { — }
+            </span>
+            <span
+              [class]="
+                'mono tnum text-right text-[12px] ' +
+                (r.marge === null ? 'text-muted' : r.marge >= 0 ? 'text-ok' : 'text-danger')
+              "
+            >
+              @if (r.marge !== null) {
+                {{ r.marge >= 0 ? '+' : '' }}{{ formatPrice(r.marge) }} €
+              } @else {
+                —
+              }
+            </span>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- DETAIL -->
+    <div class="overflow-y-auto px-6 pt-5 pb-8">
+      @if (loading() === 'init' || loading() === 'loading') {
+        <div class="mb-4 flex items-start gap-3">
+          <bfd-skeleton width="48px" height="48px" rounded="md" variant="surface-3" />
+          <div class="flex flex-1 flex-col gap-1.5">
+            <bfd-skeleton width="40%" height="20px" variant="surface-3" />
+            <bfd-skeleton width="60%" height="11px" />
+          </div>
+        </div>
+        <div
+          class="mb-4 grid grid-cols-3 gap-2.5 rounded-md border border-border-s bg-surface p-3.5"
+        >
+          @for (_ of r3; track $index) {
+            <div class="flex flex-col gap-1.5">
+              <bfd-skeleton width="70%" height="10px" />
+              <bfd-skeleton width="60%" height="20px" variant="surface-3" />
+            </div>
+          }
+        </div>
+      } @else if (selectedRecipe(); as recipe) {
+        <div class="mb-4 flex items-start gap-3">
+          <span
+            class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-soft text-blue"
+          >
+            <svg [lucideIcon]="icChef" [size]="22" aria-hidden="true"></svg>
+          </span>
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <h2 class="m-0 text-lg font-semibold text-text">{{ recipe.nom }}</h2>
+              @if (recipe.star) {
+                <svg
+                  [lucideIcon]="icStar"
+                  [size]="14"
+                  fill="var(--bae-warn)"
+                  class="text-warn"
+                  aria-hidden="true"
+                ></svg>
+              }
+            </div>
+            <div class="mt-0.5 text-xs text-muted">
+              {{ recipe.usage }} · {{ recipe.ing }} ingrédient{{ recipe.ing !== 1 ? 's' : '' }}
+            </div>
+          </div>
+          <bfd-btn kind="ghost" size="sm" [icon]="icEdit">Éditer</bfd-btn>
+          <bfd-btn kind="ghost" size="sm" [icon]="icMore"></bfd-btn>
+        </div>
+
+        <!-- Cost summary -->
+        <div
+          class="mb-4 grid grid-cols-3 gap-2.5 rounded-md border border-border-s bg-surface p-3.5"
+        >
+          <div>
+            <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Coût revient
+            </div>
+            <div class="mono tnum mt-1 text-lg font-semibold text-text-2">
+              @if (recipe.cout !== null) { {{ formatPrice(recipe.cout) }} € } @else { — }
+            </div>
+          </div>
+          <div>
+            <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Prix vente
+            </div>
+            <div class="mono tnum mt-1 text-lg font-semibold text-text">
+              @if (recipe.prix !== null) { {{ formatPrice(recipe.prix) }} € } @else { — }
+            </div>
+          </div>
+          <div>
+            <div class="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Marge nette
+            </div>
+            <div
+              [class]="
+                'mono tnum mt-1 text-lg font-semibold ' +
+                (recipe.marge === null ? 'text-muted' : recipe.marge >= 0 ? 'text-ok' : 'text-danger')
+              "
+            >
+              @if (recipe.marge !== null) {
+                {{ recipe.marge >= 0 ? '+' : '' }}{{ formatPrice(recipe.marge) }} €
+              } @else {
+                —
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="mono mb-2 text-[10px] tracking-wider text-muted">INGRÉDIENTS PAR PORTION</div>
+        @if (detailLoading()) {
+          <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+            @for (_ of r5; track $index; let i = $index) {
+              <div
+                [class]="
+                  'grid grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 ' +
+                  (i ? 'border-t border-border-s' : '')
+                "
+              >
+                <bfd-skeleton width="60%" height="11px" variant="surface-3" />
+                <bfd-skeleton width="40px" height="10px" />
+                <bfd-skeleton width="50px" height="10px" />
+                <bfd-skeleton width="60px" height="10px" />
+              </div>
+            }
+          </div>
+        } @else if (detailError()) {
+          <div
+            class="rounded-md border border-dashed border-border-s bg-surface p-4 text-center text-[12px] text-danger"
+          >
+            Impossible de charger le détail de la recette.
+          </div>
+        } @else if (!recipe.ingredients || recipe.ingredients.length === 0) {
+          <div
+            class="rounded-md border border-dashed border-border-s bg-surface p-4 text-center text-[12px] text-muted"
+          >
+            Aucun ingrédient renseigné pour cette recette.
+          </div>
+        } @else {
+          <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+            @for (g of recipe.ingredients; track g.n; let i = $index) {
+              <div
+                [class]="
+                  'grid grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+                  (i ? 'border-t border-border-s' : '')
+                "
+              >
+                <div>
+                  <span class="text-text">{{ g.n }}</span>
+                  @if (g.lot !== '—') {
+                    <span class="mono ml-2 text-[10.5px] text-muted">{{ g.lot }}</span>
+                  }
+                </div>
+                <span class="mono tnum text-right text-text-2">{{ g.q }}</span>
+                <span class="mono tnum text-right text-muted">
+                  @if (g.c !== null) { {{ formatPrice(g.c) }} € } @else { — }
+                </span>
+                <div class="text-right">
+                  @if (g.warn) {
+                    <bfd-badge kind="warn">Lot DLC J-2</bfd-badge>
+                  } @else {
+                    <span class="tnum text-[11px] text-muted">{{ g.stock }} en stock</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="mono mt-5 mb-2 text-[10px] tracking-wider text-muted">MÉTHODE</div>
+        @if (detailLoading()) {
+          <div class="flex flex-col gap-2">
+            @for (_ of r3; track $index) {
+              <div class="flex items-start gap-2.5">
+                <bfd-skeleton width="22px" height="22px" rounded="sm" variant="surface-3" />
+                <bfd-skeleton width="80%" height="12px" />
+              </div>
+            }
+          </div>
+        } @else if (!recipe.methode || recipe.methode.length === 0) {
+          @if (!detailError()) {
+            <div
+              class="rounded-md border border-dashed border-border-s bg-surface p-4 text-center text-[12px] text-muted"
+            >
+              Aucune méthode renseignée pour cette recette.
+            </div>
+          }
+        } @else {
+          <ol class="m-0 flex list-none flex-col gap-2 p-0">
+            @for (s of recipe.methode; track $index; let i = $index) {
+              <li class="flex items-start gap-2.5">
+                <span
+                  class="mono inline-flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-sm bg-surface-2 text-[11px] font-semibold text-text-2"
+                >
+                  {{ i + 1 }}
+                </span>
+                <span class="text-[12.5px] leading-relaxed text-text-2">{{ s }}</span>
+              </li>
+            }
+          </ol>
+        }
+      } @else if (recettes().length === 0) {
+        <div
+          class="flex h-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-8 text-center"
+        >
+          <span
+            class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
+          >
+            <svg [lucideIcon]="icChef" [size]="22" aria-hidden="true"></svg>
+          </span>
+          <div>
+            <div class="text-[13px] font-semibold text-text">Aucune recette à afficher</div>
+            <div class="mt-1 text-[12px] text-muted">
+              Le détail apparaîtra ici dès qu'une recette sera disponible.
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div
+          class="flex h-full items-center justify-center rounded-md border border-dashed border-border-s bg-surface p-8 text-center text-[12.5px] text-muted"
+        >
+          Sélectionnez une recette pour voir son détail.
+        </div>
+      }
+    </div>
+  </div>
+</div>

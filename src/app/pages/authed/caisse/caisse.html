@@ -1,0 +1,209 @@
+<ng-template #actions>
+  @if (store.sessionActive()) {
+    <bfd-btn kind="ghost" size="md" [icon]="icScan">Scanner</bfd-btn>
+    <bfd-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bfd-btn>
+  } @else if (store.todayEvent()) {
+    <bfd-btn kind="primary" size="md" [icon]="icCalendarPlus" (clicked)="startSession()">
+      Lancer la session
+    </bfd-btn>
+  }
+</ng-template>
+
+@if (!store.sessionActive()) {
+  <div class="flex h-full items-center justify-center p-6">
+    <div
+      class="flex w-full max-w-md flex-col items-center gap-3.5 rounded-lg border border-dashed border-border-s bg-surface p-8 text-center"
+    >
+      <div
+        class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-soft text-blue"
+      >
+        <svg [lucideIcon]="icCart" [size]="22" aria-hidden="true"></svg>
+      </div>
+      <div class="text-base font-semibold text-text">Aucune session de caisse active</div>
+      @if (store.todayEvent(); as ev) {
+        <p class="text-[12.5px] text-muted">
+          Une soirée est prévue aujourd'hui : <span class="text-text">{{ ev.name }}</span
+          >{{ ev.location ? ' · ' + ev.location : '' }}.
+        </p>
+        <bfd-btn kind="primary" size="lg" [icon]="icCalendarPlus" (clicked)="startSession()">
+          Lancer la session pour {{ ev.name }}
+        </bfd-btn>
+      } @else {
+        <p class="text-[12.5px] text-muted">
+          Aucune soirée n'est programmée pour aujourd'hui. La caisse ne peut pas être ouverte.
+        </p>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="grid h-full grid-cols-[1fr_360px]">
+    <!-- LEFT: products -->
+    <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-5">
+      <!-- Category tabs -->
+      <div class="flex flex-wrap items-center gap-2">
+        @for (c of store.categories(); track c) {
+          @let active = c === store.activeCategory();
+          <button
+            type="button"
+            (click)="onCategoryClick(c)"
+            [class]="
+              'inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold ' +
+              (active ? 'border-blue bg-blue text-white' : 'border-border bg-surface text-text-2')
+            "
+          >
+            {{ c }}
+          </button>
+        }
+        <div class="flex-1"></div>
+        <bfd-btn kind="outline" size="md" [icon]="icSearch">Rechercher</bfd-btn>
+      </div>
+
+      <!-- Product grid -->
+      @if (store.visibleItems().length === 0) {
+        <div
+          class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border-s bg-surface p-8 text-center text-[12.5px] text-muted"
+        >
+          Aucun produit dans le menu de cette soirée.
+        </div>
+      } @else {
+        <div class="grid flex-1 grid-cols-4 content-start gap-3">
+          @for (it of store.visibleItems(); track it.recipeId) {
+            <button
+              type="button"
+              (click)="addItem(it)"
+              class="relative flex min-h-[110px] cursor-pointer flex-col gap-3 rounded-lg border border-border bg-surface p-3.5 text-left transition-transform"
+            >
+              <div class="flex-1 text-[15px] font-semibold leading-tight text-text">
+                {{ it.recipeName }}
+              </div>
+              <div class="flex items-end justify-between">
+                <span class="tnum text-[22px] font-semibold -tracking-[0.5px] text-text">
+                  {{ formatPrice(it.price) }}
+                  <span class="text-[13px] font-medium text-muted">€</span>
+                </span>
+                <bfd-badge kind="ghost">{{ it.category }}</bfd-badge>
+              </div>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Hints -->
+      <div
+        class="flex items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted"
+      >
+        <span><bfd-kbd>F1</bfd-kbd> · catégorie suivante</span>
+        <span><bfd-kbd>+</bfd-kbd> / <bfd-kbd>−</bfd-kbd> · quantité</span>
+        <span><bfd-kbd>Entrée</bfd-kbd> · encaisser</span>
+        <span class="flex-1"></span>
+        @if (store.sessionEvent(); as ev) {
+          <span
+            >Soirée <span class="text-text">{{ ev.name }}</span></span
+          >
+        }
+      </div>
+    </div>
+
+    <!-- RIGHT: cart -->
+    <aside class="flex flex-col border-l border-border-s bg-surface">
+      <!-- Header -->
+      <div class="flex items-center gap-2.5 border-b border-border-s p-4">
+        <div
+          class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
+        >
+          <svg [lucideIcon]="icCart" [size]="18" aria-hidden="true"></svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-text">Ticket en cours</div>
+          <div class="text-[11px] text-muted">
+            {{ store.itemCount() }} article{{ store.itemCount() > 1 ? 's' : '' }} ·
+            {{ store.totalQuantity() }} quantité{{ store.totalQuantity() > 1 ? 's' : '' }}
+          </div>
+        </div>
+        <bfd-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bfd-btn>
+      </div>
+
+      <!-- Items -->
+      <div class="flex-1 overflow-y-auto px-4">
+        @if (store.itemCount() === 0) {
+          <div class="py-10 text-center text-[12px] text-muted">
+            Sélectionnez un produit pour commencer le ticket.
+          </div>
+        } @else {
+          @for (it of store.cart(); track it.recipeId; let last = $last) {
+            <div
+              [class]="
+                'flex items-center gap-2.5 py-2.5 ' + (last ? '' : 'border-b border-border-s')
+              "
+            >
+              <button
+                type="button"
+                class="tnum inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-sm border border-border bg-surface-2 text-[13px] font-semibold text-text hover:bg-surface-3"
+                (click)="store.incrementItem(it.recipeId)"
+                aria-label="Augmenter la quantité"
+              >
+                {{ it.quantity }}
+              </button>
+              <div class="min-w-0 flex-1">
+                <div
+                  class="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                >
+                  {{ it.name }}
+                </div>
+                <div class="tnum text-[11px] text-muted">
+                  {{ formatPrice(it.price) }} € × {{ it.quantity }}
+                </div>
+              </div>
+              <span class="tnum text-[13px] font-semibold text-text"
+                >{{ formatPrice(it.price * it.quantity) }} €</span
+              >
+              <bfd-btn
+                kind="ghost"
+                size="sm"
+                [icon]="icX"
+                (clicked)="store.removeFromCart(it.recipeId)"
+              ></bfd-btn>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Totals + payment -->
+      <div class="border-t border-border-s bg-bg p-4">
+        <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
+          <div class="flex justify-between text-text-2">
+            <span>Sous-total</span>
+            <span class="tnum">{{ formatPrice(store.subtotal()) }} €</span>
+          </div>
+        </div>
+        <div class="flex items-baseline justify-between border-t border-dashed border-border py-3">
+          <span class="text-sm text-text-2">À encaisser</span>
+          <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
+            >{{ formatPrice(store.subtotal()) }} €</span
+          >
+        </div>
+
+        <div class="mt-2.5 grid grid-cols-2 gap-2">
+          <bfd-btn kind="secondary" size="lg" [icon]="icEuro" [disabled]="store.itemCount() === 0"
+            >Espèces</bfd-btn
+          >
+          <bfd-btn kind="secondary" size="lg" [icon]="icQr" [disabled]="store.itemCount() === 0"
+            >Lydia</bfd-btn
+          >
+        </div>
+        <div class="mt-2">
+          <bfd-btn
+            kind="primary"
+            size="xl"
+            [full]="true"
+            [iconRight]="icArrowRight"
+            [disabled]="store.itemCount() === 0"
+            (clicked)="store.clearCart()"
+          >
+            Encaisser · {{ formatPrice(store.subtotal()) }} €
+          </bfd-btn>
+        </div>
+      </div>
+    </aside>
+  </div>
+}
