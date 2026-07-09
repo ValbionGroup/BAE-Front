@@ -39,14 +39,14 @@ interface Recipe {
 }
 
 const RECIPE_CATALOG: readonly Recipe[] = [
-  { id: 'hd-clas',  nom: 'Burger Classic',     cout: 2.8,  usage: 'Plat principal' },
-  { id: 'hd-veg',   nom: 'Burger Végétarien',  cout: 2.5,  usage: 'Plat principal' },
-  { id: 'frites',   nom: 'Frites maison',       cout: 0.6,  usage: 'Accompagnement' },
-  { id: 'crepe-n',  nom: 'Crêpe Nutella',       cout: 0.9,  usage: 'Dessert' },
-  { id: 'crepe-s',  nom: 'Crêpe Sucre',         cout: 0.7,  usage: 'Dessert' },
-  { id: 'pano',     nom: 'Panoplie Boissons',   cout: 1.1,  usage: 'Boisson' },
-  { id: 'tapas',    nom: 'Tapas assortis',       cout: 3.2,  usage: 'Entrée' },
-  { id: 'sangria',  nom: 'Sangria maison',       cout: 1.4,  usage: 'Boisson' },
+  { id: 'hd-clas', nom: 'Burger Classic', cout: 2.8, usage: 'Plat principal' },
+  { id: 'hd-veg', nom: 'Burger Végétarien', cout: 2.5, usage: 'Plat principal' },
+  { id: 'frites', nom: 'Frites maison', cout: 0.6, usage: 'Accompagnement' },
+  { id: 'crepe-n', nom: 'Crêpe Nutella', cout: 0.9, usage: 'Dessert' },
+  { id: 'crepe-s', nom: 'Crêpe Sucre', cout: 0.7, usage: 'Dessert' },
+  { id: 'pano', nom: 'Panoplie Boissons', cout: 1.1, usage: 'Boisson' },
+  { id: 'tapas', nom: 'Tapas assortis', cout: 3.2, usage: 'Entrée' },
+  { id: 'sangria', nom: 'Sangria maison', cout: 1.4, usage: 'Boisson' },
 ];
 
 type EventStatus = 'preparing' | 'planning' | 'past';

@@ -46,6 +46,7 @@ src/app/
 ```
 
 ### Path aliases
+
 - `#core/*` → `src/app/core/*`
 - `#shared/*` → `src/app/shared/*`
 - `#pages/*` → `src/app/pages/*`
@@ -59,18 +60,23 @@ src/app/
 2. **authInterceptor** — ajoute `Authorization: Bearer <token>` vers l'API
 3. **errorInterceptor** — gestion globale des erreurs HTTP
 4. **apiResponseCaseInterceptor** — convertit les clés de la réponse en `camelCase`
+5. **apiEnvelopeInterceptor** — déballe l'enveloppe API : succès `{ data, meta }` → body = `data` ; erreur `{ error: { code, message } }` → `HttpErrorResponse.error` = `{ code, message }` (types dans `core/models/api-response.model.ts`)
 
 > Les body reçus par le backend arrivent toujours en `snake_case`. En déstructurant `req.body`, utiliser les clés snake_case côté Express.
+> Côté Express, toute donnée issue de la DB doit passer par `serialize` / `model.serialize()` avant d'être renvoyée dans `data` — ne jamais renvoyer le modèle brut.
+> Les dates Luxon (`DateTime`) doivent être sérialisées avec `.toISO()` (string ISO 8601), jamais l'objet `DateTime` brut : le front les type en `string`, et le convertisseur de casse récurserait dans les internes Luxon (`loc`, `c`, `_zone`…).
 
 ---
 
 ## State Management
 
 Deux systèmes coexistent :
+
 - **NgRx Store classique** : auth uniquement (reducer, actions, effects, selectors dans `core/store/auth/`)
 - **NgRx Signal Store** (`signalStore`) : tous les autres domaines — `withState`, `withMethods`, `patchState`, `providedIn: 'root'`
 
 Pattern Signal Store :
+
 ```typescript
 // state shape
 { loading: LoadingStatus; loadError: string | null; items: Item[] }
@@ -78,45 +84,63 @@ Pattern Signal Store :
 ```
 
 ### Stores Signal existants
-| Store | State principal | Méthodes clés |
-|---|---|---|
-| `EventsStore` | `events: Record<string, EventDetail>` | `load()`, `loadEventRoster()`, `setMemberPresence()` |
-| `StocksStore` | `products: StockProduct[]` | `load()`, `getBatches(id, showEmpty?)`, `discardBatch()` |
-| `CoordinationStore` | `events`, `assignments`, `eventJobs` | `load()`, `createEvent()`, `updateEvent()`, `deleteEvent()` |
-| `CaisseStore` | `cart`, `sessionEventId`, `activeCategory` | `addToCart()`, `decrementItem()`, `startSession()` |
-| `AnalyseStore` | `kpis`, `chart`, `soirees`, `prediction` | computed-only |
+
+| Store               | State principal                            | Méthodes clés                                               |
+| ------------------- | ------------------------------------------ | ----------------------------------------------------------- |
+| `EventsStore`       | `events: Record<string, EventDetail>`      | `load()`, `loadEventRoster()`, `setMemberPresence()`        |
+| `StocksStore`       | `products: StockProduct[]`                 | `load()`, `getBatches(id, showEmpty?)`, `discardBatch()`    |
+| `CoordinationStore` | `events`, `assignments`, `eventJobs`       | `load()`, `createEvent()`, `updateEvent()`, `deleteEvent()` |
+| `CaisseStore`       | `cart`, `sessionEventId`, `activeCategory` | `addToCart()`, `decrementItem()`, `startSession()`          |
+| `AnalyseStore`      | `kpis`, `chart`, `soirees`, `prediction`   | computed-only                                               |
 
 ---
 
 ## Stocks — Domaine métier
 
 ### Types (`stocks.types.ts`)
+
 ```typescript
 type DlcStatus = 'none' | 'ok' | 'soon' | 'expired';
-type SortKey   = 'name' | 'qty' | 'dlc' | 'category';
-type SortDir   = 'asc' | 'desc';
+type SortKey = 'name' | 'qty' | 'dlc' | 'category';
+type SortDir = 'asc' | 'desc';
 
 interface StockProduct {
-  id, name, unit, brand, categoryId, categoryName,
-  totalQty, batchCount,
-  nearestDlc: string | null, nearestDlcStatus: DlcStatus,
-  expiredBatchCount, soonBatchCount
+  id;
+  name;
+  unit;
+  brand;
+  categoryId;
+  categoryName;
+  totalQty;
+  batchCount;
+  nearestDlc: string | null;
+  nearestDlcStatus: DlcStatus;
+  expiredBatchCount;
+  soonBatchCount;
 }
 interface StockBatchRow {
-  id, restockId, initialQty, remainingQty,
-  dlcLabel: string | null, dlcStatus: DlcStatus, openedAt: string | null
+  id;
+  restockId;
+  initialQty;
+  remainingQty;
+  dlcLabel: string | null;
+  dlcStatus: DlcStatus;
+  openedAt: string | null;
 }
 ```
 
 ### API stocks (`StocksService`)
-| Méthode | Endpoint | Notes |
-|---|---|---|
-| `getAll()` | `GET /stocks` | Agrégat par produit |
-| `getBatches(id, showEmpty?)` | `GET /stocks/:id/batches?showEmpty=true` | `showEmpty` défaut `false` → exclut lots vides |
-| `discardBatch(goodsId, batchId, remainingQty)` | `POST /stocks/:id/batches/:batchId/discard` | body camelCase → snake_case par interceptor |
+
+| Méthode                                        | Endpoint                                    | Notes                                          |
+| ---------------------------------------------- | ------------------------------------------- | ---------------------------------------------- |
+| `getAll()`                                     | `GET /stocks`                               | Agrégat par produit                            |
+| `getBatches(id, showEmpty?)`                   | `GET /stocks/:id/batches?showEmpty=true`    | `showEmpty` défaut `false` → exclut lots vides |
+| `discardBatch(goodsId, batchId, remainingQty)` | `POST /stocks/:id/batches/:batchId/discard` | body camelCase → snake_case par interceptor    |
 
 ### Page stocks (`pages/authed/stocks/stocks.ts`)
+
 Signals locaux :
+
 - `searchQuery`, `activeCategory`, `sortKey`, `sortDir` — filtres/tri
 - `selectedId` — produit actif dans le panneau droite
 - `selectedBatches`, `batchesLoading` — lots du panneau détail
@@ -124,6 +148,7 @@ Signals locaux :
 - `selectedIds: ReadonlySet<number>` — sélection multiple (multi-select)
 
 Computed :
+
 - `visibleProducts` — filtre catégorie + recherche + tri sur `store.products()`
 - `kpis` — 4 KPIs (périmés, proche péremption, produits en stock, total lots)
 - `categoryTabs` — `['Tous', ...categories dynamiques]`
@@ -137,20 +162,21 @@ Rechargement des lots : un `effect()` réagit à `selectedId()` + `showEmptyBatc
 
 Tous sont **standalone**, `ChangeDetectionStrategy.OnPush`, utilisent `input()` / `output()`.
 
-| Sélecteur | Inputs clés | Outputs |
-|---|---|---|
-| `bfd-btn` | `kind`, `size`, `icon`, `iconRight`, `full`, `disabled`, `type` | `clicked` |
-| `bfd-input` | `icon`, `placeholder`, `size` | `valueChange` |
-| `bfd-badge` | `kind`, `dot` | — |
-| `bfd-card` | `padding` | — |
-| `bfd-checkbox` | `checked`, `disabled` | `change: boolean` |
-| `bfd-toggle` | `on`, `label`, `disabled` | `change: boolean` |
-| `bfd-skeleton` | — | — |
-| `bfd-avatar` | — | — |
+| Sélecteur      | Inputs clés                                                     | Outputs           |
+| -------------- | --------------------------------------------------------------- | ----------------- |
+| `bfd-btn`      | `kind`, `size`, `icon`, `iconRight`, `full`, `disabled`, `type` | `clicked`         |
+| `bfd-input`    | `icon`, `placeholder`, `size`                                   | `valueChange`     |
+| `bfd-badge`    | `kind`, `dot`                                                   | —                 |
+| `bfd-card`     | `padding`                                                       | —                 |
+| `bfd-checkbox` | `checked`, `disabled`                                           | `change: boolean` |
+| `bfd-toggle`   | `on`, `label`, `disabled`                                       | `change: boolean` |
+| `bfd-skeleton` | —                                                               | —                 |
+| `bfd-avatar`   | —                                                               | —                 |
 
 ### Checkbox & Toggle — mode contrôlé vs CVA
 
 Les deux composants supportent deux modes :
+
 - **Contrôlé** (`[checked]` / `[on]` + `(change)`) : `cvaValue` reste `null`, `internalChecked`/`internalOn` lit l'input signal.
 - **CVA** (`ngModel` / `formControl`) : `writeValue()` active `inCvaMode = true` et met à jour le signal `cvaValue`.
 

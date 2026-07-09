@@ -255,7 +255,9 @@
       <div>
         <div class="mb-2 flex items-center justify-between">
           <span class="text-[12px] font-semibold text-text">Lots · ordre FEFO</span>
-          <label class="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted select-none">
+          <label
+            class="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted select-none"
+          >
             <bfd-toggle [on]="showEmptyBatches()" (change)="showEmptyBatches.set($event)" />
             Afficher les lots vides
           </label>

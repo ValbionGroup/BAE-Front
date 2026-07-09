@@ -1,12 +1,12 @@
 import { MemberModel, UserModel } from '#core/models/user.model';
-import { ErrorModel } from '#core/models/error.model';
+import { ApiError } from '#core/models/api-response.model';
 
 export interface AuthState {
   // Optional when not logged in
   user?: UserModel;
   member?: MemberModel;
 
-  loginError?: ErrorModel;
+  loginError?: ApiError;
 }
 
 // Root app state

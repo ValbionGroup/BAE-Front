@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
@@ -6,9 +7,17 @@ import { AuthService } from '#core/services/auth/auth-service';
 import { TokensService } from '#core/services/tokens/tokens-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { isNil } from '#shared/utils/base-function';
+import { ApiError, isApiError } from '#core/models/api-response.model';
 
 import * as AuthActions from './auth.actions';
 import { AppRoutes } from '#app/app.routes';
+
+const UNKNOWN_LOGIN_ERROR: ApiError = { code: 'UNKNOWN_ERROR', message: '' };
+
+const toApiError = (err: unknown): ApiError =>
+  isApiError((err as HttpErrorResponse)?.error)
+    ? (err as HttpErrorResponse).error
+    : UNKNOWN_LOGIN_ERROR;
 
 @Injectable()
 export class AuthEffects {
@@ -49,8 +58,8 @@ export class AuthEffects {
       ofType(AuthActions.loginStart),
       mergeMap(({ email, password }) =>
         this.authService.login$(email, password).pipe(
-          switchMap((tokens) => {
-            this.tokensService.setTokens(tokens);
+          switchMap((token) => {
+            this.tokensService.setTokens(token);
             return this.authService.getUserProfile$().pipe(
               map((userProfile) =>
                 AuthActions.loginSuccess({
@@ -58,10 +67,10 @@ export class AuthEffects {
                   member: userProfile.member,
                 }),
               ),
-              catchError((err) => of(AuthActions.loginFailure({ error: err }))),
+              catchError((err) => of(AuthActions.loginFailure({ error: toApiError(err) }))),
             );
           }),
-          catchError((err) => of(AuthActions.loginFailure({ error: err }))),
+          catchError((err) => of(AuthActions.loginFailure({ error: toApiError(err) }))),
         ),
       ),
     ),

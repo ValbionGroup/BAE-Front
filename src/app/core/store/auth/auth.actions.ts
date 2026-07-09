@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { MemberModel, UserModel } from '#core/models/user.model';
-import { ErrorModel } from '#core/models/error.model';
+import { ApiError } from '#core/models/api-response.model';
 
 // Logout
 export const logout = createAction('[Auth] Logout');
@@ -23,6 +23,6 @@ export const loginSuccess = createAction(
   props<{ user: UserModel; member: MemberModel }>(),
 );
 
-export const loginFailure = createAction('[Auth] Login Failure', props<{ error: ErrorModel }>());
+export const loginFailure = createAction('[Auth] Login Failure', props<{ error: ApiError }>());
 
 export const rehydrateAuth = createAction('[Auth] Rehydrate auth');

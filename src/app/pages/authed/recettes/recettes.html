@@ -71,9 +71,7 @@
             <svg [lucideIcon]="icChef" [size]="22" aria-hidden="true"></svg>
           </span>
           <div>
-            <div class="text-[13px] font-semibold text-text">
-              Aucune recette dans le catalogue
-            </div>
+            <div class="text-[13px] font-semibold text-text">Aucune recette dans le catalogue</div>
             <div class="mt-1 text-[12px] text-muted">
               Créez votre première recette pour la voir apparaître ici.
             </div>
@@ -114,10 +112,18 @@
             </div>
             <span class="tnum text-right text-[12.5px] text-text-2">{{ r.ing }}</span>
             <span class="mono tnum text-right text-[12px] text-text-2">
-              @if (r.cout !== null) { {{ formatPrice(r.cout) }} € } @else { — }
+              @if (r.cout !== null) {
+                {{ formatPrice(r.cout) }} €
+              } @else {
+                —
+              }
             </span>
             <span class="mono tnum text-right text-[12.5px] font-semibold text-text">
-              @if (r.prix !== null) { {{ formatPrice(r.prix) }} € } @else { — }
+              @if (r.prix !== null) {
+                {{ formatPrice(r.prix) }} €
+              } @else {
+                —
+              }
             </span>
             <span
               [class]="
@@ -193,7 +199,11 @@
               Coût revient
             </div>
             <div class="mono tnum mt-1 text-lg font-semibold text-text-2">
-              @if (recipe.cout !== null) { {{ formatPrice(recipe.cout) }} € } @else { — }
+              @if (recipe.cout !== null) {
+                {{ formatPrice(recipe.cout) }} €
+              } @else {
+                —
+              }
             </div>
           </div>
           <div>
@@ -201,7 +211,11 @@
               Prix vente
             </div>
             <div class="mono tnum mt-1 text-lg font-semibold text-text">
-              @if (recipe.prix !== null) { {{ formatPrice(recipe.prix) }} € } @else { — }
+              @if (recipe.prix !== null) {
+                {{ formatPrice(recipe.prix) }} €
+              } @else {
+                —
+              }
             </div>
           </div>
           <div>
@@ -211,7 +225,11 @@
             <div
               [class]="
                 'mono tnum mt-1 text-lg font-semibold ' +
-                (recipe.marge === null ? 'text-muted' : recipe.marge >= 0 ? 'text-ok' : 'text-danger')
+                (recipe.marge === null
+                  ? 'text-muted'
+                  : recipe.marge >= 0
+                    ? 'text-ok'
+                    : 'text-danger')
               "
             >
               @if (recipe.marge !== null) {
@@ -269,7 +287,11 @@
                 </div>
                 <span class="mono tnum text-right text-text-2">{{ g.q }}</span>
                 <span class="mono tnum text-right text-muted">
-                  @if (g.c !== null) { {{ formatPrice(g.c) }} € } @else { — }
+                  @if (g.c !== null) {
+                    {{ formatPrice(g.c) }} €
+                  } @else {
+                    —
+                  }
                 </span>
                 <div class="text-right">
                   @if (g.warn) {

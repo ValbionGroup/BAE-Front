@@ -10,9 +10,8 @@ export class TokensService {
   private readonly ACCESS_TOKEN_KEY = 'access_token';
   private readonly TOKEN_EXPIRES_AT_KEY = 'token_expires_at';
 
-  setTokens(tokens: AuthTokens): void {
-    localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
-    localStorage.setItem(this.TOKEN_EXPIRES_AT_KEY, tokens.expiresAt.toString());
+  setTokens(token: string): void {
+    localStorage.setItem(this.ACCESS_TOKEN_KEY, token);
   }
 
   getAccessToken(): string | null {
@@ -30,10 +29,10 @@ export class TokensService {
   }
 
   getValidAccessToken(): Observable<string | null> {
-    if (this.isTokenAboutToExpire()) {
-      this.clear();
-      return of(null);
-    }
+    // if (this.isTokenAboutToExpire()) {
+    //   this.clear();
+    //   return of(null);
+    // }
     return of(this.getAccessToken());
   }
 }

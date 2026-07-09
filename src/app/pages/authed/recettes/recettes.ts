@@ -148,13 +148,16 @@ export class Recettes {
       this.rawIngredients.set([]);
       this._detailLoading.set(true);
       this._detailError.set(false);
-      void this.store.getIngredients(id).then((ingredients) => {
-        this.rawIngredients.set(ingredients);
-        this._detailLoading.set(false);
-      }).catch(() => {
-        this._detailLoading.set(false);
-        this._detailError.set(true);
-      });
+      void this.store
+        .getIngredients(id)
+        .then((ingredients) => {
+          this.rawIngredients.set(ingredients);
+          this._detailLoading.set(false);
+        })
+        .catch(() => {
+          this._detailLoading.set(false);
+          this._detailError.set(true);
+        });
     });
 
     void this.store.load();

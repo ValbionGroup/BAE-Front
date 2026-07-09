@@ -15,6 +15,7 @@ import { apiCaseRequestInterceptor } from '#core/interceptors/api-case-request/a
 import { authInterceptor } from '#core/interceptors/auth/auth-interceptor';
 import { errorInterceptor } from '#core/interceptors/error/error-interceptor';
 import { apiResponseCaseInterceptor } from '#core/interceptors/api-case-response/api-case-response-interceptor';
+import { apiEnvelopeInterceptor } from '#core/interceptors/api-envelope/api-envelope-interceptor';
 import { provideEffects } from '@ngrx/effects';
 import { AuthEffects } from '#core/store/auth/auth.effect';
 import { storeConfig } from '#app/app-store.config';
@@ -38,6 +39,7 @@ export const appConfig: ApplicationConfig = {
         authInterceptor,
         errorInterceptor,
         apiResponseCaseInterceptor,
+        apiEnvelopeInterceptor,
       ]),
     ),
     storeConfig,
