@@ -58,7 +58,4 @@ export interface ComponentModalConfig<T = unknown> extends BaseModal {
 }
 
 export type ModalConfig =
-  | MessageModalConfig
-  | DeleteModalConfig
-  | RolesModalConfig
-  | ComponentModalConfig;
+  MessageModalConfig | DeleteModalConfig | RolesModalConfig | ComponentModalConfig;
