@@ -19,7 +19,7 @@ import { Toggle } from '#shared/components/ui/toggle/toggle';
 
 @Component({
   selector: 'bfd-login',
-  imports: [ReactiveFormsModule, TextInput, Logo, Btn, Badge, Field, Toggle, LucideDynamicIcon],
+  imports: [ReactiveFormsModule, TextInput, Logo, Btn, Badge, Field, LucideDynamicIcon],
   templateUrl: './login.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
