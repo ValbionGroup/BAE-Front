@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
   TemplateRef,
   computed,
   effect,
@@ -33,7 +34,7 @@ import { RosterAside } from './roster-aside/roster-aside';
   templateUrl: './presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Presences {
+export class Presences implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
@@ -71,6 +72,10 @@ export class Presences {
         for (const id of toFetch) void this.events.loadMemberPresence(id);
       });
     });
+  }
+
+  ngOnInit(): void {
+    void this.events.load();
   }
 
   protected isPresenceLoading(event: EventDetail): boolean {

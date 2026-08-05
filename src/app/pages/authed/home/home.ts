@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
   computed,
   effect,
   inject,
@@ -47,7 +48,7 @@ import { startOfDay } from 'date-fns';
   templateUrl: './home.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Home {
+export class Home implements OnInit {
   private readonly store = inject(Store);
   private readonly events = inject(EventsStore);
   private readonly router = inject(Router);
@@ -91,6 +92,16 @@ export class Home {
       if (!e || e.memberPresenceStatus !== 'init') return;
       untracked(() => void this.events.loadMemberPresence(e.id));
     });
+  }
+
+  ngOnInit(): void {
+    void this.events.load();
+    this.stats.load();
+    this.alerts.load();
+    this.encaissements.load();
+    this.role.load();
+    this.quickActions.load();
+    this.activity.load();
   }
 
   protected respondPresent(): void {

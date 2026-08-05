@@ -68,6 +68,7 @@ export const CoordinationStore = signalStore(
   withState<CoordinationState>(initialState),
   withMethods((store, svc = inject(CoordinationService)) => ({
     async load(): Promise<void> {
+      if (store.loading() === 'loaded' || store.loading() === 'loading') return;
       patchState(store, { loading: 'loading', loadError: null });
       try {
         const raw = await lastValueFrom(svc.loadAll());

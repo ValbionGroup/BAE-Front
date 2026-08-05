@@ -1,4 +1,4 @@
-import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { RoleAssignment } from './models';
 
 interface RoleAssignmentState {
@@ -18,5 +18,4 @@ export const RoleAssignmentStore = signalStore(
       patchState(store, { loading: false, data: null });
     },
   })),
-  withHooks({ onInit: (s) => s.load() }),
 );

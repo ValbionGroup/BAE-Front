@@ -5,9 +5,32 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 ## Project Context
 
 **BAE** — gestion d'événements et de stocks pour une association.
-Frontend Angular 21 standalone, backend Express.js sur `localhost:3000`.
+Frontend Angular 21 standalone, backend **AdonisJS 6 + Lucid** dans le dépôt voisin `../BAE-Back`,
+servi sur `localhost:3333` (`environment.apiUrl` = `http://localhost:3333/v1`).
 
 Stack : Angular 21, NgRx Signals, Tailwind CSS 4, Lucide Icons, date-fns 4, RxJS 7.
+
+### Backend — repères essentiels
+
+- `start/routes.ts` est un index mince ; les routes sont déclarées explicitement dans
+  `start/routes/*.ts` par domaine (auth, members, catalog, stocks, events, coordination,
+  billing, system). Pas de `router.resource().apiOnly()`.
+- `database/schema.ts` est **auto-généré** par `node ace migration:run` — ne jamais l'éditer.
+  Les modèles étendent ses classes `XxxSchema`.
+- `.adonisjs/server/controllers.ts` (importé via `#generated/controllers`) est auto-généré
+  par `node ace make:controller`.
+- Toute réponse passe par `ctx.serialize()` → enveloppe `{ data }`. Cf. `BAE-Back/API.md`.
+- `app/middleware/case_converter_middleware.ts` fait la conversion dans les deux sens :
+  entrée `snake_case` → `camelCase`, sortie `camelCase` → `snake_case`. Les contrôleurs
+  travaillent donc **en camelCase**.
+- Piège Adonis : déclarer `router.put(path, …)` et `router.patch(path, …)` séparément sur la
+  même action fait planter le boot (nom de route auto-dérivé en double). Utiliser
+  `router.route(path, ['PUT', 'PATCH'], [ctrl, 'action'])`.
+- Les colonnes `decimal` reviennent en **string** (driver SQL), pas en number — convertir
+  explicitement avant tout calcul.
+
+> Si une page front existe sans endpoint correspondant, c'est le back qui est incomplet :
+> on ajoute l'endpoint ou on laisse la page en mock, on ne supprime pas le panneau.
 
 ---
 

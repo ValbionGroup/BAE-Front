@@ -22,6 +22,7 @@ export const RecipesStore = signalStore(
     const svc = inject(RecipesService);
     return {
       async load(): Promise<void> {
+        if (store.loading() === 'loaded' || store.loading() === 'loading') return;
         patchState(store, { loading: 'loading', loadError: null });
         try {
           const products = await lastValueFrom(svc.getAll());

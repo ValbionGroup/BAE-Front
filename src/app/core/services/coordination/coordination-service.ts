@@ -10,11 +10,21 @@ export interface ApiEvent {
   date: string;
   duration: number | null;
 }
+/**
+ * `GET /members` returns the member's role as the full related record, not a
+ * plain string. Reading `member.role` directly renders `[object Object]` —
+ * always go through `role.name` for a display string.
+ */
+export interface ApiRole {
+  id: number;
+  name: string;
+}
 export interface ApiMember {
   id: number;
   firstName: string;
   lastName: string;
-  role: string;
+  roleId: number | null;
+  role: ApiRole | null;
   points: number;
 }
 export interface ApiJob {
@@ -62,7 +72,7 @@ export class CoordinationService {
       events: this.http.get<ApiEvent[]>(`${this.baseUrl}/events`),
       members: this.http.get<ApiMember[]>(`${this.baseUrl}/members`),
       jobs: this.http.get<ApiJob[]>(`${this.baseUrl}/jobs`),
-      eventJobs: this.http.get<ApiEventJob[]>(`${this.baseUrl}/event_jobs`),
+      eventJobs: this.http.get<ApiEventJob[]>(`${this.baseUrl}/event-jobs`),
       assignments: this.http.get<ApiAssignment[]>(`${this.baseUrl}/assignments`),
       responses: this.http.get<ApiAvailability[]>(`${this.baseUrl}/responses`),
       preferences: this.http.get<ApiPreference[]>(`${this.baseUrl}/preferences`),
@@ -103,7 +113,7 @@ export class CoordinationService {
   }
 
   updateJob(id: number, name: string): Observable<ApiJob> {
-    return this.http.put<ApiJob>(`${this.baseUrl}/jobs`, { name }, { params: { id } });
+    return this.http.put<ApiJob>(`${this.baseUrl}/jobs/${id}`, { name });
   }
 
   deleteEvent(id: number): Observable<unknown> {
@@ -111,23 +121,23 @@ export class CoordinationService {
   }
 
   deleteJob(id: number): Observable<unknown> {
-    return this.http.delete(`${this.baseUrl}/jobs`, { params: { id } });
+    return this.http.delete(`${this.baseUrl}/jobs/${id}`);
   }
 
   createEventJob(eventId: number, jobId: number, count: number): Observable<ApiEventJob> {
-    return this.http.post<ApiEventJob>(`${this.baseUrl}/event_jobs`, { eventId, jobId, count });
+    return this.http.post<ApiEventJob>(`${this.baseUrl}/event-jobs`, { eventId, jobId, count });
   }
 
   updateEventJob(eventId: number, jobId: number, count: number): Observable<ApiEventJob> {
     return this.http.put<ApiEventJob>(
-      `${this.baseUrl}/event_jobs`,
+      `${this.baseUrl}/event-jobs`,
       { count },
       { params: { event_id: eventId, job_id: jobId } },
     );
   }
 
   deleteEventJob(eventId: number, jobId: number): Observable<unknown> {
-    return this.http.delete(`${this.baseUrl}/event_jobs`, {
+    return this.http.delete(`${this.baseUrl}/event-jobs`, {
       params: { event_id: eventId, job_id: jobId },
     });
   }

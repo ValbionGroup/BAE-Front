@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
   TemplateRef,
   effect,
   inject,
@@ -21,6 +22,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { CaisseStore } from '#core/store/caisse.store';
+import { EventsStore } from '#core/store/events.store';
 import { MenuItem } from '#core/models/event.model';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
@@ -32,8 +34,9 @@ import { Kbd } from '#shared/components/ui/kbd/kbd';
   templateUrl: './caisse.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Caisse {
+export class Caisse implements OnInit {
   protected readonly store = inject(CaisseStore);
+  private readonly events = inject(EventsStore);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
@@ -52,6 +55,10 @@ export class Caisse {
       const tpl = this.actionsTpl();
       if (tpl) this.pageHeader.setActions(tpl);
     });
+  }
+
+  ngOnInit(): void {
+    void this.events.load();
   }
 
   protected startSession(): void {

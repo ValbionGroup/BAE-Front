@@ -1,11 +1,4 @@
-import {
-  patchState,
-  signalStore,
-  withComputed,
-  withHooks,
-  withMethods,
-  withState,
-} from '@ngrx/signals';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { computed, inject } from '@angular/core';
 import { EventsService } from '#core/services/events/events-service';
 import { EventDetail, Presence, RosterRow } from '#core/models/event.model';
@@ -22,6 +15,21 @@ const initialState: EventsState = {
   loading: 'init',
 };
 
+function toEventsDict(eventsList: readonly EventDetail[]): Record<string, EventDetail> {
+  return eventsList.reduce(
+    (acc, ev) => {
+      acc[ev.id] = {
+        ...ev,
+        memberPresenceStatus: 'init',
+        menuStatus: 'init',
+        rosterStatus: 'init',
+      };
+      return acc;
+    },
+    {} as Record<string, EventDetail>,
+  );
+}
+
 export const EventsStore = signalStore(
   { providedIn: 'root' },
   withState<EventsState>(initialState),
@@ -34,24 +42,21 @@ export const EventsStore = signalStore(
     },
 
     async load() {
+      if (store.loading() === 'loaded' || store.loading() === 'loading') return;
       patchState(store, { loading: 'loading' });
       try {
         const eventsList = await lastValueFrom(eventService.fetchAll());
+        patchState(store, { events: toEventsDict(eventsList), loading: 'loaded' });
+      } catch (error) {
+        patchState(store, { loading: 'error' });
+      }
+    },
 
-        const eventsDict = eventsList.reduce(
-          (acc, ev) => {
-            acc[ev.id] = {
-              ...ev,
-              memberPresenceStatus: 'init',
-              menuStatus: 'init',
-              rosterStatus: 'init',
-            };
-            return acc;
-          },
-          {} as Record<string, EventDetail>,
-        );
-
-        patchState(store, { events: eventsDict, loading: 'loaded' });
+    async refresh() {
+      patchState(store, { loading: 'refreshing' });
+      try {
+        const eventsList = await lastValueFrom(eventService.fetchAll());
+        patchState(store, { events: toEventsDict(eventsList), loading: 'loaded' });
       } catch (error) {
         patchState(store, { loading: 'error' });
       }
@@ -170,5 +175,4 @@ export const EventsStore = signalStore(
       patchState(store, { loading: 'init', events: {} });
     },
   })),
-  withHooks({ onInit: (s) => s.load() }),
 );

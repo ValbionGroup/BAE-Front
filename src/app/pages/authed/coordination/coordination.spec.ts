@@ -15,7 +15,16 @@ describe(Coordination.name, () => {
   beforeEach(async () => {
     const mockData: CoordinationApiData = {
       events: [{ id: 1, name: 'Soiree Test', date: new Date().toISOString(), duration: 3600 }],
-      members: [{ id: 1, firstName: 'Test', lastName: 'User', role: 'member', points: 80 }],
+      members: [
+        {
+          id: 1,
+          firstName: 'Test',
+          lastName: 'User',
+          roleId: 3,
+          role: { id: 3, name: 'member' },
+          points: 80,
+        },
+      ],
       jobs: [{ id: 1, name: 'Barman' }],
       eventJobs: [{ eventId: 1, jobId: 1, count: 1 }],
       assignments: [],

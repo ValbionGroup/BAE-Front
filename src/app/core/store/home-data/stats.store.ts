@@ -1,4 +1,4 @@
-import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { KpiTile } from './models';
 
 interface StatsState {
@@ -18,5 +18,4 @@ export const StatsStore = signalStore(
       patchState(store, { loading: false, data: [] });
     },
   })),
-  withHooks({ onInit: (s) => s.load() }),
 );

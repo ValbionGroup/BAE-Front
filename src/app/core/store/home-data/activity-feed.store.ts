@@ -1,4 +1,4 @@
-import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { ActivityItem } from './models';
 
 interface ActivityFeedState {
@@ -18,5 +18,4 @@ export const ActivityFeedStore = signalStore(
       patchState(store, { loading: false, data: [] });
     },
   })),
-  withHooks({ onInit: (s) => s.load() }),
 );

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
   TemplateRef,
   computed,
   effect,
@@ -60,7 +61,7 @@ const MONTHS_SHORT_FR = [
   templateUrl: './my-presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MyPresences {
+export class MyPresences implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly store = inject(Store);
   private readonly events = inject(EventsStore);
@@ -168,6 +169,10 @@ export class MyPresences {
         for (const id of toFetch) void this.events.loadMemberPresence(id);
       });
     });
+  }
+
+  ngOnInit(): void {
+    void this.events.load();
   }
 
   protected isPresenceLoading(event: EventDetail): boolean {

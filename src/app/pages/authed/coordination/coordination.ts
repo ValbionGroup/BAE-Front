@@ -782,7 +782,8 @@ export class Coordination implements OnInit {
         id: m.id,
         firstName: m.firstName,
         lastName: m.lastName,
-        role: m.role,
+        // `GET /members` returns the role as the related record, not a string.
+        role: m.role?.name ?? '—',
         points: m.points,
       })),
     );

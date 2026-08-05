@@ -12,7 +12,7 @@ export class RecipesService {
   private readonly baseUrl = inject(API_BASE_URL);
 
   getAll(): Observable<RecipeProduct[]> {
-    return this.http.get<RecipeProduct[]>(`${this.baseUrl}/products`);
+    return this.http.get<RecipeProduct[]>(`${this.baseUrl}/products/summary`);
   }
 
   getIngredients(productId: number): Observable<RecipeIngredient[]> {

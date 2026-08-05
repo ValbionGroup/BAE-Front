@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import {
   LucideChevronRight,
   LucideDownload,
@@ -9,6 +9,7 @@ import { PageHeaderService } from '#core/services/page-header/page-header-servic
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { AnalyseStore } from '#core/store/analyse.store';
+import { EventsStore } from '#core/store/events.store';
 
 @Component({
   selector: 'bfd-analyse',
@@ -16,8 +17,9 @@ import { AnalyseStore } from '#core/store/analyse.store';
   templateUrl: './analyse.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Analyse {
+export class Analyse implements OnInit {
   protected readonly store = inject(AnalyseStore);
+  private readonly events = inject(EventsStore);
 
   constructor() {
     inject(PageHeaderService).set({
@@ -26,6 +28,10 @@ export class Analyse {
       breadcrumb: ['Suivi', 'Analyse'],
       activeNavId: 'ana',
     });
+  }
+
+  ngOnInit(): void {
+    void this.events.load();
   }
 
   protected readonly icFilter = LucideFunnel;

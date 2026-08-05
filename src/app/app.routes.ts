@@ -1,35 +1,6 @@
 import { Routes } from '@angular/router';
 import { AppRoutes } from './app-routes.const';
-import { Login } from '#pages/guest/login/login';
 import { AppShell } from '#pages/app-shell/app-shell';
-import { Home } from '#pages/authed/home/home';
-import { Presences } from '#pages/authed/presences/presences';
-import { MyPresences } from '#pages/authed/my-presences/my-presences';
-import { Stocks } from '#pages/authed/stocks/stocks';
-import { StocksScanner } from '#pages/authed/stocks/scanner/scanner';
-import { Recettes } from '#pages/authed/recettes/recettes';
-import { Coordination } from '#pages/authed/coordination/coordination';
-import { CoordinationEvents } from '#pages/authed/coordination/events/events';
-import { Logistique } from '#pages/authed/logistique/logistique';
-import { LogistiqueEvents } from '#pages/authed/logistique/events/events';
-import { Caisse } from '#pages/authed/caisse/caisse';
-import { CaisseCloture } from '#pages/authed/caisse/cloture/cloture';
-import { Precommandes } from '#pages/public/precommandes/precommandes';
-import { PrecommandesAdmin } from '#pages/authed/precommandes-admin/precommandes-admin';
-import { Paiements } from '#pages/authed/paiements/paiements';
-import { Analyse } from '#pages/authed/analyse/analyse';
-import { Tickets } from '#pages/authed/tickets/tickets';
-import { Parametres } from '#pages/authed/parametres/parametres';
-import { ParametresSecurite } from '#pages/authed/parametres/securite/securite';
-import { ParametresIntegrations } from '#pages/authed/parametres/integrations/integrations';
-import { ParametresModules } from '#pages/authed/parametres/modules/modules';
-import { Adherents } from '#pages/authed/adherents/adherents';
-import { SoireeLive } from '#pages/authed/soiree/live/live';
-import { SoireeBilan } from '#pages/authed/soiree/bilan/bilan';
-import { Notifications } from '#pages/authed/notifications/notifications';
-import { Equipe } from '#pages/authed/equipe/equipe';
-import { Etats } from '#pages/authed/etats/etats';
-import { NotFound } from '#pages/states/not-found';
 import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
 
@@ -38,81 +9,195 @@ export { AppRoutes } from './app-routes.const';
 export const routes: Routes = [
   {
     path: AppRoutes.precommandes,
-    component: Precommandes,
+    loadComponent: () =>
+      import('#pages/public/precommandes/precommandes').then((m) => m.Precommandes),
   },
   {
     path: AppRoutes.login,
     canActivate: [guestGuard],
-    component: Login,
+    loadComponent: () => import('#pages/guest/login/login').then((m) => m.Login),
   },
   {
     path: '',
     component: AppShell,
     canActivate: [authGuard],
     children: [
-      { path: AppRoutes.home, component: Home },
+      {
+        path: AppRoutes.home,
+        loadComponent: () => import('#pages/authed/home/home').then((m) => m.Home),
+      },
       {
         path: AppRoutes.presences,
         children: [
-          { path: '', component: Presences, pathMatch: 'full' },
-          { path: 'my', component: MyPresences },
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('#pages/authed/presences/presences').then((m) => m.Presences),
+          },
+          {
+            path: 'my',
+            loadComponent: () =>
+              import('#pages/authed/my-presences/my-presences').then((m) => m.MyPresences),
+          },
         ],
       },
-      { path: AppRoutes.adherents, component: Adherents },
+      {
+        path: AppRoutes.adherents,
+        loadComponent: () => import('#pages/authed/adherents/adherents').then((m) => m.Adherents),
+      },
       {
         path: AppRoutes.stocks,
         children: [
-          { path: '', component: Stocks, pathMatch: 'full' },
-          { path: 'scanner', component: StocksScanner },
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () => import('#pages/authed/stocks/stocks').then((m) => m.Stocks),
+          },
+          {
+            path: 'scanner',
+            loadComponent: () =>
+              import('#pages/authed/stocks/scanner/scanner').then((m) => m.StocksScanner),
+          },
         ],
       },
-      { path: AppRoutes.recettes, component: Recettes },
+      {
+        path: AppRoutes.recettes,
+        loadComponent: () => import('#pages/authed/recettes/recettes').then((m) => m.Recettes),
+      },
       {
         path: AppRoutes.coordination,
         children: [
-          { path: '', component: CoordinationEvents, pathMatch: 'full' },
-          { path: ':id', component: Coordination },
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('#pages/authed/coordination/events/events').then(
+                (m) => m.CoordinationEvents,
+              ),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('#pages/authed/coordination/coordination').then((m) => m.Coordination),
+          },
         ],
       },
       {
         path: AppRoutes.logistique,
         children: [
-          { path: '', component: LogistiqueEvents, pathMatch: 'full' },
-          { path: ':id', component: Logistique },
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('#pages/authed/logistique/events/events').then((m) => m.LogistiqueEvents),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('#pages/authed/logistique/logistique').then((m) => m.Logistique),
+          },
         ],
       },
       {
         path: AppRoutes.caisse,
         children: [
-          { path: '', component: Caisse, pathMatch: 'full' },
-          { path: 'cloture', component: CaisseCloture },
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () => import('#pages/authed/caisse/caisse').then((m) => m.Caisse),
+          },
+          {
+            path: 'cloture',
+            loadComponent: () =>
+              import('#pages/authed/caisse/cloture/cloture').then((m) => m.CaisseCloture),
+          },
         ],
       },
-      { path: AppRoutes.precommandesAdmin, component: PrecommandesAdmin },
+      {
+        path: AppRoutes.precommandesAdmin,
+        loadComponent: () =>
+          import('#pages/authed/precommandes-admin/precommandes-admin').then(
+            (m) => m.PrecommandesAdmin,
+          ),
+      },
       {
         path: AppRoutes.soiree,
         children: [
           { path: '', redirectTo: 'live', pathMatch: 'full' },
-          { path: 'live', component: SoireeLive },
-          { path: 'bilan', component: SoireeBilan },
+          {
+            path: 'live',
+            loadComponent: () =>
+              import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
+          },
+          {
+            path: 'bilan',
+            loadComponent: () =>
+              import('#pages/authed/soiree/bilan/bilan').then((m) => m.SoireeBilan),
+          },
         ],
       },
-      { path: AppRoutes.paiements, component: Paiements },
-      { path: AppRoutes.analyse, component: Analyse },
-      { path: AppRoutes.tickets, component: Tickets },
-      { path: AppRoutes.notifications, component: Notifications },
+      {
+        path: AppRoutes.paiements,
+        loadComponent: () => import('#pages/authed/paiements/paiements').then((m) => m.Paiements),
+      },
+      {
+        path: AppRoutes.analyse,
+        loadComponent: () => import('#pages/authed/analyse/analyse').then((m) => m.Analyse),
+      },
+      {
+        path: AppRoutes.tickets,
+        loadComponent: () => import('#pages/authed/tickets/tickets').then((m) => m.Tickets),
+      },
+      {
+        path: AppRoutes.notifications,
+        loadComponent: () =>
+          import('#pages/authed/notifications/notifications').then((m) => m.Notifications),
+      },
       {
         path: AppRoutes.parametres,
         children: [
-          { path: '', component: Parametres, pathMatch: 'full' },
-          { path: 'securite', component: ParametresSecurite },
-          { path: 'integrations', component: ParametresIntegrations },
-          { path: 'modules', component: ParametresModules },
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('#pages/authed/parametres/parametres').then((m) => m.Parametres),
+          },
+          {
+            path: 'securite',
+            loadComponent: () =>
+              import('#pages/authed/parametres/securite/securite').then(
+                (m) => m.ParametresSecurite,
+              ),
+          },
+          {
+            path: 'integrations',
+            loadComponent: () =>
+              import('#pages/authed/parametres/integrations/integrations').then(
+                (m) => m.ParametresIntegrations,
+              ),
+          },
+          {
+            path: 'modules',
+            loadComponent: () =>
+              import('#pages/authed/parametres/modules/modules').then(
+                (m) => m.ParametresModules,
+              ),
+          },
         ],
       },
-      { path: AppRoutes.equipe, component: Equipe },
-      { path: AppRoutes.etats, component: Etats },
+      {
+        path: AppRoutes.equipe,
+        loadComponent: () => import('#pages/authed/equipe/equipe').then((m) => m.Equipe),
+      },
+      {
+        path: AppRoutes.etats,
+        loadComponent: () => import('#pages/authed/etats/etats').then((m) => m.Etats),
+      },
     ],
   },
-  { path: '**', component: NotFound },
+  {
+    path: '**',
+    loadComponent: () => import('#pages/states/not-found').then((m) => m.NotFound),
+  },
 ];

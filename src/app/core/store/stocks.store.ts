@@ -59,7 +59,7 @@ export const StocksStore = signalStore(
   withState<StocksState>(initialState),
   withMethods((store, svc = inject(StocksService)) => ({
     async load(): Promise<void> {
-      if (store.loading() === 'loading') return;
+      if (store.loading() === 'loaded' || store.loading() === 'loading') return;
       patchState(store, { loading: 'loading', loadError: null });
       try {
         const items = await lastValueFrom(svc.getAll());

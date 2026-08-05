@@ -1,4 +1,4 @@
-import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { LucideClock, LucideTriangleAlert, LucideTruck } from '@lucide/angular';
 import { AlertItem } from './models';
 
@@ -19,5 +19,4 @@ export const AlertsStore = signalStore(
       patchState(store, { loading: false, data: [] });
     },
   })),
-  withHooks({ onInit: (s) => s.load() }),
 );
