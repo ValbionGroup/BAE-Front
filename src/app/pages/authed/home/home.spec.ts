@@ -39,9 +39,14 @@ describe(Home.name, () => {
       .match(() => true)
       .map((req) => new URL(req.request.url, 'http://localhost').pathname);
 
-    for (const path of ['/v1/events', '/v1/stocks', '/v1/transactions', '/v1/logs']) {
+    for (const path of ['/v1/events', '/v1/stocks', '/v1/transactions']) {
       expect(paths).toContain(path);
     }
+
+    // The activity feed is a domain-event trail, not a request log. Until the
+    // backend provides one, it must render an explicit "unavailable" state
+    // rather than dressing up /v1/logs as activity.
+    expect(paths).not.toContain('/v1/logs');
   });
 
   it('renders skeletons while the stores are still loading', () => {

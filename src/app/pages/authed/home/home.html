@@ -575,9 +575,9 @@
           >
             {{ err }}
           </div>
-        } @else if (activity.data().length === 0) {
+        } @else if (activity.unavailable()) {
           <div class="border-t border-border-s px-4 py-6 text-center text-[12px] text-muted">
-            Aucune activité récente.
+            Fil d'activité indisponible — non encore fourni par l'API.
           </div>
         } @else {
           @for (a of activity.data(); track $index) {

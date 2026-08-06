@@ -133,7 +133,7 @@ export class Home implements OnInit {
     void this.encaissements.load();
     void this.role.load();
     this.quickActions.load();
-    void this.activity.load();
+    this.activity.load();
   }
 
   protected respondPresent(): void {
