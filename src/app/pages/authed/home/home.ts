@@ -32,15 +32,25 @@ import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { StatsStore } from '#core/store/home-data/stats.store';
 import { EncaissementsStore } from '#core/store/home-data/encaissements.store';
-import { QuickActionsStore } from '#core/store/home-data/quick-actions.store';
+import { QUICK_ACTION_ROUTES, QuickActionsStore } from '#core/store/home-data/quick-actions.store';
 import { ActivityFeedStore } from '#core/store/home-data/activity-feed.store';
 import { RoleAssignmentStore } from '#core/store/home-data/role-assignment.store';
 import { AgendaStore } from '#core/store/home-data/agenda.store';
 import { AlertsStore } from '#core/store/home-data/alerts.store';
 import { NextEventStore } from '#core/store/home-data/next-event.store';
 import { EventsStore } from '#core/store/events.store';
+import { StocksStore } from '#core/store/stocks.store';
 import { EventDetail, Presence } from '#core/models/event.model';
 import { startOfDay } from 'date-fns';
+
+/** Number of past soirées charted behind each label of the period selector. */
+const PERIOD_LIMITS: readonly number[] = [1, 3, 6, 12];
+
+const EUR = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+});
 
 @Component({
   selector: 'bfd-home',
@@ -51,6 +61,7 @@ import { startOfDay } from 'date-fns';
 export class Home implements OnInit {
   private readonly store = inject(Store);
   private readonly events = inject(EventsStore);
+  private readonly stocks = inject(StocksStore);
   private readonly router = inject(Router);
   private readonly currentDate = new Date();
 
@@ -80,6 +91,25 @@ export class Home implements OnInit {
     return status === 'init' || status === 'loading' || status === 'refreshing';
   });
 
+  /**
+   * Members actually assigned to the next soirée, from `/v1/assignments`.
+   *
+   * `NextEventStore.data().members` is hardcoded to 0 (that store is a pure
+   * projection of `/v1/events`, which carries no roster), so the hero binds
+   * here instead of displaying a zero that is not a real count.
+   */
+  protected readonly nextEventAssignees = computed<number | null>(() => {
+    const event = this.responseEvent();
+    if (!event || this.role.loading()) return null;
+    const eventId = Number(event.id);
+    return new Set(
+      this.role
+        .assignments()
+        .filter((a) => a.eventId === eventId)
+        .map((a) => a.memberId),
+    ).size;
+  });
+
   constructor() {
     inject(PageHeaderService).set({
       title: 'Accueil',
@@ -95,13 +125,15 @@ export class Home implements OnInit {
   }
 
   ngOnInit(): void {
+    // StatsStore, AlertsStore, AgendaStore and NextEventStore derive from these
+    // two and fetch nothing themselves — loading the sources is what fills them.
     void this.events.load();
-    this.stats.load();
-    this.alerts.load();
-    this.encaissements.load();
-    this.role.load();
+    void this.stocks.load();
+
+    void this.encaissements.load();
+    void this.role.load();
     this.quickActions.load();
-    this.activity.load();
+    void this.activity.load();
   }
 
   protected respondPresent(): void {
@@ -129,14 +161,23 @@ export class Home implements OnInit {
   protected readonly icChevronRight = LucideChevronRight;
 
   protected readonly periods = ['1A', '3A', '6A', '12A'];
-  protected readonly activePeriodIndex = signal(2);
+  protected readonly activePeriodIndex = signal(PERIOD_LIMITS.indexOf(6));
+
+  protected readonly encaissementsTotal = computed(() => EUR.format(this.encaissements.total()));
+  protected readonly periodCount = computed(() => PERIOD_LIMITS[this.activePeriodIndex()]);
 
   protected setPeriod(index: number): void {
     this.activePeriodIndex.set(index);
+    this.encaissements.setLimit(PERIOD_LIMITS[index]);
   }
 
   protected goToAgenda(): void {
     void this.router.navigateByUrl(`/${AppRoutes.presences}`);
+  }
+
+  protected runQuickAction(label: string): void {
+    const route = QUICK_ACTION_ROUTES[label];
+    if (route !== undefined) void this.router.navigateByUrl(`/${route}`);
   }
 
   // Skeleton row counts (templates can't construct arrays inline).

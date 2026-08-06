@@ -5,7 +5,15 @@
       <h2 class="m-0 text-[26px] font-semibold -tracking-[0.5px] text-text">
         Salut {{ firstName() }}, <span class="text-muted">tout est sous contrôle.</span>
       </h2>
-      <p class="m-0 mt-1 text-[13px] text-muted">Rien à traiter avant la prochaine soirée.</p>
+      <p class="m-0 mt-1 text-[13px] text-muted">
+        @if (alerts.loading()) {
+          Chargement des alertes…
+        } @else if (alerts.data().length > 0) {
+          {{ alerts.data().length }} alerte{{ alerts.data().length === 1 ? '' : 's' }} à traiter.
+        } @else {
+          Rien à traiter avant la prochaine soirée.
+        }
+      </p>
     </div>
 
     <!-- STATS card -->
@@ -17,6 +25,8 @@
             <bfd-skeleton width="70px" height="18px" variant="surface-3" />
           </div>
         }
+      } @else if (stats.error(); as err) {
+        <div class="text-[12px] text-danger" role="alert">{{ err }}</div>
       } @else if (stats.data().length === 0) {
         <div class="text-[12px] text-muted">Aucun chiffre disponible.</div>
       } @else {
@@ -25,11 +35,13 @@
             <div class="mb-0.5 text-[11px] text-muted">{{ k.label }}</div>
             <div class="tnum text-[17px] font-semibold text-text">
               {{ k.value }}
-              <span
-                [class]="'ml-1 text-[11px] font-medium ' + (k.positive ? 'text-ok' : 'text-red')"
-              >
-                {{ k.delta }}
-              </span>
+              @if (k.delta) {
+                <span
+                  [class]="'ml-1 text-[11px] font-medium ' + (k.positive ? 'text-ok' : 'text-red')"
+                >
+                  {{ k.delta }}
+                </span>
+              }
             </div>
           </div>
         }
@@ -103,6 +115,8 @@
                   ></svg>
                   {{ n.date }} · {{ n.start }}
                 </span>
+                <!-- Real count from /v1/assignments; NextEventStore has no roster. -->
+                @let assigned = nextEventAssignees();
                 <span class="inline-flex items-center gap-1.5">
                   <svg
                     [lucideIcon]="icUsers"
@@ -110,11 +124,18 @@
                     class="text-muted"
                     aria-hidden="true"
                   ></svg>
-                  {{ n.members }} membres confirmés
+                  @if (assigned === null) {
+                    Affectations…
+                  } @else {
+                    {{ assigned }} membre{{ assigned === 1 ? '' : 's' }} affecté{{
+                      assigned === 1 ? '' : 's'
+                    }}
+                  }
                 </span>
-                <span class="inline-flex items-center gap-1.5">
+                <!-- No endpoint exposes précommandes per soirée yet. -->
+                <span class="inline-flex items-center gap-1.5" title="Donnée non exposée par l'API">
                   <svg [lucideIcon]="icQr" [size]="14" class="text-muted" aria-hidden="true"></svg>
-                  {{ n.prereg }} précommandes
+                  Précommandes —
                 </span>
               </div>
             </div>
@@ -146,8 +167,10 @@
                   </bfd-btn>
                 </div>
               }
+              <!-- Top-ranked job from /v1/preferences, "—" when never expressed. -->
               <div class="mt-1 text-[11px] text-muted">
-                Poste préférentiel : <span class="text-text">Caisse</span>
+                Poste préférentiel :
+                <span class="text-text">{{ role.preferredPoste() ?? '—' }}</span>
               </div>
             </div>
           </div>
@@ -166,6 +189,13 @@
                     ></div>
                   </div>
                 }
+              </div>
+            } @empty {
+              <!-- /v1/events carries no preparation checklist. -->
+              <div
+                class="col-span-4 rounded-md border border-dashed border-border-s px-3 py-4 text-center text-[12px] text-muted"
+              >
+                Indicateurs de préparation non disponibles.
               </div>
             }
           </div>
@@ -276,6 +306,8 @@
                 </div>
               </div>
             }
+          } @else if (alerts.error(); as err) {
+            <div class="px-4 py-6 text-center text-[12px] text-danger" role="alert">{{ err }}</div>
           } @else if (alerts.data().length === 0) {
             <div class="px-4 py-6 text-center text-[12px] text-muted">Aucune alerte 🎉</div>
           } @else {
@@ -311,15 +343,17 @@
         <div class="flex items-center border-b border-border-s px-4 py-3.5">
           <div class="flex-1">
             <div class="text-[13px] font-semibold text-text">
-              Encaissements · 6 dernières soirées
+              Encaissements · {{ periodCount() }} dernières soirées
             </div>
-            <div class="mt-0.5 text-[11px] text-muted">Caisse + précommandes</div>
+            <!-- transactions.type is a payment method, not a sales channel. -->
+            <div class="mt-0.5 text-[11px] text-muted">Par moyen de paiement</div>
           </div>
-          <div class="flex gap-1">
+          <div class="flex gap-1" role="group" aria-label="Nombre de soirées affichées">
             @for (p of periods; track p; let i = $index) {
               <button
                 type="button"
                 (click)="setPeriod(i)"
+                [attr.aria-pressed]="i === activePeriodIndex()"
                 [class]="
                   'cursor-pointer rounded-sm border px-2.5 py-1 text-[11px] ' +
                   (i === activePeriodIndex()
@@ -342,6 +376,8 @@
               </div>
             }
           </div>
+        } @else if (encaissements.error(); as err) {
+          <div class="px-4 py-10 text-center text-[12px] text-danger" role="alert">{{ err }}</div>
         } @else if (encaissements.data().length === 0) {
           <div class="px-4 py-10 text-center text-[12px] text-muted">
             Pas encore de données d'encaissement.
@@ -365,8 +401,16 @@
                       "
                     ></div>
                   } @else {
-                    <div class="w-[40%] rounded-t-[3px] bg-blue" [style.height.%]="pct(b.v1)"></div>
-                    <div class="w-[40%] rounded-t-[3px] bg-red" [style.height.%]="pct(b.v2)"></div>
+                    <div
+                      class="w-[40%] rounded-t-[3px] bg-blue"
+                      [style.height.%]="pct(b.v1)"
+                      [title]="'Espèces : ' + b.v1 + ' €'"
+                    ></div>
+                    <div
+                      class="w-[40%] rounded-t-[3px] bg-red"
+                      [style.height.%]="pct(b.v2)"
+                      [title]="'Lydia : ' + b.v2 + ' €'"
+                    ></div>
                   }
                 </div>
                 <div
@@ -379,12 +423,12 @@
           </div>
           <div class="flex gap-4.5 px-4 pb-3.5 text-[11px] text-muted">
             <span class="inline-flex items-center gap-1.5">
-              <span class="h-2.5 w-2.5 rounded-sm bg-blue"></span>Caisse sur place
+              <span class="h-2.5 w-2.5 rounded-sm bg-blue"></span>Espèces
             </span>
             <span class="inline-flex items-center gap-1.5">
-              <span class="h-2.5 w-2.5 rounded-sm bg-red"></span>Précommandes
+              <span class="h-2.5 w-2.5 rounded-sm bg-red"></span>Lydia
             </span>
-            <span class="ml-auto">Total · 5 460 €</span>
+            <span class="ml-auto">Total · {{ encaissementsTotal() }}</span>
           </div>
         }
       </bfd-card>
@@ -421,6 +465,13 @@
               }
             </div>
           </div>
+        } @else if (role.error(); as err) {
+          <div
+            class="mt-3.5 rounded-md border border-border-s bg-surface-2 px-3.5 py-4 text-center text-[12px] text-danger"
+            role="alert"
+          >
+            {{ err }}
+          </div>
         } @else if (role.data(); as r) {
           <div class="mt-3.5 rounded-md border border-border-s bg-surface-2 p-3.5">
             <div class="flex items-center justify-between">
@@ -445,14 +496,15 @@
               }
             </div>
           </div>
+          <!--
+            The mockup showed an "algo score /100". No assignment-scoring
+            algorithm or endpoint exists, so no number is displayed.
+          -->
           <div
             class="mt-3 flex items-start gap-2 rounded-md border border-dashed border-border p-2.5 text-[11.5px] text-text-2"
           >
             <svg [lucideIcon]="icZap" [size]="14" class="mt-px text-warn" aria-hidden="true"></svg>
-            <span>
-              Algo basé sur 9 soirées d'historique · score d'affectation
-              <b class="text-text">{{ r.algoScore }}/100</b>.
-            </span>
+            <span>Score d'affectation indisponible — non calculé par l'API.</span>
           </div>
         } @else {
           <div
@@ -489,6 +541,7 @@
             @for (qa of quickActions.data(); track qa.label) {
               <button
                 type="button"
+                (click)="runQuickAction(qa.label)"
                 class="flex cursor-pointer flex-col items-start gap-2 rounded-md border border-border-s bg-surface-2 p-3 text-left text-text hover:bg-surface-3"
               >
                 <svg [lucideIcon]="qa.icon" [size]="16" class="text-blue" aria-hidden="true"></svg>
@@ -515,6 +568,13 @@
               </div>
             </div>
           }
+        } @else if (activity.error(); as err) {
+          <div
+            class="border-t border-border-s px-4 py-6 text-center text-[12px] text-danger"
+            role="alert"
+          >
+            {{ err }}
+          </div>
         } @else if (activity.data().length === 0) {
           <div class="border-t border-border-s px-4 py-6 text-center text-[12px] text-muted">
             Aucune activité récente.
