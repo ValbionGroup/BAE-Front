@@ -24,6 +24,7 @@ import {
 import { Store } from '@ngrx/store';
 import { selectMember } from '#core/store/auth/auth.selector';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { RouterLink } from '@angular/router';
 import { AppRoutes } from '#app/app.routes';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
@@ -54,7 +55,7 @@ const EUR = new Intl.NumberFormat('fr-FR', {
 
 @Component({
   selector: 'bfd-home',
-  imports: [Btn, Badge, Card, Avatar, Skeleton, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Avatar, Skeleton, RouterLink, LucideDynamicIcon],
   templateUrl: './home.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -76,6 +77,14 @@ export class Home implements OnInit {
   protected readonly activity = inject(ActivityFeedStore);
 
   protected readonly Presence = Presence;
+
+  /** Where a member goes to rank the postes they want. */
+  protected readonly preferencesLink = `/${AppRoutes.parametresPreferences}`;
+
+  /** "1er choix", "2e choix"… — French ordinals are irregular only at 1. */
+  protected rankLabel(rank: number): string {
+    return rank === 1 ? '1er choix' : `${rank}e choix`;
+  }
 
   protected readonly responseEvent = computed<EventDetail | undefined>(() => {
     const today = startOfDay(new Date()).getTime();

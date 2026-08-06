@@ -83,8 +83,8 @@ describe(RoleAssignmentStore.name, () => {
       jobs: [{ id: 1, name: 'Caisse' }],
       eventJobs: [{ eventId: 7, jobId: 1, count: 3 }],
       assignments: [
-        { memberId: 1, eventId: 7, jobId: 1 },
-        { memberId: 2, eventId: 7, jobId: 1 },
+        { memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 6 },
+        { memberId: 2, eventId: 7, jobId: 1, locked: false, pointsDelta: 6 },
       ],
       members: [
         { id: 1, firstName: 'Lucas', lastName: 'ESPIET', roleId: null, role: null, points: 0 },
@@ -98,17 +98,53 @@ describe(RoleAssignmentStore.name, () => {
       { label: 'Soirée', value: 'Soirée test' },
       { label: 'Effectif du poste', value: '2/3' },
       { label: 'Coéquipiers', value: 'Tommy K.' },
+      { label: 'Points de cette affectation', value: '+6' },
     ]);
   });
 
-  it('never invents an assignment score — none is computed server-side', async () => {
+  /**
+   * The mockup asked for an "algo score /100" that nothing computes. What is
+   * real is which of the member's own choices the poste was.
+   */
+  it('reports which of the member’s choices the poste was', async () => {
+    await loadEvents();
+    await loadCoordination({
+      jobs: [
+        { id: 1, name: 'Caisse' },
+        { id: 2, name: 'Bar' },
+      ],
+      assignments: [{ memberId: 1, eventId: 7, jobId: 2, locked: false, pointsDelta: 8 }],
+      preferences: [
+        { memberId: 1, jobId: 1, preferenceRank: 1 },
+        { memberId: 1, jobId: 2, preferenceRank: 2 },
+      ],
+    });
+
+    expect(store.data()?.preferenceRank).toBe(2);
+  });
+
+  it('reports a null rank for a poste the member never ranked', async () => {
     await loadEvents();
     await loadCoordination({
       jobs: [{ id: 1, name: 'Caisse' }],
-      assignments: [{ memberId: 1, eventId: 7, jobId: 1 }],
+      assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 0 }],
+      preferences: [],
     });
 
-    expect(store.data()?.algoScore).toBe(0);
+    expect(store.data()?.preferenceRank).toBeNull();
+  });
+
+  it('exposes the points this assignment credited', async () => {
+    await loadEvents();
+    await loadCoordination({
+      jobs: [{ id: 1, name: 'Caisse' }],
+      assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 10 }],
+    });
+
+    expect(store.data()?.meta).toContainEqual({
+      label: 'Points de cette affectation',
+      value: '+10',
+    });
   });
 
   it('reads the preferred job from /preferences, null when never expressed', async () => {

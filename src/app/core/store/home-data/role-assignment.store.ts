@@ -36,13 +36,14 @@ import { RoleAssignment, RoleMeta } from './models';
  * narrower methods would mean editing `coordination-service.ts`, which is owned
  * by another workstream this phase.
  *
- * ⚠️ `RoleAssignment.algoScore` implies an assignment-scoring algorithm. None
- * exists — no endpoint returns a score, and there is no historical
- * assignment-quality data to compute one from. It is pinned to `0` and the
- * template renders a "score indisponible" placeholder instead of a number.
+ * The mockup showed an invented "algo score /100". What the API really knows is
+ * which of the member's OWN choices this poste was — `member_job_preferences`
+ * carries the ranking — plus the points the assignment credited
+ * (`member_event_assigned_jobs.points_delta`). Both are exposed instead of a
+ * fabricated score.
  *
  * ⚠️ The mockup meta rows (horaire de poste, zone, binôme) have no backing
- * columns either; the three rows below are the ones that do.
+ * columns; the rows below are the ones that do.
  */
 
 /** Presentation-only: picks an icon from the job name. Purely cosmetic. */
@@ -140,6 +141,12 @@ export const RoleAssignmentStore = signalStore(
           .filter((m): m is ApiMember => m !== undefined)
           .map(shortName);
 
+        // Which of the member's own choices this poste was. Absent from their
+        // ranking means the engine placed them there as a last resort.
+        const preferenceRank =
+          store.preferences().find((p) => p.memberId === memberId && p.jobId === mine.jobId)
+            ?.preferenceRank ?? null;
+
         const meta: RoleMeta[] = [
           { label: 'Soirée', value: event.name },
           {
@@ -147,10 +154,13 @@ export const RoleAssignmentStore = signalStore(
             value: needed === null ? String(onSameJob.length) : `${onSameJob.length}/${needed}`,
           },
           { label: 'Coéquipiers', value: teammates.length > 0 ? teammates.join(', ') : 'Aucun' },
+          {
+            label: 'Points de cette affectation',
+            value: mine.pointsDelta > 0 ? `+${mine.pointsDelta}` : String(mine.pointsDelta),
+          },
         ];
 
-        // No scoring algorithm exists server-side — see the file header.
-        return { poste, icon: iconFor(poste), meta, algoScore: 0 };
+        return { poste, icon: iconFor(poste), meta, preferenceRank };
       }),
 
       /**

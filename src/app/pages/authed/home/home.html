@@ -497,15 +497,38 @@
             </div>
           </div>
           <!--
-            The mockup showed an "algo score /100". No assignment-scoring
-            algorithm or endpoint exists, so no number is displayed.
+            The mockup showed an invented "algo score /100". What is real is
+            which of the member's own choices this poste was.
           -->
-          <div
-            class="mt-3 flex items-start gap-2 rounded-md border border-dashed border-border p-2.5 text-[11.5px] text-text-2"
-          >
-            <svg [lucideIcon]="icZap" [size]="14" class="mt-px text-warn" aria-hidden="true"></svg>
-            <span>Score d'affectation indisponible — non calculé par l'API.</span>
-          </div>
+          @if (r.preferenceRank; as rank) {
+            <div
+              class="mt-3 flex items-start gap-2 rounded-md border border-blue/30 bg-blue-soft p-2.5 text-[11.5px] text-blue"
+            >
+              <svg [lucideIcon]="icZap" [size]="14" class="mt-px" aria-hidden="true"></svg>
+              <span
+                >Vous avez obtenu votre <strong>{{ rankLabel(rank) }}</strong
+                >.</span
+              >
+            </div>
+          } @else {
+            <div
+              class="mt-3 flex items-start gap-2 rounded-md border border-dashed border-border p-2.5 text-[11.5px] text-text-2"
+            >
+              <svg
+                [lucideIcon]="icZap"
+                [size]="14"
+                class="mt-px text-warn"
+                aria-hidden="true"
+              ></svg>
+              <span>
+                Ce poste ne figure pas dans votre classement.
+                <a [routerLink]="preferencesLink" class="text-blue underline">
+                  Classez vos postes
+                </a>
+                pour peser sur la prochaine affectation.
+              </span>
+            </div>
+          }
         } @else {
           <div
             class="mt-3.5 rounded-md border border-dashed border-border-s bg-surface-2 px-3.5 py-4 text-center text-[12px] text-muted"

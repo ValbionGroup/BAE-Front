@@ -59,7 +59,16 @@ export interface RoleAssignment {
   readonly poste: string;
   readonly icon: LucideIconInput;
   readonly meta: readonly RoleMeta[];
-  readonly algoScore: number;
+  /**
+   * Which of the member's own choices this poste was — 1 for their first
+   * choice. `null` when they never ranked it, which is what the matching
+   * engine treats as "wanted last".
+   *
+   * Replaces the mockup's invented "algo score /100": the rank is real, comes
+   * from `member_job_preferences`, and answers the same question — was this a
+   * good assignment for you?
+   */
+  readonly preferenceRank: number | null;
 }
 
 export interface QuickAction {
