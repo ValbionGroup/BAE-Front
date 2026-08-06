@@ -8,9 +8,9 @@
     size="md"
     [icon]="icZap"
     [disabled]="loading() || algoRunning()"
-    (clicked)="runAlgorithm()"
+    (clicked)="confirmRunMatching()"
   >
-    Lancer l'algo
+    {{ algoRunning() ? 'Affectation en cours…' : "Lancer l'affectation automatique" }}
   </bfd-btn>
   <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="validateAssignments()">
     Valider l'affectation
@@ -18,32 +18,60 @@
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
-  <!-- Algo result banner -->
-  @if (algoRunAt()) {
-    @let summary = algoSummary();
+  <!-- Live region: announces the matching run and its outcome -->
+  <div role="status" aria-live="polite" class="sr-only">
+    @if (algoRunning()) {
+      Affectation automatique en cours…
+    } @else if (lastOutcome(); as outcome) {
+      {{ outcome.title }}. {{ outcome.message }}
+    }
+  </div>
+
+  <!-- Last matching run -->
+  @if (lastOutcome(); as outcome) {
     <div
-      class="mb-4.5 flex items-center gap-3.5 rounded-md border border-ok bg-ok-soft px-4.5 py-3.5"
+      [class]="
+        'mb-4.5 flex items-center gap-3.5 rounded-md border px-4.5 py-3.5 ' +
+        outcomeBannerClass(outcome.tone)
+      "
     >
-      <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15 text-ok">
-        <svg [lucideIcon]="icCheck" [size]="18" aria-hidden="true"></svg>
+      <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/15">
+        <svg [lucideIcon]="icZap" [size]="18" aria-hidden="true"></svg>
       </span>
       <div class="flex-1">
         <div class="text-[13.5px] font-semibold text-text">
-          Algorithme exécuté · {{ algoRunLabel() }}
+          {{ outcome.title }} · {{ algoRunLabel() }}
         </div>
-        <div class="mt-0.5 text-[12px] text-text-2">
-          {{ summary?.assignedCount ?? 0 }} affectations · score moyen
-          <span class="mono tnum text-text">{{ summary?.avgScore ?? 0 }}/100</span> ·
-          {{ summary?.lockedCount ?? 0 }} verrouillées manuellement
-        </div>
+        <div class="mt-0.5 text-[12px] text-text-2">{{ outcome.message }}</div>
       </div>
     </div>
   }
 
+  <!-- Lock ↔ re-run relationship -->
+  <div
+    class="mb-4 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 px-3.5 py-2.5"
+  >
+    <svg [lucideIcon]="icLock" [size]="14" class="text-muted" aria-hidden="true"></svg>
+    @let locked = lockedCount();
+    @let replaceable = replaceableCount();
+    <p class="text-[12px] text-text-2">
+      @if (locked > 0) {
+        <span class="font-semibold text-text">{{ locked }}</span> affectation(s) verrouillée(s) —
+        conservée(s) au prochain lancement.
+      } @else {
+        Aucune affectation verrouillée.
+      }
+      <span class="text-muted">
+        Le prochain lancement de l'affectation automatique remplacera les
+        <span class="font-semibold text-text">{{ replaceable }}</span> affectation(s) non
+        verrouillée(s).
+      </span>
+    </p>
+  </div>
+
   <!-- Postes grid -->
   <div class="mb-5.5 grid grid-cols-3 gap-3">
-    @for (p of postes; track p.id) {
-      @let assigned = assignedTo(p.label);
+    @for (p of postes(); track p.id) {
       @let full = isFull(p);
       <div class="rounded-md border border-border-s bg-surface p-3.5">
         <div class="mb-3 flex items-center gap-2.5">
@@ -55,9 +83,14 @@
             <svg [lucideIcon]="p.icon" [size]="15" aria-hidden="true"></svg>
           </span>
           <div class="flex-1">
-            <div class="text-[13px] font-semibold text-text">{{ p.label }}</div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[13px] font-semibold text-text">{{ p.label }}</span>
+              @if (p.restricted) {
+                <bfd-badge kind="ghost">Éligibilité restreinte</bfd-badge>
+              }
+            </div>
             <div class="mono tnum mt-px text-[11px] text-muted">
-              {{ assigned.length }}/{{ p.need }} affectés
+              {{ p.assigned.length }}/{{ p.need }} affectés
             </div>
           </div>
           @if (full) {
@@ -67,31 +100,39 @@
           }
         </div>
         <div class="flex flex-col gap-1.5">
-          @for (m of assigned; track m.name) {
-            <div class="flex items-center gap-2 rounded-sm bg-surface-2 px-2 py-1.5">
+          @for (m of p.assigned; track m.id) {
+            <div
+              [class]="
+                'flex items-center gap-2 rounded-sm px-2 py-1.5 ' +
+                (m.lock ? 'bg-surface-2 ring-1 ring-inset ring-blue/40' : 'bg-surface-2')
+              "
+            >
               <bfd-avatar [name]="m.name" [size]="20" />
               <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
               <button
                 type="button"
-                class="text-muted hover:text-text focus:outline-none"
-                aria-label="Verrouiller ou déverrouiller"
+                class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                [attr.aria-pressed]="m.lock"
+                [attr.aria-label]="lockLabel(m.name, p.label, m.lock)"
+                [disabled]="m.lockPending"
                 (click)="toggleLock(m.id, p.id); $event.stopPropagation()"
               >
                 <svg
-                  [lucideIcon]="icLock"
+                  [lucideIcon]="m.lock ? icLock : icLockOpen"
                   [size]="11"
-                  [class]="m.lock ? 'text-text' : 'text-muted'"
+                  [class]="m.lock ? 'text-blue' : 'text-muted'"
                   aria-hidden="true"
                 ></svg>
               </button>
               @if (!m.lock) {
-                <svg
-                  [lucideIcon]="icX"
-                  [size]="12"
-                  class="text-muted cursor-pointer"
+                <button
+                  type="button"
+                  class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+                  [attr.aria-label]="'Retirer ' + m.name + ' du poste ' + p.label"
                   (click)="removeAssignment(m.id, p.id); $event.stopPropagation()"
-                  aria-hidden="true"
-                ></svg>
+                >
+                  <svg [lucideIcon]="icX" [size]="12" aria-hidden="true"></svg>
+                </button>
               }
               <span [class]="'mono tnum text-[10.5px] ' + scoreClassSmall(m.score)">{{
                 m.score
@@ -99,14 +140,16 @@
             </div>
           }
           @for (_ of vacantSlots(p); track $index) {
-            <div
+            <button
               #anchor
-              class="flex items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-[12px] text-muted cursor-pointer"
+              type="button"
+              [attr.aria-label]="'Affecter un membre au poste ' + p.label"
+              class="flex w-full items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-left text-[12px] text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
               (click)="openRoleDropdown(anchor, p.id)"
             >
               <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
               <span>Affecter…</span>
-            </div>
+            </button>
           }
         </div>
       </div>
@@ -126,10 +169,10 @@
       <span>Préférences (1-3)</span>
       <span>Affecté à</span>
       <span class="text-right">Score</span>
-      <span class="text-right">Bonus</span>
+      <span class="text-right">Points gagnés</span>
       <span></span>
     </div>
-    @let allMembres = membres;
+    @let allMembres = membres();
     @let presCount = presentMembers().length;
     @if (presCount > 0) {
       <div class="flex items-center gap-2 border-t border-border-s bg-surface-2/50 px-3.5 py-1.5">
@@ -137,7 +180,7 @@
         <span class="mono text-[10px] tracking-wider text-text-2">PRÉSENTS · {{ presCount }}</span>
       </div>
     }
-    @for (m of allMembres; track m.name; let i = $index) {
+    @for (m of allMembres; track m.id; let i = $index) {
       @if (i === presCount && presCount > 0 && presCount < allMembres.length) {
         <div class="border-t border-border-s bg-surface-2/50 px-3.5 py-1.5">
           <span class="mono text-[10px] tracking-wider text-muted"
@@ -165,7 +208,7 @@
           <div class="mt-px text-[11px] text-muted">2A · INFO</div>
         </div>
         <div class="flex gap-1">
-          @for (pr of prefsFor(m); track $index; let j = $index) {
+          @for (pr of m.preferences; track $index; let j = $index) {
             <span
               [class]="
                 'mono rounded-[3px] px-1.5 py-0.5 text-[10px] ' +
@@ -184,14 +227,16 @@
           @if (roleId !== null) {
             <button
               type="button"
-              class="text-muted hover:text-text focus:outline-none"
-              aria-label="Verrouiller ou déverrouiller"
+              class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
+              [attr.aria-pressed]="m.lock"
+              [attr.aria-label]="lockLabel(m.name, m.poste, m.lock)"
+              [disabled]="m.lockPending"
               (click)="toggleLock(m.id, roleId); $event.stopPropagation()"
             >
               <svg
-                [lucideIcon]="icLock"
+                [lucideIcon]="m.lock ? icLock : icLockOpen"
                 [size]="11"
-                [class]="m.lock ? 'text-text' : 'text-muted'"
+                [class]="m.lock ? 'text-blue' : 'text-muted'"
                 aria-hidden="true"
               ></svg>
             </button>
@@ -200,9 +245,12 @@
         <span [class]="'mono tnum text-right text-[13px] font-semibold ' + scoreClass(m.score)">{{
           m.score
         }}</span>
-        <span [class]="'mono text-right text-[12px] ' + bonusClass(m.bonus)">{{
-          m.bonus || '·'
-        }}</span>
+        <span
+          [class]="
+            'mono tnum text-right text-[12px] ' + (m.pointsDelta > 0 ? 'text-ok' : 'text-muted')
+          "
+          >{{ m.pointsDelta > 0 ? '+' + m.pointsDelta : '·' }}</span
+        >
         <svg
           [lucideIcon]="icMore"
           [size]="14"

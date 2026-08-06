@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import {
   LucideDynamicIcon,
   LucideIconInput,
@@ -20,7 +20,6 @@ import {
   LucideX,
   LucideCheck,
   LucideUsers,
-  LucideAlertTriangle,
   LucideFlame,
   LucideWine,
   LucideCreditCard,
@@ -30,18 +29,22 @@ import {
   LucideSettings,
   LucideZap,
   LucideLock,
+  LucideLockOpen,
   LucideEllipsisVertical,
 } from '@lucide/angular';
 import {
   CoordinationService,
   type ApiJob,
+  type ApiMatchingSummary,
   type ApiPreference,
   type CoordinationApiData,
 } from '#core/services/coordination/coordination-service';
+import { CoordinationStore } from '#core/store/coordination.store';
 import { DropdownService } from '#shared/components/dropdown/dropdown.service';
 import type { DropdownItemAction } from '#shared/components/dropdown/dropdown.models';
 import { ModalService } from '#shared/components/modal/modal.service';
 import type { RoleModalRole } from '#shared/components/modal/modal.models';
+import type { ToastType } from '#shared/components/toast/toast.models';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
@@ -56,24 +59,47 @@ interface Member {
   points: number;
 }
 
-interface Role {
+/**
+ * One `member_event_assigned_jobs` row, from the point of view of the job it
+ * belongs to. `locked` is server state, not a local UI preference: the
+ * matching engine reads it to decide what it may overwrite.
+ */
+export interface AssignedMember {
+  memberId: number;
+  locked: boolean;
+  pointsDelta: number;
+}
+
+export interface Role {
   id: number;
   name: string;
   icon: LucideIconInput;
   requiredCount: number;
-  assignedMemberIds: number[];
+  /** `true` when the job has at least one `job_eligible_members` row, i.e. it
+   *  is NOT open to everyone. */
+  restricted: boolean;
+  assigned: AssignedMember[];
 }
 
-interface SoireeEvent {
+export interface SoireeEvent {
   id: number;
   name: string;
   date: Date;
 }
 
-interface EventData {
+export interface EventData {
   event: SoireeEvent;
   presentMemberIds: number[];
   roles: Role[];
+}
+
+interface AssignedMemberView {
+  id: number;
+  name: string;
+  lock: boolean;
+  lockPending: boolean;
+  score: number;
+  pointsDelta: number;
 }
 
 interface PosteView {
@@ -82,7 +108,8 @@ interface PosteView {
   color: string;
   icon: LucideIconInput;
   need: number;
-  assignedMemberIds: number[];
+  restricted: boolean;
+  assigned: AssignedMemberView[];
 }
 
 interface MemberView {
@@ -91,28 +118,21 @@ interface MemberView {
   poste: string;
   roleId: number | null;
   lock: boolean;
+  lockPending: boolean;
   score: number;
-  bonus: number;
+  pointsDelta: number;
   preferences: string[];
   isPresent: boolean;
 }
 
-const AVATAR_COLORS = [
-  'bg-violet-500',
-  'bg-blue-500',
-  'bg-emerald-500',
-  'bg-amber-500',
-  'bg-rose-500',
-  'bg-indigo-500',
-  'bg-teal-500',
-  'bg-orange-500',
-  'bg-pink-500',
-  'bg-cyan-500',
-];
+/** Outcome of a matching run, rendered identically by the toast and the banner. */
+export interface MatchingOutcome {
+  tone: ToastType;
+  title: string;
+  message: string;
+}
 
 const POSTE_COLORS = ['blue', 'emerald', 'amber', 'rose', 'indigo', 'teal'];
-
-const LOCK_STORAGE_KEY = 'coordination-assignment-locks';
 
 const JOB_ICONS: Record<string, LucideIconInput> = {
   Barman: LucideWine,
@@ -123,7 +143,20 @@ const JOB_ICONS: Record<string, LucideIconInput> = {
   Sono: LucideMusic,
 };
 
-function buildEventsData(raw: CoordinationApiData): EventData[] {
+/** French agreement: 0 and 1 take the singular form. */
+function plural(count: number, singular: string, pluralForm: string): string {
+  return `${count} ${count > 1 ? pluralForm : singular}`;
+}
+
+/**
+ * `restrictedJobIds` holds the jobs that have at least one
+ * `job_eligible_members` row. A job absent from that set is unrestricted —
+ * absence means "open to everyone", never "nobody is eligible".
+ */
+export function buildEventsData(
+  raw: CoordinationApiData,
+  restrictedJobIds: ReadonlySet<number>,
+): EventData[] {
   return raw.events.map((event) => ({
     event: { id: event.id, name: event.name, date: new Date(event.date) },
     presentMemberIds: raw.responses
@@ -138,12 +171,82 @@ function buildEventsData(raw: CoordinationApiData): EventData[] {
           name: job.name,
           icon: JOB_ICONS[job.name] ?? LucideUsers,
           requiredCount: ej.count,
-          assignedMemberIds: raw.assignments
+          restricted: restrictedJobIds.has(ej.jobId),
+          assigned: raw.assignments
             .filter((a) => a.eventId === event.id && a.jobId === ej.jobId)
-            .map((a) => a.memberId),
+            .map((a) => ({
+              memberId: a.memberId,
+              locked: a.locked,
+              pointsDelta: a.pointsDelta,
+            })),
         };
       }),
   }));
+}
+
+/**
+ * Turn a matching summary into something the user can act on.
+ *
+ * The engine happily returns an empty `matched` when the event has no job,
+ * nobody answered available, or every seat is already held by a locked row —
+ * those must NOT read as a success, so the tone degrades to `info`/`warning`
+ * and the message names the reason instead of claiming work happened.
+ */
+export function describeMatching(summary: ApiMatchingSummary): MatchingOutcome {
+  const matched = summary.matched.length;
+  const unmatched = summary.unmatchedMemberIds.length;
+  const locked = summary.locked.length;
+
+  const matchedPart = plural(matched, 'affectation générée', 'affectations générées');
+  const unmatchedPart = plural(unmatched, 'membre non affecté', 'membres non affectés');
+  const lockedPart = plural(
+    locked,
+    'affectation verrouillée conservée',
+    'affectations verrouillées conservées',
+  );
+
+  if (matched === 0) {
+    if (unmatched > 0) {
+      const reason =
+        locked > 0
+          ? `toutes les places restantes sont verrouillées (${lockedPart}), ou aucun poste ne correspond à leurs préférences`
+          : 'plus aucune place libre, ou aucun poste ne correspond à leurs préférences';
+      return {
+        tone: 'warning',
+        title: 'Aucune affectation générée',
+        message: `${plural(unmatched, 'membre disponible n’a pu être placé', 'membres disponibles n’ont pu être placés')} : ${reason}.`,
+      };
+    }
+    if (locked > 0) {
+      return {
+        tone: 'info',
+        title: 'Rien à réaffecter',
+        message: `Aucune modification : ${lockedPart}, et plus aucun membre disponible à placer.`,
+      };
+    }
+    return {
+      tone: 'info',
+      title: 'Rien à affecter',
+      message:
+        'Aucun membre disponible à placer sur cette soirée. Vérifiez les réponses de disponibilité et les préférences avant de relancer.',
+    };
+  }
+
+  const lockedSuffix = locked > 0 ? ` · ${lockedPart}` : '';
+
+  if (unmatched > 0) {
+    return {
+      tone: 'warning',
+      title: 'Affectation partielle',
+      message: `${matchedPart} · ${unmatchedPart}${lockedSuffix}.`,
+    };
+  }
+
+  return {
+    tone: 'success',
+    title: 'Affectation automatique terminée',
+    message: `${matchedPart} · tous les membres disponibles ont été placés${lockedSuffix}.`,
+  };
 }
 
 function findNextEventId(events: EventData[]): number | null {
@@ -151,6 +254,10 @@ function findNextEventId(events: EventData[]): number | null {
   today.setHours(0, 0, 0, 0);
   const next = events.find((ed) => ed.event.date >= today);
   return next?.event.id ?? events.at(-1)?.event.id ?? null;
+}
+
+function assignmentKey(eventId: number, jobId: number, memberId: number): string {
+  return `${eventId}:${jobId}:${memberId}`;
 }
 
 @Component({
@@ -161,6 +268,7 @@ function findNextEventId(events: EventData[]): number | null {
 })
 export class Coordination implements OnInit {
   private readonly svc = inject(CoordinationService);
+  private readonly store = inject(CoordinationStore);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -172,6 +280,7 @@ export class Coordination implements OnInit {
   protected readonly icCheck = LucideCheck;
   protected readonly icX = LucideX;
   protected readonly icLock = LucideLock;
+  protected readonly icLockOpen = LucideLockOpen;
   protected readonly icPlus = LucidePlus;
   protected readonly icMore = LucideEllipsisVertical;
 
@@ -186,11 +295,18 @@ export class Coordination implements OnInit {
   protected readonly selectedEventId = signal<number | null>(null);
   protected readonly algoRunning = signal(false);
   protected readonly algoRunAt = signal<Date | null>(null);
+  protected readonly lastOutcome = signal<MatchingOutcome | null>(null);
+
+  /** Assignment keys whose lock write is still in flight. */
+  private readonly lockPending = signal<ReadonlySet<string>>(new Set());
 
   private readonly routeEventId = signal<number | null>(null);
   private readonly jobsById = signal<Map<number, ApiJob>>(new Map());
   private readonly preferences = signal<ApiPreference[]>([]);
-  private readonly lockedAssignments = signal<Set<string>>(this.readLocks());
+  /** Jobs narrowed by `job_eligible_members`; fetched once, they only change
+   *  from an admin screen that does not exist yet. */
+  private readonly restrictedJobIds = signal<ReadonlySet<number>>(new Set<number>());
+
   constructor() {
     effect(() => {
       const tpl = this.actionsTpl();
@@ -231,7 +347,7 @@ export class Coordination implements OnInit {
     if (!eventData) return new Set<number>();
     const ids = new Set<number>();
     for (const role of eventData.roles) {
-      for (const id of role.assignedMemberIds) ids.add(id);
+      for (const a of role.assigned) ids.add(a.memberId);
     }
     return ids;
   });
@@ -242,6 +358,26 @@ export class Coordination implements OnInit {
     const assigned = this.assignedMemberIds();
     return this.allMembers().filter(
       (m) => eventData.presentMemberIds.includes(m.id) && !assigned.has(m.id),
+    );
+  });
+
+  /** Rows the next matching run would preserve. */
+  protected readonly lockedCount = computed(() => {
+    const eventData = this.selectedEventData();
+    if (!eventData) return 0;
+    return eventData.roles.reduce(
+      (sum, role) => sum + role.assigned.filter((a) => a.locked).length,
+      0,
+    );
+  });
+
+  /** Rows the next matching run would delete and regenerate. */
+  protected readonly replaceableCount = computed(() => {
+    const eventData = this.selectedEventData();
+    if (!eventData) return 0;
+    return eventData.roles.reduce(
+      (sum, role) => sum + role.assigned.filter((a) => !a.locked).length,
+      0,
     );
   });
 
@@ -260,21 +396,62 @@ export class Coordination implements OnInit {
     return map;
   });
 
-  protected readonly algoSummary = computed(() => {
+  protected readonly postes = computed<PosteView[]>(() => {
     const eventData = this.selectedEventData();
-    if (!eventData) return null;
-    const assignedCount = eventData.roles.reduce(
-      (sum, role) => sum + role.assignedMemberIds.length,
-      0,
-    );
-    const lockedCount = this.countLockedAssignments(eventData);
-    const avgScore = this.averageAssignedScore(eventData);
-    return { assignedCount, lockedCount, avgScore };
+    if (!eventData) return [];
+    const members = this.memberById();
+    const pending = this.lockPending();
+
+    return eventData.roles.map((role, index) => ({
+      id: role.id,
+      label: role.name,
+      color: POSTE_COLORS[index % POSTE_COLORS.length],
+      icon: role.icon,
+      need: role.requiredCount,
+      restricted: role.restricted,
+      assigned: role.assigned.map((a) => {
+        const member = members.get(a.memberId);
+        return {
+          id: a.memberId,
+          name: member ? `${member.firstName} ${member.lastName}` : `#${a.memberId}`,
+          lock: a.locked,
+          lockPending: pending.has(assignmentKey(eventData.event.id, role.id, a.memberId)),
+          score: member?.points ?? 0,
+          pointsDelta: a.pointsDelta,
+        };
+      }),
+    }));
   });
 
-  protected getMember(id: number): Member | undefined {
-    return this.allMembers().find((m) => m.id === id);
-  }
+  protected readonly membres = computed<MemberView[]>(() => {
+    const eventData = this.selectedEventData();
+    if (!eventData) return [];
+    const pending = this.lockPending();
+
+    const views = this.allMembers().map((member) => {
+      const assignedRole = eventData.roles.find((role) =>
+        role.assigned.some((a) => a.memberId === member.id),
+      );
+      const assignment = assignedRole?.assigned.find((a) => a.memberId === member.id) ?? null;
+      const roleId = assignedRole?.id ?? null;
+
+      return {
+        id: member.id,
+        name: `${member.firstName} ${member.lastName}`,
+        poste: assignedRole?.name ?? member.role,
+        roleId,
+        lock: assignment?.locked ?? false,
+        lockPending:
+          roleId !== null && pending.has(assignmentKey(eventData.event.id, roleId, member.id)),
+        score: member.points,
+        pointsDelta: assignment?.pointsDelta ?? 0,
+        preferences: this.buildPreferences(member, eventData),
+        isPresent: eventData.presentMemberIds.includes(member.id),
+      };
+    });
+
+    return views.sort((a, b) => Number(b.isPresent) - Number(a.isPresent));
+  });
 
   protected formatDate(date: Date): string {
     return date.toLocaleDateString('fr-FR', {
@@ -289,17 +466,10 @@ export class Coordination implements OnInit {
     const eventId = this.selectedEventId();
     if (eventId === null) return;
 
-    this.eventsData.update((events) =>
-      events.map((ed) => {
-        if (ed.event.id !== eventId) return ed;
-        return {
-          ...ed,
-          roles: ed.roles.map((r) => {
-            if (r.id !== roleId || r.assignedMemberIds.includes(memberId)) return r;
-            return { ...r, assignedMemberIds: [...r.assignedMemberIds, memberId] };
-          }),
-        };
-      }),
+    this.patchRole(eventId, roleId, (assigned) =>
+      assigned.some((a) => a.memberId === memberId)
+        ? assigned
+        : [...assigned, { memberId, locked: false, pointsDelta: 0 }],
     );
 
     this.svc.assign(eventId, memberId, roleId).subscribe({
@@ -310,26 +480,13 @@ export class Coordination implements OnInit {
   protected removeAssignment(memberId: number, roleId: number): void {
     const eventId = this.selectedEventId();
     if (eventId === null) return;
-    if (this.isLocked(eventId, roleId, memberId)) return;
+    if (this.isLocked(roleId, memberId)) return;
 
-    this.eventsData.update((events) =>
-      events.map((ed) => {
-        if (ed.event.id !== eventId) return ed;
-        return {
-          ...ed,
-          roles: ed.roles.map((r) => {
-            if (r.id !== roleId) return r;
-            return { ...r, assignedMemberIds: r.assignedMemberIds.filter((id) => id !== memberId) };
-          }),
-        };
-      }),
-    );
+    this.patchRole(eventId, roleId, (assigned) => assigned.filter((a) => a.memberId !== memberId));
 
     this.svc.unassign(eventId, memberId, roleId).subscribe({
       error: () => this.loadError.set('Erreur lors de la suppression.'),
     });
-
-    this.clearLock(eventId, roleId, memberId);
   }
 
   protected openRolesModal(): void {
@@ -369,124 +526,96 @@ export class Coordination implements OnInit {
     });
   }
 
-  protected runAlgorithm(): void {
+  /**
+   * Entry point of the server-side stable-matching engine.
+   *
+   * The run deletes every NON-locked assignment of the event before writing
+   * new ones, so it always goes through a confirmation modal. The degenerate
+   * cases that cannot possibly produce anything are caught here rather than
+   * burning a destructive round trip.
+   */
+  protected confirmRunMatching(): void {
     const eventData = this.selectedEventData();
-    if (!eventData) return;
+    if (!eventData || this.algoRunning() || this.loading()) return;
 
-    const eventId = eventData.event.id;
-    const preferenceMap = this.preferenceByMember();
-    const memberMap = this.memberById();
-
-    const lockedByRole = new Map<number, number[]>();
-    const assignedMembers = new Set<number>();
-    for (const role of eventData.roles) {
-      const locked = role.assignedMemberIds.filter((memberId) =>
-        this.isLocked(eventId, role.id, memberId),
-      );
-      lockedByRole.set(role.id, locked);
-      locked.forEach((memberId) => assignedMembers.add(memberId));
-    }
-
-    const nextAssignments = new Map<number, number[]>();
-    for (const role of eventData.roles) {
-      nextAssignments.set(role.id, [...(lockedByRole.get(role.id) ?? [])]);
-    }
-
-    const available = new Set(
-      eventData.presentMemberIds.filter((memberId) => !assignedMembers.has(memberId)),
-    );
-
-    const sortedRoles = [...eventData.roles].sort((a, b) => {
-      const needA = Math.max(0, a.requiredCount - (nextAssignments.get(a.id)?.length ?? 0));
-      const needB = Math.max(0, b.requiredCount - (nextAssignments.get(b.id)?.length ?? 0));
-      if (needA !== needB) return needB - needA;
-      return a.id - b.id;
-    });
-
-    const sortCandidates = (roleId: number, candidates: number[]): number[] => {
-      return candidates.sort((a, b) => {
-        const prefA = preferenceMap.get(a)?.get(roleId) ?? Number.MAX_SAFE_INTEGER;
-        const prefB = preferenceMap.get(b)?.get(roleId) ?? Number.MAX_SAFE_INTEGER;
-        if (prefA !== prefB) return prefA - prefB;
-        const pointsA = memberMap.get(a)?.points ?? 0;
-        const pointsB = memberMap.get(b)?.points ?? 0;
-        if (pointsA !== pointsB) return pointsB - pointsA;
-        return a - b;
+    if (eventData.roles.length === 0) {
+      this.toast.show({
+        type: 'warning',
+        title: 'Aucun poste à pourvoir',
+        message: `« ${eventData.event.name} » n'a aucun poste. Ajoutez-en via « Postes » avant de lancer l'affectation.`,
       });
-    };
-
-    for (const role of sortedRoles) {
-      const assigned = nextAssignments.get(role.id) ?? [];
-      const needed = role.requiredCount - assigned.length;
-      if (needed <= 0) continue;
-
-      const candidates = sortCandidates(role.id, Array.from(available));
-      for (const memberId of candidates) {
-        if (assigned.length >= role.requiredCount) break;
-        assigned.push(memberId);
-        available.delete(memberId);
-      }
-
-      nextAssignments.set(role.id, assigned);
+      return;
     }
 
-    const currentAssignments: Array<{ roleId: number; memberId: number }> = [];
-    for (const role of eventData.roles) {
-      for (const memberId of role.assignedMemberIds) {
-        currentAssignments.push({ roleId: role.id, memberId });
-      }
+    if (eventData.presentMemberIds.length === 0) {
+      this.toast.show({
+        type: 'warning',
+        title: 'Aucun membre disponible',
+        message: `Personne ne s'est déclaré disponible pour « ${eventData.event.name} » : l'algorithme n'aurait personne à placer.`,
+      });
+      return;
     }
 
-    const currentKeys = new Set(
-      currentAssignments.map((a) => this.lockKey(eventId, a.roleId, a.memberId)),
-    );
-    const nextKeys = new Set(
-      Array.from(nextAssignments.entries()).flatMap(([roleId, memberIds]) =>
-        memberIds.map((memberId) => this.lockKey(eventId, roleId, memberId)),
-      ),
-    );
+    const locked = this.lockedCount();
+    const replaceable = this.replaceableCount();
+    const lockedSentence =
+      locked > 0
+        ? `${plural(locked, 'affectation verrouillée sera conservée', 'affectations verrouillées seront conservées')} à l'identique.`
+        : "Aucune affectation n'est verrouillée : tout sera recalculé. Verrouillez d'abord les affectations à préserver.";
 
-    const toUnassign = currentAssignments.filter(
-      ({ roleId, memberId }) =>
-        !this.isLocked(eventId, roleId, memberId) &&
-        !nextKeys.has(this.lockKey(eventId, roleId, memberId)),
-    );
-    const toAssign: Array<{ roleId: number; memberId: number }> = [];
-    for (const [roleId, memberIds] of nextAssignments.entries()) {
-      for (const memberId of memberIds) {
-        const key = this.lockKey(eventId, roleId, memberId);
-        if (!currentKeys.has(key)) {
-          toAssign.push({ roleId, memberId });
-        }
-      }
-    }
+    this.modal.open({
+      type: 'warning',
+      title: "Lancer l'affectation automatique ?",
+      message:
+        `${plural(replaceable, 'affectation non verrouillée', 'affectations non verrouillées')} de ` +
+        `« ${eventData.event.name} » ${replaceable > 1 ? 'seront supprimées puis recalculées' : 'sera supprimée puis recalculée'} ` +
+        `par l'algorithme. ${lockedSentence} Cette action est irréversible.`,
+      actions: [
+        { label: 'Annuler', action: () => undefined, variant: 'secondary' },
+        {
+          label: "Lancer l'affectation",
+          action: () => this.runMatching(eventData.event.id),
+          variant: 'primary',
+        },
+      ],
+    });
+  }
 
-    this.applyAssignments(eventId, nextAssignments);
-
-    const ops = [
-      ...toUnassign.map((a) => this.svc.unassign(eventId, a.memberId, a.roleId)),
-      ...toAssign.map((a) => this.svc.assign(eventId, a.memberId, a.roleId)),
-    ];
-
+  private runMatching(eventId: number): void {
     this.algoRunning.set(true);
     this.loadError.set(null);
-    let success = true;
-    const save$: Observable<CoordinationApiData | null> = ops.length
-      ? forkJoin(ops).pipe(switchMap(() => this.svc.loadAll()))
-      : of(null);
 
-    save$
+    this.svc
+      .runMatching(eventId)
       .pipe(
+        switchMap((summary) => this.svc.loadAll().pipe(map((raw) => ({ summary, raw }) as const))),
         catchError(() => {
-          success = false;
           this.loadError.set("Erreur lors de l'exécution de l'algorithme.");
+          this.toast.show({
+            type: 'error',
+            title: "Échec de l'affectation automatique",
+            message: "L'algorithme n'a pas pu être exécuté. Les affectations sont inchangées.",
+          });
           return of(null);
         }),
         finalize(() => this.algoRunning.set(false)),
       )
-      .subscribe((raw: CoordinationApiData | null) => {
-        if (raw) this.applyLoadedData(raw);
-        if (success) this.algoRunAt.set(new Date());
+      .subscribe((result) => {
+        if (!result) return;
+        this.applyLoadedData(result.raw);
+        this.algoRunAt.set(new Date());
+
+        const outcome = describeMatching(result.summary);
+        this.lastOutcome.set(outcome);
+        this.toast.show({
+          type: outcome.tone,
+          title: outcome.title,
+          message: outcome.message,
+        });
+
+        // The event list cached by the root store still holds the pre-run
+        // assigned counts — it is fed by the same endpoints, not by this page.
+        void this.store.refresh();
       });
   }
 
@@ -498,86 +627,8 @@ export class Coordination implements OnInit {
     });
   }
 
-  private applyAssignments(eventId: number, assignments: Map<number, number[]>): void {
-    this.eventsData.update((events) =>
-      events.map((ed) => {
-        if (ed.event.id !== eventId) return ed;
-        return {
-          ...ed,
-          roles: ed.roles.map((role) => ({
-            ...role,
-            assignedMemberIds: assignments.get(role.id) ?? [],
-          })),
-        };
-      }),
-    );
-  }
-
-  protected get postes(): PosteView[] {
-    const eventData = this.selectedEventData();
-    if (!eventData) return [];
-
-    return eventData.roles.map((role, index) => ({
-      id: role.id,
-      label: role.name,
-      color: POSTE_COLORS[index % POSTE_COLORS.length],
-      icon: role.icon,
-      need: role.requiredCount,
-      assignedMemberIds: role.assignedMemberIds,
-    }));
-  }
-
-  protected get membres(): MemberView[] {
-    const eventData = this.selectedEventData();
-    if (!eventData) return [];
-
-    const views = this.allMembers().map((member) => {
-      const assignedRole = eventData.roles.find((role) =>
-        role.assignedMemberIds.includes(member.id),
-      );
-      const roleId = assignedRole?.id ?? null;
-      const score = member.points;
-      const bonus = assignedRole
-        ? Math.max(0, assignedRole.requiredCount - assignedRole.assignedMemberIds.length)
-        : 0;
-      const lock = roleId !== null ? this.isLocked(eventData.event.id, roleId, member.id) : false;
-
-      return {
-        id: member.id,
-        name: `${member.firstName} ${member.lastName}`,
-        poste: assignedRole?.name ?? member.role,
-        roleId,
-        lock,
-        score,
-        bonus,
-        preferences: this.buildPreferences(member, eventData),
-        isPresent: eventData.presentMemberIds.includes(member.id),
-      };
-    });
-
-    return views.sort((a, b) => Number(b.isPresent) - Number(a.isPresent));
-  }
-
-  protected assignedTo(
-    label: string,
-  ): Array<{ id: number; name: string; lock: boolean; score: number }> {
-    const poste = this.postes.find((role) => role.label === label);
-    if (!poste) return [];
-    const eventId = this.selectedEventId();
-
-    return poste.assignedMemberIds
-      .map((memberId) => this.getMember(memberId))
-      .filter((member): member is Member => member !== undefined)
-      .map((member) => ({
-        id: member.id,
-        name: `${member.firstName} ${member.lastName}`,
-        lock: eventId !== null ? this.isLocked(eventId, poste.id, member.id) : false,
-        score: member.points,
-      }));
-  }
-
   protected isFull(p: PosteView): boolean {
-    return p.assignedMemberIds.length >= p.need;
+    return p.assigned.length >= p.need;
   }
 
   protected posteBgClass(c: string): string {
@@ -591,15 +642,11 @@ export class Coordination implements OnInit {
   }
 
   protected toFill(p: PosteView): number {
-    return Math.max(0, p.need - p.assignedMemberIds.length);
+    return Math.max(0, p.need - p.assigned.length);
   }
 
   protected vacantSlots(p: PosteView): number[] {
     return Array.from({ length: this.toFill(p) }, (_, index) => index);
-  }
-
-  protected prefsFor(member: MemberView): string[] {
-    return member.preferences;
   }
 
   protected scoreClassSmall(score: number): string {
@@ -610,109 +657,97 @@ export class Coordination implements OnInit {
     return this.getScoreClass(score);
   }
 
-  protected bonusClass(bonus: number): string {
-    if (bonus > 0) return 'text-ok';
-    if (bonus < 0) return 'text-error';
-    return 'text-muted';
-  }
-
   protected algoRunLabel(): string {
     const runAt = this.algoRunAt();
     if (!runAt) return '';
     const minutes = Math.floor((Date.now() - runAt.getTime()) / 60000);
-    if (minutes <= 0) return "a l'instant";
+    if (minutes <= 0) return "à l'instant";
     if (minutes === 1) return 'il y a 1 min';
     return `il y a ${minutes} min`;
   }
 
+  protected outcomeBannerClass(tone: ToastType): string {
+    switch (tone) {
+      case 'success':
+        return 'border-ok bg-ok-soft text-ok';
+      case 'warning':
+        return 'border-warn bg-warn-soft text-warn';
+      case 'error':
+        return 'border-danger bg-danger-soft text-danger';
+      default:
+        return 'border-blue bg-blue-soft text-blue';
+    }
+  }
+
+  protected lockLabel(memberName: string, posteName: string, locked: boolean): string {
+    return locked
+      ? `Déverrouiller l'affectation de ${memberName} au poste ${posteName} : elle pourra être remplacée par l'affectation automatique`
+      : `Verrouiller l'affectation de ${memberName} au poste ${posteName} : elle sera conservée par l'affectation automatique`;
+  }
+
+  /**
+   * Persist the lock flag of one assignment. Optimistic: the row flips
+   * immediately and rolls back if the write fails.
+   */
   protected toggleLock(memberId: number, roleId: number): void {
     const eventId = this.selectedEventId();
     if (eventId === null) return;
-    const key = this.lockKey(eventId, roleId, memberId);
-    const next = new Set(this.lockedAssignments());
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-    this.setLocks(next);
+
+    const key = assignmentKey(eventId, roleId, memberId);
+    if (this.lockPending().has(key)) return;
+
+    const next = !this.isLocked(roleId, memberId);
+    this.setLockPending(key, true);
+    // `setAssignmentLock` recreates the row, which resets `points_delta` to 0
+    // server-side — mirror that instead of showing a value that no longer exists.
+    this.patchRole(eventId, roleId, (assigned) =>
+      assigned.map((a) => (a.memberId === memberId ? { ...a, locked: next, pointsDelta: 0 } : a)),
+    );
+
+    this.svc.setAssignmentLock(eventId, memberId, roleId, next).subscribe({
+      next: () => this.setLockPending(key, false),
+      error: () => {
+        this.setLockPending(key, false);
+        this.patchRole(eventId, roleId, (assigned) =>
+          assigned.map((a) => (a.memberId === memberId ? { ...a, locked: !next } : a)),
+        );
+        this.toast.show({
+          type: 'error',
+          title: 'Verrouillage impossible',
+          message: "L'état de verrouillage n'a pas pu être enregistré.",
+        });
+      },
+    });
   }
 
-  protected isLocked(eventId: number, roleId: number, memberId: number): boolean {
-    return this.lockedAssignments().has(this.lockKey(eventId, roleId, memberId));
+  private isLocked(roleId: number, memberId: number): boolean {
+    const role = this.selectedEventData()?.roles.find((r) => r.id === roleId);
+    return role?.assigned.some((a) => a.memberId === memberId && a.locked) ?? false;
   }
 
-  private lockKey(eventId: number, roleId: number, memberId: number): string {
-    return `${eventId}:${roleId}:${memberId}`;
+  private setLockPending(key: string, pending: boolean): void {
+    const next = new Set(this.lockPending());
+    if (pending) next.add(key);
+    else next.delete(key);
+    this.lockPending.set(next);
   }
 
-  private readLocks(): Set<string> {
-    try {
-      const raw = localStorage.getItem(LOCK_STORAGE_KEY);
-      if (!raw) return new Set();
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return new Set();
-      return new Set(parsed.filter((value) => typeof value === 'string'));
-    } catch {
-      return new Set();
-    }
-  }
-
-  private setLocks(locks: Set<string>): void {
-    this.lockedAssignments.set(new Set(locks));
-    this.persistLocks(locks);
-  }
-
-  private persistLocks(locks: Set<string>): void {
-    try {
-      localStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify(Array.from(locks)));
-    } catch {
-      // Ignore persistence errors (e.g., private mode or quota limits).
-    }
-  }
-
-  private clearLock(eventId: number, roleId: number, memberId: number): void {
-    const key = this.lockKey(eventId, roleId, memberId);
-    if (!this.lockedAssignments().has(key)) return;
-    const next = new Set(this.lockedAssignments());
-    next.delete(key);
-    this.setLocks(next);
-  }
-
-  private pruneLocks(events: EventData[]): void {
-    const validKeys = new Set<string>();
-    for (const eventData of events) {
-      for (const role of eventData.roles) {
-        for (const memberId of role.assignedMemberIds) {
-          validKeys.add(this.lockKey(eventData.event.id, role.id, memberId));
-        }
-      }
-    }
-
-    const current = this.lockedAssignments();
-    const next = new Set(Array.from(current).filter((key) => validKeys.has(key)));
-    if (next.size !== current.size) {
-      this.setLocks(next);
-    }
-  }
-
-  private countLockedAssignments(eventData: EventData): number {
-    return eventData.roles.reduce((sum, role) => {
-      const count = role.assignedMemberIds.filter((memberId) =>
-        this.isLocked(eventData.event.id, role.id, memberId),
-      ).length;
-      return sum + count;
-    }, 0);
-  }
-
-  private averageAssignedScore(eventData: EventData): number {
-    const memberMap = this.memberById();
-    const assignedIds = eventData.roles.flatMap((role) => role.assignedMemberIds);
-    if (!assignedIds.length) return 0;
-    const total = assignedIds.reduce((sum, memberId) => {
-      return sum + (memberMap.get(memberId)?.points ?? 0);
-    }, 0);
-    return Math.round(total / assignedIds.length);
+  private patchRole(
+    eventId: number,
+    roleId: number,
+    update: (assigned: AssignedMember[]) => AssignedMember[],
+  ): void {
+    this.eventsData.update((events) =>
+      events.map((ed) => {
+        if (ed.event.id !== eventId) return ed;
+        return {
+          ...ed,
+          roles: ed.roles.map((role) =>
+            role.id === roleId ? { ...role, assigned: update(role.assigned) } : role,
+          ),
+        };
+      }),
+    );
   }
 
   private updateHeader(eventData: EventData | null, presentCount: number): void {
@@ -764,8 +799,14 @@ export class Coordination implements OnInit {
   private loadCoordinationData(): void {
     this.loading.set(true);
     this.loadError.set(null);
-    this.svc.loadAll().subscribe({
-      next: (raw) => {
+    forkJoin({
+      raw: this.svc.loadAll(),
+      // A failed eligibility fetch must not blank the whole page: the badge it
+      // feeds is informational, the assignments are not.
+      eligible: this.svc.getJobEligibleMembers().pipe(catchError(() => of([]))),
+    }).subscribe({
+      next: ({ raw, eligible }) => {
+        this.restrictedJobIds.set(new Set(eligible.map((row) => row.jobId)));
         this.applyLoadedData(raw);
         this.loading.set(false);
       },
@@ -789,9 +830,8 @@ export class Coordination implements OnInit {
     );
     this.jobsById.set(new Map(raw.jobs.map((job) => [job.id, job] as const)));
     this.preferences.set(raw.preferences);
-    const events = buildEventsData(raw);
-    this.eventsData.set(events);
-    this.pruneLocks(events);
+    this.eventsData.set(buildEventsData(raw, this.restrictedJobIds()));
+    const events = this.eventsData();
 
     const routeId = this.routeEventId();
     const routeExists = routeId !== null && events.some((ed) => ed.event.id === routeId);
@@ -854,9 +894,7 @@ export class Coordination implements OnInit {
     });
 
     removedRoles.forEach((role) => {
-      const unassignOps = role.assignedMemberIds.map((memberId) =>
-        this.svc.unassign(eventId, memberId, role.id),
-      );
+      const unassignOps = role.assigned.map((a) => this.svc.unassign(eventId, a.memberId, role.id));
       const unassign$: Observable<unknown> = unassignOps.length ? forkJoin(unassignOps) : of(null);
       const deleteEventJob$ = unassign$.pipe(
         switchMap(() => this.svc.deleteEventJob(eventId, role.id)),

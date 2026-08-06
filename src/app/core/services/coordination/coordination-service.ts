@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin, Observable, switchMap } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
@@ -40,6 +40,21 @@ export interface ApiAssignment {
   memberId: number;
   eventId: number;
   jobId: number;
+  /** A locked row is preserved verbatim by `POST /events/:id/matching`: the
+   *  algorithm neither deletes it nor puts its member back in the pool. */
+  locked: boolean;
+  /** Points actually credited to the member when the matching engine created
+   *  this row (0 for rows created by hand). */
+  pointsDelta: number;
+}
+/**
+ * `job_eligible_members` narrows which members the matching engine may put on
+ * a job. A job with NO row here is unrestricted — absence means "open to
+ * everyone", not "nobody is eligible".
+ */
+export interface ApiJobEligibleMember {
+  jobId: number;
+  memberId: number;
 }
 export interface ApiAvailability {
   memberId: number;
@@ -62,6 +77,25 @@ export interface CoordinationApiData {
   preferences: ApiPreference[];
 }
 
+/** One row created by the matching engine. */
+export interface ApiMatchedAssignment {
+  memberId: number;
+  jobId: number;
+  /** 1-based position of the job inside that member's own preference list. */
+  rankAchieved: number;
+  /** Points actually credited (already clamped to the 0-100 range). */
+  pointsDelta: number;
+}
+
+/** Summary returned by `POST /events/:id/matching`. */
+export interface ApiMatchingSummary {
+  matched: ApiMatchedAssignment[];
+  /** Available members the engine could not place anywhere. */
+  unmatchedMemberIds: number[];
+  /** Pre-existing locked rows, left untouched by the run. */
+  locked: { memberId: number; jobId: number }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CoordinationService {
   private readonly http = inject(HttpClient);
@@ -79,13 +113,59 @@ export class CoordinationService {
     });
   }
 
+  /**
+   * Deliberately NOT part of `loadAll()`: that round-trip is shared with
+   * `RoleAssignmentStore`, which already over-fetches, and only the
+   * coordination page needs the eligibility restrictions.
+   */
+  getJobEligibleMembers(): Observable<ApiJobEligibleMember[]> {
+    return this.http.get<ApiJobEligibleMember[]>(`${this.baseUrl}/job-eligible-members`);
+  }
+
   // Body keys are camelCase: apiCaseRequestInterceptor converts them to snake_case before sending.
-  assign(eventId: number, memberId: number, jobId: number): Observable<ApiAssignment> {
+  assign(
+    eventId: number,
+    memberId: number,
+    jobId: number,
+    locked = false,
+  ): Observable<ApiAssignment> {
     return this.http.post<ApiAssignment>(`${this.baseUrl}/assignments`, {
       eventId,
       memberId,
       jobId,
+      locked,
     });
+  }
+
+  /**
+   * Flip the `locked` flag of an EXISTING assignment.
+   *
+   * /!\ `POST /assignments` is create-or-ignore: when the composite row
+   * already exists it returns the requested `locked` value without writing
+   * it, and there is no PUT/PATCH on `/assignments`. Deleting then recreating
+   * is therefore the only way to change the flag — with the side effect that
+   * the row's `points_delta` is reset to 0 (the column is not writable from
+   * the API). That is harmless: the engine only ever reads `points_delta`
+   * back on NON-locked rows, to refund them before a re-run.
+   */
+  setAssignmentLock(
+    eventId: number,
+    memberId: number,
+    jobId: number,
+    locked: boolean,
+  ): Observable<ApiAssignment> {
+    return this.unassign(eventId, memberId, jobId).pipe(
+      switchMap(() => this.assign(eventId, memberId, jobId, locked)),
+    );
+  }
+
+  /**
+   * Run the stable-matching engine for one event. Destructive: every
+   * non-locked assignment of the event is deleted (and its points refunded)
+   * before the new ones are written.
+   */
+  runMatching(eventId: number): Observable<ApiMatchingSummary> {
+    return this.http.post<ApiMatchingSummary>(`${this.baseUrl}/events/${eventId}/matching`, {});
   }
 
   // Params are NOT converted by the interceptor — use snake_case explicitly.

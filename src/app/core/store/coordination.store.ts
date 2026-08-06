@@ -66,10 +66,9 @@ const initialState: CoordinationState = {
 export const CoordinationStore = signalStore(
   { providedIn: 'root' },
   withState<CoordinationState>(initialState),
-  withMethods((store, svc = inject(CoordinationService)) => ({
-    async load(): Promise<void> {
-      if (store.loading() === 'loaded' || store.loading() === 'loading') return;
-      patchState(store, { loading: 'loading', loadError: null });
+  withMethods((store, svc = inject(CoordinationService)) => {
+    async function fetchInto(status: 'loading' | 'refreshing'): Promise<void> {
+      patchState(store, { loading: status, loadError: null });
       try {
         const raw = await lastValueFrom(svc.loadAll());
         const events = raw.events
@@ -84,38 +83,60 @@ export const CoordinationStore = signalStore(
       } catch {
         patchState(store, { loading: 'error', loadError: 'Impossible de charger les soirées.' });
       }
-    },
+    }
 
-    async createEvent(name: string, date: string, duration: number | null): Promise<ApiEvent> {
-      const ev = await lastValueFrom(svc.createEvent(name, date, duration));
-      const newEvent = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
-      patchState(store, {
-        events: [...store.events(), newEvent].sort(
-          (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime(),
-        ),
-      });
-      return ev;
-    },
+    return {
+      async load(): Promise<void> {
+        if (store.loading() === 'loaded' || store.loading() === 'loading') return;
+        await fetchInto('loading');
+      },
 
-    async updateEvent(
-      id: number,
-      name: string,
-      date: string,
-      duration: number | null,
-    ): Promise<ApiEvent> {
-      const ev = await lastValueFrom(svc.updateEvent(id, name, date, duration));
-      const updated = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
-      patchState(store, {
-        events: store.events().map((e) => (e.id === id ? updated : e)),
-      });
-      return ev;
-    },
+      /**
+       * Re-fetch, bypassing the `load()` cache guard. Needed after a mutation
+       * performed OUTSIDE the store invalidated what it holds — the
+       * coordination detail page talks to `CoordinationService` directly, so
+       * running the matching engine there silently desyncs the cached event
+       * list (assigned counts) of this root-provided singleton.
+       *
+       * No-op while nothing has been loaded yet: an untouched store has no
+       * stale data to fix, and `load()` will do the initial fetch.
+       */
+      async refresh(): Promise<void> {
+        if (store.loading() === 'init' || store.loading() === 'loading') return;
+        await fetchInto('refreshing');
+      },
 
-    async deleteEvent(id: number): Promise<void> {
-      await lastValueFrom(svc.deleteEvent(id));
-      patchState(store, {
-        events: store.events().filter((e) => e.id !== id),
-      });
-    },
-  })),
+      async createEvent(name: string, date: string, duration: number | null): Promise<ApiEvent> {
+        const ev = await lastValueFrom(svc.createEvent(name, date, duration));
+        const newEvent = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
+        patchState(store, {
+          events: [...store.events(), newEvent].sort(
+            (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime(),
+          ),
+        });
+        return ev;
+      },
+
+      async updateEvent(
+        id: number,
+        name: string,
+        date: string,
+        duration: number | null,
+      ): Promise<ApiEvent> {
+        const ev = await lastValueFrom(svc.updateEvent(id, name, date, duration));
+        const updated = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
+        patchState(store, {
+          events: store.events().map((e) => (e.id === id ? updated : e)),
+        });
+        return ev;
+      },
+
+      async deleteEvent(id: number): Promise<void> {
+        await lastValueFrom(svc.deleteEvent(id));
+        patchState(store, {
+          events: store.events().filter((e) => e.id !== id),
+        });
+      },
+    };
+  }),
 );
