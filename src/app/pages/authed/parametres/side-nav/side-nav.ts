@@ -39,6 +39,12 @@ export class ParametresSideNav {
       exact: true,
     },
     {
+      id: 'preferences',
+      l: 'Préférences de postes',
+      icon: LucideUsers,
+      route: `/${AppRoutes.parametresPreferences}`,
+    },
+    {
       id: 'security',
       l: 'Sécurité & 2FA',
       icon: LucideShield,

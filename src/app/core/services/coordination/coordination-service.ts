@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, Observable, switchMap } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
@@ -138,15 +138,12 @@ export class CoordinationService {
   }
 
   /**
-   * Flip the `locked` flag of an EXISTING assignment.
+   * Flip the `locked` flag of an EXISTING assignment, in place.
    *
-   * /!\ `POST /assignments` is create-or-ignore: when the composite row
-   * already exists it returns the requested `locked` value without writing
-   * it, and there is no PUT/PATCH on `/assignments`. Deleting then recreating
-   * is therefore the only way to change the flag — with the side effect that
-   * the row's `points_delta` is reset to 0 (the column is not writable from
-   * the API). That is harmless: the engine only ever reads `points_delta`
-   * back on NON-locked rows, to refund them before a re-run.
+   * The composite key travels in the query string — the row has no surrogate
+   * id — while the body carries only the flag. `points_delta` is left alone by
+   * the backend: it is the matching engine's bookkeeping, refunded when a row
+   * is replaced, so a client must never overwrite it.
    */
   setAssignmentLock(
     eventId: number,
@@ -154,8 +151,10 @@ export class CoordinationService {
     jobId: number,
     locked: boolean,
   ): Observable<ApiAssignment> {
-    return this.unassign(eventId, memberId, jobId).pipe(
-      switchMap(() => this.assign(eventId, memberId, jobId, locked)),
+    return this.http.put<ApiAssignment>(
+      `${this.baseUrl}/assignments`,
+      { locked },
+      { params: { member_id: memberId, event_id: eventId, job_id: jobId } },
     );
   }
 

@@ -1,0 +1,135 @@
+<div class="flex gap-6">
+  <bfd-parametres-side-nav />
+
+  <div class="flex min-w-0 flex-1 flex-col gap-4">
+    <bfd-card [padding]="22">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-[15px] font-semibold text-text">Mes préférences de postes</h2>
+        <p class="text-[12.5px] leading-relaxed text-text-2">
+          Classez les postes que vous souhaitez tenir, du plus au moins voulu. L'ordre compte :
+          l'affectation automatique essaie de vous placer sur votre premier choix, puis sur le
+          suivant. Les postes sont créés par l'administration.
+        </p>
+      </div>
+
+      @if (store.loading() === 'loading' || store.loading() === 'init') {
+        <div class="mt-4 flex flex-col gap-2">
+          @for (row of skeletonRows; track row) {
+            <bfd-skeleton width="100%" height="44px" />
+          }
+        </div>
+      } @else if (store.loadError(); as err) {
+        <div class="mt-4 rounded-md border border-danger/40 px-4 py-6 text-center" role="alert">
+          <p class="text-[12.5px] text-danger">{{ err }}</p>
+          <bfd-btn kind="ghost" size="sm" (clicked)="store.refresh()">Réessayer</bfd-btn>
+        </div>
+      } @else {
+        <div class="mt-4 flex flex-col gap-5">
+          <section class="flex flex-col gap-2">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Mon classement
+            </h3>
+
+            @if (store.ranked().length === 0) {
+              <p
+                class="rounded-md border border-dashed border-border px-4 py-6 text-center text-[12.5px] text-muted"
+              >
+                Aucun poste classé. Ajoutez-en ci-dessous pour être pris en compte par l'affectation
+                automatique.
+              </p>
+            } @else {
+              <ol class="flex flex-col gap-2">
+                @for (job of store.ranked(); track job.id; let i = $index, last = $last) {
+                  <li
+                    class="flex items-center gap-3 rounded-md border border-border bg-surface-2 px-3 py-2.5"
+                  >
+                    <span
+                      class="mono inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-soft text-[11px] font-semibold text-blue"
+                      aria-hidden="true"
+                      >{{ i + 1 }}</span
+                    >
+                    <span class="min-w-0 flex-1 truncate text-[13px] text-text">
+                      <span class="sr-only">Rang {{ i + 1 }} :</span>{{ job.name }}
+                    </span>
+
+                    <button
+                      type="button"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted hover:text-text disabled:opacity-40 disabled:hover:text-muted"
+                      [disabled]="i === 0"
+                      [attr.aria-label]="moveUpLabel(job.name, i + 1)"
+                      (click)="store.move(job.id, -1)"
+                    >
+                      <svg [lucideIcon]="icUp" [size]="14" aria-hidden="true"></svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted hover:text-text disabled:opacity-40 disabled:hover:text-muted"
+                      [disabled]="last"
+                      [attr.aria-label]="moveDownLabel(job.name, i + 1)"
+                      (click)="store.move(job.id, 1)"
+                    >
+                      <svg [lucideIcon]="icDown" [size]="14" aria-hidden="true"></svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted hover:text-danger"
+                      [attr.aria-label]="'Retirer ' + job.name + ' de mon classement'"
+                      (click)="store.remove(job.id)"
+                    >
+                      <svg [lucideIcon]="icRemove" [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  </li>
+                }
+              </ol>
+            }
+          </section>
+
+          <section class="flex flex-col gap-2">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Postes disponibles
+            </h3>
+
+            @if (store.available().length === 0) {
+              <p class="text-[12.5px] text-muted">Tous les postes existants sont déjà classés.</p>
+            } @else {
+              <ul class="flex flex-wrap gap-2">
+                @for (job of store.available(); track job.id) {
+                  <li>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[12.5px] text-text-2 hover:text-text"
+                      [attr.aria-label]="'Ajouter ' + job.name + ' à mon classement'"
+                      (click)="store.add(job.id)"
+                    >
+                      <svg [lucideIcon]="icAdd" [size]="13" aria-hidden="true"></svg>
+                      {{ job.name }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+
+          @if (store.saveError(); as err) {
+            <p class="text-[12.5px] text-danger" role="alert">{{ err }}</p>
+          }
+
+          <div class="flex items-center justify-end gap-2 border-t border-border-s pt-4">
+            @if (store.dirty()) {
+              <span class="mr-auto text-[12px] text-muted">Modifications non enregistrées</span>
+              <bfd-btn kind="ghost" size="md" (clicked)="store.reset()">Annuler</bfd-btn>
+            }
+            <bfd-btn
+              kind="primary"
+              size="md"
+              [disabled]="!store.dirty() || store.saving()"
+              (clicked)="onSave()"
+            >
+              {{ store.saving() ? 'Enregistrement…' : 'Enregistrer' }}
+            </bfd-btn>
+          </div>
+        </div>
+      }
+    </bfd-card>
+  </div>
+</div>

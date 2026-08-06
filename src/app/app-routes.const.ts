@@ -21,6 +21,7 @@ export const AppRoutes = {
   notifications: 'notifications',
   parametres: 'parametres',
   parametresSecurite: 'parametres/securite',
+  parametresPreferences: 'parametres/preferences',
   parametresIntegrations: 'parametres/integrations',
   parametresModules: 'parametres/modules',
   equipe: 'equipe',

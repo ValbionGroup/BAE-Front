@@ -164,6 +164,13 @@ export const routes: Routes = [
               import('#pages/authed/parametres/parametres').then((m) => m.Parametres),
           },
           {
+            path: 'preferences',
+            loadComponent: () =>
+              import('#pages/authed/parametres/preferences/preferences').then(
+                (m) => m.ParametresPreferences,
+              ),
+          },
+          {
             path: 'securite',
             loadComponent: () =>
               import('#pages/authed/parametres/securite/securite').then(
