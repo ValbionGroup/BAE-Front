@@ -16,10 +16,22 @@ interface MessageBase extends BaseModal {
   details?: string;
 }
 
+/**
+ * One staffing line on an event: an existing job, and how many people it needs.
+ *
+ * `jobId` always refers to a job that already exists in the backend. Jobs are
+ * created and renamed through administration, never from an event screen — so
+ * there is no free-text name here, and no `null` id meaning "make a new one".
+ */
 export interface RoleModalRole {
-  id: number | null;
-  name: string;
+  jobId: number;
   requiredCount: number;
+}
+
+/** A job available to be staffed on an event. */
+export interface RoleModalJob {
+  id: number;
+  name: string;
 }
 
 export interface MessageModalConfig extends BaseModal {
@@ -47,6 +59,8 @@ export interface RolesModalConfig extends BaseModal {
   title?: string;
   message?: string;
   roles: RoleModalRole[];
+  /** Every job defined in the backend — the only things selectable here. */
+  availableJobs: RoleModalJob[];
   onSave: (roles: RoleModalRole[]) => void;
 }
 

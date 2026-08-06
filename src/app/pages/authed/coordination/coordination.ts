@@ -115,7 +115,8 @@ interface PosteView {
 interface MemberView {
   id: number;
   name: string;
-  poste: string;
+  /** Job held on the selected soirée, or `null` when the member is unassigned. */
+  poste: string | null;
   roleId: number | null;
   lock: boolean;
   lockPending: boolean;
@@ -438,7 +439,11 @@ export class Coordination implements OnInit {
       return {
         id: member.id,
         name: `${member.firstName} ${member.lastName}`,
-        poste: assignedRole?.name ?? member.role,
+        // The job this member holds on THIS soirée — `null` when unassigned.
+        // Never their BAE function: a member's role (Trésorerie, Logistique…)
+        // says what they are in the association, not what they are doing
+        // tonight, and falling back to it made unassigned members look staffed.
+        poste: assignedRole?.name ?? null,
         roleId,
         lock: assignment?.locked ?? false,
         lockPending:
@@ -496,12 +501,16 @@ export class Coordination implements OnInit {
     this.modal.open({
       type: 'roles',
       title: 'Gérer les postes',
-      message: 'Ajoutez, renommez ou ajustez le nombre de personnes par poste.',
+      message:
+        'Choisissez les postes à armer sur cette soirée et le nombre de personnes par poste. ' +
+        "Les postes eux-mêmes se créent et se renomment depuis l'administration.",
       roles: eventData.roles.map((role) => ({
-        id: role.id,
-        name: role.name,
+        jobId: role.id,
         requiredCount: role.requiredCount,
       })),
+      availableJobs: [...this.jobsById().values()]
+        .map((job) => ({ id: job.id, name: job.name }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
       onSave: (roles: RoleModalRole[]) => this.saveRoleEdits(eventData.event.id, roles),
     });
   }
@@ -851,59 +860,42 @@ export class Coordination implements OnInit {
     }
   }
 
+  /**
+   * Persist the staffing of ONE event.
+   *
+   * This screen only ever writes `event_jobs` — which existing jobs this soirée
+   * needs, and how many people on each. It never creates, renames or deletes a
+   * job: those are global objects shared by every event, owned by
+   * administration. Removing a poste here detaches it from this soirée only.
+   */
   private saveRoleEdits(eventId: number, roles: RoleModalRole[]): void {
     const eventData = this.selectedEventData();
     if (!eventData) return;
 
     const currentRoles = eventData.roles;
     const currentById = new Map(currentRoles.map((role) => [role.id, role] as const));
-    const incomingExistingIds = new Set(
-      roles.filter((role) => role.id !== null).map((role) => role.id as number),
-    );
-    const removedRoles = currentRoles.filter((role) => !incomingExistingIds.has(role.id));
-    const usedInOtherEvents = new Set(
-      this.eventsData()
-        .filter((ed) => ed.event.id !== eventId)
-        .flatMap((ed) => ed.roles.map((role) => role.id)),
-    );
+    const incomingJobIds = new Set(roles.map((role) => role.jobId));
+    const removedRoles = currentRoles.filter((role) => !incomingJobIds.has(role.id));
 
     const ops: Observable<unknown>[] = [];
 
     roles.forEach((role) => {
-      const trimmedName = role.name.trim();
-      if (!trimmedName) return;
+      if (role.requiredCount <= 0) return;
 
-      if (role.id === null) {
-        ops.push(
-          this.svc
-            .createJob(trimmedName)
-            .pipe(switchMap((job) => this.svc.createEventJob(eventId, job.id, role.requiredCount))),
-        );
+      const current = currentById.get(role.jobId);
+      if (!current) {
+        ops.push(this.svc.createEventJob(eventId, role.jobId, role.requiredCount));
         return;
       }
-
-      const current = currentById.get(role.id);
-      if (!current) return;
-
-      if (trimmedName !== current.name) {
-        ops.push(this.svc.updateJob(role.id, trimmedName));
-      }
       if (role.requiredCount !== current.requiredCount) {
-        ops.push(this.svc.updateEventJob(eventId, role.id, role.requiredCount));
+        ops.push(this.svc.updateEventJob(eventId, role.jobId, role.requiredCount));
       }
     });
 
     removedRoles.forEach((role) => {
       const unassignOps = role.assigned.map((a) => this.svc.unassign(eventId, a.memberId, role.id));
       const unassign$: Observable<unknown> = unassignOps.length ? forkJoin(unassignOps) : of(null);
-      const deleteEventJob$ = unassign$.pipe(
-        switchMap(() => this.svc.deleteEventJob(eventId, role.id)),
-      );
-      if (usedInOtherEvents.has(role.id)) {
-        ops.push(deleteEventJob$);
-      } else {
-        ops.push(deleteEventJob$.pipe(switchMap(() => this.svc.deleteJob(role.id))));
-      }
+      ops.push(unassign$.pipe(switchMap(() => this.svc.deleteEventJob(eventId, role.id))));
     });
 
     const save$ = ops.length ? forkJoin(ops) : of([]);

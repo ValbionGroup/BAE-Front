@@ -22,8 +22,17 @@ export class RolesModal {
   close = output<void>();
 
   protected readonly draft = signal<RoleModalRole[]>([]);
+
+  /** Jobs not yet staffed on this event, so the same job cannot be added twice. */
+  protected readonly unusedJobs = computed(() => {
+    const taken = new Set(this.draft().map((role) => role.jobId));
+    return this.config().availableJobs.filter((job) => !taken.has(job.id));
+  });
+
+  protected readonly canAdd = computed(() => this.unusedJobs().length > 0);
+
   protected readonly canSave = computed(() =>
-    this.draft().every((role) => role.name.trim().length > 0 && role.requiredCount > 0),
+    this.draft().every((role) => role.jobId > 0 && role.requiredCount > 0),
   );
 
   constructor() {
@@ -36,18 +45,31 @@ export class RolesModal {
     this.close.emit();
   }
 
+  /** The options for one row: the job it holds, plus everything still free. */
+  protected optionsFor(role: RoleModalRole): readonly { id: number; name: string }[] {
+    const own = this.config().availableJobs.filter((job) => job.id === role.jobId);
+    return [...own, ...this.unusedJobs()];
+  }
+
+  protected jobName(jobId: number): string {
+    return this.config().availableJobs.find((job) => job.id === jobId)?.name ?? 'Poste inconnu';
+  }
+
   protected addRole(): void {
-    this.draft.update((roles) => [...roles, { id: null, name: '', requiredCount: 1 }]);
+    const next = this.unusedJobs()[0];
+    if (!next) return;
+    this.draft.update((roles) => [...roles, { jobId: next.id, requiredCount: 1 }]);
   }
 
   protected removeRole(index: number): void {
     this.draft.update((roles) => roles.filter((_, i) => i !== index));
   }
 
-  protected onNameInput(index: number, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+  protected onJobChange(index: number, event: Event): void {
+    const value = Number.parseInt((event.target as HTMLSelectElement).value, 10);
+    if (!Number.isFinite(value)) return;
     this.draft.update((roles) =>
-      roles.map((role, i) => (i === index ? { ...role, name: value } : role)),
+      roles.map((role, i) => (i === index ? { ...role, jobId: value } : role)),
     );
   }
 

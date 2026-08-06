@@ -222,14 +222,18 @@
           }
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="text-[12.5px] text-text">{{ m.poste }}</span>
+          @if (m.poste; as poste) {
+            <span class="text-[12.5px] text-text">{{ poste }}</span>
+          } @else {
+            <span class="text-[12.5px] text-muted italic">Non affecté</span>
+          }
           @let roleId = m.roleId;
           @if (roleId !== null) {
             <button
               type="button"
               class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
               [attr.aria-pressed]="m.lock"
-              [attr.aria-label]="lockLabel(m.name, m.poste, m.lock)"
+              [attr.aria-label]="lockLabel(m.name, m.poste ?? 'ce poste', m.lock)"
               [disabled]="m.lockPending"
               (click)="toggleLock(m.id, roleId); $event.stopPropagation()"
             >
