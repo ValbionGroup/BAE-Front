@@ -5,6 +5,22 @@ import { EventDetail, Presence, RosterRow } from '#core/models/event.model';
 import { lastValueFrom } from 'rxjs';
 import { LoadingStatus } from '#core/models/global.model';
 
+/**
+ * Outcome of a presence write, handed back to the caller.
+ *
+ * A plain `void` used to hide the only thing a member needs when the write is
+ * refused: `POST /events/:id/response` answers 409
+ * `E_PRESENCE_LOCKED_BY_ASSIGNMENT` with a full French sentence explaining that
+ * a poste is held and how to get out of it. The store swallowed it, so no
+ * screen could ever say why the refusal happened.
+ *
+ * The failure travels in the RESOLVED value rather than as a rejection on
+ * purpose: `home.ts` calls `setMemberPresence` fire-and-forget, and a rejected
+ * promise nobody awaits is an unhandled rejection. Every existing caller keeps
+ * compiling and behaving exactly as before; those that care read `ok`.
+ */
+export type PresenceUpdateResult = { ok: true } | { ok: false; error: unknown };
+
 interface EventsState {
   readonly loading: LoadingStatus;
   readonly events: Record<string, EventDetail>;
@@ -145,12 +161,16 @@ export const EventsStore = signalStore(
       }
     },
 
-    async setMemberPresence(eventId: string, memberPresence: Presence) {
+    async setMemberPresence(
+      eventId: string,
+      memberPresence: Presence,
+    ): Promise<PresenceUpdateResult> {
       try {
         await lastValueFrom(eventService.updatePresenceForEvent(eventId, memberPresence));
 
         const current = store.events()[eventId];
-        if (!current) return;
+        // Nothing cached to patch — the write itself still went through.
+        if (!current) return { ok: true };
         patchState(store, (state) => ({
           events: {
             ...state.events,
@@ -161,6 +181,7 @@ export const EventsStore = signalStore(
             } as EventDetail,
           },
         }));
+        return { ok: true };
       } catch (error) {
         patchState(store, (state) => ({
           events: {
@@ -168,6 +189,7 @@ export const EventsStore = signalStore(
             [eventId]: { ...state.events[eventId], memberPresenceStatus: 'error' } as EventDetail,
           },
         }));
+        return { ok: false, error };
       }
     },
 
