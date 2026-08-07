@@ -307,11 +307,11 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     });
 
     /**
-     * The switch from `bfd-btn` to raw `<button>` (needed so aria-describedby
-     * and disabled land on the real interactive element) must not drop the
-     * themed focus ring `bfd-btn` provided for free — a keyboard user tabbing
-     * to these buttons would otherwise fall back to the browser default
-     * outline, inconsistent with every other custom control in the app.
+     * These buttons spent a while as raw `<button>` elements, because `bfd-btn`
+     * did not forward `id` or `aria-*` onto the control inside it. Each hand-
+     * rolled class list dropped the themed focus ring at least once, leaving a
+     * keyboard user on the browser default outline. `bfd-btn` carries the ring
+     * now that it forwards those attributes — this keeps that honest.
      */
     it('keeps the themed focus ring on both response buttons', async () => {
       await setup();

@@ -151,45 +151,29 @@
                 @let me = responseEvent()?.memberPresence;
                 @let locked = presenceLocked();
                 <div class="flex gap-1.5">
-                  <!-- Raw buttons, not bfd-btn: bfd-btn does not forward
-                       id/aria-describedby past its host element onto the
-                       inner <button>, and the presence lock needs both on the
-                       real interactive element (same choice made in
-                       my-presences.html). -->
-                  <button
-                    type="button"
+                  <bfd-btn
                     id="presence-present"
-                    (click)="respondPresent()"
-                    [attr.aria-pressed]="me === Presence.PRESENT"
-                    [class]="
-                      'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ' +
-                      (me === Presence.PRESENT
-                        ? 'border-blue bg-blue text-white'
-                        : 'border-border bg-transparent text-text hover:bg-surface-2')
-                    "
+                    size="sm"
+                    [icon]="icCheck"
+                    [kind]="me === Presence.PRESENT ? 'primary' : 'outline'"
+                    [ariaPressed]="me === Presence.PRESENT"
+                    (clicked)="respondPresent()"
                   >
-                    <svg [lucideIcon]="icCheck" [size]="14" aria-hidden="true"></svg>
                     Présent·e
-                  </button>
+                  </bfd-btn>
                   <!-- Disabled, never hidden (D8): the member has to see that
                        the option exists and read why it is out of reach. -->
-                  <button
-                    type="button"
+                  <bfd-btn
                     id="presence-absent"
-                    (click)="respondAbsent()"
+                    size="sm"
+                    [kind]="me === Presence.ABSENT ? 'danger' : 'outline'"
                     [disabled]="locked"
-                    [attr.aria-pressed]="me === Presence.ABSENT"
-                    [attr.aria-describedby]="locked ? presenceLockId() : null"
-                    [class]="
-                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ' +
-                      (locked ? 'cursor-not-allowed opacity-40 ' : 'cursor-pointer ') +
-                      (me === Presence.ABSENT
-                        ? 'border-red bg-red text-white'
-                        : 'border-border bg-transparent text-text hover:bg-surface-2')
-                    "
+                    [ariaPressed]="me === Presence.ABSENT"
+                    [ariaDescribedby]="locked ? presenceLockId() : null"
+                    (clicked)="respondAbsent()"
                   >
                     Absent·e
-                  </button>
+                  </bfd-btn>
                 </div>
                 @if (locked) {
                   <!-- Why « Absent·e » is disabled, and how to get out of it.

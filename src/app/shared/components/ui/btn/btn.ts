@@ -35,6 +35,13 @@ const BASE_CLASSES =
   imports: [LucideDynamicIcon],
   templateUrl: './btn.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // An attribute written on <bfd-btn> lands on this host element, which is an
+    // inert wrapper — so a description attached here is never announced for the
+    // control that actually takes focus. The template forwards them to the
+    // <button>; clearing `id` here keeps the document from holding it twice.
+    '[attr.id]': 'null',
+  },
 })
 export class Btn {
   readonly kind = input<BtnKind>('primary');
@@ -44,6 +51,12 @@ export class Btn {
   readonly full = input<boolean>(false);
   readonly disabled = input<boolean>(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
+
+  /** Forwarded to the inner <button>, so labels and descriptions can point at it. */
+  readonly id = input<string | null>(null);
+  readonly ariaLabel = input<string | null>(null);
+  readonly ariaPressed = input<boolean | null>(null);
+  readonly ariaDescribedby = input<string | null>(null);
 
   readonly clicked = output<MouseEvent>();
 

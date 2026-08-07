@@ -5,7 +5,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 ## Project Context
 
 **BAE** — gestion d'événements et de stocks pour une association.
-Frontend Angular 21 standalone, backend **AdonisJS 6 + Lucid** dans le dépôt voisin `../BAE-Back`,
+Frontend Angular 21 standalone, backend **AdonisJS 7 + Lucid** dans le dépôt voisin `../BAE-Back`,
 servi sur `localhost:3333` (`environment.apiUrl` = `http://localhost:3333/v1`).
 
 Stack : Angular 21, NgRx Signals, Tailwind CSS 4, Lucide Icons, date-fns 4, RxJS 7.

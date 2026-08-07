@@ -1,4 +1,13 @@
-<button [type]="type()" [disabled]="disabled()" [class]="classes()" (click)="onClick($event)">
+<button
+  [type]="type()"
+  [disabled]="disabled()"
+  [class]="classes()"
+  [attr.id]="id()"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-pressed]="ariaPressed()"
+  [attr.aria-describedby]="ariaDescribedby()"
+  (click)="onClick($event)"
+>
   @if (icon(); as leftIcon) {
     <svg [lucideIcon]="leftIcon" [size]="iconSize()" aria-hidden="true"></svg>
   }
