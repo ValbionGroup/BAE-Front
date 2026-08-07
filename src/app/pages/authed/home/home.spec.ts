@@ -296,6 +296,24 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
       expect(updatePresence).not.toHaveBeenCalled();
     });
 
+    /**
+     * The switch from `bfd-btn` to raw `<button>` (needed so aria-describedby
+     * and disabled land on the real interactive element) must not drop the
+     * themed focus ring `bfd-btn` provided for free — a keyboard user tabbing
+     * to these buttons would otherwise fall back to the browser default
+     * outline, inconsistent with every other custom control in the app.
+     */
+    it('keeps the themed focus ring on both response buttons', async () => {
+      await setup();
+
+      for (const id of ['presence-present', 'presence-absent']) {
+        const button = byId<HTMLButtonElement>(id)!;
+        expect(button.classList.contains('focus-visible:outline-none')).toBe(true);
+        expect(button.classList.contains('focus-visible:ring-2')).toBe(true);
+        expect(button.classList.contains('focus-visible:ring-blue/40')).toBe(true);
+      }
+    });
+
     it('sends the absence when nothing blocks it', async () => {
       await setup();
 

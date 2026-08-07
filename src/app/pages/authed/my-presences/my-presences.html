@@ -130,7 +130,7 @@
                       (click)="respondPresent(e)"
                       [attr.aria-pressed]="e.memberPresence === Presence.PRESENT"
                       [class]="
-                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ' +
                         (e.memberPresence === Presence.PRESENT
                           ? 'bg-ok text-white border-ok'
                           : 'bg-transparent text-ok border-ok')
@@ -159,7 +159,7 @@
                       [attr.aria-pressed]="e.memberPresence === Presence.ABSENT"
                       [attr.aria-describedby]="locked ? lockDescriptionId(e) : null"
                       [class]="
-                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium ' +
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ' +
                         (locked ? 'cursor-not-allowed opacity-55 ' : 'cursor-pointer ') +
                         (e.memberPresence === Presence.ABSENT
                           ? 'bg-red text-white border-red'

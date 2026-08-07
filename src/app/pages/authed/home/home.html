@@ -162,7 +162,7 @@
                     (click)="respondPresent()"
                     [attr.aria-pressed]="me === Presence.PRESENT"
                     [class]="
-                      'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ' +
+                      'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ' +
                       (me === Presence.PRESENT
                         ? 'border-blue bg-blue text-white'
                         : 'border-border bg-transparent text-text hover:bg-surface-2')
@@ -181,7 +181,7 @@
                     [attr.aria-pressed]="me === Presence.ABSENT"
                     [attr.aria-describedby]="locked ? presenceLockId() : null"
                     [class]="
-                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ' +
+                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ' +
                       (locked ? 'cursor-not-allowed opacity-40 ' : 'cursor-pointer ') +
                       (me === Presence.ABSENT
                         ? 'border-red bg-red text-white'

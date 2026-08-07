@@ -303,6 +303,23 @@ describe(MyPresences.name, () => {
       expect(byId(`presence-absent-${UPCOMING_ID}`)).not.toBeNull();
     });
 
+    /**
+     * These are raw `<button>`s, not `bfd-btn` (id/aria-describedby need to
+     * land on the real element) — the themed focus ring `bfd-btn` gave for
+     * free has to be carried over by hand, or a keyboard user tabbing here
+     * falls back to the browser's default outline.
+     */
+    it('keeps the themed focus ring on both response buttons', async () => {
+      await setup();
+
+      for (const id of [`presence-present-${UPCOMING_ID}`, `presence-absent-${UPCOMING_ID}`]) {
+        const button = byId<HTMLButtonElement>(id)!;
+        expect(button.classList.contains('focus-visible:outline-none')).toBe(true);
+        expect(button.classList.contains('focus-visible:ring-2')).toBe(true);
+        expect(button.classList.contains('focus-visible:ring-blue/40')).toBe(true);
+      }
+    });
+
     it('leaves « Absent·e » active when no poste is held', async () => {
       await setup();
 
