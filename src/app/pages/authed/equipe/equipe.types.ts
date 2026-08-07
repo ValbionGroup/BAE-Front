@@ -17,9 +17,8 @@ export interface TeamMemberRow {
   /** `member.points` — real, and the only extra numeric attribute members carry. */
   readonly points: number;
   /**
-   * NO API SOURCE. The mockup showed a per-role scope ("Paiements · Caisse"), which would
-   * require the roles↔permissions relation. Neither `GET /roles` nor `GET /permissions`
-   * exposes it, so this is always `null` and renders as `—`.
+   * NO API SOURCE. The mockup showed a per-role scope ("Paiements · Caisse"). Deriving it
+   * from the role's permissions is out of scope for now, so this is always `null`.
    */
   readonly scope: string | null;
   /**
@@ -40,11 +39,8 @@ export interface TeamMemberRow {
   readonly recentlyActive: boolean;
 }
 
-/**
- * `unknown` means "the API does not tell us". It is NOT the same as `none`
- * (explicitly no access) and must never be rendered as such.
- */
-export type PermState = 'rw' | 'r' | 'none' | 'unknown';
+/** Une ligne est déjà une chaîne `resource:action` : l'état d'une case est binaire. */
+export type PermState = 'granted' | 'none';
 
 export interface PermsRow {
   /** `permission` string from `GET /permissions`, e.g. `stock:read`. It is the primary key. */
@@ -63,8 +59,6 @@ export interface PermsRoleColumn {
 export interface PermsMatrix {
   readonly roles: readonly PermsRoleColumn[];
   readonly rows: readonly PermsRow[];
-  /** True while no cell state can be resolved — the API hides the pivot table. */
-  readonly relationUnavailable: boolean;
 }
 
 export type AuditTone = 'warn' | 'ok' | 'danger' | 'blue' | 'neutral';

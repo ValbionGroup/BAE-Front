@@ -6,7 +6,7 @@ import {
   type ApiTeamLog,
   type ApiTeamMember,
   type ApiTeamPermission,
-  type ApiTeamRole,
+  type ApiTeamRoleWithPermissions,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
 
@@ -36,7 +36,7 @@ interface TeamState {
   loading: LoadingStatus;
   loadError: string | null;
   members: ApiTeamMember[];
-  roles: ApiTeamRole[];
+  roles: ApiTeamRoleWithPermissions[];
   permissions: ApiTeamPermission[];
   logs: ApiTeamLog[];
   errors: TeamSectionErrors;

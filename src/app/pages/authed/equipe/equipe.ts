@@ -140,20 +140,11 @@ export class Equipe implements OnInit {
   }
 
   protected permClass(p: PermState): { wrap: string; label: string; title: string } {
-    if (p === 'rw')
-      return { wrap: 'bg-ok-soft text-ok', label: 'R+W', title: 'Lecture + écriture' };
-    if (p === 'r') return { wrap: 'bg-surface-2 text-text-2', label: 'R', title: 'Lecture seule' };
-    if (p === 'none') {
-      return {
-        wrap: 'border border-dashed border-border text-faint',
-        label: '—',
-        title: 'Aucun accès',
-      };
-    }
+    if (p === 'granted') return { wrap: 'bg-ok-soft text-ok', label: '✓', title: 'Accordée' };
     return {
       wrap: 'border border-dashed border-border text-faint',
-      label: '?',
-      title: "Non exposé par l'API",
+      label: '—',
+      title: 'Aucun accès',
     };
   }
 

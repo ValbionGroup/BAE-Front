@@ -61,7 +61,7 @@ describe(Equipe.name, () => {
         role: { id: 1, name: 'Finance', createdAt: null, updatedAt: null },
       },
     ]);
-    httpMock.expectOne(`${baseUrl}/roles`).flush([{ id: 1, name: 'Finance' }]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([{ id: 1, name: 'Finance', permissions: [] }]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
     httpMock.expectOne(`${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);

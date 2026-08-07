@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
-// Shapes below were verified against a live backend (AdonisJS 6, `GET /v1/{members,roles,permissions,logs}`).
+// Shapes below were verified against a live backend (AdonisJS 7, `GET /v1/{members,roles,permissions,logs}`).
 
 /** `GET /roles` row — plain `roles` table, no relation is preloaded by RolesController.index. */
 export interface ApiTeamRole {
@@ -12,6 +12,15 @@ export interface ApiTeamRole {
   name: string;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+/**
+ * `GET /roles` row. Distinct from `ApiTeamRole` on purpose: the role embedded in a
+ * member by `GET /members` is preloaded WITHOUT its permissions, so making the field
+ * optional on the shared type would let a missing preload pass as "grants nothing".
+ */
+export interface ApiTeamRoleWithPermissions extends ApiTeamRole {
+  permissions: ApiTeamPermission[];
 }
 
 /**
@@ -84,8 +93,8 @@ export class TeamService {
     return this.http.get<ApiTeamMember[]>(`${this.baseUrl}/members`);
   }
 
-  getRoles(): Observable<ApiTeamRole[]> {
-    return this.http.get<ApiTeamRole[]>(`${this.baseUrl}/roles`);
+  getRoles(): Observable<ApiTeamRoleWithPermissions[]> {
+    return this.http.get<ApiTeamRoleWithPermissions[]>(`${this.baseUrl}/roles`);
   }
 
   getPermissions(): Observable<ApiTeamPermission[]> {

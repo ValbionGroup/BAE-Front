@@ -10,7 +10,7 @@ import type {
   ApiTeamLog,
   ApiTeamMember,
   ApiTeamPermission,
-  ApiTeamRole,
+  ApiTeamRoleWithPermissions,
 } from '#core/services/team/team-service';
 import type {
   AuditEntry,
@@ -18,6 +18,7 @@ import type {
   PermsMatrix,
   PermsRoleColumn,
   PermsRow,
+  PermState,
   TeamMemberRow,
 } from './equipe.types';
 
@@ -110,7 +111,7 @@ export function toMemberRows(
 }
 
 export function toPermsMatrix(
-  roles: readonly ApiTeamRole[],
+  roles: readonly ApiTeamRoleWithPermissions[],
   permissions: readonly ApiTeamPermission[],
   members: readonly ApiTeamMember[],
 ): PermsMatrix {
@@ -120,25 +121,28 @@ export function toPermsMatrix(
     memberCounts.set(member.roleId, (memberCounts.get(member.roleId) ?? 0) + 1);
   }
 
-  const columns: PermsRoleColumn[] = [...roles]
-    .sort((a, b) => a.name.localeCompare(b.name, 'fr') || a.id - b.id)
-    .map((role) => ({
-      id: role.id,
-      name: role.name,
-      memberCount: memberCounts.get(role.id) ?? 0,
-    }));
+  const sorted = [...roles].sort((a, b) => a.name.localeCompare(b.name, 'fr') || a.id - b.id);
 
-  // Every cell is `unknown`: `GET /roles` runs `Role.query()` with no preload and
-  // `GET /permissions` runs `Permission.all()`, so the `roles_permissions` pivot is
-  // never serialized. As soon as the backend exposes it, fill the cells here.
+  const columns: PermsRoleColumn[] = sorted.map((role) => ({
+    id: role.id,
+    name: role.name,
+    memberCount: memberCounts.get(role.id) ?? 0,
+  }));
+
+  const grantedByColumn = sorted.map(
+    (role) => new Set(role.permissions.map((entry) => entry.permission)),
+  );
+
   const rows: PermsRow[] = [...permissions]
     .sort((a, b) => a.permission.localeCompare(b.permission, 'fr'))
     .map((permission) => ({
       permission: permission.permission,
-      cells: columns.map(() => 'unknown' as const),
+      cells: grantedByColumn.map(
+        (granted): PermState => (granted.has(permission.permission) ? 'granted' : 'none'),
+      ),
     }));
 
-  return { roles: columns, rows, relationUnavailable: true };
+  return { roles: columns, rows };
 }
 
 function auditTone(level: string): AuditTone {
