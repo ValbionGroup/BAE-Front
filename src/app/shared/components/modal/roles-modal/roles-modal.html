@@ -26,9 +26,10 @@
     <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
 
     <div
-      class="grid grid-cols-[1fr_110px_36px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="grid grid-cols-[1fr_120px_110px_36px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
     >
       <span>Poste</span>
+      <span>Moment</span>
       <span>Besoin</span>
       <span></span>
     </div>
@@ -36,17 +37,26 @@
     <div class="flex flex-col gap-2">
       @for (role of draft(); track $index) {
         @let countInvalid = role.requiredCount <= 0;
-        <div class="grid grid-cols-[1fr_110px_36px] gap-2 items-center">
+        <div class="grid grid-cols-[1fr_120px_110px_36px] gap-2 items-center">
           <select
             [value]="role.jobId"
             [class]="inputClass(false)"
-            [attr.aria-label]="'Poste : ' + jobName(role.jobId)"
+            [attr.aria-label]="
+              'Poste : ' + jobName(role.jobId) + ' — moment : ' + jobPeriodLabel(role.jobId)
+            "
             (change)="onJobChange($index, $event)"
           >
-            @for (job of optionsFor(role); track job.id) {
-              <option [value]="job.id" [selected]="job.id === role.jobId">{{ job.name }}</option>
+            @for (group of optionGroupsFor(role); track group.period) {
+              <optgroup [label]="group.label">
+                @for (job of group.jobs; track job.id) {
+                  <option [value]="job.id" [selected]="job.id === role.jobId">
+                    {{ job.name }}
+                  </option>
+                }
+              </optgroup>
             }
           </select>
+          <span class="text-[12px] text-text-2">{{ jobPeriodLabel(role.jobId) }}</span>
           <input
             type="number"
             min="1"

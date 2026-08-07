@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import {
@@ -40,6 +41,14 @@ import {
   type CoordinationApiData,
 } from '#core/services/coordination/coordination-service';
 import { CoordinationStore } from '#core/store/coordination.store';
+import {
+  JOB_PERIODS,
+  JOB_PERIOD_LABELS,
+  JOB_PERIOD_SHORT_LABELS,
+  isJobPeriod,
+  type JobPeriod,
+} from '#core/models/job-period.model';
+import { isApiError } from '#core/models/api-response.model';
 import { DropdownService } from '#shared/components/dropdown/dropdown.service';
 import type { DropdownItemAction } from '#shared/components/dropdown/dropdown.models';
 import { ModalService } from '#shared/components/modal/modal.service';
@@ -68,11 +77,16 @@ export interface AssignedMember {
   memberId: number;
   locked: boolean;
   pointsDelta: number;
+  /** Non-null once the soirée's points have been folded into `members.points`.
+   *  Read as a whole-event flag through `EventData.settled`. */
+  settledAt: string | null;
 }
 
 export interface Role {
   id: number;
   name: string;
+  /** Which moment of the soirée this poste belongs to, read from `jobs.type`. */
+  period: JobPeriod;
   icon: LucideIconInput;
   requiredCount: number;
   /** `true` when the job has at least one `job_eligible_members` row, i.e. it
@@ -91,6 +105,12 @@ export interface EventData {
   event: SoireeEvent;
   presentMemberIds: number[];
   roles: Role[];
+  /**
+   * `true` when at least one assignment carries a `settledAt`: the soirée's
+   * points are consolidated, and `POST /events/:id/matching` on it answers
+   * 409 `E_EVENT_ALREADY_SETTLED`.
+   */
+  settled: boolean;
 }
 
 interface AssignedMemberView {
@@ -105,6 +125,7 @@ interface AssignedMemberView {
 interface PosteView {
   id: number;
   label: string;
+  period: JobPeriod;
   color: string;
   icon: LucideIconInput;
   need: number;
@@ -112,14 +133,68 @@ interface PosteView {
   assigned: AssignedMemberView[];
 }
 
+/** One moment of the soirée and everything staffed on it. */
+interface PeriodGroupView {
+  period: JobPeriod;
+  label: string;
+  postes: PosteView[];
+  assignedCount: number;
+  neededCount: number;
+  toFill: number;
+  /**
+   * Coverage is per moment on purpose: a soirée over-staffed at the bar while
+   * nobody is on the rangement is NOT complete, and a global rate would say it
+   * is.
+   */
+  isFull: boolean;
+}
+
+/** Locked vs replaceable rows, for one moment of the soirée. */
+interface PeriodLockView {
+  period: JobPeriod;
+  label: string;
+  locked: number;
+  replaceable: number;
+}
+
+/**
+ * One `member_event_assigned_jobs` row seen from the member. A member holds at
+ * most one poste per period (D1), so a member has between zero and three of
+ * these — and the lock belongs to the row, never to the member.
+ */
+interface MemberAssignmentView {
+  period: JobPeriod;
+  /** Full wording, for the lock button's accessible name. */
+  periodLabel: string;
+  jobId: number;
+  jobName: string;
+  lock: boolean;
+  lockPending: boolean;
+}
+
+/**
+ * One moment of the soirée for one member, held or not. The three of them are
+ * always rendered so the column can tell "pas de poste sur ce moment" apart
+ * from "pas de poste du tout".
+ */
+interface MemberSlotView {
+  period: JobPeriod;
+  /** Compact wording, for the narrow table column. */
+  shortLabel: string;
+  assignment: MemberAssignmentView | null;
+}
+
 interface MemberView {
   id: number;
   name: string;
-  /** Job held on the selected soirée, or `null` when the member is unassigned. */
-  poste: string | null;
-  roleId: number | null;
-  lock: boolean;
-  lockPending: boolean;
+  /** Postes held on the selected soirée, in chronological order. Empty when the
+   *  member holds none — never their BAE function, which says what they are in
+   *  the association, not what they are doing tonight. */
+  assignments: MemberAssignmentView[];
+  /** `false` when the member holds no poste at all on this soirée. */
+  hasAssignment: boolean;
+  /** Names of the postes held, to highlight the matching preference chips. */
+  assignedJobNames: string[];
   score: number;
   pointsDelta: number;
   preferences: string[];
@@ -150,6 +225,37 @@ function plural(count: number, singular: string, pluralForm: string): string {
 }
 
 /**
+ * The moment a poste belongs to, tolerant of a value this build does not know.
+ *
+ * `jobs.type` has no database check constraint: a server-side enum that grew
+ * past this client would otherwise land a poste in no group at all, i.e. make
+ * it silently disappear from the screen. Falling back on the soirée itself
+ * keeps it visible and staffable.
+ */
+function periodOf(job: { type: string }): JobPeriod {
+  return isJobPeriod(job.type) ? job.type : 'during';
+}
+
+/** `{ before: 0, during: 0, after: 0 }`, ready to be counted into. */
+function emptyPeriodCounts(): Record<JobPeriod, number> {
+  return { before: 0, during: 0, after: 0 };
+}
+
+/**
+ * "3 en préparation · 12 en soirée · 0 en nettoyage".
+ *
+ * Every moment is named, including those nobody was placed on: a zero on the
+ * nettoyage is the single most useful number this screen can print, so it is
+ * never omitted. The wording comes from `JOB_PERIOD_LABELS` — the period
+ * vocabulary is declared once, in `core/models/job-period.model.ts`.
+ */
+function describePeriodCounts(counts: Record<JobPeriod, number>): string {
+  return JOB_PERIODS.map(
+    (period) => `${counts[period]} en ${JOB_PERIOD_LABELS[period].toLowerCase()}`,
+  ).join(' · ');
+}
+
+/**
  * `restrictedJobIds` holds the jobs that have at least one
  * `job_eligible_members` row. A job absent from that set is unrestricted —
  * absence means "open to everyone", never "nobody is eligible".
@@ -163,6 +269,7 @@ export function buildEventsData(
     presentMemberIds: raw.responses
       .filter((r) => r.eventId === event.id && r.isAvailable)
       .map((r) => r.memberId),
+    settled: raw.assignments.some((a) => a.eventId === event.id && a.settledAt !== null),
     roles: raw.eventJobs
       .filter((ej) => ej.eventId === event.id)
       .map((ej) => {
@@ -170,6 +277,7 @@ export function buildEventsData(
         return {
           id: ej.jobId,
           name: job.name,
+          period: periodOf(job),
           icon: JOB_ICONS[job.name] ?? LucideUsers,
           requiredCount: ej.count,
           restricted: restrictedJobIds.has(ej.jobId),
@@ -179,10 +287,32 @@ export function buildEventsData(
               memberId: a.memberId,
               locked: a.locked,
               pointsDelta: a.pointsDelta,
+              settledAt: a.settledAt,
             })),
         };
       }),
   }));
+}
+
+/**
+ * Turn a failed `POST /events/:id/matching` into wording the user can act on.
+ *
+ * `HttpErrorResponse.error` is already unwrapped to `{ code, message }` by
+ * `apiEnvelopeInterceptor`. An unknown code keeps the API's own sentence
+ * rather than a hard-coded one that would hide what actually happened.
+ */
+export function matchingErrorMessage(error: unknown): string {
+  const body = error instanceof HttpErrorResponse ? error.error : null;
+  if (isApiError(body)) {
+    if (body.code === 'E_EVENT_ALREADY_SETTLED') {
+      return (
+        'Les points de cette soirée ont déjà été consolidés : l’affectation automatique ne ' +
+        'peut plus être relancée. Les affectations restent modifiables à la main.'
+      );
+    }
+    return body.message;
+  }
+  return "L'algorithme n'a pas pu être exécuté. Les affectations sont inchangées.";
 }
 
 /**
@@ -192,30 +322,46 @@ export function buildEventsData(
  * nobody answered available, or every seat is already held by a locked row —
  * those must NOT read as a success, so the tone degrades to `info`/`warning`
  * and the message names the reason instead of claiming work happened.
+ *
+ * A member left out is no longer a matter of taste. Preferences are implicitly
+ * complete (D2: every unranked poste is ex æquo last), so the engine can always
+ * place somebody as long as a seat exists. `unmatchedMemberIds` therefore means
+ * ONE thing — there was no seat left — and the wording says so and points at
+ * the fix: more postes, or bigger effectifs.
  */
 export function describeMatching(summary: ApiMatchingSummary): MatchingOutcome {
   const matched = summary.matched.length;
   const unmatched = summary.unmatchedMemberIds.length;
   const locked = summary.locked.length;
 
+  const byPeriod = emptyPeriodCounts();
+  for (const row of summary.matched) {
+    if (isJobPeriod(row.period)) byPeriod[row.period] += 1;
+  }
+
   const matchedPart = plural(matched, 'affectation générée', 'affectations générées');
-  const unmatchedPart = plural(unmatched, 'membre non affecté', 'membres non affectés');
   const lockedPart = plural(
     locked,
     'affectation verrouillée conservée',
     'affectations verrouillées conservées',
   );
+  const shortagePart = plural(
+    unmatched,
+    'membre disponible est resté sans poste',
+    'membres disponibles sont restés sans poste',
+  );
+  const fix = 'Ajoutez des postes ou augmentez les effectifs demandés, puis relancez.';
 
   if (matched === 0) {
     if (unmatched > 0) {
       const reason =
         locked > 0
-          ? `toutes les places restantes sont verrouillées (${lockedPart}), ou aucun poste ne correspond à leurs préférences`
-          : 'plus aucune place libre, ou aucun poste ne correspond à leurs préférences';
+          ? `il ne reste aucune place libre — ${lockedPart}`
+          : 'il ne reste aucune place libre';
       return {
         tone: 'warning',
         title: 'Aucune affectation générée',
-        message: `${plural(unmatched, 'membre disponible n’a pu être placé', 'membres disponibles n’ont pu être placés')} : ${reason}.`,
+        message: `${shortagePart} : ${reason}. ${fix}`,
       };
     }
     if (locked > 0) {
@@ -229,24 +375,25 @@ export function describeMatching(summary: ApiMatchingSummary): MatchingOutcome {
       tone: 'info',
       title: 'Rien à affecter',
       message:
-        'Aucun membre disponible à placer sur cette soirée. Vérifiez les réponses de disponibilité et les préférences avant de relancer.',
+        'Aucun membre disponible à placer sur cette soirée. Vérifiez les réponses de disponibilité avant de relancer.',
     };
   }
 
+  const breakdown = describePeriodCounts(byPeriod);
   const lockedSuffix = locked > 0 ? ` · ${lockedPart}` : '';
 
   if (unmatched > 0) {
     return {
       tone: 'warning',
-      title: 'Affectation partielle',
-      message: `${matchedPart} · ${unmatchedPart}${lockedSuffix}.`,
+      title: 'Postes en nombre insuffisant',
+      message: `${matchedPart} (${breakdown})${lockedSuffix}. ${shortagePart} : toutes les places sont prises. ${fix}`,
     };
   }
 
   return {
     tone: 'success',
     title: 'Affectation automatique terminée',
-    message: `${matchedPart} · tous les membres disponibles ont été placés${lockedSuffix}.`,
+    message: `${matchedPart} (${breakdown}) · tous les membres disponibles ont un poste${lockedSuffix}.`,
   };
 }
 
@@ -343,44 +490,72 @@ export class Coordination implements OnInit {
     return this.allMembers().filter((m) => eventData.presentMemberIds.includes(m.id));
   });
 
-  protected readonly assignedMemberIds = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return new Set<number>();
-    const ids = new Set<number>();
-    for (const role of eventData.roles) {
+  /**
+   * Who is already taken, moment by moment. The constraint is one poste per
+   * member PER PERIOD (D1) — somebody on the installation is still free for
+   * the service, so a single event-wide set would wrongly hide them.
+   */
+  protected readonly assignedMemberIdsByPeriod = computed(() => {
+    const byPeriod = new Map<JobPeriod, Set<number>>(
+      JOB_PERIODS.map((period) => [period, new Set<number>()] as const),
+    );
+    for (const role of this.selectedEventData()?.roles ?? []) {
+      const ids = byPeriod.get(role.period)!;
       for (const a of role.assigned) ids.add(a.memberId);
     }
-    return ids;
+    return byPeriod;
   });
 
-  protected readonly availableMembers = computed(() => {
+  protected availableMembersFor(period: JobPeriod): Member[] {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
-    const assigned = this.assignedMemberIds();
+    const assigned = this.assignedMemberIdsByPeriod().get(period) ?? new Set<number>();
     return this.allMembers().filter(
       (m) => eventData.presentMemberIds.includes(m.id) && !assigned.has(m.id),
     );
+  }
+
+  /**
+   * The soirée's points are consolidated: `POST /events/:id/matching` on it
+   * answers 409 `E_EVENT_ALREADY_SETTLED`. Known before the click, so the
+   * action is disabled with its reason instead of failing.
+   */
+  protected readonly isSettled = computed(() => this.selectedEventData()?.settled ?? false);
+
+  /**
+   * Locked vs replaceable rows, moment by moment. A global count hides which
+   * part of the soirée the next run is about to redo.
+   */
+  protected readonly lockBreakdown = computed<PeriodLockView[]>(() => {
+    const eventData = this.selectedEventData();
+    const counts = new Map<JobPeriod, { locked: number; replaceable: number }>(
+      JOB_PERIODS.map((period) => [period, { locked: 0, replaceable: 0 }] as const),
+    );
+
+    for (const role of eventData?.roles ?? []) {
+      const bucket = counts.get(role.period)!;
+      for (const a of role.assigned) {
+        if (a.locked) bucket.locked += 1;
+        else bucket.replaceable += 1;
+      }
+    }
+
+    return JOB_PERIODS.map((period) => ({
+      period,
+      label: JOB_PERIOD_LABELS[period],
+      ...counts.get(period)!,
+    }));
   });
 
   /** Rows the next matching run would preserve. */
-  protected readonly lockedCount = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return 0;
-    return eventData.roles.reduce(
-      (sum, role) => sum + role.assigned.filter((a) => a.locked).length,
-      0,
-    );
-  });
+  protected readonly lockedCount = computed(() =>
+    this.lockBreakdown().reduce((sum, group) => sum + group.locked, 0),
+  );
 
   /** Rows the next matching run would delete and regenerate. */
-  protected readonly replaceableCount = computed(() => {
-    const eventData = this.selectedEventData();
-    if (!eventData) return 0;
-    return eventData.roles.reduce(
-      (sum, role) => sum + role.assigned.filter((a) => !a.locked).length,
-      0,
-    );
-  });
+  protected readonly replaceableCount = computed(() =>
+    this.lockBreakdown().reduce((sum, group) => sum + group.replaceable, 0),
+  );
 
   private readonly memberById = computed(
     () => new Map(this.allMembers().map((member) => [member.id, member] as const)),
@@ -406,6 +581,7 @@ export class Coordination implements OnInit {
     return eventData.roles.map((role, index) => ({
       id: role.id,
       label: role.name,
+      period: role.period,
       color: POSTE_COLORS[index % POSTE_COLORS.length],
       icon: role.icon,
       need: role.requiredCount,
@@ -424,32 +600,82 @@ export class Coordination implements OnInit {
     }));
   });
 
+  /**
+   * The postes of the soirée, grouped by moment, in chronological order.
+   *
+   * The three moments are ALWAYS present, including one with no poste at all:
+   * a section that silently disappears reads as a bug, and "nobody is on the
+   * nettoyage" is precisely what this screen exists to show. The empty section
+   * says so in words instead of vanishing.
+   */
+  protected readonly posteGroups = computed<PeriodGroupView[]>(() => {
+    const postes = this.postes();
+
+    return JOB_PERIODS.map((period) => {
+      const own = postes.filter((p) => p.period === period);
+      const assignedCount = own.reduce((sum, p) => sum + p.assigned.length, 0);
+      const neededCount = own.reduce((sum, p) => sum + p.need, 0);
+      const toFill = own.reduce((sum, p) => sum + this.toFill(p), 0);
+
+      return {
+        period,
+        label: JOB_PERIOD_LABELS[period],
+        postes: own,
+        assignedCount,
+        neededCount,
+        toFill,
+        // A moment with no poste is not "full": there is nothing to be full of,
+        // and the template says that in its own words.
+        isFull: own.length > 0 && toFill === 0,
+      };
+    });
+  });
+
   protected readonly membres = computed<MemberView[]>(() => {
     const eventData = this.selectedEventData();
     if (!eventData) return [];
     const pending = this.lockPending();
+    // Chronological, so a member's postes always read préparation → nettoyage
+    // whatever order `event_jobs` came back in.
+    const periodRank = new Map(JOB_PERIODS.map((period, index) => [period, index] as const));
 
     const views = this.allMembers().map((member) => {
-      const assignedRole = eventData.roles.find((role) =>
-        role.assigned.some((a) => a.memberId === member.id),
-      );
-      const assignment = assignedRole?.assigned.find((a) => a.memberId === member.id) ?? null;
-      const roleId = assignedRole?.id ?? null;
+      // Every poste this member holds on THIS soirée — at most one per moment
+      // (D1). Never their BAE function: a member's role (Trésorerie,
+      // Logistique…) says what they are in the association, not what they are
+      // doing tonight, and falling back to it made unassigned members look
+      // staffed.
+      const assignments: MemberAssignmentView[] = eventData.roles
+        .flatMap((role) => {
+          const assignment = role.assigned.find((a) => a.memberId === member.id);
+          if (!assignment) return [];
+          return [
+            {
+              period: role.period,
+              periodLabel: JOB_PERIOD_LABELS[role.period],
+              jobId: role.id,
+              jobName: role.name,
+              lock: assignment.locked,
+              lockPending: pending.has(assignmentKey(eventData.event.id, role.id, member.id)),
+            },
+          ];
+        })
+        .sort((a, b) => periodRank.get(a.period)! - periodRank.get(b.period)!);
 
       return {
         id: member.id,
         name: `${member.firstName} ${member.lastName}`,
-        // The job this member holds on THIS soirée — `null` when unassigned.
-        // Never their BAE function: a member's role (Trésorerie, Logistique…)
-        // says what they are in the association, not what they are doing
-        // tonight, and falling back to it made unassigned members look staffed.
-        poste: assignedRole?.name ?? null,
-        roleId,
-        lock: assignment?.locked ?? false,
-        lockPending:
-          roleId !== null && pending.has(assignmentKey(eventData.event.id, roleId, member.id)),
+        assignments,
+        hasAssignment: assignments.length > 0,
+        assignedJobNames: assignments.map((a) => a.jobName),
         score: member.points,
-        pointsDelta: assignment?.pointsDelta ?? 0,
+        // The soirée total: one delta per assignment (D5), and it may be
+        // negative for a member served on their first choice everywhere.
+        pointsDelta: eventData.roles.reduce(
+          (sum, role) =>
+            sum + (role.assigned.find((a) => a.memberId === member.id)?.pointsDelta ?? 0),
+          0,
+        ),
         preferences: this.buildPreferences(member, eventData),
         isPresent: eventData.presentMemberIds.includes(member.id),
       };
@@ -457,6 +683,21 @@ export class Coordination implements OnInit {
 
     return views.sort((a, b) => Number(b.isPresent) - Number(a.isPresent));
   });
+
+  /**
+   * The three moments of one member, held or not.
+   *
+   * Rendering the empty ones is the whole point: an absent line would blur
+   * "this member has nothing on the nettoyage" into "this member has nothing at
+   * all", and only the second one calls for staffing them somewhere.
+   */
+  protected periodSlots(member: MemberView): MemberSlotView[] {
+    return JOB_PERIODS.map((period) => ({
+      period,
+      shortLabel: JOB_PERIOD_SHORT_LABELS[period],
+      assignment: member.assignments.find((a) => a.period === period) ?? null,
+    }));
+  }
 
   protected formatDate(date: Date): string {
     return date.toLocaleDateString('fr-FR', {
@@ -474,7 +715,7 @@ export class Coordination implements OnInit {
     this.patchRole(eventId, roleId, (assigned) =>
       assigned.some((a) => a.memberId === memberId)
         ? assigned
-        : [...assigned, { memberId, locked: false, pointsDelta: 0 }],
+        : [...assigned, { memberId, locked: false, pointsDelta: 0, settledAt: null }],
     );
 
     this.svc.assign(eventId, memberId, roleId).subscribe({
@@ -509,29 +750,31 @@ export class Coordination implements OnInit {
         requiredCount: role.requiredCount,
       })),
       availableJobs: [...this.jobsById().values()]
-        .map((job) => ({ id: job.id, name: job.name }))
+        .map((job) => ({ id: job.id, name: job.name, period: periodOf(job) }))
         .sort((a, b) => a.name.localeCompare(b.name)),
       onSave: (roles: RoleModalRole[]) => this.saveRoleEdits(eventData.event.id, roles),
     });
   }
 
-  protected openRoleDropdown(anchor: HTMLElement, roleId: number): void {
+  protected openRoleDropdown(anchor: HTMLElement, poste: PosteView): void {
     const eventData = this.selectedEventData();
     if (!eventData) return;
 
-    const members = this.availableMembers();
+    // Only members still free on THIS moment: being on the installation does
+    // not disqualify somebody from the service.
+    const members = this.availableMembersFor(poste.period);
     const items: DropdownItemAction[] = members.map((m) => ({
       type: 'action',
       label: `${m.firstName} ${m.lastName}`,
       description: m.role,
-      onClick: () => this.assignMember(m.id, roleId),
+      onClick: () => this.assignMember(m.id, poste.id),
     }));
 
     this.dropdown.toggle({
       anchor,
       items,
-      header: 'Affecter un membre',
-      emptyLabel: 'Aucun membre disponible',
+      header: `Affecter un membre · ${JOB_PERIOD_LABELS[poste.period]}`,
+      emptyLabel: 'Aucun membre disponible sur ce moment',
     });
   }
 
@@ -561,6 +804,20 @@ export class Coordination implements OnInit {
         type: 'warning',
         title: 'Aucun membre disponible',
         message: `Personne ne s'est déclaré disponible pour « ${eventData.event.name} » : l'algorithme n'aurait personne à placer.`,
+      });
+      return;
+    }
+
+    // Known from `settledAt`: the server would answer 409
+    // `E_EVENT_ALREADY_SETTLED`. Say so instead of spending the round trip —
+    // the button is already disabled, this catches the keyboard path.
+    if (eventData.settled) {
+      this.toast.show({
+        type: 'info',
+        title: 'Soirée déjà clôturée',
+        message:
+          `Les points de « ${eventData.event.name} » ont été consolidés : l'affectation ` +
+          'automatique ne peut plus être relancée. Les affectations restent modifiables à la main.',
       });
       return;
     }
@@ -598,20 +855,28 @@ export class Coordination implements OnInit {
       .runMatching(eventId)
       .pipe(
         switchMap((summary) => this.svc.loadAll().pipe(map((raw) => ({ summary, raw }) as const))),
-        catchError(() => {
-          this.loadError.set("Erreur lors de l'exécution de l'algorithme.");
+        catchError((error: unknown) => {
+          const message = matchingErrorMessage(error);
+          this.loadError.set(message);
           this.toast.show({
             type: 'error',
             title: "Échec de l'affectation automatique",
-            message: "L'algorithme n'a pas pu être exécuté. Les affectations sont inchangées.",
+            message,
           });
-          return of(null);
+          // Re-sync rather than stop here: a 409 means another tab settled the
+          // soirée while this one had the modal open, and the page has to start
+          // showing that instead of offering a run that can no longer happen.
+          return this.svc.loadAll().pipe(
+            map((raw) => ({ summary: null, raw }) as const),
+            catchError(() => of(null)),
+          );
         }),
         finalize(() => this.algoRunning.set(false)),
       )
       .subscribe((result) => {
         if (!result) return;
         this.applyLoadedData(result.raw);
+        if (!result.summary) return;
         this.algoRunAt.set(new Date());
 
         const outcome = describeMatching(result.summary);
@@ -658,6 +923,21 @@ export class Coordination implements OnInit {
     return Array.from({ length: this.toFill(p) }, (_, index) => index);
   }
 
+  /**
+   * The soirée's point movement, sign included. `clampPoints` is gone (D6) and
+   * a member served on their first choice legitimately loses credit, so a
+   * negative value is normal information — not something to hide behind a dot.
+   */
+  protected formatPointsDelta(delta: number): string {
+    if (delta === 0) return '·';
+    return delta > 0 ? `+${delta}` : `${delta}`;
+  }
+
+  protected pointsDeltaClass(delta: number): string {
+    if (delta > 0) return 'text-ok';
+    return delta < 0 ? 'text-warn' : 'text-muted';
+  }
+
   protected scoreClassSmall(score: number): string {
     return this.getScoreClass(score);
   }
@@ -688,36 +968,49 @@ export class Coordination implements OnInit {
     }
   }
 
-  protected lockLabel(memberName: string, posteName: string, locked: boolean): string {
+  /**
+   * The lock is a property of ONE `member_event_assigned_jobs` row, so the
+   * label names the moment too: a member may hold up to three postes, and
+   * "verrouiller l'affectation de X" alone would not say which one flips.
+   */
+  protected lockLabel(
+    memberName: string,
+    posteName: string,
+    periodLabel: string,
+    locked: boolean,
+  ): string {
+    const target = `l'affectation de ${memberName} au poste ${posteName} (${periodLabel})`;
     return locked
-      ? `Déverrouiller l'affectation de ${memberName} au poste ${posteName} : elle pourra être remplacée par l'affectation automatique`
-      : `Verrouiller l'affectation de ${memberName} au poste ${posteName} : elle sera conservée par l'affectation automatique`;
+      ? `Déverrouiller ${target} : elle pourra être remplacée par l'affectation automatique`
+      : `Verrouiller ${target} : elle sera conservée par l'affectation automatique`;
   }
 
   /**
-   * Persist the lock flag of one assignment. Optimistic: the row flips
-   * immediately and rolls back if the write fails.
+   * Persist the lock flag of ONE assignment — the `(member, event, job)` row,
+   * never "the member": somebody on both the installation and the service has
+   * two independent locks. Optimistic: the row flips immediately and rolls back
+   * if the write fails.
    */
-  protected toggleLock(memberId: number, roleId: number): void {
+  protected toggleLock(memberId: number, jobId: number): void {
     const eventId = this.selectedEventId();
     if (eventId === null) return;
 
-    const key = assignmentKey(eventId, roleId, memberId);
+    const key = assignmentKey(eventId, jobId, memberId);
     if (this.lockPending().has(key)) return;
 
-    const next = !this.isLocked(roleId, memberId);
+    const next = !this.isLocked(jobId, memberId);
     this.setLockPending(key, true);
     // `setAssignmentLock` recreates the row, which resets `points_delta` to 0
     // server-side — mirror that instead of showing a value that no longer exists.
-    this.patchRole(eventId, roleId, (assigned) =>
+    this.patchRole(eventId, jobId, (assigned) =>
       assigned.map((a) => (a.memberId === memberId ? { ...a, locked: next, pointsDelta: 0 } : a)),
     );
 
-    this.svc.setAssignmentLock(eventId, memberId, roleId, next).subscribe({
+    this.svc.setAssignmentLock(eventId, memberId, jobId, next).subscribe({
       next: () => this.setLockPending(key, false),
       error: () => {
         this.setLockPending(key, false);
-        this.patchRole(eventId, roleId, (assigned) =>
+        this.patchRole(eventId, jobId, (assigned) =>
           assigned.map((a) => (a.memberId === memberId ? { ...a, locked: !next } : a)),
         );
         this.toast.show({
@@ -729,8 +1022,8 @@ export class Coordination implements OnInit {
     });
   }
 
-  private isLocked(roleId: number, memberId: number): boolean {
-    const role = this.selectedEventData()?.roles.find((r) => r.id === roleId);
+  private isLocked(jobId: number, memberId: number): boolean {
+    const role = this.selectedEventData()?.roles.find((r) => r.id === jobId);
     return role?.assigned.some((a) => a.memberId === memberId && a.locked) ?? false;
   }
 

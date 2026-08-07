@@ -3,14 +3,20 @@
   <bfd-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
     Postes
   </bfd-btn>
+  <!-- Disabled, never hidden: a vanished action reads as a bug. The reason is
+       spelled out in the banner below, which the live region announces. -->
   <bfd-btn
     kind="secondary"
     size="md"
     [icon]="icZap"
-    [disabled]="loading() || algoRunning()"
+    [disabled]="loading() || algoRunning() || isSettled()"
     (clicked)="confirmRunMatching()"
   >
-    {{ algoRunning() ? 'Affectation en cours…' : "Lancer l'affectation automatique" }}
+    @if (isSettled()) {
+      Affectation clôturée
+    } @else {
+      {{ algoRunning() ? 'Affectation en cours…' : "Lancer l'affectation automatique" }}
+    }
   </bfd-btn>
   <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="validateAssignments()">
     Valider l'affectation
@@ -26,6 +32,26 @@
       {{ outcome.title }}. {{ outcome.message }}
     }
   </div>
+
+  <!-- Why the automatic assignment is unavailable. Stated, not implied by a
+       greyed-out button the user cannot focus to read a tooltip on. -->
+  @if (isSettled()) {
+    <div
+      role="status"
+      aria-live="polite"
+      class="mb-4.5 flex items-start gap-3.5 rounded-md border border-blue bg-blue-soft px-4.5 py-3.5"
+    >
+      <svg [lucideIcon]="icLock" [size]="16" class="mt-0.5 text-blue" aria-hidden="true"></svg>
+      <div class="flex-1">
+        <div class="text-[13.5px] font-semibold text-text">Soirée clôturée</div>
+        <p class="mt-0.5 text-[12px] text-text-2">
+          Les points de cette soirée ont été consolidés sur les scores des membres : l'affectation
+          automatique ne peut plus être relancée. Les affectations restent modifiables à la main,
+          poste par poste.
+        </p>
+      </div>
+    </div>
+  }
 
   <!-- Last matching run -->
   @if (lastOutcome(); as outcome) {
@@ -47,112 +73,181 @@
     </div>
   }
 
-  <!-- Lock ↔ re-run relationship -->
+  <!-- Lock ↔ re-run relationship, ventilated by moment: a global count hides
+       which part of the soirée the next run is about to redo. -->
   <div
-    class="mb-4 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 px-3.5 py-2.5"
+    role="status"
+    aria-live="polite"
+    class="mb-4 flex items-start gap-2.5 rounded-md border border-border-s bg-surface-2 px-3.5 py-2.5"
   >
-    <svg [lucideIcon]="icLock" [size]="14" class="text-muted" aria-hidden="true"></svg>
+    <svg [lucideIcon]="icLock" [size]="14" class="mt-0.5 text-muted" aria-hidden="true"></svg>
     @let locked = lockedCount();
     @let replaceable = replaceableCount();
-    <p class="text-[12px] text-text-2">
-      @if (locked > 0) {
-        <span class="font-semibold text-text">{{ locked }}</span> affectation(s) verrouillée(s) —
-        conservée(s) au prochain lancement.
-      } @else {
-        Aucune affectation verrouillée.
-      }
-      <span class="text-muted">
-        Le prochain lancement de l'affectation automatique remplacera les
-        <span class="font-semibold text-text">{{ replaceable }}</span> affectation(s) non
-        verrouillée(s).
-      </span>
-    </p>
+    <div class="flex-1">
+      <p class="text-[12px] text-text-2">
+        @if (locked > 0) {
+          <span class="font-semibold text-text">{{ locked }}</span> affectation(s) verrouillée(s) —
+          conservée(s) au prochain lancement.
+        } @else {
+          Aucune affectation verrouillée.
+        }
+        <span class="text-muted">
+          Le prochain lancement de l'affectation automatique remplacera les
+          <span class="font-semibold text-text">{{ replaceable }}</span> affectation(s) non
+          verrouillée(s).
+        </span>
+      </p>
+      <ul class="mono mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
+        @for (group of lockBreakdown(); track group.period) {
+          <li>
+            {{ group.label }} : {{ group.locked }} verrouillée(s) · {{ group.replaceable }}
+            remplaçable(s)
+          </li>
+        }
+      </ul>
+    </div>
   </div>
 
-  <!-- Postes grid -->
-  <div class="mb-5.5 grid grid-cols-3 gap-3">
-    @for (p of postes(); track p.id) {
-      @let full = isFull(p);
-      <div class="rounded-md border border-border-s bg-surface p-3.5">
-        <div class="mb-3 flex items-center gap-2.5">
-          <span
-            [class]="
-              'inline-flex h-8 w-8 items-center justify-center rounded-lg ' + posteBgClass(p.color)
-            "
+  <!-- Coverage changes on every assign / remove: announce it per moment. -->
+  <div role="status" aria-live="polite" class="sr-only">
+    @for (group of posteGroups(); track group.period) {
+      {{ group.label }} :
+      @if (group.postes.length === 0) {
+        aucun poste armé.
+      } @else {
+        {{ group.assignedCount }} affecté·es sur {{ group.neededCount }}.
+      }
+    }
+  </div>
+
+  <!-- Postes, grouped by moment. The three moments are always rendered, empty
+       ones included: "nobody on the nettoyage" is what this screen is for, and
+       a section that silently disappears cannot say it. -->
+  <div class="mb-5.5 flex flex-col gap-4.5">
+    @for (group of posteGroups(); track group.period) {
+      <section [attr.aria-labelledby]="'periode-' + group.period">
+        <div class="mb-2 flex items-center gap-2">
+          <h2
+            [id]="'periode-' + group.period"
+            class="text-[12px] font-semibold uppercase tracking-wider text-text"
           >
-            <svg [lucideIcon]="p.icon" [size]="15" aria-hidden="true"></svg>
-          </span>
-          <div class="flex-1">
-            <div class="flex items-center gap-1.5">
-              <span class="text-[13px] font-semibold text-text">{{ p.label }}</span>
-              @if (p.restricted) {
-                <bfd-badge kind="ghost">Éligibilité restreinte</bfd-badge>
-              }
-            </div>
-            <div class="mono tnum mt-px text-[11px] text-muted">
-              {{ p.assigned.length }}/{{ p.need }} affectés
-            </div>
-          </div>
-          @if (full) {
-            <bfd-badge kind="ok">Complet</bfd-badge>
+            {{ group.label }}
+          </h2>
+          @if (group.postes.length === 0) {
+            <bfd-badge kind="ghost">Aucun poste sur ce moment</bfd-badge>
+          } @else if (group.isFull) {
+            <bfd-badge kind="ok"
+              >Complet · {{ group.assignedCount }}/{{ group.neededCount }}</bfd-badge
+            >
           } @else {
-            <bfd-badge kind="warn">{{ toFill(p) }} à pourvoir</bfd-badge>
+            <bfd-badge kind="warn"
+              >{{ group.toFill }} à pourvoir · {{ group.assignedCount }}/{{
+                group.neededCount
+              }}</bfd-badge
+            >
           }
         </div>
-        <div class="flex flex-col gap-1.5">
-          @for (m of p.assigned; track m.id) {
-            <div
-              [class]="
-                'flex items-center gap-2 rounded-sm px-2 py-1.5 ' +
-                (m.lock ? 'bg-surface-2 ring-1 ring-inset ring-blue/40' : 'bg-surface-2')
-              "
-            >
-              <bfd-avatar [name]="m.name" [size]="20" />
-              <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
-              <button
-                type="button"
-                class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
-                [attr.aria-pressed]="m.lock"
-                [attr.aria-label]="lockLabel(m.name, p.label, m.lock)"
-                [disabled]="m.lockPending"
-                (click)="toggleLock(m.id, p.id); $event.stopPropagation()"
-              >
-                <svg
-                  [lucideIcon]="m.lock ? icLock : icLockOpen"
-                  [size]="11"
-                  [class]="m.lock ? 'text-blue' : 'text-muted'"
-                  aria-hidden="true"
-                ></svg>
-              </button>
-              @if (!m.lock) {
-                <button
-                  type="button"
-                  class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
-                  [attr.aria-label]="'Retirer ' + m.name + ' du poste ' + p.label"
-                  (click)="removeAssignment(m.id, p.id); $event.stopPropagation()"
-                >
-                  <svg [lucideIcon]="icX" [size]="12" aria-hidden="true"></svg>
-                </button>
-              }
-              <span [class]="'mono tnum text-[10.5px] ' + scoreClassSmall(m.score)">{{
-                m.score
-              }}</span>
-            </div>
-          }
-          @for (_ of vacantSlots(p); track $index) {
-            <button
-              #anchor
-              type="button"
-              [attr.aria-label]="'Affecter un membre au poste ' + p.label"
-              class="flex w-full items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-left text-[12px] text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
-              (click)="openRoleDropdown(anchor, p.id)"
-            >
-              <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
-              <span>Affecter…</span>
-            </button>
-          }
-        </div>
-      </div>
+
+        @if (group.postes.length === 0) {
+          <p
+            class="rounded-md border border-dashed border-border bg-surface px-3.5 py-3 text-[12px] text-muted"
+          >
+            Aucun poste n'est armé sur ce moment : personne n'y sera affecté·e. Ajoutez-en depuis «
+            Postes » si la soirée en a besoin.
+          </p>
+        } @else {
+          <div class="grid grid-cols-3 gap-3">
+            @for (p of group.postes; track p.id) {
+              @let full = isFull(p);
+              <div class="rounded-md border border-border-s bg-surface p-3.5">
+                <div class="mb-3 flex items-center gap-2.5">
+                  <span
+                    [class]="
+                      'inline-flex h-8 w-8 items-center justify-center rounded-lg ' +
+                      posteBgClass(p.color)
+                    "
+                  >
+                    <svg [lucideIcon]="p.icon" [size]="15" aria-hidden="true"></svg>
+                  </span>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[13px] font-semibold text-text">{{ p.label }}</span>
+                      @if (p.restricted) {
+                        <bfd-badge kind="ghost">Éligibilité restreinte</bfd-badge>
+                      }
+                    </div>
+                    <div class="mono tnum mt-px text-[11px] text-muted">
+                      {{ p.assigned.length }}/{{ p.need }} affectés
+                    </div>
+                  </div>
+                  @if (full) {
+                    <bfd-badge kind="ok">Complet</bfd-badge>
+                  } @else {
+                    <bfd-badge kind="warn">{{ toFill(p) }} à pourvoir</bfd-badge>
+                  }
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  @for (m of p.assigned; track m.id) {
+                    <div
+                      [class]="
+                        'flex items-center gap-2 rounded-sm px-2 py-1.5 ' +
+                        (m.lock ? 'bg-surface-2 ring-1 ring-inset ring-blue/40' : 'bg-surface-2')
+                      "
+                    >
+                      <bfd-avatar [name]="m.name" [size]="20" />
+                      <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
+                      <button
+                        type="button"
+                        class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                        [attr.aria-pressed]="m.lock"
+                        [attr.aria-label]="lockLabel(m.name, p.label, group.label, m.lock)"
+                        [disabled]="m.lockPending"
+                        (click)="toggleLock(m.id, p.id); $event.stopPropagation()"
+                      >
+                        <svg
+                          [lucideIcon]="m.lock ? icLock : icLockOpen"
+                          [size]="11"
+                          [class]="m.lock ? 'text-blue' : 'text-muted'"
+                          aria-hidden="true"
+                        ></svg>
+                      </button>
+                      @if (!m.lock) {
+                        <button
+                          type="button"
+                          class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+                          [attr.aria-label]="
+                            'Retirer ' + m.name + ' du poste ' + p.label + ' (' + group.label + ')'
+                          "
+                          (click)="removeAssignment(m.id, p.id); $event.stopPropagation()"
+                        >
+                          <svg [lucideIcon]="icX" [size]="12" aria-hidden="true"></svg>
+                        </button>
+                      }
+                      <span [class]="'mono tnum text-[10.5px] ' + scoreClassSmall(m.score)">{{
+                        m.score
+                      }}</span>
+                    </div>
+                  }
+                  @for (_ of vacantSlots(p); track $index) {
+                    <button
+                      #anchor
+                      type="button"
+                      [attr.aria-label]="
+                        'Affecter un membre au poste ' + p.label + ' (' + group.label + ')'
+                      "
+                      class="flex w-full items-center gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 text-left text-[12px] text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+                      (click)="openRoleDropdown(anchor, p)"
+                    >
+                      <svg [lucideIcon]="icPlus" [size]="12" aria-hidden="true"></svg>
+                      <span>Affecter…</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
     }
   </div>
 
@@ -169,7 +264,7 @@
       <span>Préférences (1-3)</span>
       <span>Affecté à</span>
       <span class="text-right">Score</span>
-      <span class="text-right">Points gagnés</span>
+      <span class="text-right">Points soirée</span>
       <span></span>
     </div>
     @let allMembres = membres();
@@ -212,7 +307,7 @@
             <span
               [class]="
                 'mono rounded-[3px] px-1.5 py-0.5 text-[10px] ' +
-                (pr === m.poste
+                (m.assignedJobNames.includes(pr)
                   ? 'bg-blue-soft text-blue font-semibold'
                   : 'bg-surface-2 text-muted font-medium')
               "
@@ -221,40 +316,51 @@
             </span>
           }
         </div>
-        <div class="flex items-center gap-1.5">
-          @if (m.poste; as poste) {
-            <span class="text-[12.5px] text-text">{{ poste }}</span>
+        <!-- Three distinct states: no poste at all · no poste on this moment ·
+             poste held. Each held row carries its OWN lock — the lock belongs to
+             the (membre, soirée, poste) row, not to the member. -->
+        <div class="flex flex-col gap-0.5">
+          @if (!m.hasAssignment) {
+            <span class="text-[12.5px] italic text-muted">Non affecté·e sur cette soirée</span>
           } @else {
-            <span class="text-[12.5px] text-muted italic">Non affecté</span>
-          }
-          @let roleId = m.roleId;
-          @if (roleId !== null) {
-            <button
-              type="button"
-              class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
-              [attr.aria-pressed]="m.lock"
-              [attr.aria-label]="lockLabel(m.name, m.poste ?? 'ce poste', m.lock)"
-              [disabled]="m.lockPending"
-              (click)="toggleLock(m.id, roleId); $event.stopPropagation()"
-            >
-              <svg
-                [lucideIcon]="m.lock ? icLock : icLockOpen"
-                [size]="11"
-                [class]="m.lock ? 'text-blue' : 'text-muted'"
-                aria-hidden="true"
-              ></svg>
-            </button>
+            @for (slot of periodSlots(m); track slot.period) {
+              <div class="flex items-center gap-1.5">
+                <span class="mono w-11 shrink-0 text-[10px] uppercase tracking-wider text-muted">
+                  {{ slot.shortLabel }}
+                </span>
+                @if (slot.assignment; as a) {
+                  <span class="text-[12.5px] text-text">{{ a.jobName }}</span>
+                  <button
+                    type="button"
+                    class="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                    [attr.aria-pressed]="a.lock"
+                    [attr.aria-label]="lockLabel(m.name, a.jobName, a.periodLabel, a.lock)"
+                    [disabled]="a.lockPending"
+                    (click)="toggleLock(m.id, a.jobId); $event.stopPropagation()"
+                  >
+                    <svg
+                      [lucideIcon]="a.lock ? icLock : icLockOpen"
+                      [size]="11"
+                      [class]="a.lock ? 'text-blue' : 'text-muted'"
+                      aria-hidden="true"
+                    ></svg>
+                  </button>
+                } @else {
+                  <span class="text-[12.5px] italic text-muted">Aucun poste</span>
+                }
+              </div>
+            }
           }
         </div>
         <span [class]="'mono tnum text-right text-[13px] font-semibold ' + scoreClass(m.score)">{{
           m.score
         }}</span>
-        <span
-          [class]="
-            'mono tnum text-right text-[12px] ' + (m.pointsDelta > 0 ? 'text-ok' : 'text-muted')
-          "
-          >{{ m.pointsDelta > 0 ? '+' + m.pointsDelta : '·' }}</span
-        >
+        <!-- Sum of the deltas of every poste held. `clampPoints` is gone (D6)
+             and being served first costs credit, so this can be negative:
+             printing "·" for a −4 would hide a real movement. -->
+        <span [class]="'mono tnum text-right text-[12px] ' + pointsDeltaClass(m.pointsDelta)">{{
+          formatPointsDelta(m.pointsDelta)
+        }}</span>
         <svg
           [lucideIcon]="icMore"
           [size]="14"

@@ -9,7 +9,15 @@ import {
 } from '@angular/core';
 import { LucidePlus, LucideTrash2, LucideX } from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
-import { RoleModalRole, RolesModalConfig } from '../modal.models';
+import { JOB_PERIODS, JOB_PERIOD_LABELS, type JobPeriod } from '#core/models/job-period.model';
+import { RoleModalJob, RoleModalRole, RolesModalConfig } from '../modal.models';
+
+/** One `<optgroup>`: a moment of the soirée and the jobs still selectable in it. */
+interface JobOptionGroup {
+  period: JobPeriod;
+  label: string;
+  jobs: readonly RoleModalJob[];
+}
 
 @Component({
   selector: 'bfd-roles-modal',
@@ -46,13 +54,33 @@ export class RolesModal {
   }
 
   /** The options for one row: the job it holds, plus everything still free. */
-  protected optionsFor(role: RoleModalRole): readonly { id: number; name: string }[] {
+  protected optionsFor(role: RoleModalRole): readonly RoleModalJob[] {
     const own = this.config().availableJobs.filter((job) => job.id === role.jobId);
     return [...own, ...this.unusedJobs()];
   }
 
+  /**
+   * The same options as `optionsFor`, split by moment so the `<select>` can
+   * render one `<optgroup>` per period — its `label` is what a screen reader
+   * announces before the options it holds. A moment with nothing left to offer
+   * is dropped: an empty `<optgroup>` announces a heading over nothing.
+   */
+  protected optionGroupsFor(role: RoleModalRole): JobOptionGroup[] {
+    const options = this.optionsFor(role);
+    return JOB_PERIODS.map((period) => ({
+      period,
+      label: JOB_PERIOD_LABELS[period],
+      jobs: options.filter((job) => job.period === period),
+    })).filter((group) => group.jobs.length > 0);
+  }
+
   protected jobName(jobId: number): string {
     return this.config().availableJobs.find((job) => job.id === jobId)?.name ?? 'Poste inconnu';
+  }
+
+  protected jobPeriodLabel(jobId: number): string {
+    const job = this.config().availableJobs.find((candidate) => candidate.id === jobId);
+    return job ? JOB_PERIOD_LABELS[job.period] : 'Moment inconnu';
   }
 
   protected addRole(): void {

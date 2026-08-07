@@ -1,4 +1,5 @@
 import { Type } from '@angular/core';
+import type { JobPeriod } from '#core/models/job-period.model';
 
 export interface ModalAction {
   label: string;
@@ -32,6 +33,9 @@ export interface RoleModalRole {
 export interface RoleModalJob {
   id: number;
   name: string;
+  /** The moment of the soirée this job belongs to. Staffing a soirée without
+   *  seeing it is how one ends up with nobody on the rangement. */
+  period: JobPeriod;
 }
 
 export interface MessageModalConfig extends BaseModal {
