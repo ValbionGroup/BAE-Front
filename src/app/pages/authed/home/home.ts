@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   LucideArrowRight,
   LucideCalendar,
@@ -31,6 +32,7 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { StatsStore } from '#core/store/home-data/stats.store';
 import { EncaissementsStore } from '#core/store/home-data/encaissements.store';
 import { QUICK_ACTION_ROUTES, QuickActionsStore } from '#core/store/home-data/quick-actions.store';
@@ -41,8 +43,65 @@ import { AlertsStore } from '#core/store/home-data/alerts.store';
 import { NextEventStore } from '#core/store/home-data/next-event.store';
 import { EventsStore } from '#core/store/events.store';
 import { StocksStore } from '#core/store/stocks.store';
+import {
+  MemberAssignmentsStore,
+  type MemberAssignment,
+} from '#core/store/member-assignments.store';
+import { isApiError } from '#core/models/api-response.model';
 import { EventDetail, Presence } from '#core/models/event.model';
 import { startOfDay } from 'date-fns';
+
+/** Toast wording for a refused presence write. Mirrors `my-presences.ts`'s
+ *  `presenceErrorView` — the two screens face the same 409, worded the same
+ *  way, so they must read as the same feature. */
+export interface PresenceErrorView {
+  readonly title: string;
+  readonly message: string;
+}
+
+/**
+ * Turn a failed `POST /events/:id/response` into wording the member can act on.
+ *
+ * `HttpErrorResponse.error` is already unwrapped to `{ code, message }` by
+ * `apiEnvelopeInterceptor`. The API's own sentence is kept verbatim — including
+ * for `E_PRESENCE_LOCKED_BY_ASSIGNMENT`, where it is the only text that states
+ * the rule the server actually enforces.
+ */
+export function presenceErrorView(error: unknown): PresenceErrorView {
+  const body = error instanceof HttpErrorResponse ? error.error : null;
+  if (isApiError(body)) {
+    return {
+      title:
+        body.code === 'E_PRESENCE_LOCKED_BY_ASSIGNMENT'
+          ? 'Désengagement impossible'
+          : 'Réponse non enregistrée',
+      message: body.message,
+    };
+  }
+  return {
+    title: 'Réponse non enregistrée',
+    message: "Votre réponse n'a pas pu être enregistrée. Réessayez dans un instant.",
+  };
+}
+
+/**
+ * Why « Absent·e » is unavailable, and how to get out of it.
+ *
+ * The lock covers the whole soirée (D9) — being released from the nettoyage
+ * alone does not unlock it — so the sentence names every poste held, not just
+ * the first one.
+ */
+export function presenceLockExplanation(postes: readonly MemberAssignment[]): string {
+  const named = postes.map((p) => `${p.jobName} en ${p.periodLabel.toLowerCase()}`);
+  const list =
+    named.length > 1 ? `${named.slice(0, -1).join(', ')} et ${named.at(-1)}` : (named[0] ?? '');
+  const held = named.length > 1 ? `les postes ${list}` : `le poste ${list}`;
+  return (
+    `Vous tenez ${held} sur cette soirée : vous ne pouvez plus vous déclarer absent·e. ` +
+    'Demandez au bureau ou au coordinateur de vous retirer de votre poste ; ' +
+    'vous pourrez alors vous désengager. Vous déclarer présent·e reste possible.'
+  );
+}
 
 /** Number of past soirées charted behind each label of the period selector. */
 const PERIOD_LIMITS: readonly number[] = [1, 3, 6, 12];
@@ -64,6 +123,7 @@ export class Home implements OnInit {
   private readonly events = inject(EventsStore);
   private readonly stocks = inject(StocksStore);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
   private readonly currentDate = new Date();
 
   // Each card pulls from its own NgRx (signal) store with independent loading state.
@@ -75,6 +135,13 @@ export class Home implements OnInit {
   protected readonly role = inject(RoleAssignmentStore);
   protected readonly quickActions = inject(QuickActionsStore);
   protected readonly activity = inject(ActivityFeedStore);
+  /**
+   * Injected directly (not through `RoleAssignmentStore`) so the presence
+   * lock can read the member's own postes the same way "mes présences" does —
+   * this page already loads it via `role.load()`, since both stores share the
+   * same singleton and single `CoordinationService.loadAll()` round trip.
+   */
+  private readonly memberAssignments = inject(MemberAssignmentsStore);
 
   protected readonly Presence = Presence;
 
@@ -112,12 +179,37 @@ export class Home implements OnInit {
     if (!event || this.role.loading()) return null;
     const eventId = Number(event.id);
     return new Set(
-      this.role
+      this.memberAssignments
         .assignments()
         .filter((a) => a.eventId === eventId)
         .map((a) => a.memberId),
     ).size;
   });
+
+  /**
+   * Postes really held by the logged-in member on `responseEvent()` — at most
+   * one per period (D1), ordered préparation → soirée → nettoyage. This is
+   * exactly what "mes présences" reads to decide the presence lock; the two
+   * screens must agree.
+   */
+  protected readonly heldPostes = computed<readonly MemberAssignment[]>(() => {
+    const event = this.responseEvent();
+    if (!event) return [];
+    return this.memberAssignments.assignmentsFor(event.id);
+  });
+
+  /** D8/D9: holding any poste on the soirée blocks declaring oneself absent —
+   *  the whole soirée, not the moment. Going back to present is never blocked. */
+  protected readonly presenceLocked = computed(() => this.heldPostes().length > 0);
+
+  protected readonly presenceLockId = computed<string | null>(() => {
+    const event = this.responseEvent();
+    return event ? `presence-lock-${event.id}` : null;
+  });
+
+  protected readonly presenceLockExplanationText = computed(() =>
+    presenceLockExplanation(this.heldPostes()),
+  );
 
   constructor() {
     inject(PageHeaderService).set({
@@ -145,14 +237,32 @@ export class Home implements OnInit {
     this.activity.load();
   }
 
-  protected respondPresent(): void {
+  protected async respondPresent(): Promise<void> {
     const e = this.responseEvent();
-    if (e) this.events.setMemberPresence(e.id, Presence.PRESENT);
+    if (e) await this.submitPresence(e, Presence.PRESENT);
   }
 
-  protected respondAbsent(): void {
+  protected async respondAbsent(): Promise<void> {
     const e = this.responseEvent();
-    if (e) this.events.setMemberPresence(e.id, Presence.ABSENT);
+    if (!e) return;
+    // The button is disabled, but a keyboard or a stale click must not spend a
+    // round trip on a refusal this page already knows about.
+    if (this.presenceLocked()) return;
+    await this.submitPresence(e, Presence.ABSENT);
+  }
+
+  private async submitPresence(event: EventDetail, presence: Presence): Promise<void> {
+    const result = await this.events.setMemberPresence(event.id, presence);
+    if (result.ok) return;
+
+    const view = presenceErrorView(result.error);
+    this.toast.show({ type: 'error', title: view.title, message: view.message });
+
+    // The refusal is proof this page's assignments are stale — another tab, or
+    // a coordinator staffing the member since the page loaded. Re-read so the
+    // lock and the poste behind it become visible instead of leaving a button
+    // that looks usable and is not.
+    void this.memberAssignments.refresh();
   }
 
   protected readonly memberData = this.store.selectSignal(selectMember);

@@ -79,67 +79,77 @@ export const RoleAssignmentStore = signalStore(
         return store.loading() || eventsStatus === 'init' || eventsStatus === 'loading';
       }),
 
-      /**
-       * Every assignment row of the payload, all members and all soirées —
-       * forwarded because `home.ts` counts the next soirée's assignees from it.
-       * Only that one raw slice is re-exported; everything else this panel needs
-       * is already shaped by the computed below.
-       */
-      assignments: computed(() => store.assignments()),
-
       /** Kept worded for this panel: the page it feeds talks about "votre
        *  affectation", not about the whole coordination payload. */
       error: computed<string | null>(() =>
         store.error() === null ? null : 'Impossible de charger votre affectation.',
       ),
 
-      data: computed<RoleAssignment | null>(() => {
+      /**
+       * Every poste the member holds on the next soirée, one per period held
+       * (D1), ordered before → during → after — `MemberAssignmentsStore`
+       * already sorts them that way. Each carries its OWN rank and its OWN
+       * delta: there is no longer a single "the" assignment to find.
+       */
+      data: computed<readonly RoleAssignment[]>(() => {
         const memberId = member()?.id;
         const event = nextEvent();
-        if (memberId === undefined || !event) return null;
+        if (memberId === undefined || !event) return [];
 
         const eventId = Number(event.id);
-        const mine = store
-          .assignments()
-          .find((a) => a.memberId === memberId && a.eventId === eventId);
-        if (!mine) return null;
+        const mine = store.assignmentsFor(eventId);
 
-        const job = store.jobs().find((j) => j.id === mine.jobId);
-        const poste = job?.name ?? `Poste #${mine.jobId}`;
+        return mine.map((assignment): RoleAssignment => {
+          const onSameJob = store
+            .assignments()
+            .filter((a) => a.eventId === eventId && a.jobId === assignment.jobId);
+          const needed =
+            store
+              .eventJobs()
+              .find((ej) => ej.eventId === eventId && ej.jobId === assignment.jobId)?.count ??
+            null;
 
-        const onSameJob = store
-          .assignments()
-          .filter((a) => a.eventId === eventId && a.jobId === mine.jobId);
-        const needed =
-          store.eventJobs().find((ej) => ej.eventId === eventId && ej.jobId === mine.jobId)
-            ?.count ?? null;
+          const teammates = onSameJob
+            .filter((a) => a.memberId !== memberId)
+            .map((a) => store.members().find((m) => m.id === a.memberId))
+            .filter((m): m is ApiMember => m !== undefined)
+            .map(shortName);
 
-        const teammates = onSameJob
-          .filter((a) => a.memberId !== memberId)
-          .map((a) => store.members().find((m) => m.id === a.memberId))
-          .filter((m): m is ApiMember => m !== undefined)
-          .map(shortName);
+          // Which of the member's own choices this poste was. Absent from
+          // their ranking means the engine placed them there as a last resort.
+          const preferenceRank =
+            store
+              .preferences()
+              .find((p) => p.memberId === memberId && p.jobId === assignment.jobId)
+              ?.preferenceRank ?? null;
 
-        // Which of the member's own choices this poste was. Absent from their
-        // ranking means the engine placed them there as a last resort.
-        const preferenceRank =
-          store.preferences().find((p) => p.memberId === memberId && p.jobId === mine.jobId)
-            ?.preferenceRank ?? null;
+          // D5: a good rank COSTS priority credit — this is often negative,
+          // and that is normal. Never hide it behind a `·` or a conditional.
+          const meta: RoleMeta[] = [
+            { label: 'Soirée', value: event.name },
+            {
+              label: 'Effectif du poste',
+              value: needed === null ? String(onSameJob.length) : `${onSameJob.length}/${needed}`,
+            },
+            { label: 'Coéquipiers', value: teammates.length > 0 ? teammates.join(', ') : 'Aucun' },
+            {
+              label: 'Crédit de priorité',
+              value:
+                assignment.pointsDelta > 0
+                  ? `+${assignment.pointsDelta}`
+                  : String(assignment.pointsDelta),
+            },
+          ];
 
-        const meta: RoleMeta[] = [
-          { label: 'Soirée', value: event.name },
-          {
-            label: 'Effectif du poste',
-            value: needed === null ? String(onSameJob.length) : `${onSameJob.length}/${needed}`,
-          },
-          { label: 'Coéquipiers', value: teammates.length > 0 ? teammates.join(', ') : 'Aucun' },
-          {
-            label: 'Points de cette affectation',
-            value: mine.pointsDelta > 0 ? `+${mine.pointsDelta}` : String(mine.pointsDelta),
-          },
-        ];
-
-        return { poste, icon: iconFor(poste), meta, preferenceRank };
+          return {
+            poste: assignment.jobName,
+            icon: iconFor(assignment.jobName),
+            period: assignment.period,
+            periodLabel: assignment.periodLabel,
+            meta,
+            preferenceRank,
+          };
+        });
       }),
 
       /**

@@ -1,5 +1,6 @@
 import type { LucideIconInput } from '@lucide/angular';
 import type { BadgeKind } from '#shared/components/ui/badge/badge';
+import type { JobPeriod } from '#core/models/job-period.model';
 
 export interface KpiTile {
   readonly label: string;
@@ -55,9 +56,18 @@ export interface RoleMeta {
   readonly value: string;
 }
 
+/**
+ * One poste the member holds on the next soirée. A member may hold up to
+ * three of these — one per period (D1) — each with its OWN rank and its OWN
+ * delta; there is no single "the" assignment any more.
+ */
 export interface RoleAssignment {
   readonly poste: string;
   readonly icon: LucideIconInput;
+  /** Which moment of the soirée this poste belongs to. */
+  readonly period: JobPeriod;
+  /** « Préparation » / « Soirée » / « Nettoyage ». */
+  readonly periodLabel: string;
   readonly meta: readonly RoleMeta[];
   /**
    * Which of the member's own choices this poste was — 1 for their first

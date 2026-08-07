@@ -149,23 +149,59 @@
                 </div>
               } @else {
                 @let me = responseEvent()?.memberPresence;
+                @let locked = presenceLocked();
                 <div class="flex gap-1.5">
-                  <bfd-btn
-                    [kind]="me === Presence.PRESENT ? 'primary' : 'outline'"
-                    size="sm"
-                    [icon]="icCheck"
-                    (clicked)="respondPresent()"
+                  <!-- Raw buttons, not bfd-btn: bfd-btn does not forward
+                       id/aria-describedby past its host element onto the
+                       inner <button>, and the presence lock needs both on the
+                       real interactive element (same choice made in
+                       my-presences.html). -->
+                  <button
+                    type="button"
+                    id="presence-present"
+                    (click)="respondPresent()"
+                    [attr.aria-pressed]="me === Presence.PRESENT"
+                    [class]="
+                      'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ' +
+                      (me === Presence.PRESENT
+                        ? 'border-blue bg-blue text-white'
+                        : 'border-border bg-transparent text-text hover:bg-surface-2')
+                    "
                   >
+                    <svg [lucideIcon]="icCheck" [size]="14" aria-hidden="true"></svg>
                     Présent·e
-                  </bfd-btn>
-                  <bfd-btn
-                    [kind]="me === Presence.ABSENT ? 'danger' : 'outline'"
-                    size="sm"
-                    (clicked)="respondAbsent()"
+                  </button>
+                  <!-- Disabled, never hidden (D8): the member has to see that
+                       the option exists and read why it is out of reach. -->
+                  <button
+                    type="button"
+                    id="presence-absent"
+                    (click)="respondAbsent()"
+                    [disabled]="locked"
+                    [attr.aria-pressed]="me === Presence.ABSENT"
+                    [attr.aria-describedby]="locked ? presenceLockId() : null"
+                    [class]="
+                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ' +
+                      (locked ? 'cursor-not-allowed opacity-40 ' : 'cursor-pointer ') +
+                      (me === Presence.ABSENT
+                        ? 'border-red bg-red text-white'
+                        : 'border-border bg-transparent text-text hover:bg-surface-2')
+                    "
                   >
                     Absent·e
-                  </bfd-btn>
+                  </button>
                 </div>
+                @if (locked) {
+                  <!-- Why « Absent·e » is disabled, and how to get out of it.
+                       Referenced by the button's aria-describedby: a disabled
+                       control that does not say why is a dead end. -->
+                  <div
+                    [id]="presenceLockId()"
+                    class="mt-1 max-w-60 text-right text-[10.5px] text-muted"
+                  >
+                    {{ presenceLockExplanationText() }}
+                  </div>
+                }
               }
               <!-- Top-ranked job from /v1/preferences, "—" when never expressed. -->
               <div class="mt-1 text-[11px] text-muted">
@@ -472,63 +508,75 @@
           >
             {{ err }}
           </div>
-        } @else if (role.data(); as r) {
-          <div class="mt-3.5 rounded-md border border-border-s bg-surface-2 p-3.5">
-            <div class="flex items-center justify-between">
+        } @else if (role.data().length > 0) {
+          <!-- D1: up to three postes, one per period, before → during → after. -->
+          <div class="mt-3.5 flex flex-col gap-3">
+            @for (r of role.data(); track r.period) {
               <div>
-                <div class="text-[11px] text-muted">POSTE</div>
-                <div class="mt-0.5 text-[18px] font-semibold -tracking-[0.3px] text-text">
-                  {{ r.poste }}
+                <div class="rounded-md border border-border-s bg-surface-2 p-3.5">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[11px] uppercase text-muted">{{ r.periodLabel }}</div>
+                      <div
+                        data-testid="role-poste-name"
+                        class="mt-0.5 text-[18px] font-semibold -tracking-[0.3px] text-text"
+                      >
+                        {{ r.poste }}
+                      </div>
+                    </div>
+                    <div
+                      class="inline-flex h-9.5 w-9.5 items-center justify-center rounded-lg bg-blue-soft text-blue"
+                    >
+                      <svg [lucideIcon]="r.icon" [size]="18" aria-hidden="true"></svg>
+                    </div>
+                  </div>
+                  <div class="mt-3.5 flex flex-col gap-1.5 text-[12px]">
+                    @for (m of r.meta; track m.label) {
+                      <div class="flex justify-between">
+                        <span class="text-muted">{{ m.label }}</span>
+                        <!-- The "Crédit de priorité" value is often negative
+                             on purpose (D5) — never conditioned away. -->
+                        <span class="text-text">{{ m.value }}</span>
+                      </div>
+                    }
+                  </div>
                 </div>
+                <!--
+                  The mockup showed an invented "algo score /100". What is real is
+                  which of the member's own choices this poste was.
+                -->
+                @if (r.preferenceRank; as rank) {
+                  <div
+                    class="mt-2 flex items-start gap-2 rounded-md border border-blue/30 bg-blue-soft p-2.5 text-[11.5px] text-blue"
+                  >
+                    <svg [lucideIcon]="icZap" [size]="14" class="mt-px" aria-hidden="true"></svg>
+                    <span
+                      >Vous avez obtenu votre <strong>{{ rankLabel(rank) }}</strong
+                      >.</span
+                    >
+                  </div>
+                } @else {
+                  <div
+                    class="mt-2 flex items-start gap-2 rounded-md border border-dashed border-border p-2.5 text-[11.5px] text-text-2"
+                  >
+                    <svg
+                      [lucideIcon]="icZap"
+                      [size]="14"
+                      class="mt-px text-warn"
+                      aria-hidden="true"
+                    ></svg>
+                    <span>
+                      Ce poste ne figure pas dans votre classement.
+                      <a [routerLink]="preferencesLink" class="text-blue underline">
+                        Classez vos postes
+                      </a>
+                      pour peser sur la prochaine affectation.
+                    </span>
+                  </div>
+                }
               </div>
-              <div
-                class="inline-flex h-9.5 w-9.5 items-center justify-center rounded-lg bg-blue-soft text-blue"
-              >
-                <svg [lucideIcon]="r.icon" [size]="18" aria-hidden="true"></svg>
-              </div>
-            </div>
-            <div class="mt-3.5 flex flex-col gap-1.5 text-[12px]">
-              @for (m of r.meta; track m.label) {
-                <div class="flex justify-between">
-                  <span class="text-muted">{{ m.label }}</span>
-                  <span class="text-text">{{ m.value }}</span>
-                </div>
-              }
-            </div>
+            }
           </div>
-          <!--
-            The mockup showed an invented "algo score /100". What is real is
-            which of the member's own choices this poste was.
-          -->
-          @if (r.preferenceRank; as rank) {
-            <div
-              class="mt-3 flex items-start gap-2 rounded-md border border-blue/30 bg-blue-soft p-2.5 text-[11.5px] text-blue"
-            >
-              <svg [lucideIcon]="icZap" [size]="14" class="mt-px" aria-hidden="true"></svg>
-              <span
-                >Vous avez obtenu votre <strong>{{ rankLabel(rank) }}</strong
-                >.</span
-              >
-            </div>
-          } @else {
-            <div
-              class="mt-3 flex items-start gap-2 rounded-md border border-dashed border-border p-2.5 text-[11.5px] text-text-2"
-            >
-              <svg
-                [lucideIcon]="icZap"
-                [size]="14"
-                class="mt-px text-warn"
-                aria-hidden="true"
-              ></svg>
-              <span>
-                Ce poste ne figure pas dans votre classement.
-                <a [routerLink]="preferencesLink" class="text-blue underline">
-                  Classez vos postes
-                </a>
-                pour peser sur la prochaine affectation.
-              </span>
-            </div>
-          }
         } @else {
           <div
             class="mt-3.5 rounded-md border border-dashed border-border-s bg-surface-2 px-3.5 py-4 text-center text-[12px] text-muted"

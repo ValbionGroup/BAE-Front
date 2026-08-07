@@ -74,13 +74,13 @@ describe(RoleAssignmentStore.name, () => {
     await loadCoordination();
 
     expect(store.loading()).toBe(false);
-    expect(store.data()).toBeNull();
+    expect(store.data()).toEqual([]);
   });
 
   it('builds the panel from assignments, jobs, event-jobs and members', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse' }],
+      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
       eventJobs: [{ eventId: 7, jobId: 1, count: 3 }],
       assignments: [
         { memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 6 },
@@ -93,12 +93,14 @@ describe(RoleAssignmentStore.name, () => {
     });
 
     const data = store.data();
-    expect(data?.poste).toBe('Caisse');
-    expect(data?.meta).toEqual([
+    expect(data).toHaveLength(1);
+    expect(data[0].poste).toBe('Caisse');
+    expect(data[0].period).toBe('during');
+    expect(data[0].meta).toEqual([
       { label: 'Soirée', value: 'Soirée test' },
       { label: 'Effectif du poste', value: '2/3' },
       { label: 'Coéquipiers', value: 'Tommy K.' },
-      { label: 'Points de cette affectation', value: '+6' },
+      { label: 'Crédit de priorité', value: '+6' },
     ]);
   });
 
@@ -110,8 +112,8 @@ describe(RoleAssignmentStore.name, () => {
     await loadEvents();
     await loadCoordination({
       jobs: [
-        { id: 1, name: 'Caisse' },
-        { id: 2, name: 'Bar' },
+        { id: 1, name: 'Caisse', type: 'during' },
+        { id: 2, name: 'Bar', type: 'during' },
       ],
       assignments: [{ memberId: 1, eventId: 7, jobId: 2, locked: false, pointsDelta: 8 }],
       preferences: [
@@ -120,31 +122,90 @@ describe(RoleAssignmentStore.name, () => {
       ],
     });
 
-    expect(store.data()?.preferenceRank).toBe(2);
+    expect(store.data()[0].preferenceRank).toBe(2);
   });
 
   it('reports a null rank for a poste the member never ranked', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse' }],
+      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
       assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 0 }],
       preferences: [],
     });
 
-    expect(store.data()?.preferenceRank).toBeNull();
+    expect(store.data()[0].preferenceRank).toBeNull();
   });
 
-  it('exposes the points this assignment credited', async () => {
+  it('exposes the priority credit this assignment moved', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse' }],
+      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
       assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 10 }],
     });
 
-    expect(store.data()?.meta).toContainEqual({
-      label: 'Points de cette affectation',
+    expect(store.data()[0].meta).toContainEqual({
+      label: 'Crédit de priorité',
       value: '+10',
     });
+  });
+
+  /**
+   * D5: a good rank COSTS priority credit — the "Crédit de priorité" line must
+   * show the negative as-is, never hide it behind a `·` or a conditional
+   * branch. A trap this lot hit twice already (coordination, mes présences).
+   */
+  it('renders a negative credit rather than hiding it', async () => {
+    await loadEvents();
+    await loadCoordination({
+      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
+      assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: -4 }],
+    });
+
+    expect(store.data()[0].meta).toContainEqual({
+      label: 'Crédit de priorité',
+      value: '-4',
+    });
+  });
+
+  /**
+   * D1: a member may hold up to three postes on the same soirée, one per
+   * period. The panel must show every one, ordered before → during → after —
+   * regardless of the order the API returned the assignment rows in — each
+   * with its OWN rank and its OWN delta.
+   */
+  it('shows every poste held on the soirée, ordered before → during → after', async () => {
+    await loadEvents();
+    await loadCoordination({
+      jobs: [
+        { id: 1, name: 'Installation tables', type: 'before' },
+        { id: 2, name: 'Service', type: 'during' },
+        { id: 3, name: 'Vaisselle', type: 'after' },
+      ],
+      // Deliberately out of chronological order in the API response.
+      assignments: [
+        { memberId: 1, eventId: 7, jobId: 3, locked: false, pointsDelta: 6 },
+        { memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 4 },
+        { memberId: 1, eventId: 7, jobId: 2, locked: false, pointsDelta: -4 },
+      ],
+      preferences: [
+        { memberId: 1, jobId: 2, preferenceRank: 1 },
+        // job 1 and job 3 are deliberately left unranked.
+      ],
+    });
+
+    const data = store.data();
+    expect(data.map((r) => r.period)).toEqual(['before', 'during', 'after']);
+    expect(data.map((r) => r.poste)).toEqual([
+      'Installation tables',
+      'Service',
+      'Vaisselle',
+    ]);
+    expect(data.map((r) => r.preferenceRank)).toEqual([null, 1, null]);
+    expect(data.map((r) => r.meta.find((m) => m.label === 'Crédit de priorité')?.value)).toEqual([
+      '+4',
+      '-4',
+      '+6',
+    ]);
   });
 
   it('reads the preferred job from /preferences, null when never expressed', async () => {
@@ -170,6 +231,6 @@ describe(RoleAssignmentStore.name, () => {
     await loaded;
 
     expect(store.error()).toBeTruthy();
-    expect(store.data()).toBeNull();
+    expect(store.data()).toEqual([]);
   });
 });
