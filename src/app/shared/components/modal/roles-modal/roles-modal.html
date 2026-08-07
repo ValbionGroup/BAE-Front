@@ -57,11 +57,21 @@
             }
           </select>
           <span class="text-[12px] text-text-2">{{ jobPeriodLabel(role.jobId) }}</span>
+          <!-- The "Besoin" column header is a plain <span>, associated with nothing:
+               without this the field announced as a bare "nombre, 1", and with
+               several rows nothing said which poste it counted for. -->
           <input
             type="number"
             min="1"
             [value]="role.requiredCount"
             [class]="inputClass(countInvalid)"
+            [attr.aria-label]="
+              'Nombre de personnes nécessaires au poste ' +
+              jobName(role.jobId) +
+              ' (' +
+              jobPeriodLabel(role.jobId) +
+              ')'
+            "
             (input)="onCountInput($index, $event)"
           />
           <button

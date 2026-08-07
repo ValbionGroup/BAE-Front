@@ -323,13 +323,22 @@ export function matchingErrorMessage(error: unknown): string {
  * those must NOT read as a success, so the tone degrades to `info`/`warning`
  * and the message names the reason instead of claiming work happened.
  *
- * A member left out is no longer a matter of taste. Preferences are implicitly
- * complete (D2: every unranked poste is ex æquo last), so the engine can always
- * place somebody as long as a seat exists. `unmatchedMemberIds` therefore means
- * ONE thing — there was no seat left — and the wording says so and points at
- * the fix: more postes, or bigger effectifs.
+ * A member left out is no longer a matter of taste: preferences are implicitly
+ * complete (D2, every unranked poste is ex æquo last), so the rankings never
+ * keep anybody out. But the engine ALSO filters candidates through
+ * `job_eligible_members`, so "left out" does not reduce to "no seat left"
+ * either: a restricted poste can sit half empty next to somebody who is simply
+ * not allowed on it.
+ *
+ * The wording therefore states only what is always true — no free seat was
+ * OPEN to them — and `hasRestrictedJobs` decides whether the remedy mentions
+ * eligibility. Telling somebody to add postes when the real blocker is an
+ * eligibility list sends them fixing the wrong thing.
  */
-export function describeMatching(summary: ApiMatchingSummary): MatchingOutcome {
+export function describeMatching(
+  summary: ApiMatchingSummary,
+  hasRestrictedJobs = false,
+): MatchingOutcome {
   const matched = summary.matched.length;
   const unmatched = summary.unmatchedMemberIds.length;
   const locked = summary.locked.length;
@@ -350,14 +359,18 @@ export function describeMatching(summary: ApiMatchingSummary): MatchingOutcome {
     'membre disponible est resté sans poste',
     'membres disponibles sont restés sans poste',
   );
-  const fix = 'Ajoutez des postes ou augmentez les effectifs demandés, puis relancez.';
+  const noSeatOpen =
+    unmatched > 1
+      ? 'aucune place libre ne leur était ouverte'
+      : 'aucune place libre ne lui était ouverte';
+  const fix = hasRestrictedJobs
+    ? 'Ajoutez des postes, augmentez les effectifs demandés, ou vérifiez les éligibilités : ' +
+      'un poste à éligibilité restreinte peut rester vide faute de personne autorisée.'
+    : 'Ajoutez des postes ou augmentez les effectifs demandés, puis relancez.';
 
   if (matched === 0) {
     if (unmatched > 0) {
-      const reason =
-        locked > 0
-          ? `il ne reste aucune place libre — ${lockedPart}`
-          : 'il ne reste aucune place libre';
+      const reason = locked > 0 ? `${noSeatOpen} — ${lockedPart}` : noSeatOpen;
       return {
         tone: 'warning',
         title: 'Aucune affectation générée',
@@ -385,8 +398,11 @@ export function describeMatching(summary: ApiMatchingSummary): MatchingOutcome {
   if (unmatched > 0) {
     return {
       tone: 'warning',
-      title: 'Postes en nombre insuffisant',
-      message: `${matchedPart} (${breakdown})${lockedSuffix}. ${shortagePart} : toutes les places sont prises. ${fix}`,
+      // Names the fact, not a cause: the title used to read "Postes en nombre
+      // insuffisant", which is one of two possible explanations, not the one
+      // the summary establishes.
+      title: 'Des membres sont restés sans poste',
+      message: `${matchedPart} (${breakdown})${lockedSuffix}. ${shortagePart} : ${noSeatOpen}. ${fix}`,
     };
   }
 
@@ -521,6 +537,15 @@ export class Coordination implements OnInit {
    * action is disabled with its reason instead of failing.
    */
   protected readonly isSettled = computed(() => this.selectedEventData()?.settled ?? false);
+
+  /**
+   * At least one poste of the soirée has `job_eligible_members` rows. When it
+   * does, a member can stay unplaced with a seat still free — on a poste they
+   * are not allowed on — so the run's wording must offer that explanation too.
+   */
+  protected readonly hasRestrictedJobs = computed(
+    () => this.selectedEventData()?.roles.some((role) => role.restricted) ?? false,
+  );
 
   /**
    * Locked vs replaceable rows, moment by moment. A global count hides which
@@ -879,7 +904,9 @@ export class Coordination implements OnInit {
         if (!result.summary) return;
         this.algoRunAt.set(new Date());
 
-        const outcome = describeMatching(result.summary);
+        // Read AFTER `applyLoadedData`, so the flag reflects the soirée the run
+        // actually operated on.
+        const outcome = describeMatching(result.summary, this.hasRestrictedJobs());
         this.lastOutcome.set(outcome);
         this.toast.show({
           type: outcome.tone,

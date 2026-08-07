@@ -148,6 +148,20 @@ describe(RolesModal.name, () => {
     expect(internals.jobPeriodLabel(99)).toBe('Moment inconnu');
   });
 
+  /**
+   * The `<span>Besoin</span>` column header is associated with nothing, so the
+   * number input announced as a bare "nombre, 1" — and with three rows on a
+   * soirée, nothing said which poste it counted for.
+   */
+  it('gives the effectif input an accessible name naming its poste', async () => {
+    await setup([{ jobId: 4, requiredCount: 2 }]);
+
+    const input = fixture.nativeElement.querySelector('input[type="number"]') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).toBe(
+      'Nombre de personnes nécessaires au poste Rangement (Nettoyage)',
+    );
+  });
+
   it('adds the first still-unused job rather than a blank row', async () => {
     await setup([{ jobId: 1, requiredCount: 1 }]);
     internals.addRole();

@@ -40,6 +40,7 @@ interface CoordinationInternals {
     isFull: boolean;
   }[];
   lockBreakdown(): { period: JobPeriod; label: string; locked: number; replaceable: number }[];
+  availableMembersFor(period: JobPeriod): { id: number }[];
   membres(): {
     id: number;
     hasAssignment: boolean;
@@ -146,17 +147,44 @@ describe('describeMatching', () => {
 
   /**
    * Preferences being implicitly complete (D2), a member left out no longer
-   * means "no job matched their taste" — it means there was no seat left.
+   * means "no job matched their taste".
    */
-  it('blames a shortage of postes, not the rankings, when members stay unplaced', () => {
+  it('stops blaming the rankings when members stay unplaced', () => {
     const outcome = describeMatching(
       summary({ matched: [match(1, 1, 'during')], unmatchedMemberIds: [2, 3] }),
     );
     expect(outcome.tone).toBe('warning');
-    expect(outcome.title).toBe('Postes en nombre insuffisant');
+    expect(outcome.title).toBe('Des membres sont restés sans poste');
     expect(outcome.message).toContain('2 membres disponibles sont restés sans poste');
     expect(outcome.message).toContain('Ajoutez des postes');
     expect(outcome.message).not.toContain('préférences');
+  });
+
+  /**
+   * `runMatching` also filters candidates through `job_eligible_members`, so a
+   * member can stay unplaced while a seat IS free — on a poste they are not
+   * allowed on. Affirming "toutes les places sont prises" would send the user
+   * adding postes, which changes nothing.
+   */
+  it('never affirms that every seat is taken', () => {
+    const outcome = describeMatching(
+      summary({ matched: [match(1, 1, 'during')], unmatchedMemberIds: [2] }),
+    );
+    expect(outcome.message).not.toContain('toutes les places sont prises');
+    expect(outcome.message).toContain('aucune place libre ne lui était ouverte');
+  });
+
+  it('points at the eligibility rules too when the soirée has a restricted poste', () => {
+    const restricted = describeMatching(
+      summary({ matched: [match(1, 1, 'during')], unmatchedMemberIds: [2] }),
+      true,
+    );
+    expect(restricted.message).toContain('éligibilit');
+
+    const open = describeMatching(
+      summary({ matched: [match(1, 1, 'during')], unmatchedMemberIds: [2] }),
+    );
+    expect(open.message).not.toContain('éligibilit');
   });
 
   it('never claims success when nothing was matched and members were left out', () => {
@@ -164,6 +192,12 @@ describe('describeMatching', () => {
     expect(outcome.tone).toBe('warning');
     expect(outcome.title).toBe('Aucune affectation générée');
     expect(outcome.message).not.toContain('préférences');
+    expect(outcome.message).toContain('aucune place libre ne leur était ouverte');
+  });
+
+  it('mentions the eligibility rules on an empty run too', () => {
+    const outcome = describeMatching(summary({ unmatchedMemberIds: [1, 2] }), true);
+    expect(outcome.message).toContain('éligibilit');
   });
 
   it('explains that every seat is already locked', () => {
@@ -366,6 +400,11 @@ describe(Coordination.name, () => {
         .find((g) => g.period === 'after')!;
       expect(after.postes).toEqual([]);
       expect(after.neededCount).toBe(0);
+      // The one that matters: 0/0 seats left to fill is NOT "complet". A green
+      // badge on a nettoyage where nobody is even expected is exactly the lie
+      // this whole task exists to prevent.
+      expect(after.isFull).toBe(false);
+      expect(after.toFill).toBe(0);
     });
 
     /** The point of a per-period rate: a staffed soirée must not read as
@@ -403,6 +442,37 @@ describe(Coordination.name, () => {
         { period: 'before', jobId: 3, jobName: 'Installation', lock: false },
         { period: 'during', jobId: 1, jobName: 'Barman', lock: true },
       ]);
+    });
+
+    /**
+     * The constraint is one poste per member PER MOMENT (D1). Member 1 holds
+     * Installation (`before`) and Barman (`during`), member 2 holds Sécurité
+     * (`during`) — so the nettoyage still has both of them to offer, and the
+     * soirée has nobody left.
+     *
+     * A single event-wide "already assigned" set would return [] on `after` and
+     * make manual staffing of a second moment impossible.
+     */
+    it('offers a member already staffed elsewhere on a moment they are still free on', async () => {
+      await setup();
+      const ids = (period: JobPeriod) =>
+        internals(component)
+          .availableMembersFor(period)
+          .map((m) => m.id);
+
+      expect(ids('after')).toEqual([1, 2]);
+      expect(ids('during')).toEqual([]);
+      expect(ids('before')).toEqual([2]);
+    });
+
+    it('never offers somebody who already holds a poste on that same moment', async () => {
+      await setup();
+      // Member 1 is on Installation, the only `before` poste.
+      expect(
+        internals(component)
+          .availableMembersFor('before')
+          .map((m) => m.id),
+      ).not.toContain(1);
     });
 
     it('leaves a member with no poste at all with an empty list', async () => {
