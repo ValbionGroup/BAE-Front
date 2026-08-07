@@ -64,9 +64,8 @@ export interface ApiTeamLogUser {
 
 /**
  * `meta` is a free-form JSON column. In practice the request logger stores the HTTP
- * status, the duration and a full copy of the response body — which makes `GET /logs`
- * a heavy payload (~675 KB for ~500 rows). `response` is deliberately typed `unknown`:
- * nothing in this page reads it.
+ * status, the duration and a copy of the response body. `response` is deliberately
+ * typed `unknown`: nothing in this page reads it.
  */
 export interface ApiTeamLogMeta {
   status?: number;
@@ -105,7 +104,12 @@ export class TeamService {
     return this.http.get<ApiTeamPermission[]>(`${this.baseUrl}/permissions`);
   }
 
-  /** No pagination is exposed by LogsController.index: this returns the whole table. */
+  /**
+   * `GET /logs` paginates server-side (50 rows per page by default, 200 max) and this
+   * call sends neither `page` nor `limit`, so it silently gets the default first page —
+   * the most recent entries, newest first — not the whole table. The Équipe page's
+   * audit panel only ever shows that first page.
+   */
   getLogs(): Observable<ApiTeamLog[]> {
     return this.http.get<ApiTeamLog[]>(`${this.baseUrl}/logs`);
   }
