@@ -59,6 +59,7 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
 import { ToastService } from '#shared/components/toast/toast.service';
+import { formatPointsDelta as sharedFormatPointsDelta } from '#shared/utils/points-delta';
 
 interface Member {
   id: number;
@@ -305,10 +306,7 @@ export function matchingErrorMessage(error: unknown): string {
   const body = error instanceof HttpErrorResponse ? error.error : null;
   if (isApiError(body)) {
     if (body.code === 'E_EVENT_ALREADY_SETTLED') {
-      return (
-        'Les points de cette soirée ont déjà été consolidés : l’affectation automatique ne ' +
-        'peut plus être relancée. Les affectations restent modifiables à la main.'
-      );
+      return "Points consolidés : l'affectation automatique est indisponible.";
     }
     return body.message;
   }
@@ -364,9 +362,8 @@ export function describeMatching(
       ? 'aucune place libre ne leur était ouverte'
       : 'aucune place libre ne lui était ouverte';
   const fix = hasRestrictedJobs
-    ? 'Ajoutez des postes, augmentez les effectifs demandés, ou vérifiez les éligibilités : ' +
-      'un poste à éligibilité restreinte peut rester vide faute de personne autorisée.'
-    : 'Ajoutez des postes ou augmentez les effectifs demandés, puis relancez.';
+    ? 'Un poste à éligibilité restreinte peut rester vide faute de personne autorisée.'
+    : 'Ajoutez des postes ou augmentez les effectifs.';
 
   if (matched === 0) {
     if (unmatched > 0) {
@@ -387,8 +384,7 @@ export function describeMatching(
     return {
       tone: 'info',
       title: 'Rien à affecter',
-      message:
-        'Aucun membre disponible à placer sur cette soirée. Vérifiez les réponses de disponibilité avant de relancer.',
+      message: 'Aucun membre disponible sur cette soirée.',
     };
   }
 
@@ -840,9 +836,7 @@ export class Coordination implements OnInit {
       this.toast.show({
         type: 'info',
         title: 'Soirée déjà clôturée',
-        message:
-          `Les points de « ${eventData.event.name} » ont été consolidés : l'affectation ` +
-          'automatique ne peut plus être relancée. Les affectations restent modifiables à la main.',
+        message: `Points de « ${eventData.event.name} » consolidés : affectation automatique indisponible.`,
       });
       return;
     }
@@ -920,11 +914,27 @@ export class Coordination implements OnInit {
       });
   }
 
+  /**
+   * No `POST` backs this button yet — the panel is ahead of the backend on
+   * purpose (cf. project convention). The toast must not claim otherwise: it
+   * used to announce a success with no write behind it, right under a banner
+   * saying the soirée's points are already consolidated. The button is also
+   * disabled once the soirée is settled (template); this early return covers
+   * the keyboard path the same way `confirmRunMatching` does.
+   */
   protected validateAssignments(): void {
+    if (this.isSettled()) {
+      this.toast.show({
+        type: 'info',
+        title: 'Soirée déjà clôturée',
+        message: 'Rien à valider : les affectations sont déjà consolidées.',
+      });
+      return;
+    }
     this.toast.show({
-      type: 'success',
-      title: 'Affectations validées',
-      message: 'Les affectations ont bien été enregistrées.',
+      type: 'info',
+      title: 'Validation indisponible',
+      message: "Cette action n'est pas encore reliée au serveur.",
     });
   }
 
@@ -953,11 +963,11 @@ export class Coordination implements OnInit {
   /**
    * The soirée's point movement, sign included. `clampPoints` is gone (D6) and
    * a member served on their first choice legitimately loses credit, so a
-   * negative value is normal information — not something to hide behind a dot.
+   * negative value is normal information — never hidden, and formatted the
+   * same way as mes présences and l'accueil.
    */
   protected formatPointsDelta(delta: number): string {
-    if (delta === 0) return '·';
-    return delta > 0 ? `+${delta}` : `${delta}`;
+    return sharedFormatPointsDelta(delta);
   }
 
   protected pointsDeltaClass(delta: number): string {
@@ -1026,6 +1036,12 @@ export class Coordination implements OnInit {
     if (this.lockPending().has(key)) return;
 
     const next = !this.isLocked(jobId, memberId);
+    // Captured before the optimistic patch zeroes it out, so a failed write can
+    // put the real credit back instead of leaving it at `0` until a full reload.
+    const previousPointsDelta =
+      this.selectedEventData()
+        ?.roles.find((r) => r.id === jobId)
+        ?.assigned.find((a) => a.memberId === memberId)?.pointsDelta ?? 0;
     this.setLockPending(key, true);
     // `setAssignmentLock` recreates the row, which resets `points_delta` to 0
     // server-side — mirror that instead of showing a value that no longer exists.
@@ -1037,8 +1053,14 @@ export class Coordination implements OnInit {
       next: () => this.setLockPending(key, false),
       error: () => {
         this.setLockPending(key, false);
+        // The write never reached the server: the row's real credit is still
+        // whatever it was before, not the `0` the optimistic patch guessed at.
         this.patchRole(eventId, jobId, (assigned) =>
-          assigned.map((a) => (a.memberId === memberId ? { ...a, locked: !next } : a)),
+          assigned.map((a) =>
+            a.memberId === memberId
+              ? { ...a, locked: !next, pointsDelta: previousPointsDelta }
+              : a,
+          ),
         );
         this.toast.show({
           type: 'error',

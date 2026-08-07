@@ -18,8 +18,20 @@
       {{ algoRunning() ? 'Affectation en cours…' : "Lancer l'affectation automatique" }}
     }
   </bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="validateAssignments()">
-    Valider l'affectation
+  <!-- Disabled, never hidden, same convention as the automatic-assignment
+       button above: a vanished action reads as a bug. -->
+  <bfd-btn
+    kind="primary"
+    size="md"
+    [icon]="icCheck"
+    [disabled]="isSettled()"
+    (clicked)="validateAssignments()"
+  >
+    @if (isSettled()) {
+      Affectation clôturée
+    } @else {
+      Valider l'affectation
+    }
   </bfd-btn>
 </ng-template>
 
@@ -33,6 +45,17 @@
     }
   </div>
 
+  <!-- Surfaces `loadError`: the last load/write failure, otherwise silent
+       (initial fetch, assign, remove, role edits). -->
+  @if (loadError(); as err) {
+    <div
+      role="alert"
+      class="mb-4.5 flex items-start gap-3.5 rounded-md border border-danger bg-danger-soft px-4.5 py-3.5"
+    >
+      <div class="flex-1 text-[12.5px] text-danger">{{ err }}</div>
+    </div>
+  }
+
   <!-- Why the automatic assignment is unavailable. Stated, not implied by a
        greyed-out button the user cannot focus to read a tooltip on. -->
   @if (isSettled()) {
@@ -45,9 +68,7 @@
       <div class="flex-1">
         <div class="text-[13.5px] font-semibold text-text">Soirée clôturée</div>
         <p class="mt-0.5 text-[12px] text-text-2">
-          Les points de cette soirée ont été consolidés sur les scores des membres : l'affectation
-          automatique ne peut plus être relancée. Les affectations restent modifiables à la main,
-          poste par poste.
+          Points consolidés : l'affectation automatique est indisponible.
         </p>
       </div>
     </div>
@@ -293,6 +314,7 @@
           <bfd-avatar [name]="m.name" [size]="22" />
           @if (m.isPresent) {
             <span
+              role="img"
               class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-ok ring-1 ring-surface"
               aria-label="Présent"
             ></span>

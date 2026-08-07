@@ -15,6 +15,7 @@ import type { ApiMember } from '#core/services/coordination/coordination-service
 import { EventsStore } from '#core/store/events.store';
 import { MemberAssignmentsStore } from '#core/store/member-assignments.store';
 import { selectMember } from '#core/store/auth/auth.selector';
+import { formatPointsDelta } from '#shared/utils/points-delta';
 import { RoleAssignment, RoleMeta } from './models';
 
 /**
@@ -134,10 +135,7 @@ export const RoleAssignmentStore = signalStore(
             { label: 'Coéquipiers', value: teammates.length > 0 ? teammates.join(', ') : 'Aucun' },
             {
               label: 'Crédit de priorité',
-              value:
-                assignment.pointsDelta > 0
-                  ? `+${assignment.pointsDelta}`
-                  : String(assignment.pointsDelta),
+              value: formatPointsDelta(assignment.pointsDelta),
             },
           ];
 

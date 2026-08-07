@@ -100,13 +100,13 @@ describe('presenceErrorView', () => {
 });
 
 describe('presenceLockExplanation', () => {
-  it('names the single poste held and the way out', () => {
+  it('names the single poste held and the way out, short', () => {
     const text = presenceLockExplanation([poste('during', 'Service')]);
     expect(text).toContain('Service en soirée');
-    expect(text).toContain('absent·e');
     // The marche à suivre is the point: a disabled button that does not say how
     // to get unblocked is a dead end.
-    expect(text).toMatch(/bureau|coordinateur/);
+    expect(text).toMatch(/bureau/);
+    expect(text).toContain('désengager');
   });
 
   it('names every poste when several periods are held', () => {

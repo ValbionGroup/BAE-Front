@@ -24,6 +24,8 @@ import type { ModalAction, MessageModalConfig } from '#shared/components/modal/m
 interface CoordinationInternals {
   confirmRunMatching(): void;
   toggleLock(memberId: number, jobId: number): void;
+  assignMember(memberId: number, roleId: number): void;
+  validateAssignments(): void;
   lockedCount(): number;
   replaceableCount(): number;
   isSettled(): boolean;
@@ -317,7 +319,10 @@ describe(Coordination.name, () => {
   let runMatching: ReturnType<typeof vi.fn>;
   let setAssignmentLock: ReturnType<typeof vi.fn>;
 
-  async function setup(data: CoordinationApiData = baseData()): Promise<void> {
+  async function setup(
+    data: CoordinationApiData = baseData(),
+    serviceOverrides: Record<string, unknown> = {},
+  ): Promise<void> {
     runMatching = vi.fn(() => of(summary()));
     setAssignmentLock = vi.fn(() => of(null));
 
@@ -334,6 +339,7 @@ describe(Coordination.name, () => {
       getJobEligibleMembers: () => of([{ jobId: 2, memberId: 2 }]),
       runMatching,
       setAssignmentLock,
+      ...serviceOverrides,
     };
 
     await TestBed.configureTestingModule({
@@ -486,6 +492,19 @@ describe(Coordination.name, () => {
     });
   });
 
+  describe('error banner', () => {
+    /** `loadError` used to be set on every write failure and rendered
+     *  nowhere — a coordinator got no feedback at all beyond a silent no-op. */
+    it('surfaces an assignment failure instead of staying silent', async () => {
+      await setup(baseData(), { assign: () => throwError(() => new Error('boom')) });
+
+      internals(component).assignMember(2, 3);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain("Erreur lors de l'affectation");
+    });
+  });
+
   describe('lock', () => {
     it('counts locked and replaceable assignments from server state', async () => {
       await setup();
@@ -547,6 +566,24 @@ describe(Coordination.name, () => {
 
       expect(internals(component).lockedCount()).toBe(1);
       expect(toast.toasts().at(-1)!.title).toBe('Verrouillage impossible');
+    });
+
+    /**
+     * The optimistic patch zeroes `pointsDelta` too (mirroring what
+     * `setAssignmentLock` does server-side), so a failed write has to restore
+     * it along with `locked` — otherwise a real credit (member 2 holds 6 on
+     * job 2, cf. `baseData`) reads as `0` until the next full reload.
+     */
+    it('restores the points delta, not just the lock flag, when the write fails', async () => {
+      await setup();
+      setAssignmentLock.mockReturnValue(throwError(() => new Error('boom')));
+
+      internals(component).toggleLock(2, 2);
+
+      const poste = internals(component)
+        .postes()
+        .find((p) => p.id === 2)!;
+      expect(poste.assigned.find((a) => a.id === 2)?.pointsDelta).toBe(6);
     });
 
     it('unlocks an already locked assignment', async () => {
@@ -702,6 +739,27 @@ describe(Coordination.name, () => {
       expect(last.type).toBe('error');
       expect(last.message).toContain('consolidés');
       expect(internals(component).algoRunning()).toBe(false);
+    });
+
+    /**
+     * `validateAssignments()` has no endpoint behind it yet (the panel is
+     * ahead of the backend, on purpose). It must never claim a write
+     * happened — least of all right under the "Soirée clôturée" banner.
+     */
+    it('never tells the user a validation succeeded: no write exists', async () => {
+      await setup();
+      internals(component).validateAssignments();
+
+      expect(toast.toasts().at(-1)!.type).not.toBe('success');
+    });
+
+    it('names the soirée as already settled instead of a fake success', async () => {
+      await setup(settledData());
+      internals(component).validateAssignments();
+
+      const last = toast.toasts().at(-1)!;
+      expect(last.type).not.toBe('success');
+      expect(last.title).toBe('Soirée déjà clôturée');
     });
   });
 });

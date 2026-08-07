@@ -9,7 +9,6 @@ import {
   untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   LucideArrowRight,
   LucideCalendar,
@@ -47,61 +46,18 @@ import {
   MemberAssignmentsStore,
   type MemberAssignment,
 } from '#core/store/member-assignments.store';
-import { isApiError } from '#core/models/api-response.model';
 import { EventDetail, Presence } from '#core/models/event.model';
+import {
+  presenceErrorView,
+  presenceLockExplanation,
+  type PresenceErrorView,
+} from '#shared/utils/presence-lock';
 import { startOfDay } from 'date-fns';
 
-/** Toast wording for a refused presence write. Mirrors `my-presences.ts`'s
- *  `presenceErrorView` — the two screens face the same 409, worded the same
- *  way, so they must read as the same feature. */
-export interface PresenceErrorView {
-  readonly title: string;
-  readonly message: string;
-}
-
-/**
- * Turn a failed `POST /events/:id/response` into wording the member can act on.
- *
- * `HttpErrorResponse.error` is already unwrapped to `{ code, message }` by
- * `apiEnvelopeInterceptor`. The API's own sentence is kept verbatim — including
- * for `E_PRESENCE_LOCKED_BY_ASSIGNMENT`, where it is the only text that states
- * the rule the server actually enforces.
- */
-export function presenceErrorView(error: unknown): PresenceErrorView {
-  const body = error instanceof HttpErrorResponse ? error.error : null;
-  if (isApiError(body)) {
-    return {
-      title:
-        body.code === 'E_PRESENCE_LOCKED_BY_ASSIGNMENT'
-          ? 'Désengagement impossible'
-          : 'Réponse non enregistrée',
-      message: body.message,
-    };
-  }
-  return {
-    title: 'Réponse non enregistrée',
-    message: "Votre réponse n'a pas pu être enregistrée. Réessayez dans un instant.",
-  };
-}
-
-/**
- * Why « Absent·e » is unavailable, and how to get out of it.
- *
- * The lock covers the whole soirée (D9) — being released from the nettoyage
- * alone does not unlock it — so the sentence names every poste held, not just
- * the first one.
- */
-export function presenceLockExplanation(postes: readonly MemberAssignment[]): string {
-  const named = postes.map((p) => `${p.jobName} en ${p.periodLabel.toLowerCase()}`);
-  const list =
-    named.length > 1 ? `${named.slice(0, -1).join(', ')} et ${named.at(-1)}` : (named[0] ?? '');
-  const held = named.length > 1 ? `les postes ${list}` : `le poste ${list}`;
-  return (
-    `Vous tenez ${held} sur cette soirée : vous ne pouvez plus vous déclarer absent·e. ` +
-    'Demandez au bureau ou au coordinateur de vous retirer de votre poste ; ' +
-    'vous pourrez alors vous désengager. Vous déclarer présent·e reste possible.'
-  );
-}
+// Re-exported: this screen's spec imports the two helpers from here, and so
+// does `my-presences.ts` — both pages just consume the shared, single-source
+// wording instead of each keeping its own copy.
+export { presenceErrorView, presenceLockExplanation, type PresenceErrorView };
 
 /** Number of past soirées charted behind each label of the period selector. */
 const PERIOD_LIMITS: readonly number[] = [1, 3, 6, 12];

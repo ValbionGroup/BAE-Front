@@ -22,7 +22,6 @@ import {
   LucideX,
 } from '@lucide/angular';
 import { Store } from '@ngrx/store';
-import { HttpErrorResponse } from '@angular/common/http';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
@@ -35,9 +34,19 @@ import {
   MemberAssignmentsStore,
   type MemberAssignment,
 } from '#core/store/member-assignments.store';
-import { isApiError } from '#core/models/api-response.model';
 import { selectMember } from '#core/store/auth/auth.selector';
+import {
+  presenceErrorView,
+  presenceLockExplanation,
+  type PresenceErrorView,
+} from '#shared/utils/presence-lock';
+import { formatPointsDelta } from '#shared/utils/points-delta';
 import { startOfDay } from 'date-fns';
+
+// Re-exported: this screen's spec imports the two helpers from here, and so
+// does `home.ts` — both pages just consume the shared, single-source wording
+// instead of each keeping its own copy.
+export { presenceErrorView, presenceLockExplanation, type PresenceErrorView };
 
 interface ScoreRow {
   readonly k: string;
@@ -50,61 +59,6 @@ interface ScoreRow {
  * template and its spec name a single type — the page adds no field of its own.
  */
 export type MemberPoste = MemberAssignment;
-
-/** Toast wording for a refused presence write. */
-export interface PresenceErrorView {
-  readonly title: string;
-  readonly message: string;
-}
-
-/**
- * Turn a failed `POST /events/:id/response` into wording the member can act on.
- *
- * `HttpErrorResponse.error` is already unwrapped to `{ code, message }` by
- * `apiEnvelopeInterceptor`. The API's own sentence is kept verbatim — including
- * for `E_PRESENCE_LOCKED_BY_ASSIGNMENT`, where it is the only text that states
- * the rule the server actually enforces. Re-writing it here would let the two
- * drift apart, and a hard-coded sentence would survive a backend change that
- * the user is the one paying for.
- */
-export function presenceErrorView(error: unknown): PresenceErrorView {
-  const body = error instanceof HttpErrorResponse ? error.error : null;
-  if (isApiError(body)) {
-    return {
-      title:
-        body.code === 'E_PRESENCE_LOCKED_BY_ASSIGNMENT'
-          ? 'Désengagement impossible'
-          : 'Réponse non enregistrée',
-      message: body.message,
-    };
-  }
-  return {
-    title: 'Réponse non enregistrée',
-    message: "Votre réponse n'a pas pu être enregistrée. Réessayez dans un instant.",
-  };
-}
-
-/**
- * Why « Absent·e » is unavailable, and how to get out of it.
- *
- * A disabled control that does not say why is a dead end, so the sentence names
- * every poste held — the lock covers the whole soirée (D9), being released from
- * the nettoyage alone does not unlock it — and points at the people who can
- * actually lift it.
- */
-export function presenceLockExplanation(postes: readonly MemberPoste[]): string {
-  // « Service en soirée », « Installation tables en préparation » — the same
-  // phrasing the coordination page uses for a moment of the evening.
-  const named = postes.map((p) => `${p.jobName} en ${p.periodLabel.toLowerCase()}`);
-  const list =
-    named.length > 1 ? `${named.slice(0, -1).join(', ')} et ${named.at(-1)}` : (named[0] ?? '');
-  const held = named.length > 1 ? `les postes ${list}` : `le poste ${list}`;
-  return (
-    `Vous tenez ${held} sur cette soirée : vous ne pouvez plus vous déclarer absent·e. ` +
-    'Demandez au bureau ou au coordinateur de vous retirer de votre poste ; ' +
-    'vous pourrez alors vous désengager. Vous déclarer présent·e reste possible.'
-  );
-}
 
 const MONTHS_SHORT_FR = [
   'jan.',
@@ -289,9 +243,7 @@ export class MyPresences implements OnInit {
    */
   protected creditLabel(event: EventDetail): string {
     if (this.postesFor(event).length === 0) return '—';
-    const credit = this.creditFor(event);
-    const unit = Math.abs(credit) > 1 ? 'pts' : 'pt';
-    return credit > 0 ? `+${credit} ${unit}` : `${credit} ${unit}`;
+    return formatPointsDelta(this.creditFor(event));
   }
 
   protected creditClass(event: EventDetail): string {

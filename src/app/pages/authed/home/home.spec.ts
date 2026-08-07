@@ -107,15 +107,15 @@ describe('presenceErrorView', () => {
 });
 
 describe('presenceLockExplanation', () => {
-  it('names every poste held and the way out', () => {
+  it('names every poste held and the way out, short', () => {
     const text = presenceLockExplanation([
       poste('before', 'Installation tables'),
       poste('during', 'Service'),
     ]);
     expect(text).toContain('Installation tables');
     expect(text).toContain('Service');
-    expect(text).toContain('absent·e');
-    expect(text).toMatch(/bureau|coordinateur/);
+    expect(text).toContain('désengager');
+    expect(text).toMatch(/bureau/);
   });
 });
 
@@ -146,6 +146,9 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
   interface SetupOptions {
     assignments?: unknown[];
     preferences?: unknown[];
+    /** Successive `loadAll()` payloads, to model a refresh returning new data
+     *  — same shape `my-presences.spec.ts` uses for the same scenario. */
+    coordination?: unknown[];
     updatePresenceForEvent?: () => Observable<unknown>;
   }
 
@@ -162,6 +165,20 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     return fixture.nativeElement.querySelector(`#${id}`) as T | null;
   }
 
+  function coordinationPayload(assignments: unknown[] = [], preferences: unknown[] = []) {
+    return {
+      events: [],
+      members: [
+        { id: 1, firstName: 'Lucas', lastName: 'ESPIET', roleId: null, role: null, points: 0 },
+      ],
+      jobs: JOBS,
+      eventJobs: [],
+      assignments,
+      responses: [],
+      preferences,
+    };
+  }
+
   async function setup(options: SetupOptions = {}): Promise<void> {
     updatePresence = vi.fn(
       options.updatePresenceForEvent ?? (() => of(Presence.ABSENT as unknown)),
@@ -176,19 +193,12 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
       updatePresenceForEvent: updatePresence,
     };
 
+    const payloads = options.coordination ?? [
+      coordinationPayload(options.assignments ?? [], options.preferences ?? []),
+    ];
+    let call = 0;
     const coordinationService = {
-      loadAll: () =>
-        of({
-          events: [],
-          members: [
-            { id: 1, firstName: 'Lucas', lastName: 'ESPIET', roleId: null, role: null, points: 0 },
-          ],
-          jobs: JOBS,
-          eventJobs: [],
-          assignments: options.assignments ?? [],
-          responses: [],
-          preferences: options.preferences ?? [],
-        }),
+      loadAll: () => of(payloads[Math.min(call++, payloads.length - 1)]),
     };
 
     await TestBed.configureTestingModule({
@@ -351,6 +361,26 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
       await internals(component).respondAbsent();
 
       expect(toast.toasts()[0].message).toContain("n'a pas pu être enregistrée");
+    });
+
+    /**
+     * The 409 is proof this page's assignments are stale — another tab, or a
+     * coordinator staffing the member since the page loaded. `my-presences.ts`
+     * already re-reads on the same refusal; this is the same behaviour, on
+     * `home.ts`'s own `MemberAssignmentsStore.refresh()` call (home.ts:265).
+     */
+    it('re-reads the assignments so the lock becomes visible', async () => {
+      await setup({
+        coordination: [coordinationPayload([]), coordinationPayload([assignment(2, -4)])],
+        updatePresenceForEvent: lockedResponse(),
+      });
+
+      expect(byId<HTMLButtonElement>('presence-absent')?.disabled).toBe(false);
+
+      await internals(component).respondAbsent();
+      await fixture.whenStable();
+
+      expect(byId<HTMLButtonElement>('presence-absent')?.disabled).toBe(true);
     });
 
     it('stays silent when the response goes through', async () => {

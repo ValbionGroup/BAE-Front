@@ -100,7 +100,7 @@ describe(RoleAssignmentStore.name, () => {
       { label: 'Soirée', value: 'Soirée test' },
       { label: 'Effectif du poste', value: '2/3' },
       { label: 'Coéquipiers', value: 'Tommy K.' },
-      { label: 'Crédit de priorité', value: '+6' },
+      { label: 'Crédit de priorité', value: '+6 pts' },
     ]);
   });
 
@@ -145,7 +145,7 @@ describe(RoleAssignmentStore.name, () => {
 
     expect(store.data()[0].meta).toContainEqual({
       label: 'Crédit de priorité',
-      value: '+10',
+      value: '+10 pts',
     });
   });
 
@@ -163,7 +163,7 @@ describe(RoleAssignmentStore.name, () => {
 
     expect(store.data()[0].meta).toContainEqual({
       label: 'Crédit de priorité',
-      value: '-4',
+      value: '-4 pts',
     });
   });
 
@@ -202,9 +202,9 @@ describe(RoleAssignmentStore.name, () => {
     ]);
     expect(data.map((r) => r.preferenceRank)).toEqual([null, 1, null]);
     expect(data.map((r) => r.meta.find((m) => m.label === 'Crédit de priorité')?.value)).toEqual([
-      '+4',
-      '-4',
-      '+6',
+      '+4 pts',
+      '-4 pts',
+      '+6 pts',
     ]);
   });
 
