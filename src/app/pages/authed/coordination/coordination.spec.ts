@@ -55,16 +55,16 @@ function baseData(overrides: Partial<CoordinationApiData> = {}): CoordinationApi
       },
     ],
     jobs: [
-      { id: 1, name: 'Barman' },
-      { id: 2, name: 'Sécurité' },
+      { id: 1, name: 'Barman', type: 'during' },
+      { id: 2, name: 'Sécurité', type: 'during' },
     ],
     eventJobs: [
       { eventId: 1, jobId: 1, count: 1 },
       { eventId: 1, jobId: 2, count: 1 },
     ],
     assignments: [
-      { memberId: 1, eventId: 1, jobId: 1, locked: true, pointsDelta: 10 },
-      { memberId: 2, eventId: 1, jobId: 2, locked: false, pointsDelta: 6 },
+      { memberId: 1, eventId: 1, jobId: 1, locked: true, pointsDelta: 10, settledAt: null },
+      { memberId: 2, eventId: 1, jobId: 2, locked: false, pointsDelta: 6, settledAt: null },
     ],
     responses: [
       { memberId: 1, eventId: 1, isAvailable: true },
@@ -78,7 +78,9 @@ function baseData(overrides: Partial<CoordinationApiData> = {}): CoordinationApi
 describe('describeMatching', () => {
   it('reports a full success when everybody was placed', () => {
     const outcome = describeMatching(
-      summary({ matched: [{ memberId: 1, jobId: 1, rankAchieved: 1, pointsDelta: 10 }] }),
+      summary({
+        matched: [{ memberId: 1, jobId: 1, period: 'during', rankAchieved: 1, pointsDelta: 10 }],
+      }),
     );
     expect(outcome.tone).toBe('success');
     expect(outcome.message).toContain('1 affectation générée');
@@ -88,10 +90,10 @@ describe('describeMatching', () => {
     const outcome = describeMatching(
       summary({
         matched: [
-          { memberId: 1, jobId: 1, rankAchieved: 1, pointsDelta: 10 },
-          { memberId: 3, jobId: 1, rankAchieved: 2, pointsDelta: 8 },
+          { memberId: 1, jobId: 1, period: 'during', rankAchieved: 1, pointsDelta: 10 },
+          { memberId: 3, jobId: 1, period: 'during', rankAchieved: 2, pointsDelta: 8 },
         ],
-        locked: [{ memberId: 2, jobId: 2 }],
+        locked: [{ memberId: 2, jobId: 2, period: 'during' }],
       }),
     );
     expect(outcome.tone).toBe('success');
@@ -102,7 +104,7 @@ describe('describeMatching', () => {
   it('degrades to a warning when some members stayed unmatched', () => {
     const outcome = describeMatching(
       summary({
-        matched: [{ memberId: 1, jobId: 1, rankAchieved: 1, pointsDelta: 10 }],
+        matched: [{ memberId: 1, jobId: 1, period: 'during', rankAchieved: 1, pointsDelta: 10 }],
         unmatchedMemberIds: [2, 3],
       }),
     );
@@ -118,7 +120,9 @@ describe('describeMatching', () => {
   });
 
   it('explains that every seat is already locked', () => {
-    const outcome = describeMatching(summary({ locked: [{ memberId: 1, jobId: 1 }] }));
+    const outcome = describeMatching(
+      summary({ locked: [{ memberId: 1, jobId: 1, period: 'during' }] }),
+    );
     expect(outcome.tone).toBe('info');
     expect(outcome.title).toBe('Rien à réaffecter');
     expect(outcome.message).toContain('1 affectation verrouillée conservée');
@@ -226,8 +230,8 @@ describe(Coordination.name, () => {
     runMatching.mockReturnValue(
       of(
         summary({
-          matched: [{ memberId: 2, jobId: 2, rankAchieved: 1, pointsDelta: 10 }],
-          locked: [{ memberId: 1, jobId: 1 }],
+          matched: [{ memberId: 2, jobId: 2, period: 'during', rankAchieved: 1, pointsDelta: 10 }],
+          locked: [{ memberId: 1, jobId: 1, period: 'during' }],
         }),
       ),
     );
@@ -245,7 +249,9 @@ describe(Coordination.name, () => {
 
   it('surfaces an all-locked run as info rather than a success toast', async () => {
     await setup();
-    runMatching.mockReturnValue(of(summary({ locked: [{ memberId: 1, jobId: 1 }] })));
+    runMatching.mockReturnValue(
+      of(summary({ locked: [{ memberId: 1, jobId: 1, period: 'during' }] })),
+    );
 
     internals(component).confirmRunMatching();
     confirmAction().action();

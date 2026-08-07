@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
+import type { JobPeriod } from '#core/models/job-period.model';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
 export interface ApiEvent {
@@ -30,6 +31,9 @@ export interface ApiMember {
 export interface ApiJob {
   id: number;
   name: string;
+  /** Which moment of the soirée this job belongs to. Never null server-side:
+   *  the column is `notNullable` with a `'during'` default. */
+  type: JobPeriod;
 }
 export interface ApiEventJob {
   eventId: number;
@@ -46,6 +50,11 @@ export interface ApiAssignment {
   /** Points actually credited to the member when the matching engine created
    *  this row (0 for rows created by hand). */
   pointsDelta: number;
+  /** ISO 8601 timestamp of the soirée's closing consolidation, or `null` when
+   *  this assignment's points have not been folded into `members.points` yet.
+   *  A non-null value on any row of an event means the event is settled:
+   *  `POST /events/:id/matching` on it answers 409 `E_EVENT_ALREADY_SETTLED`. */
+  settledAt: string | null;
 }
 /**
  * `job_eligible_members` narrows which members the matching engine may put on
@@ -81,9 +90,15 @@ export interface CoordinationApiData {
 export interface ApiMatchedAssignment {
   memberId: number;
   jobId: number;
-  /** 1-based position of the job inside that member's own preference list. */
-  rankAchieved: number;
-  /** Points actually credited (already clamped to the 0-100 range). */
+  /** Which period this assignment belongs to — one match per member per
+   *  period, restricted to the jobs of that `type`. */
+  period: JobPeriod;
+  /** The member's global expressed rank (`member_job_preferences.rank`),
+   *  never the position inside the list restricted to this period. `null`
+   *  when the job was not ranked at all. */
+  rankAchieved: number | null;
+  /** Points actually credited. No longer clamped: D6 drops `clampPoints`, so
+   *  this can legitimately be negative. */
   pointsDelta: number;
 }
 
@@ -92,8 +107,14 @@ export interface ApiMatchingSummary {
   matched: ApiMatchedAssignment[];
   /** Available members the engine could not place anywhere. */
   unmatchedMemberIds: number[];
-  /** Pre-existing locked rows, left untouched by the run. */
-  locked: { memberId: number; jobId: number }[];
+  /**
+   * Pre-existing locked rows, left untouched by the run.
+   *
+   * `period` is nullable here ONLY: it is `null` for an orphaned row whose
+   * job was deleted while an assignment still referenced it. Treat it as
+   * absent, never assume it is set.
+   */
+  locked: { memberId: number; jobId: number; period: JobPeriod | null }[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -174,8 +195,8 @@ export class CoordinationService {
     });
   }
 
-  createJob(name: string): Observable<ApiJob> {
-    return this.http.post<ApiJob>(`${this.baseUrl}/jobs`, { name });
+  createJob(name: string, type: JobPeriod): Observable<ApiJob> {
+    return this.http.post<ApiJob>(`${this.baseUrl}/jobs`, { name, type });
   }
 
   createEvent(name: string, date: string, duration: number | null): Observable<ApiEvent> {
@@ -191,8 +212,8 @@ export class CoordinationService {
     return this.http.put<ApiEvent>(`${this.baseUrl}/events/${id}`, { name, date, duration });
   }
 
-  updateJob(id: number, name: string): Observable<ApiJob> {
-    return this.http.put<ApiJob>(`${this.baseUrl}/jobs/${id}`, { name });
+  updateJob(id: number, name: string, type: JobPeriod): Observable<ApiJob> {
+    return this.http.put<ApiJob>(`${this.baseUrl}/jobs/${id}`, { name, type });
   }
 
   deleteEvent(id: number): Observable<unknown> {
