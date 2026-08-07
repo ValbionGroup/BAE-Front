@@ -6,7 +6,11 @@ import { API_BASE_URL } from '#core/tokens/api-url.token';
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
 // Shapes below were verified against a live backend (AdonisJS 7, `GET /v1/{members,roles,permissions,logs}`).
 
-/** `GET /roles` row — plain `roles` table, no relation is preloaded by RolesController.index. */
+/**
+ * Role shape as embedded in a member by `GET /members`, which preloads the role WITHOUT
+ * its permissions. No `permissions` field here on purpose: see `ApiTeamRoleWithPermissions`
+ * for the `GET /roles` shape, which does carry them.
+ */
 export interface ApiTeamRole {
   id: number;
   name: string;

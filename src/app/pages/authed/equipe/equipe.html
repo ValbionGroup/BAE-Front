@@ -11,7 +11,7 @@
         type="button"
         role="tab"
         [id]="'equipe-tab-' + i"
-        [attr.aria-controls]="'equipe-panel-' + i"
+        [attr.aria-controls]="i === activeTab() ? 'equipe-panel-' + activeTab() : null"
         [attr.aria-selected]="i === activeTab()"
         (click)="activeTab.set(i)"
         [class]="
