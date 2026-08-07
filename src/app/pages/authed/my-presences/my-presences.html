@@ -57,7 +57,8 @@
           <div class="flex flex-col gap-2.5">
             @for (e of upcomingEvents(); track e.id; let i = $index) {
               @let isNext = i === 0;
-              @let post = postFor(e);
+              @let postes = postesFor(e);
+              @let locked = isPresenceLocked(e);
               <div
                 [class]="
                   'flex items-center gap-4.5 p-4 rounded-lg border ' +
@@ -94,10 +95,24 @@
                   } @else {
                     <div class="mt-0.75 text-[11.5px] text-muted">Lieu · {{ e.location }}</div>
                   }
-                  @if (post) {
-                    <div class="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-text-2">
-                      <svg [lucideIcon]="icFlag" [size]="12" class="text-blue"></svg>
-                      Poste affecté : <b class="text-text">{{ post }}</b>
+                  @if (postes.length > 0) {
+                    <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span class="flex items-center gap-1.5 text-[11.5px] text-text-2">
+                        <svg [lucideIcon]="icFlag" [size]="12" class="text-blue"></svg>
+                        {{ postes.length > 1 ? 'Postes affectés' : 'Poste affecté' }} :
+                      </span>
+                      @for (p of postes; track p.jobId) {
+                        <span class="text-[11.5px] text-text-2">
+                          <span class="text-muted">{{ p.periodLabel }}</span>
+                          <b class="text-text">{{ p.jobName }}</b>
+                        </span>
+                      }
+                    </div>
+                    <!-- Why « Absent·e » is disabled, and how to get out of it.
+                         Referenced by the button's aria-describedby: a disabled
+                         control that does not say why is a dead end. -->
+                    <div [id]="lockDescriptionId(e)" class="mt-1 text-[11px] text-muted">
+                      {{ lockExplanation(e) }}
                     </div>
                   }
                 </div>
@@ -111,7 +126,9 @@
                   } @else {
                     <button
                       type="button"
+                      [id]="'presence-present-' + e.id"
                       (click)="respondPresent(e)"
+                      [attr.aria-pressed]="e.memberPresence === Presence.PRESENT"
                       [class]="
                         'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
                         (e.memberPresence === Presence.PRESENT
@@ -132,11 +149,18 @@
                     >
                       <svg [lucideIcon]="icClock" [size]="12"></svg>Indécis·e
                     </button>
+                    <!-- Disabled, never hidden (D8): the member has to see that
+                         the option exists and read why it is out of reach. -->
                     <button
                       type="button"
+                      [id]="'presence-absent-' + e.id"
                       (click)="respondAbsent(e)"
+                      [disabled]="locked"
+                      [attr.aria-pressed]="e.memberPresence === Presence.ABSENT"
+                      [attr.aria-describedby]="locked ? lockDescriptionId(e) : null"
                       [class]="
-                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium cursor-pointer ' +
+                        'inline-flex items-center gap-1.5 rounded-md border px-2.75 py-1 text-xs font-medium ' +
+                        (locked ? 'cursor-not-allowed opacity-55 ' : 'cursor-pointer ') +
                         (e.memberPresence === Presence.ABSENT
                           ? 'bg-red text-white border-red'
                           : 'bg-transparent text-red border-red')
@@ -160,6 +184,13 @@
             <span class="text-[11px] text-muted">{{ pastCount() }} soirée·s passée·s</span>
           }
         </div>
+        <!-- The last column is a credit of priority, not "points gagnés": a
+             negative total means the soirée served you on your first choices,
+             which costs priority. Said in words so the sign reads right. -->
+        <p class="mb-2 mt-0 text-[11px] text-muted">
+          La dernière colonne est votre <b class="font-medium">crédit de priorité</b> : il monte
+          quand vous tenez un poste peu demandé, et descend quand vous obtenez vos premiers choix.
+        </p>
 
         @if (loading()) {
           <bfd-card [padding]="0">
@@ -202,7 +233,16 @@
                   <span class="text-[10.5px] text-muted">{{ dateMonth(p.date) }}</span>
                 </div>
                 <span class="text-text">{{ p.name }}</span>
-                <span class="text-text-2">{{ postFor(p) ?? '—' }}</span>
+                <span class="flex flex-col gap-0.5 text-text-2">
+                  @for (poste of postesFor(p); track poste.jobId) {
+                    <span>
+                      <span class="text-[10.5px] text-muted">{{ poste.shortPeriodLabel }}</span>
+                      {{ poste.jobName }}
+                    </span>
+                  } @empty {
+                    <span>—</span>
+                  }
+                </span>
                 @if (isPresenceLoading(p)) {
                   <span><bfd-skeleton width="64px" height="18px" rounded="pill" /></span>
                   <span class="flex justify-end"><bfd-skeleton width="48px" height="12px" /></span>
@@ -212,8 +252,8 @@
                       {{ pastStatusLabel(p) }}
                     </bfd-badge>
                   </span>
-                  <span [class]="'mono tnum text-right font-semibold ' + ptsClass(pointsFor(p))">
-                    {{ ptsLabel(pointsFor(p)) }}
+                  <span [class]="'mono tnum text-right font-semibold ' + creditClass(p)">
+                    {{ creditLabel(p) }}
                   </span>
                 }
               </div>
