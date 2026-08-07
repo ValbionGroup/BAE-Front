@@ -1,7 +1,6 @@
 import { computed, inject } from '@angular/core';
-import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { signalStore, withComputed, withMethods } from '@ngrx/signals';
 import { Store } from '@ngrx/store';
-import { lastValueFrom } from 'rxjs';
 import { startOfDay } from 'date-fns';
 import {
   LucideBeer,
@@ -12,29 +11,21 @@ import {
   LucideWallet,
   type LucideIconInput,
 } from '@lucide/angular';
-import {
-  CoordinationService,
-  type ApiAssignment,
-  type ApiEventJob,
-  type ApiJob,
-  type ApiMember,
-  type ApiPreference,
-} from '#core/services/coordination/coordination-service';
+import type { ApiMember } from '#core/services/coordination/coordination-service';
 import { EventsStore } from '#core/store/events.store';
+import { MemberAssignmentsStore } from '#core/store/member-assignments.store';
 import { selectMember } from '#core/store/auth/auth.selector';
-import type { LoadingStatus } from '#core/models/global.model';
 import { RoleAssignment, RoleMeta } from './models';
 
 /**
  * "Votre rôle ce soir-là" panel.
  *
- * Source: `GET /v1/assignments` + `GET /v1/jobs` + `GET /v1/event-jobs`
- * (+ `/v1/members` for teammate names and `/v1/preferences` for the preferred
- * job), all fetched in one `CoordinationService.loadAll()` round-trip.
- *
- * Known over-fetch: `loadAll()` also pulls `/events` and `/responses`. Adding
- * narrower methods would mean editing `coordination-service.ts`, which is owned
- * by another workstream this phase.
+ * Presentation only: the coordination payload it reads is owned by
+ * `MemberAssignmentsStore`, which performs the single
+ * `CoordinationService.loadAll()` round-trip. This store used to hold that
+ * payload itself, for every soirée, while exposing only the next one — so "mes
+ * présences" would have had to either import a `home-data/` store or open a
+ * second loading path. The state moved out; the panel stayed here.
  *
  * The mockup showed an invented "algo score /100". What the API really knows is
  * which of the member's OWN choices this poste was — `member_job_preferences`
@@ -67,30 +58,10 @@ function shortName(member: ApiMember): string {
   return `${member.firstName}${last}`;
 }
 
-interface RoleAssignmentState {
-  readonly status: LoadingStatus;
-  readonly error: string | null;
-  readonly assignments: readonly ApiAssignment[];
-  readonly jobs: readonly ApiJob[];
-  readonly eventJobs: readonly ApiEventJob[];
-  readonly members: readonly ApiMember[];
-  readonly preferences: readonly ApiPreference[];
-}
-
-const initialState: RoleAssignmentState = {
-  status: 'init',
-  error: null,
-  assignments: [],
-  jobs: [],
-  eventJobs: [],
-  members: [],
-  preferences: [],
-};
-
 export const RoleAssignmentStore = signalStore(
   { providedIn: 'root' },
-  withState<RoleAssignmentState>(initialState),
-  withComputed((store) => {
+  withComputed(() => {
+    const store = inject(MemberAssignmentsStore);
     const events = inject(EventsStore);
     const member = inject(Store).selectSignal(selectMember);
 
@@ -104,15 +75,23 @@ export const RoleAssignmentStore = signalStore(
 
     return {
       loading: computed<boolean>(() => {
-        const status = store.status();
         const eventsStatus = events.loading();
-        return (
-          status === 'init' ||
-          status === 'loading' ||
-          eventsStatus === 'init' ||
-          eventsStatus === 'loading'
-        );
+        return store.loading() || eventsStatus === 'init' || eventsStatus === 'loading';
       }),
+
+      /**
+       * Every assignment row of the payload, all members and all soirées —
+       * forwarded because `home.ts` counts the next soirée's assignees from it.
+       * Only that one raw slice is re-exported; everything else this panel needs
+       * is already shaped by the computed below.
+       */
+      assignments: computed(() => store.assignments()),
+
+      /** Kept worded for this panel: the page it feeds talks about "votre
+       *  affectation", not about the whole coordination payload. */
+      error: computed<string | null>(() =>
+        store.error() === null ? null : 'Impossible de charger votre affectation.',
+      ),
 
       data: computed<RoleAssignment | null>(() => {
         const memberId = member()?.id;
@@ -179,27 +158,11 @@ export const RoleAssignmentStore = signalStore(
       }),
     };
   }),
-  withMethods((store, svc = inject(CoordinationService)) => ({
-    async load(): Promise<void> {
-      if (store.status() === 'loaded' || store.status() === 'loading') return;
-      patchState(store, { status: 'loading', error: null });
-      try {
-        const raw = await lastValueFrom(svc.loadAll());
-        patchState(store, {
-          status: 'loaded',
-          assignments: raw.assignments,
-          jobs: raw.jobs,
-          eventJobs: raw.eventJobs,
-          members: raw.members,
-          preferences: raw.preferences,
-        });
-      } catch {
-        patchState(store, { status: 'error', error: 'Impossible de charger votre affectation.' });
-      }
-    },
-
-    clear(): void {
-      patchState(store, initialState);
-    },
-  })),
+  withMethods(() => {
+    const store = inject(MemberAssignmentsStore);
+    return {
+      load: (): Promise<void> => store.load(),
+      clear: (): void => store.clear(),
+    };
+  }),
 );
