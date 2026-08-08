@@ -170,4 +170,44 @@ describe(TeamStore.name, () => {
     req.flush({ ...ROLE, permissions: [] });
     await first;
   });
+
+  it("keeps another role's confirmed write when a different role's write fails", async () => {
+    const roleB = { id: 2, name: 'Secretaire', createdAt: null, updatedAt: null, permissions: [] };
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([ROLE, roleB]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const failing = store.setRolePermission(1, 'log:read', true);
+    const succeeding = store.setRolePermission(2, 'stock:read', true);
+
+    httpMock.expectOne(`${baseUrl}/roles/2/permissions`).flush({
+      ...roleB,
+      permissions: [{ permission: 'stock:read', createdAt: null, updatedAt: null }],
+    });
+    await succeeding;
+
+    httpMock
+      .expectOne(`${baseUrl}/roles/1/permissions`)
+      .flush(
+        { code: 'E_RBAC_LOCKOUT', message: 'Accordez d’abord role:write à un rôle occupé.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await failing;
+
+    expect(
+      store
+        .roles()
+        .find((role) => role.id === 2)!
+        .permissions.map((p) => p.permission),
+    ).toEqual(['stock:read']);
+    expect(
+      store
+        .roles()
+        .find((role) => role.id === 1)!
+        .permissions.map((p) => p.permission),
+    ).toEqual(['stock:read']);
+  });
 });

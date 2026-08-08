@@ -119,14 +119,16 @@ export const TeamStore = signalStore(
       const target = before.find((role) => role.id === roleId);
       if (!target) return;
 
+      const alreadyGranted = target.permissions.some((entry) => entry.permission === permission);
       const next = granted
-        ? [...target.permissions, { permission, createdAt: null, updatedAt: null }]
+        ? alreadyGranted
+          ? target.permissions
+          : [...target.permissions, { permission, createdAt: null, updatedAt: null }]
         : target.permissions.filter((entry) => entry.permission !== permission);
 
       patchState(store, {
         roles: before.map((role) => (role.id === roleId ? { ...role, permissions: next } : role)),
         savingRoleIds: [...store.savingRoleIds(), roleId],
-        permissionsError: null,
       });
 
       try {
@@ -140,7 +142,13 @@ export const TeamStore = signalStore(
           roles: store.roles().map((role) => (role.id === roleId ? saved : role)),
         });
       } catch (error) {
-        patchState(store, { roles: before, permissionsError: messageOf(error) });
+        // Only `target` (this role's pre-click value) is restored, merged into
+        // live state: a wholesale `before` would also revert any other role
+        // whose write landed while this one was in flight.
+        patchState(store, {
+          roles: store.roles().map((role) => (role.id === roleId ? target : role)),
+          permissionsError: messageOf(error),
+        });
       } finally {
         patchState(store, {
           savingRoleIds: store.savingRoleIds().filter((id) => id !== roleId),
