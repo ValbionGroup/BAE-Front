@@ -31,9 +31,7 @@ describe('permissionGuard', () => {
 
   it('sends a member without the permission back to the home page', () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideMockStore({ initialState: { auth: { permissions: ['presence:read'] } } }),
-      ],
+      providers: [provideMockStore({ initialState: { auth: { permissions: ['presence:read'] } } })],
     });
     const router = TestBed.inject(Router);
 

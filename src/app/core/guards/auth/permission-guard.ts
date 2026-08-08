@@ -30,7 +30,8 @@ export const permissionGuard =
       filter(isSettled),
       take(1),
       map(
-        ({ permissions }) => permissions.includes(permission) || router.createUrlTree([AppRoutes.home]),
+        ({ permissions }) =>
+          permissions.includes(permission) || router.createUrlTree([AppRoutes.home]),
       ),
     );
   };
