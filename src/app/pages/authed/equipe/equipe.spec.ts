@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideMockStore, MockStore } from '@ngrx/store/testing';
 
 import { Equipe } from './equipe';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
@@ -27,6 +28,7 @@ describe(Equipe.name, () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: baseUrl },
+        provideMockStore({ initialState: { auth: { permissions: ['role:read', 'role:write'] } } }),
       ],
     }).compileComponents();
 
@@ -83,6 +85,57 @@ describe(Equipe.name, () => {
     await flushAsync(fixture);
 
     expect(fixture.nativeElement.textContent).toContain('Impossible de charger les membres.');
+    httpMock.verify();
+  });
+
+  /** Charge une matrice minimale : un seul rôle, occupé, porteur de `role:write`. */
+  async function loadMatrix(): Promise<void> {
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 2,
+        firstName: 'Tommy',
+        lastName: 'Klein',
+        roleId: 1,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: { id: 1, name: 'Administrateur', createdAt: null, updatedAt: null },
+      },
+    ]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([
+      {
+        id: 1,
+        name: 'Administrateur',
+        createdAt: null,
+        updatedAt: null,
+        permissions: [
+          { permission: 'role:write', createdAt: null, updatedAt: null },
+          { permission: 'stock:read', createdAt: null, updatedAt: null },
+        ],
+      },
+    ]);
+    httpMock
+      .expectOne(`${baseUrl}/permissions`)
+      .flush([{ permission: 'role:write' }, { permission: 'stock:read' }]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await flushAsync(fixture);
+  }
+
+  it('protects the last living holder of role:write', async () => {
+    await loadMatrix();
+
+    expect(component['cellDisabled'](1, 'role:write')).toBe(true);
+    expect(component['cellDisabled'](1, 'stock:read')).toBe(false);
+    httpMock.verify();
+  });
+
+  it('disables every cell when the member cannot write roles', async () => {
+    await loadMatrix();
+
+    TestBed.inject(MockStore).setState({ auth: { permissions: ['role:read'] } });
+    fixture.detectChanges();
+
+    expect(component['cellDisabled'](1, 'stock:read')).toBe(true);
     httpMock.verify();
   });
 });

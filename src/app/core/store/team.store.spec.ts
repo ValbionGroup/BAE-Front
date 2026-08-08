@@ -210,4 +210,60 @@ describe(TeamStore.name, () => {
         .permissions.map((p) => p.permission),
     ).toEqual(['stock:read']);
   });
+
+  it("clears a role's stale error once that same role succeeds again", async () => {
+    await loadWith();
+
+    const failing = store.setRolePermission(1, 'log:read', true);
+    httpMock
+      .expectOne(`${baseUrl}/roles/1/permissions`)
+      .flush(
+        { code: 'E_RBAC_LOCKOUT', message: 'Accordez d’abord role:write à un rôle occupé.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await failing;
+    expect(store.permissionsError()).not.toBeNull();
+
+    const retry = store.setRolePermission(1, 'log:read', true);
+    httpMock.expectOne(`${baseUrl}/roles/1/permissions`).flush({
+      ...ROLE,
+      permissions: [
+        { permission: 'stock:read', createdAt: null, updatedAt: null },
+        { permission: 'log:read', createdAt: null, updatedAt: null },
+      ],
+    });
+    await retry;
+
+    expect(store.permissionsError()).toBeNull();
+    expect(store.permissionsErrorRoleId()).toBeNull();
+  });
+
+  it("leaves another role's unseen error in place after a different role's success", async () => {
+    const roleB = { id: 2, name: 'Secretaire', createdAt: null, updatedAt: null, permissions: [] };
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([ROLE, roleB]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const failing = store.setRolePermission(1, 'log:read', true);
+    httpMock
+      .expectOne(`${baseUrl}/roles/1/permissions`)
+      .flush(
+        { code: 'E_RBAC_LOCKOUT', message: 'Accordez d’abord role:write à un rôle occupé.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await failing;
+
+    const succeeding = store.setRolePermission(2, 'stock:read', true);
+    httpMock.expectOne(`${baseUrl}/roles/2/permissions`).flush({
+      ...roleB,
+      permissions: [{ permission: 'stock:read', createdAt: null, updatedAt: null }],
+    });
+    await succeeding;
+
+    expect(store.permissionsError()).toBe('Accordez d’abord role:write à un rôle occupé.');
+    expect(store.permissionsErrorRoleId()).toBe(1);
+  });
 });

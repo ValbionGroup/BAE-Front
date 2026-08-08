@@ -55,6 +55,9 @@ interface TeamState {
    *  deux écritures concurrentes sur le même rôle s'écraseraient. */
   savingRoleIds: number[];
   permissionsError: string | null;
+  /** Role the current `permissionsError` describes; lets a retry on that same
+   *  role clear it without touching an unrelated role's still-unseen error. */
+  permissionsErrorRoleId: number | null;
 }
 
 const NO_ERRORS: TeamSectionErrors = {
@@ -74,6 +77,7 @@ const initialState: TeamState = {
   errors: NO_ERRORS,
   savingRoleIds: [],
   permissionsError: null,
+  permissionsErrorRoleId: null,
 };
 
 export const TeamStore = signalStore(
@@ -115,6 +119,12 @@ export const TeamStore = signalStore(
     async setRolePermission(roleId: number, permission: string, granted: boolean): Promise<void> {
       if (store.savingRoleIds().includes(roleId)) return;
 
+      // A stale error only ever names one role; a fresh attempt on that same
+      // role is the signal that it's no longer describing the current state.
+      if (store.permissionsErrorRoleId() === roleId) {
+        patchState(store, { permissionsError: null, permissionsErrorRoleId: null });
+      }
+
       const before = store.roles();
       const target = before.find((role) => role.id === roleId);
       if (!target) return;
@@ -148,6 +158,7 @@ export const TeamStore = signalStore(
         patchState(store, {
           roles: store.roles().map((role) => (role.id === roleId ? target : role)),
           permissionsError: messageOf(error),
+          permissionsErrorRoleId: roleId,
         });
       } finally {
         patchState(store, {

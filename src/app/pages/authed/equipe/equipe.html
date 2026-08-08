@@ -189,15 +189,12 @@
                       </th>
                       @for (cell of p.cells; track $index) {
                         <td class="text-center px-2 py-2">
-                          <span
-                            [class]="
-                              'relative mono inline-flex items-center justify-center min-w-[38px] h-[22px] px-1.5 rounded-sm text-[10.5px] font-semibold ' +
-                              permClass(cell).wrap
-                            "
-                            [title]="permClass(cell).title"
-                            >{{ permClass(cell).label
-                            }}<span class="sr-only"> {{ permClass(cell).title }}</span></span
-                          >
+                          <bfd-checkbox
+                            [checked]="cell === 'granted'"
+                            [disabled]="cellDisabled(perms().roles[$index].id, p.permission)"
+                            [ariaLabel]="p.permission + ' pour ' + perms().roles[$index].name"
+                            (change)="onToggle(perms().roles[$index].id, p.permission, $event)"
+                          />
                         </td>
                       }
                     </tr>
