@@ -12,6 +12,13 @@ export const selectLoginError = createSelector(
   (state: AuthState) => state.loginError,
 );
 
+/**
+ * `undefined` (profil pas encore réglé) et `[]` (réglé, rien d'accordé)
+ * deviennent tous deux `[]` ici. Correct pour un affichage, qui n'a de
+ * toute façon rien à montrer avant que le profil réponde — mais ce
+ * sélecteur ne convient à rien qui doive distinguer ces deux états, un
+ * garde de route en particulier : voir `selectHasPermission` ci-dessous.
+ */
 export const selectPermissions = createSelector(
   selectAuthState,
   (state: AuthState) => state.permissions ?? [],
@@ -21,10 +28,18 @@ export const selectPermissions = createSelector(
  * Le front n'évite que les impasses : ce sélecteur masque ce que le back
  * refuserait, il n'autorise rien. Toute décision reste au serveur.
  *
- * Réservé aux gardes de route. Un composant doit lire `selectPermissions` et
- * dériver : cette fabrique construit un sélecteur NEUF à chaque appel, donc
- * `MockStore.overrideSelector` ne peut jamais viser l'instance créée dans le
- * composant, et le test ne pilote rien.
+ * Pour un composant, qui n'a qu'à afficher : `undefined` et `[]` se lisent
+ * tous deux « rien à montrer », ce que `selectPermissions` donne déjà.
+ *
+ * Pas pour un garde de route. `selectPermissions` confond « profil pas
+ * encore réglé » et « réglé, rien d'accordé » derrière le même `[]` ; un
+ * garde bâti dessus refuserait l'accès avant même que le profil ait
+ * répondu. `permissionGuard` lit `selectAuthState` directement et attend
+ * que `permissions` soit défini avant de décider.
+ *
+ * Par ailleurs cette fabrique construit un sélecteur NEUF à chaque appel :
+ * un composant qui l'utiliserait ne pourrait jamais être piloté par
+ * `MockStore.overrideSelector`, qui ne peut viser une instance stable.
  */
 export const selectHasPermission = (permission: string) =>
   createSelector(selectPermissions, (permissions) => permissions.includes(permission));
