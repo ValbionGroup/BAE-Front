@@ -102,4 +102,72 @@ describe(TeamStore.name, () => {
     await store.load();
     httpMock.expectNone(`${baseUrl}/members`);
   });
+
+  const ROLE = {
+    id: 1,
+    name: 'Tresorier',
+    createdAt: null,
+    updatedAt: null,
+    permissions: [{ permission: 'stock:read', createdAt: null, updatedAt: null }],
+  };
+
+  async function loadWith(role = ROLE): Promise<void> {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([role]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+  }
+
+  it('sends the complete list when a permission is granted', async () => {
+    await loadWith();
+
+    const saving = store.setRolePermission(1, 'log:read', true);
+    const req = httpMock.expectOne(`${baseUrl}/roles/1/permissions`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ permissions: ['stock:read', 'log:read'] });
+
+    req.flush({
+      ...ROLE,
+      permissions: [
+        { permission: 'stock:read', createdAt: null, updatedAt: null },
+        { permission: 'log:read', createdAt: null, updatedAt: null },
+      ],
+    });
+    await saving;
+
+    expect(store.roles()[0].permissions.map((p) => p.permission)).toEqual([
+      'stock:read',
+      'log:read',
+    ]);
+    expect(store.savingRoleIds()).toEqual([]);
+  });
+
+  it('restores the previous state and surfaces the API message on failure', async () => {
+    await loadWith();
+
+    const saving = store.setRolePermission(1, 'stock:read', false);
+    httpMock
+      .expectOne(`${baseUrl}/roles/1/permissions`)
+      .flush(
+        { code: 'E_RBAC_LOCKOUT', message: 'Accordez d’abord role:write à un rôle occupé.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await saving;
+
+    expect(store.roles()[0].permissions.map((p) => p.permission)).toEqual(['stock:read']);
+    expect(store.permissionsError()).toBe('Accordez d’abord role:write à un rôle occupé.');
+  });
+
+  it('ignores a second write while one is in flight for the same role', async () => {
+    await loadWith();
+
+    const first = store.setRolePermission(1, 'log:read', true);
+    await store.setRolePermission(1, 'supplier:read', true);
+
+    const req = httpMock.expectOne(`${baseUrl}/roles/1/permissions`);
+    req.flush({ ...ROLE, permissions: [] });
+    await first;
+  });
 });

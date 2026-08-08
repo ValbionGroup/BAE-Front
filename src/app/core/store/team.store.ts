@@ -1,5 +1,6 @@
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, forkJoin, lastValueFrom, map, of, type Observable } from 'rxjs';
 import {
   TeamService,
@@ -24,6 +25,16 @@ function settle<T>(source: Observable<T>): Observable<Settled<T>> {
   );
 }
 
+/**
+ * `apiEnvelopeInterceptor` réduit le corps d'erreur à `{ code, message }`.
+ * Le message vient de l'API parce que le 409 anti-verrouillage explique quoi
+ * faire — un texte codé en dur ne le pourrait pas.
+ */
+function messageOf(error: unknown): string {
+  const body = (error as HttpErrorResponse | undefined)?.error as { message?: string } | undefined;
+  return body?.message ?? 'Impossible de mettre à jour les permissions du rôle.';
+}
+
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
 export interface TeamSectionErrors {
   members: string | null;
@@ -40,6 +51,10 @@ interface TeamState {
   permissions: ApiTeamPermission[];
   logs: ApiTeamLog[];
   errors: TeamSectionErrors;
+  /** Rôles dont un PUT est en vol. Chaque requête porte la liste complète :
+   *  deux écritures concurrentes sur le même rôle s'écraseraient. */
+  savingRoleIds: number[];
+  permissionsError: string | null;
 }
 
 const NO_ERRORS: TeamSectionErrors = {
@@ -57,6 +72,8 @@ const initialState: TeamState = {
   permissions: [],
   logs: [],
   errors: NO_ERRORS,
+  savingRoleIds: [],
+  permissionsError: null,
 };
 
 export const TeamStore = signalStore(
@@ -95,7 +112,43 @@ export const TeamStore = signalStore(
       });
     },
 
-    /** Forces a refetch on the next `load()` (nothing mutates team data yet). */
+    async setRolePermission(roleId: number, permission: string, granted: boolean): Promise<void> {
+      if (store.savingRoleIds().includes(roleId)) return;
+
+      const before = store.roles();
+      const target = before.find((role) => role.id === roleId);
+      if (!target) return;
+
+      const next = granted
+        ? [...target.permissions, { permission, createdAt: null, updatedAt: null }]
+        : target.permissions.filter((entry) => entry.permission !== permission);
+
+      patchState(store, {
+        roles: before.map((role) => (role.id === roleId ? { ...role, permissions: next } : role)),
+        savingRoleIds: [...store.savingRoleIds(), roleId],
+        permissionsError: null,
+      });
+
+      try {
+        const saved = await lastValueFrom(
+          svc.updateRolePermissions(
+            roleId,
+            next.map((entry) => entry.permission),
+          ),
+        );
+        patchState(store, {
+          roles: store.roles().map((role) => (role.id === roleId ? saved : role)),
+        });
+      } catch (error) {
+        patchState(store, { roles: before, permissionsError: messageOf(error) });
+      } finally {
+        patchState(store, {
+          savingRoleIds: store.savingRoleIds().filter((id) => id !== roleId),
+        });
+      }
+    },
+
+    /** Forces a refetch on the next `load()`. */
     reset(): void {
       patchState(store, initialState);
     },

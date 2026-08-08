@@ -105,6 +105,19 @@ export class TeamService {
   }
 
   /**
+   * Remplace la liste complète des permissions d'un rôle. Le corps n'est pas un
+   * delta : ce qui n'y figure pas est révoqué, ce qui rend l'appel idempotent.
+   */
+  updateRolePermissions(
+    roleId: number,
+    permissions: readonly string[],
+  ): Observable<ApiTeamRoleWithPermissions> {
+    return this.http.put<ApiTeamRoleWithPermissions>(`${this.baseUrl}/roles/${roleId}/permissions`, {
+      permissions,
+    });
+  }
+
+  /**
    * `GET /logs` paginates server-side (50 rows per page by default, 200 max) and this
    * call sends neither `page` nor `limit`, so it silently gets the default first page —
    * the most recent entries, newest first — not the whole table. The Équipe page's
