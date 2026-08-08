@@ -1,10 +1,5 @@
 <aside class="w-60 shrink-0 overflow-y-auto border-r border-border-s px-3 py-4">
-  @for (it of items; track it.id; let i = $index) {
-    @if (showAdmHead(i)) {
-      <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-3.5 pb-1 uppercase">
-        Admin BAE
-      </div>
-    }
+  @for (it of items; track it.id) {
     <a
       [routerLink]="it.route"
       routerLinkActive="bg-surface-2 text-text [&_.bae-snav-icon]:text-blue"
