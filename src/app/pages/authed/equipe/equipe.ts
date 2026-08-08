@@ -16,20 +16,24 @@ import {
   LucidePlus,
   LucideSearch,
 } from '@lucide/angular';
+import { Store } from '@ngrx/store';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { TeamStore } from '#core/store/team.store';
+import { selectPermissions } from '#core/store/auth/auth.selector';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Card } from '#shared/components/ui/card/card';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { Input } from '#shared/components/ui/input/input';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { toAuditEntries, toMemberRows, toPermsMatrix } from './equipe.mappers';
-import type { AuditEntry, Invitation, PermState } from './equipe.types';
+import type { AuditEntry, Invitation } from './equipe.types';
 
 @Component({
   selector: 'bfd-equipe',
-  imports: [Btn, Badge, Card, Avatar, Input, Skeleton, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Avatar, Input, Skeleton, Checkbox, LucideDynamicIcon],
   templateUrl: './equipe.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -37,6 +41,8 @@ export class Equipe implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
   protected readonly store = inject(TeamStore);
+  private readonly store$ = inject(Store);
+  private readonly toast = inject(ToastService);
 
   /** Reference instant for every relative label; refreshed on each load. */
   private readonly now = signal(Date.now());
@@ -101,6 +107,40 @@ export class Equipe implements OnInit {
     toPermsMatrix(this.store.roles(), this.store.permissions(), this.store.members()),
   );
 
+  // `selectPermissions` et non `selectHasPermission(…)` : cette dernière fabrique
+  // un sélecteur neuf à chaque appel, hors de portée de `overrideSelector`.
+  private readonly permissions = this.store$.selectSignal(selectPermissions);
+
+  protected readonly canWriteRoles = computed(() => this.permissions().includes('role:write'));
+
+  /**
+   * Miroir de l'invariant back : retirer `role:write` OU `role:read` au dernier
+   * rôle occupé qui la porte verrouille l'administration pour tout le monde —
+   * `role:read` conditionne aussi cette page, `GET /roles`, `GET /permissions` et
+   * l'entrée de la sidebar. Le back refuse chacune par un 409 ; la case
+   * correspondante est désactivée ici pour ne pas provoquer un refus évitable.
+   * Une `Map` et non deux computed séparés : les deux permissions partagent
+   * exactement la même règle, seul le nom change.
+   */
+  private static readonly RBAC_PROTECTED_PERMISSIONS: readonly string[] = [
+    'role:read',
+    'role:write',
+  ];
+
+  private readonly soleLivingHolderByPermission = computed(() => {
+    const matrix = this.perms();
+    const holders = new Map<string, number>();
+    for (const permission of Equipe.RBAC_PROTECTED_PERMISSIONS) {
+      const row = matrix.rows.find((r) => r.permission === permission);
+      if (!row) continue;
+      const living = matrix.roles.filter(
+        (column, index) => column.memberCount > 0 && row.cells[index] === 'granted',
+      );
+      if (living.length === 1) holders.set(permission, living[0].id);
+    }
+    return holders;
+  });
+
   protected readonly audit = computed(() =>
     toAuditEntries(this.store.logs(), this.store.members(), this.now()),
   );
@@ -139,22 +179,22 @@ export class Equipe implements OnInit {
     return role === null ? 'ghost' : 'neutral';
   }
 
-  protected permClass(p: PermState): { wrap: string; label: string; title: string } {
-    if (p === 'rw')
-      return { wrap: 'bg-ok-soft text-ok', label: 'R+W', title: 'Lecture + écriture' };
-    if (p === 'r') return { wrap: 'bg-surface-2 text-text-2', label: 'R', title: 'Lecture seule' };
-    if (p === 'none') {
-      return {
-        wrap: 'border border-dashed border-border text-faint',
-        label: '—',
-        title: 'Aucun accès',
-      };
-    }
-    return {
-      wrap: 'border border-dashed border-border text-faint',
-      label: '?',
-      title: "Non exposé par l'API",
-    };
+  protected cellDisabled(roleId: number, permission: string): boolean {
+    if (!this.canWriteRoles()) return true;
+    if (this.store.savingRoleIds().includes(roleId)) return true;
+    return this.soleLivingHolderByPermission().get(permission) === roleId;
+  }
+
+  protected async onToggle(roleId: number, permission: string, granted: boolean): Promise<void> {
+    await this.store.setRolePermission(roleId, permission, granted);
+
+    const error =
+      this.store.permissionsErrorRoleId() === roleId ? this.store.permissionsError() : null;
+    this.toast.show(
+      error
+        ? { type: 'error', title: 'Modification refusée', message: error }
+        : { type: 'success', title: 'Permissions mises à jour' },
+    );
   }
 
   protected auditIconClass(c: AuditEntry['c']): string {

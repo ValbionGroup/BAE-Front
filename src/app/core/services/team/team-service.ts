@@ -4,14 +4,27 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
-// Shapes below were verified against a live backend (AdonisJS 6, `GET /v1/{members,roles,permissions,logs}`).
+// Shapes below were verified against a live backend (AdonisJS 7, `GET /v1/{members,roles,permissions,logs}`).
 
-/** `GET /roles` row — plain `roles` table, no relation is preloaded by RolesController.index. */
+/**
+ * Role shape as embedded in a member by `GET /members`, which preloads the role WITHOUT
+ * its permissions. No `permissions` field here on purpose: see `ApiTeamRoleWithPermissions`
+ * for the `GET /roles` shape, which does carry them.
+ */
 export interface ApiTeamRole {
   id: number;
   name: string;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+/**
+ * `GET /roles` row. Distinct from `ApiTeamRole` on purpose: the role embedded in a
+ * member by `GET /members` is preloaded WITHOUT its permissions, so making the field
+ * optional on the shared type would let a missing preload pass as "grants nothing".
+ */
+export interface ApiTeamRoleWithPermissions extends ApiTeamRole {
+  permissions: ApiTeamPermission[];
 }
 
 /**
@@ -51,9 +64,8 @@ export interface ApiTeamLogUser {
 
 /**
  * `meta` is a free-form JSON column. In practice the request logger stores the HTTP
- * status, the duration and a full copy of the response body — which makes `GET /logs`
- * a heavy payload (~675 KB for ~500 rows). `response` is deliberately typed `unknown`:
- * nothing in this page reads it.
+ * status, the duration and a copy of the response body. `response` is deliberately
+ * typed `unknown`: nothing in this page reads it.
  */
 export interface ApiTeamLogMeta {
   status?: number;
@@ -84,15 +96,33 @@ export class TeamService {
     return this.http.get<ApiTeamMember[]>(`${this.baseUrl}/members`);
   }
 
-  getRoles(): Observable<ApiTeamRole[]> {
-    return this.http.get<ApiTeamRole[]>(`${this.baseUrl}/roles`);
+  getRoles(): Observable<ApiTeamRoleWithPermissions[]> {
+    return this.http.get<ApiTeamRoleWithPermissions[]>(`${this.baseUrl}/roles`);
   }
 
   getPermissions(): Observable<ApiTeamPermission[]> {
     return this.http.get<ApiTeamPermission[]>(`${this.baseUrl}/permissions`);
   }
 
-  /** No pagination is exposed by LogsController.index: this returns the whole table. */
+  /**
+   * Remplace la liste complète des permissions d'un rôle. Le corps n'est pas un
+   * delta : ce qui n'y figure pas est révoqué, ce qui rend l'appel idempotent.
+   */
+  updateRolePermissions(
+    roleId: number,
+    permissions: readonly string[],
+  ): Observable<ApiTeamRoleWithPermissions> {
+    return this.http.put<ApiTeamRoleWithPermissions>(`${this.baseUrl}/roles/${roleId}/permissions`, {
+      permissions,
+    });
+  }
+
+  /**
+   * `GET /logs` paginates server-side (50 rows per page by default, 200 max) and this
+   * call sends neither `page` nor `limit`, so it silently gets the default first page —
+   * the most recent entries, newest first — not the whole table. The Équipe page's
+   * audit panel only ever shows that first page.
+   */
   getLogs(): Observable<ApiTeamLog[]> {
     return this.http.get<ApiTeamLog[]>(`${this.baseUrl}/logs`);
   }

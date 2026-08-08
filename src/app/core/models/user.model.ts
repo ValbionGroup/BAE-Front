@@ -15,4 +15,6 @@ export interface MemberModel {
 export interface UserProfileModel {
   user: UserModel;
   member: MemberModel;
+  /** Permissions du rôle du membre, à plat. Vide si le membre n'a pas de rôle. */
+  permissions: string[];
 }

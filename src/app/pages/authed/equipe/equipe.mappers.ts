@@ -10,7 +10,7 @@ import type {
   ApiTeamLog,
   ApiTeamMember,
   ApiTeamPermission,
-  ApiTeamRole,
+  ApiTeamRoleWithPermissions,
 } from '#core/services/team/team-service';
 import type {
   AuditEntry,
@@ -18,6 +18,7 @@ import type {
   PermsMatrix,
   PermsRoleColumn,
   PermsRow,
+  PermState,
   TeamMemberRow,
 } from './equipe.types';
 
@@ -28,7 +29,11 @@ const DAY_MS = 24 * HOUR_MS;
 /** A member is flagged "recently active" under this threshold. Documented, not guessed. */
 export const RECENT_ACTIVITY_MS = 5 * MINUTE_MS;
 
-/** Number of audit rows kept in the side panel — `GET /logs` returns the whole table. */
+/**
+ * Number of audit rows kept in the Audit tab. `GET /logs` is paginated — 50 rows by
+ * default, 200 max (`LogsController`) — so this trims that already-bounded recent
+ * window further; it is not a slice of the full log table.
+ */
 export const AUDIT_LIMIT = 20;
 
 function parseIso(value: string | null): number | null {
@@ -69,7 +74,11 @@ export function timestampLabel(iso: string | null, now: number): string {
 }
 
 /**
- * Most recent log timestamp per user id.
+ * Most recent log timestamp per user id, computed only over the `logs` array passed
+ * in — which is `GET /logs`' bounded recent window (50 rows by default, 200 max;
+ * `LogsController`), not the full table. On a busy instance most members will have no
+ * entry here at all, not because they are inactive but because their last request
+ * fell outside that window.
  * `Member` self-assigns its primary key from `User` (`@belongsTo(() => User, { foreignKey: 'id' })`),
  * so `member.id === user.id` and `logs.user_id` can be joined onto members directly.
  */
@@ -110,7 +119,7 @@ export function toMemberRows(
 }
 
 export function toPermsMatrix(
-  roles: readonly ApiTeamRole[],
+  roles: readonly ApiTeamRoleWithPermissions[],
   permissions: readonly ApiTeamPermission[],
   members: readonly ApiTeamMember[],
 ): PermsMatrix {
@@ -120,25 +129,28 @@ export function toPermsMatrix(
     memberCounts.set(member.roleId, (memberCounts.get(member.roleId) ?? 0) + 1);
   }
 
-  const columns: PermsRoleColumn[] = [...roles]
-    .sort((a, b) => a.name.localeCompare(b.name, 'fr') || a.id - b.id)
-    .map((role) => ({
-      id: role.id,
-      name: role.name,
-      memberCount: memberCounts.get(role.id) ?? 0,
-    }));
+  const sorted = [...roles].sort((a, b) => a.name.localeCompare(b.name, 'fr') || a.id - b.id);
 
-  // Every cell is `unknown`: `GET /roles` runs `Role.query()` with no preload and
-  // `GET /permissions` runs `Permission.all()`, so the `roles_permissions` pivot is
-  // never serialized. As soon as the backend exposes it, fill the cells here.
+  const columns: PermsRoleColumn[] = sorted.map((role) => ({
+    id: role.id,
+    name: role.name,
+    memberCount: memberCounts.get(role.id) ?? 0,
+  }));
+
+  const grantedByColumn = sorted.map(
+    (role) => new Set(role.permissions.map((entry) => entry.permission)),
+  );
+
   const rows: PermsRow[] = [...permissions]
     .sort((a, b) => a.permission.localeCompare(b.permission, 'fr'))
     .map((permission) => ({
       permission: permission.permission,
-      cells: columns.map(() => 'unknown' as const),
+      cells: grantedByColumn.map(
+        (granted): PermState => (granted.has(permission.permission) ? 'granted' : 'none'),
+      ),
     }));
 
-  return { roles: columns, rows, relationUnavailable: true };
+  return { roles: columns, rows };
 }
 
 function auditTone(level: string): AuditTone {

@@ -17,9 +17,8 @@ export interface TeamMemberRow {
   /** `member.points` — real, and the only extra numeric attribute members carry. */
   readonly points: number;
   /**
-   * NO API SOURCE. The mockup showed a per-role scope ("Paiements · Caisse"), which would
-   * require the roles↔permissions relation. Neither `GET /roles` nor `GET /permissions`
-   * exposes it, so this is always `null` and renders as `—`.
+   * NO API SOURCE. The mockup showed a per-role scope ("Paiements · Caisse"). Deriving it
+   * from the role's permissions is out of scope for now, so this is always `null`.
    */
   readonly scope: string | null;
   /**
@@ -28,23 +27,25 @@ export interface TeamMemberRow {
    */
   readonly promo: string | null;
   /**
-   * DERIVED, not native: most recent `logs.created_at` for this member, joined on
-   * `member.id === user.id` (Member self-assigns its PK from User). `null` when the
-   * member never appears in the request log.
+   * DERIVED, not native: most recent `logs.created_at` for this member within the
+   * bounded window `GET /logs` returns (50 rows by default, 200 max; `LogsController`
+   * paginates, it does not dump the table), joined on `member.id === user.id` (Member
+   * self-assigns its PK from User). `null` both when the member never appears in that
+   * window and when they were simply never logged — the two cases are indistinguishable
+   * from here.
    */
   readonly lastActivityLabel: string | null;
   /**
    * DERIVED PROXY, not a presence signal: true when the member's most recent request log
-   * is under 5 minutes old. The API exposes no session/online state.
+   * *within that same bounded window* is under 5 minutes old. The API exposes no
+   * session/online state, and on a busy instance the window can roll past a member's
+   * last request before this ever sees it — so this under-reports, it does not lie.
    */
   readonly recentlyActive: boolean;
 }
 
-/**
- * `unknown` means "the API does not tell us". It is NOT the same as `none`
- * (explicitly no access) and must never be rendered as such.
- */
-export type PermState = 'rw' | 'r' | 'none' | 'unknown';
+/** Une ligne est déjà une chaîne `resource:action` : l'état d'une case est binaire. */
+export type PermState = 'granted' | 'none';
 
 export interface PermsRow {
   /** `permission` string from `GET /permissions`, e.g. `stock:read`. It is the primary key. */
@@ -63,8 +64,6 @@ export interface PermsRoleColumn {
 export interface PermsMatrix {
   readonly roles: readonly PermsRoleColumn[];
   readonly rows: readonly PermsRow[];
-  /** True while no cell state can be resolved — the API hides the pivot table. */
-  readonly relationUnavailable: boolean;
 }
 
 export type AuditTone = 'warn' | 'ok' | 'danger' | 'blue' | 'neutral';

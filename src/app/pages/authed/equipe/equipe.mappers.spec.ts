@@ -9,7 +9,7 @@ import type {
   ApiTeamLog,
   ApiTeamMember,
   ApiTeamPermission,
-  ApiTeamRole,
+  ApiTeamRoleWithPermissions,
 } from '#core/services/team/team-service';
 
 const NOW = Date.parse('2026-08-05T12:00:00.000+00:00');
@@ -106,9 +106,15 @@ describe('equipe mappers', () => {
   });
 
   describe('toPermsMatrix', () => {
-    const roles: ApiTeamRole[] = [
-      { id: 1, name: 'Finance', createdAt: null, updatedAt: null },
-      { id: 2, name: 'Assembly', createdAt: null, updatedAt: null },
+    const roles: ApiTeamRoleWithPermissions[] = [
+      {
+        id: 1,
+        name: 'Finance',
+        createdAt: null,
+        updatedAt: null,
+        permissions: [{ permission: 'stock:read', createdAt: null, updatedAt: null }],
+      },
+      { id: 2, name: 'Assembly', createdAt: null, updatedAt: null, permissions: [] },
     ];
     const permissions: ApiTeamPermission[] = [
       { permission: 'stock:read', createdAt: null, updatedAt: null },
@@ -127,10 +133,17 @@ describe('equipe mappers', () => {
       expect(matrix.roles.find((r) => r.name === 'Assembly')?.memberCount).toBe(1);
     });
 
-    it('marks every cell unknown — the API hides the pivot table', () => {
+    it('grants a cell only where the role carries that exact permission', () => {
       const matrix = toPermsMatrix(roles, permissions, []);
-      expect(matrix.relationUnavailable).toBe(true);
-      expect(matrix.rows.every((r) => r.cells.every((c) => c === 'unknown'))).toBe(true);
+      // Colonnes triées par nom : [Assembly, Finance].
+      expect(matrix.rows.find((r) => r.permission === 'stock:read')?.cells).toEqual([
+        'none',
+        'granted',
+      ]);
+      expect(matrix.rows.find((r) => r.permission === 'product:create')?.cells).toEqual([
+        'none',
+        'none',
+      ]);
     });
   });
 

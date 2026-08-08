@@ -1,10 +1,7 @@
 services:
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: bae-front:latest
-    container_name: bae-front
+    image: registry.eirb.fr/valbiongroup/bae-front-dashboard:latest
+    container_name: bae-front-dashboard
     ports:
       - '8080:80'
     restart: unless-stopped

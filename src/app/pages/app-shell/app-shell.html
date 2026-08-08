@@ -1,8 +1,12 @@
-<div class="flex h-screen w-screen overflow-hidden bg-bg text-text font-sans">
+<!-- w-full et non w-screen : 100vw inclut la barre de défilement verticale, donc
+     toute page assez haute pour en afficher une déborde horizontalement de sa largeur. -->
+<div class="flex h-screen w-full overflow-hidden bg-bg text-text font-sans">
   <bfd-sidebar />
   <main class="flex flex-1 min-w-0 flex-col overflow-hidden">
     <bfd-topbar />
-    <div class="flex-1 overflow-auto">
+    <!-- min-h-0 : un item de flex colonne a min-height:auto, donc il s'étire à la
+         hauteur de son contenu et son overflow-auto ne se déclenche jamais. -->
+    <div class="min-h-0 flex-1 overflow-auto">
       <router-outlet />
     </div>
   </main>

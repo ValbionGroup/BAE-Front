@@ -10,6 +10,8 @@
       <button
         type="button"
         role="tab"
+        [id]="'equipe-tab-' + i"
+        [attr.aria-controls]="i === activeTab() ? 'equipe-panel-' + activeTab() : null"
         [attr.aria-selected]="i === activeTab()"
         (click)="activeTab.set(i)"
         [class]="
@@ -34,249 +36,249 @@
     </div>
   }
 
-  <div class="grid grid-cols-[1fr_360px] gap-[18px]">
-    <!-- Members + permissions -->
-    <div>
-      <!-- Members table -->
-      <bfd-card [padding]="0">
-        <div class="flex items-center px-4 py-3.5 border-b border-border-s">
-          <div class="flex-1">
-            <div class="text-[13px] font-semibold text-text">Membres</div>
-            <div class="text-[11px] text-muted mt-0.5">
-              {{ recentlyActiveCount() }} actif(s) sur les 5 dernières minutes · d'après le journal
-              de requêtes
-            </div>
-          </div>
-          <label class="w-[220px]">
-            <span class="sr-only">Filtrer les membres</span>
-            <bfd-input
-              [icon]="icSearch"
-              placeholder="Filtrer…"
-              size="sm"
-              (valueChange)="onSearch($event)"
-            />
-          </label>
-        </div>
-
-        <div
-          class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
-        >
-          <span></span><span>Nom</span><span>Rôle</span><span>Scope</span><span>Dernière act.</span
-          ><span></span>
-        </div>
-
-        @if (loading() === 'loading' || loading() === 'init') {
-          @for (row of skeletonRows; track row) {
-            <div
-              class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center gap-2 px-4 py-3 border-b border-border-s"
-            >
-              <bfd-skeleton width="28px" height="28px" rounded="pill" />
-              <bfd-skeleton width="60%" height="10px" />
-              <bfd-skeleton width="70px" height="10px" />
-              <bfd-skeleton width="40px" height="10px" />
-              <bfd-skeleton width="60px" height="10px" />
-              <span></span>
-            </div>
-          }
-        } @else if (errors().members) {
-          <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
-            {{ errors().members }}
-          </div>
-        } @else if (team().length === 0) {
-          <div class="px-6 py-10 text-center text-[12.5px] text-muted">
-            Aucun membre à afficher.
-          </div>
-        } @else {
-          @for (m of team(); track m.id; let last = $last) {
-            <div
-              [class]="
-                'grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center px-4 py-3 text-[12.5px] ' +
-                (last ? '' : 'border-b border-border-s')
-              "
-            >
-              <div class="relative w-7">
-                <bfd-avatar [name]="m.nom" [size]="28" />
-                @if (m.recentlyActive) {
-                  <span
-                    class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-ok border-2 border-surface"
-                    aria-hidden="true"
-                  ></span>
-                }
+  <div
+    role="tabpanel"
+    [id]="'equipe-panel-' + activeTab()"
+    [attr.aria-labelledby]="'equipe-tab-' + activeTab()"
+  >
+    @switch (activeTab()) {
+      @case (0) {
+        <bfd-card [padding]="0" class="block">
+          <div class="flex items-center px-4 py-3.5 border-b border-border-s">
+            <div class="flex-1">
+              <div class="text-[13px] font-semibold text-text">Membres</div>
+              <div class="text-[11px] text-muted mt-0.5">
+                {{ recentlyActiveCount() }} actif(s) sur les 5 dernières minutes · d'après le
+                journal de requêtes
               </div>
-              <div class="min-w-0">
-                <div class="font-medium text-text truncate">{{ m.nom }}</div>
-                <div class="text-[10.5px] text-muted mt-px">{{ m.points }} pts</div>
-              </div>
-              <bfd-badge [kind]="roleKind(m.role)">{{ m.role ?? 'Sans rôle' }}</bfd-badge>
-              <!-- Scope: no API source (roles↔permissions relation is not exposed). -->
-              <span class="text-faint text-xs" title="Non exposé par l'API">—</span>
-              <span
-                [class]="'text-[11.5px] ' + (m.recentlyActive ? 'text-ok' : 'text-muted')"
-                [title]="m.lastActivityLabel ? 'Dernière requête tracée' : 'Aucune activité tracée'"
-                >{{ m.lastActivityLabel ?? '—' }}</span
-              >
-              <svg
-                [lucideIcon]="icMore"
-                [size]="14"
-                class="text-muted justify-self-end"
-                aria-hidden="true"
-              ></svg>
             </div>
-          }
-        }
-      </bfd-card>
-
-      <!-- Permissions matrix -->
-      <bfd-card [padding]="0" class="mt-[18px] block">
-        <div class="px-4 py-3.5 border-b border-border-s">
-          <div class="text-[13px] font-semibold text-text">Matrice des permissions</div>
-          <div class="text-[11px] text-muted mt-0.5">
-            {{ perms().rows.length }} permission(s) · {{ perms().roles.length }} rôle(s)
+            <label class="w-[220px]">
+              <span class="sr-only">Filtrer les membres</span>
+              <bfd-input
+                [icon]="icSearch"
+                placeholder="Filtrer…"
+                size="sm"
+                (valueChange)="onSearch($event)"
+              />
+            </label>
           </div>
-        </div>
 
-        @if (perms().relationUnavailable && perms().rows.length > 0) {
           <div
-            class="px-4 py-2.5 bg-warn-soft text-warn text-[11.5px] border-b border-border-s"
-            role="note"
+            class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
           >
-            L'API n'expose pas l'association rôle → permission (table pivot
-            <span class="mono">roles_permissions</span> non sérialisée par
-            <span class="mono">GET /roles</span> ni <span class="mono">GET /permissions</span>). Les
-            cellules restent indéterminées.
+            <span></span><span>Nom</span><span>Rôle</span><span>Scope</span
+            ><span>Dernière act.</span><span></span>
           </div>
-        }
 
-        @if (loading() === 'loading' || loading() === 'init') {
-          <div class="px-4 py-4 flex flex-col gap-2">
+          @if (loading() === 'loading' || loading() === 'init') {
             @for (row of skeletonRows; track row) {
-              <bfd-skeleton height="14px" />
+              <div
+                class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center gap-2 px-4 py-3 border-b border-border-s"
+              >
+                <bfd-skeleton width="28px" height="28px" rounded="pill" />
+                <bfd-skeleton width="60%" height="10px" />
+                <bfd-skeleton width="70px" height="10px" />
+                <bfd-skeleton width="40px" height="10px" />
+                <bfd-skeleton width="60px" height="10px" />
+                <span></span>
+              </div>
             }
-          </div>
-        } @else if (errors().roles || errors().permissions) {
-          <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
-            {{ errors().roles ?? errors().permissions }}
-          </div>
-        } @else if (perms().rows.length === 0 || perms().roles.length === 0) {
-          <div class="px-6 py-10 text-center text-[12.5px] text-muted">
-            Aucun rôle ou aucune permission enregistrée.
-          </div>
-        } @else {
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-[12.5px]">
-              <caption class="sr-only">
-                Permissions par rôle. Les cellules marquées « ? » ne sont pas exposées par l'API.
-              </caption>
-              <thead>
-                <tr
-                  class="border-b border-border-s text-[10px] font-semibold text-muted uppercase tracking-wider"
-                >
-                  <th scope="col" class="text-left px-4 py-2.5 min-w-[160px]">Permission</th>
-                  @for (r of perms().roles; track r.id) {
-                    <th scope="col" class="text-center px-2 py-2.5 whitespace-nowrap">
-                      {{ r.name }}
-                      <span class="block font-normal normal-case text-faint"
-                        >{{ r.memberCount }} mb.</span
-                      >
-                    </th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of perms().rows; track p.permission) {
-                  <tr class="border-b border-border-s last:border-b-0">
-                    <th scope="row" class="text-left px-4 py-2 font-medium text-text mono">
-                      {{ p.permission }}
-                    </th>
-                    @for (cell of p.cells; track $index) {
-                      <td class="text-center px-2 py-2">
-                        <span
-                          [class]="
-                            'mono inline-flex items-center justify-center min-w-[38px] h-[22px] px-1.5 rounded-sm text-[10.5px] font-semibold ' +
-                            permClass(cell).wrap
-                          "
-                          [title]="permClass(cell).title"
-                          >{{ permClass(cell).label
-                          }}<span class="sr-only"> {{ permClass(cell).title }}</span></span
-                        >
-                      </td>
-                    }
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </bfd-card>
-    </div>
-
-    <!-- Right: invitations + audit -->
-    <div class="flex flex-col gap-[18px]">
-      <!--
-        MOCK — aucune table `invitations` ni endpoint côté backend.
-        Le panneau est conservé volontairement : le manque est côté API.
-      -->
-      <bfd-card>
-        <div class="flex items-center mb-2.5">
-          <div class="flex-1 text-[13px] font-semibold text-text">Invitations en attente</div>
-          <bfd-badge kind="blue">{{ invitations.length }}</bfd-badge>
-        </div>
-        <p class="text-[11px] text-warn mb-1">Données de démonstration · endpoint non disponible</p>
-        @for (iv of invitations; track iv.mail; let i = $index) {
-          <div [class]="'py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
-            <div class="text-[12.5px] text-text font-medium">{{ iv.mail }}</div>
-            <div class="text-[11px] text-muted mt-0.5">{{ iv.role }} · expire {{ iv.exp }}</div>
-            <div class="flex gap-1.5 mt-2">
-              <bfd-btn kind="ghost" size="sm">Renvoyer</bfd-btn>
-              <bfd-btn kind="ghost" size="sm">Annuler</bfd-btn>
+          } @else if (errors().members) {
+            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+              {{ errors().members }}
             </div>
-          </div>
-        }
-      </bfd-card>
-
-      <bfd-card [padding]="0">
-        <div class="px-4 py-3.5 border-b border-border-s">
-          <div class="text-[13px] font-semibold text-text">Audit log · récent</div>
-          <div class="text-[11px] text-muted mt-0.5">
-            {{ audit().length }} entrée(s) les plus récentes · journal de requêtes
-          </div>
-        </div>
-
-        @if (loading() === 'loading' || loading() === 'init') {
-          <div class="px-4 py-4 flex flex-col gap-3">
-            @for (row of skeletonRows; track row) {
-              <bfd-skeleton height="14px" />
-            }
-          </div>
-        } @else if (errors().logs) {
-          <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
-            {{ errors().logs }}
-          </div>
-        } @else if (audit().length === 0) {
-          <div class="px-6 py-10 text-center text-[12.5px] text-muted">Aucune activité tracée.</div>
-        } @else {
-          @for (l of audit(); track l.id) {
-            <div class="flex gap-2.5 px-4 py-3 border-t border-border-s items-start">
+          } @else if (team().length === 0) {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucun membre à afficher.
+            </div>
+          } @else {
+            @for (m of team(); track m.id; let last = $last) {
               <div
                 [class]="
-                  'w-[26px] h-[26px] rounded-sm inline-flex items-center justify-center shrink-0 ' +
-                  auditIconClass(l.c)
+                  'grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center px-4 py-3 text-[12.5px] ' +
+                  (last ? '' : 'border-b border-border-s')
                 "
               >
-                <svg [lucideIcon]="l.icon" [size]="13" aria-hidden="true"></svg>
+                <div class="relative w-7">
+                  <bfd-avatar [name]="m.nom" [size]="28" />
+                  @if (m.recentlyActive) {
+                    <span
+                      class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-ok border-2 border-surface"
+                      aria-hidden="true"
+                    ></span>
+                  }
+                </div>
+                <div class="min-w-0">
+                  <div class="font-medium text-text truncate">{{ m.nom }}</div>
+                  <div class="text-[10.5px] text-muted mt-px">{{ m.points }} pts</div>
+                </div>
+                <bfd-badge [kind]="roleKind(m.role)">{{ m.role ?? 'Sans rôle' }}</bfd-badge>
+                <!-- Scope: deriving it from the role's permissions is out of scope for now. -->
+                <span class="text-faint text-xs" title="Non calculé">—</span>
+                <span
+                  [class]="'text-[11.5px] ' + (m.recentlyActive ? 'text-ok' : 'text-muted')"
+                  [title]="
+                    m.lastActivityLabel ? 'Dernière requête tracée' : 'Aucune activité tracée'
+                  "
+                  >{{ m.lastActivityLabel ?? '—' }}</span
+                >
+                <svg
+                  [lucideIcon]="icMore"
+                  [size]="14"
+                  class="text-muted justify-self-end"
+                  aria-hidden="true"
+                ></svg>
               </div>
-              <div class="flex-1 text-xs text-text-2 leading-relaxed min-w-0">
-                <span class="text-text font-medium">{{ l.who }}</span> {{ l.a }}
-                <span class="mono text-blue break-all">{{ l.em }}</span>
-                @if (l.s) {
-                  {{ l.s }}
-                }
-                <div class="text-[10.5px] text-muted mt-0.5">{{ l.when }}</div>
+            }
+          }
+        </bfd-card>
+      }
+
+      @case (1) {
+        <bfd-card [padding]="0" class="block">
+          <div class="px-4 py-3.5 border-b border-border-s">
+            <div class="text-[13px] font-semibold text-text">Matrice des permissions</div>
+            <div class="text-[11px] text-muted mt-0.5">
+              {{ perms().rows.length }} permission(s) · {{ perms().roles.length }} rôle(s)
+            </div>
+          </div>
+
+          @if (loading() === 'loading' || loading() === 'init') {
+            <div class="px-4 py-4 flex flex-col gap-2">
+              @for (row of skeletonRows; track row) {
+                <bfd-skeleton height="14px" />
+              }
+            </div>
+          } @else if (errors().roles || errors().permissions) {
+            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+              {{ errors().roles ?? errors().permissions }}
+            </div>
+          } @else if (perms().rows.length === 0 || perms().roles.length === 0) {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucun rôle ou aucune permission enregistrée.
+            </div>
+          } @else {
+            <!-- relative : `sr-only` est en position absolue ; sans ancêtre positionné
+                 son bloc conteneur devient le bloc conteneur initial, il échappe donc
+                 à ce défilement et étend la hauteur du document. -->
+            <div class="relative overflow-x-auto">
+              <table class="w-full border-collapse text-[12.5px]">
+                <caption class="sr-only">
+                  Permissions par rôle.
+                </caption>
+                <thead>
+                  <tr
+                    class="border-b border-border-s text-[10px] font-semibold text-muted uppercase tracking-wider"
+                  >
+                    <th scope="col" class="text-left px-4 py-2.5 min-w-[160px]">Permission</th>
+                    @for (r of perms().roles; track r.id) {
+                      <th scope="col" class="text-center px-2 py-2.5 whitespace-nowrap">
+                        {{ r.name }}
+                        <span class="block font-normal normal-case text-faint"
+                          >{{ r.memberCount }} mb.</span
+                        >
+                      </th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of perms().rows; track p.permission) {
+                    <tr class="border-b border-border-s last:border-b-0">
+                      <th scope="row" class="text-left px-4 py-2 font-medium text-text mono">
+                        {{ p.permission }}
+                      </th>
+                      @for (cell of p.cells; track $index) {
+                        <td class="text-center px-2 py-2">
+                          <bfd-checkbox
+                            [checked]="cell === 'granted'"
+                            [disabled]="cellDisabled(perms().roles[$index].id, p.permission)"
+                            [ariaLabel]="p.permission + ' pour ' + perms().roles[$index].name"
+                            (change)="onToggle(perms().roles[$index].id, p.permission, $event)"
+                          />
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </bfd-card>
+      }
+
+      @case (2) {
+        <bfd-card [padding]="0" class="block">
+          <div class="px-4 py-3.5 border-b border-border-s">
+            <div class="text-[13px] font-semibold text-text">Audit log · récent</div>
+            <div class="text-[11px] text-muted mt-0.5">
+              {{ audit().length }} entrée(s) les plus récentes · journal de requêtes
+            </div>
+          </div>
+
+          @if (loading() === 'loading' || loading() === 'init') {
+            <div class="px-4 py-4 flex flex-col gap-3">
+              @for (row of skeletonRows; track row) {
+                <bfd-skeleton height="14px" />
+              }
+            </div>
+          } @else if (errors().logs) {
+            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+              {{ errors().logs }}
+            </div>
+          } @else if (audit().length === 0) {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucune activité tracée.
+            </div>
+          } @else {
+            @for (l of audit(); track l.id) {
+              <div class="flex gap-2.5 px-4 py-3 border-t border-border-s items-start">
+                <div
+                  [class]="
+                    'w-[26px] h-[26px] rounded-sm inline-flex items-center justify-center shrink-0 ' +
+                    auditIconClass(l.c)
+                  "
+                >
+                  <svg [lucideIcon]="l.icon" [size]="13" aria-hidden="true"></svg>
+                </div>
+                <div class="flex-1 text-xs text-text-2 leading-relaxed min-w-0">
+                  <span class="text-text font-medium">{{ l.who }}</span> {{ l.a }}
+                  <span class="mono text-blue break-all">{{ l.em }}</span>
+                  @if (l.s) {
+                    {{ l.s }}
+                  }
+                  <div class="text-[10.5px] text-muted mt-0.5">{{ l.when }}</div>
+                </div>
+              </div>
+            }
+          }
+        </bfd-card>
+      }
+
+      @case (3) {
+        <!--
+          MOCK — aucune table `invitations` ni endpoint côté backend.
+          Le panneau est conservé volontairement : le manque est côté API.
+        -->
+        <bfd-card class="block">
+          <div class="flex items-center mb-2.5">
+            <div class="flex-1 text-[13px] font-semibold text-text">Invitations en attente</div>
+            <bfd-badge kind="blue">{{ invitations.length }}</bfd-badge>
+          </div>
+          <p class="text-[11px] text-warn mb-1">
+            Données de démonstration · endpoint non disponible
+          </p>
+          @for (iv of invitations; track iv.mail; let i = $index) {
+            <div [class]="'py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
+              <div class="text-[12.5px] text-text font-medium">{{ iv.mail }}</div>
+              <div class="text-[11px] text-muted mt-0.5">{{ iv.role }} · expire {{ iv.exp }}</div>
+              <div class="flex gap-1.5 mt-2">
+                <bfd-btn kind="ghost" size="sm">Renvoyer</bfd-btn>
+                <bfd-btn kind="ghost" size="sm">Annuler</bfd-btn>
               </div>
             </div>
           }
-        }
-      </bfd-card>
-    </div>
+        </bfd-card>
+      }
+    }
   </div>
 </div>

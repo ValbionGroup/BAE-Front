@@ -1,12 +1,13 @@
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, forkJoin, lastValueFrom, map, of, type Observable } from 'rxjs';
 import {
   TeamService,
   type ApiTeamLog,
   type ApiTeamMember,
   type ApiTeamPermission,
-  type ApiTeamRole,
+  type ApiTeamRoleWithPermissions,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
 
@@ -24,6 +25,16 @@ function settle<T>(source: Observable<T>): Observable<Settled<T>> {
   );
 }
 
+/**
+ * `apiEnvelopeInterceptor` réduit le corps d'erreur à `{ code, message }`.
+ * Le message vient de l'API parce que le 409 anti-verrouillage explique quoi
+ * faire — un texte codé en dur ne le pourrait pas.
+ */
+function messageOf(error: unknown): string {
+  const body = (error as HttpErrorResponse | undefined)?.error as { message?: string } | undefined;
+  return body?.message ?? 'Impossible de mettre à jour les permissions du rôle.';
+}
+
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
 export interface TeamSectionErrors {
   members: string | null;
@@ -36,10 +47,17 @@ interface TeamState {
   loading: LoadingStatus;
   loadError: string | null;
   members: ApiTeamMember[];
-  roles: ApiTeamRole[];
+  roles: ApiTeamRoleWithPermissions[];
   permissions: ApiTeamPermission[];
   logs: ApiTeamLog[];
   errors: TeamSectionErrors;
+  /** Rôles dont un PUT est en vol. Chaque requête porte la liste complète :
+   *  deux écritures concurrentes sur le même rôle s'écraseraient. */
+  savingRoleIds: number[];
+  permissionsError: string | null;
+  /** Role the current `permissionsError` describes; lets a retry on that same
+   *  role clear it without touching an unrelated role's still-unseen error. */
+  permissionsErrorRoleId: number | null;
 }
 
 const NO_ERRORS: TeamSectionErrors = {
@@ -57,6 +75,9 @@ const initialState: TeamState = {
   permissions: [],
   logs: [],
   errors: NO_ERRORS,
+  savingRoleIds: [],
+  permissionsError: null,
+  permissionsErrorRoleId: null,
 };
 
 export const TeamStore = signalStore(
@@ -95,7 +116,58 @@ export const TeamStore = signalStore(
       });
     },
 
-    /** Forces a refetch on the next `load()` (nothing mutates team data yet). */
+    async setRolePermission(roleId: number, permission: string, granted: boolean): Promise<void> {
+      if (store.savingRoleIds().includes(roleId)) return;
+
+      // A stale error only ever names one role; a fresh attempt on that same
+      // role is the signal that it's no longer describing the current state.
+      if (store.permissionsErrorRoleId() === roleId) {
+        patchState(store, { permissionsError: null, permissionsErrorRoleId: null });
+      }
+
+      const before = store.roles();
+      const target = before.find((role) => role.id === roleId);
+      if (!target) return;
+
+      const alreadyGranted = target.permissions.some((entry) => entry.permission === permission);
+      const next = granted
+        ? alreadyGranted
+          ? target.permissions
+          : [...target.permissions, { permission, createdAt: null, updatedAt: null }]
+        : target.permissions.filter((entry) => entry.permission !== permission);
+
+      patchState(store, {
+        roles: before.map((role) => (role.id === roleId ? { ...role, permissions: next } : role)),
+        savingRoleIds: [...store.savingRoleIds(), roleId],
+      });
+
+      try {
+        const saved = await lastValueFrom(
+          svc.updateRolePermissions(
+            roleId,
+            next.map((entry) => entry.permission),
+          ),
+        );
+        patchState(store, {
+          roles: store.roles().map((role) => (role.id === roleId ? saved : role)),
+        });
+      } catch (error) {
+        // Only `target` (this role's pre-click value) is restored, merged into
+        // live state: a wholesale `before` would also revert any other role
+        // whose write landed while this one was in flight.
+        patchState(store, {
+          roles: store.roles().map((role) => (role.id === roleId ? target : role)),
+          permissionsError: messageOf(error),
+          permissionsErrorRoleId: roleId,
+        });
+      } finally {
+        patchState(store, {
+          savingRoleIds: store.savingRoleIds().filter((id) => id !== roleId),
+        });
+      }
+    },
+
+    /** Forces a refetch on the next `load()`. */
     reset(): void {
       patchState(store, initialState);
     },
