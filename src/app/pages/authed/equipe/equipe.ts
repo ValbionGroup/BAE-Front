@@ -114,18 +114,31 @@ export class Equipe implements OnInit {
   protected readonly canWriteRoles = computed(() => this.permissions().includes('role:write'));
 
   /**
-   * Miroir de l'invariant back : retirer `role:write` au dernier rôle occupé qui
-   * la porte verrouille l'administration pour tout le monde. Le back refuse par
-   * un 409 ; la case est désactivée pour ne pas provoquer un refus évitable.
+   * Miroir de l'invariant back : retirer `role:write` OU `role:read` au dernier
+   * rôle occupé qui la porte verrouille l'administration pour tout le monde —
+   * `role:read` conditionne aussi cette page, `GET /roles`, `GET /permissions` et
+   * l'entrée de la sidebar. Le back refuse chacune par un 409 ; la case
+   * correspondante est désactivée ici pour ne pas provoquer un refus évitable.
+   * Une `Map` et non deux computed séparés : les deux permissions partagent
+   * exactement la même règle, seul le nom change.
    */
-  private readonly soleLivingWriter = computed(() => {
-    const holders = this.perms().roles.filter(
-      (column, index) =>
-        column.memberCount > 0 &&
-        this.perms().rows.find((row) => row.permission === 'role:write')?.cells[index] ===
-          'granted',
-    );
-    return holders.length === 1 ? holders[0].id : null;
+  private static readonly RBAC_PROTECTED_PERMISSIONS: readonly string[] = [
+    'role:read',
+    'role:write',
+  ];
+
+  private readonly soleLivingHolderByPermission = computed(() => {
+    const matrix = this.perms();
+    const holders = new Map<string, number>();
+    for (const permission of Equipe.RBAC_PROTECTED_PERMISSIONS) {
+      const row = matrix.rows.find((r) => r.permission === permission);
+      if (!row) continue;
+      const living = matrix.roles.filter(
+        (column, index) => column.memberCount > 0 && row.cells[index] === 'granted',
+      );
+      if (living.length === 1) holders.set(permission, living[0].id);
+    }
+    return holders;
   });
 
   protected readonly audit = computed(() =>
@@ -169,7 +182,7 @@ export class Equipe implements OnInit {
   protected cellDisabled(roleId: number, permission: string): boolean {
     if (!this.canWriteRoles()) return true;
     if (this.store.savingRoleIds().includes(roleId)) return true;
-    return permission === 'role:write' && this.soleLivingWriter() === roleId;
+    return this.soleLivingHolderByPermission().get(permission) === roleId;
   }
 
   protected async onToggle(roleId: number, permission: string, granted: boolean): Promise<void> {

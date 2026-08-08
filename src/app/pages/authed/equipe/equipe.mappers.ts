@@ -29,7 +29,11 @@ const DAY_MS = 24 * HOUR_MS;
 /** A member is flagged "recently active" under this threshold. Documented, not guessed. */
 export const RECENT_ACTIVITY_MS = 5 * MINUTE_MS;
 
-/** Number of audit rows kept in the side panel — `GET /logs` returns the whole table. */
+/**
+ * Number of audit rows kept in the Audit tab. `GET /logs` is paginated — 50 rows by
+ * default, 200 max (`LogsController`) — so this trims that already-bounded recent
+ * window further; it is not a slice of the full log table.
+ */
 export const AUDIT_LIMIT = 20;
 
 function parseIso(value: string | null): number | null {
@@ -70,7 +74,11 @@ export function timestampLabel(iso: string | null, now: number): string {
 }
 
 /**
- * Most recent log timestamp per user id.
+ * Most recent log timestamp per user id, computed only over the `logs` array passed
+ * in — which is `GET /logs`' bounded recent window (50 rows by default, 200 max;
+ * `LogsController`), not the full table. On a busy instance most members will have no
+ * entry here at all, not because they are inactive but because their last request
+ * fell outside that window.
  * `Member` self-assigns its primary key from `User` (`@belongsTo(() => User, { foreignKey: 'id' })`),
  * so `member.id === user.id` and `logs.user_id` can be joined onto members directly.
  */

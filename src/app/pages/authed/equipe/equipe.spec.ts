@@ -110,13 +110,18 @@ describe(Equipe.name, () => {
         updatedAt: null,
         permissions: [
           { permission: 'role:write', createdAt: null, updatedAt: null },
+          { permission: 'role:read', createdAt: null, updatedAt: null },
           { permission: 'stock:read', createdAt: null, updatedAt: null },
         ],
       },
     ]);
     httpMock
       .expectOne(`${baseUrl}/permissions`)
-      .flush([{ permission: 'role:write' }, { permission: 'stock:read' }]);
+      .flush([
+        { permission: 'role:write' },
+        { permission: 'role:read' },
+        { permission: 'stock:read' },
+      ]);
     httpMock.expectOne(`${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
   }
@@ -126,6 +131,15 @@ describe(Equipe.name, () => {
 
     expect(component['cellDisabled'](1, 'role:write')).toBe(true);
     expect(component['cellDisabled'](1, 'stock:read')).toBe(false);
+    httpMock.verify();
+  });
+
+  it('protects the last living holder of role:read', async () => {
+    // Mirrors the role:write case: role:read gates this very page, GET /roles,
+    // GET /permissions and the sidebar entry, so it must be just as protected.
+    await loadMatrix();
+
+    expect(component['cellDisabled'](1, 'role:read')).toBe(true);
     httpMock.verify();
   });
 

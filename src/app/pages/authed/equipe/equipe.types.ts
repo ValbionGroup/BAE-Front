@@ -27,14 +27,19 @@ export interface TeamMemberRow {
    */
   readonly promo: string | null;
   /**
-   * DERIVED, not native: most recent `logs.created_at` for this member, joined on
-   * `member.id === user.id` (Member self-assigns its PK from User). `null` when the
-   * member never appears in the request log.
+   * DERIVED, not native: most recent `logs.created_at` for this member within the
+   * bounded window `GET /logs` returns (50 rows by default, 200 max; `LogsController`
+   * paginates, it does not dump the table), joined on `member.id === user.id` (Member
+   * self-assigns its PK from User). `null` both when the member never appears in that
+   * window and when they were simply never logged — the two cases are indistinguishable
+   * from here.
    */
   readonly lastActivityLabel: string | null;
   /**
    * DERIVED PROXY, not a presence signal: true when the member's most recent request log
-   * is under 5 minutes old. The API exposes no session/online state.
+   * *within that same bounded window* is under 5 minutes old. The API exposes no
+   * session/online state, and on a busy instance the window can roll past a member's
+   * last request before this ever sees it — so this under-reports, it does not lie.
    */
   readonly recentlyActive: boolean;
 }
