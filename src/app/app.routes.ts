@@ -3,6 +3,7 @@ import { AppRoutes } from './app-routes.const';
 import { AppShell } from '#pages/app-shell/app-shell';
 import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
+import { permissionGuard } from '#core/guards/auth/permission-guard';
 
 export { AppRoutes } from './app-routes.const';
 
@@ -177,24 +178,11 @@ export const routes: Routes = [
                 (m) => m.ParametresSecurite,
               ),
           },
-          {
-            path: 'integrations',
-            loadComponent: () =>
-              import('#pages/authed/parametres/integrations/integrations').then(
-                (m) => m.ParametresIntegrations,
-              ),
-          },
-          {
-            path: 'modules',
-            loadComponent: () =>
-              import('#pages/authed/parametres/modules/modules').then(
-                (m) => m.ParametresModules,
-              ),
-          },
         ],
       },
       {
         path: AppRoutes.equipe,
+        canActivate: [permissionGuard('role:read')],
         loadComponent: () => import('#pages/authed/equipe/equipe').then((m) => m.Equipe),
       },
       {

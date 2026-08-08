@@ -42,6 +42,7 @@ export class AuthEffects {
                 AuthActions.rehydrationSuccess({
                   user: userProfile.user,
                   member: userProfile.member,
+                  permissions: userProfile.permissions,
                 }),
               ),
               catchError(() => of(AuthActions.rehydrationFailed())),
@@ -65,6 +66,7 @@ export class AuthEffects {
                 AuthActions.loginSuccess({
                   user: userProfile.user,
                   member: userProfile.member,
+                  permissions: userProfile.permissions,
                 }),
               ),
               catchError((err) => of(AuthActions.loginFailure({ error: toApiError(err) }))),

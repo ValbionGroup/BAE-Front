@@ -26,7 +26,7 @@ import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { Kbd } from '#shared/components/ui/kbd/kbd';
 import { Logo } from '#shared/components/ui/logo/logo';
 import { logout } from '#core/store/auth/auth.actions';
-import { selectMember } from '#core/store/auth/auth.selector';
+import { selectMember, selectPermissions } from '#core/store/auth/auth.selector';
 
 interface NavItem {
   readonly id: string;
@@ -55,6 +55,7 @@ interface NavItem {
 export class Sidebar {
   private readonly store = inject(Store);
   private readonly member = this.store.selectSignal(selectMember);
+  private readonly permissions = this.store.selectSignal(selectPermissions);
 
   protected readonly userName = computed<string>(() => {
     const m = this.member();
@@ -89,11 +90,13 @@ export class Sidebar {
     { id: 'ana', label: 'Analyse', icon: LucideChartLine, route: '/analyse' },
   ];
 
-  protected readonly footer: readonly NavItem[] = [
+  protected readonly footer = computed<readonly NavItem[]>(() => [
     { id: 'tick', label: 'Tickets', icon: LucideTicket, route: '/tickets' },
-    { id: 'team', label: 'Équipe BAE', icon: LucideShield, route: '/equipe' },
+    ...(this.permissions().includes('role:read')
+      ? [{ id: 'team', label: 'Équipe BAE', icon: LucideShield, route: '/equipe' }]
+      : []),
     { id: 'set', label: 'Paramètres', icon: LucideSettings, route: '/parametres' },
-  ];
+  ]);
 
   protected logout(): void {
     this.store.dispatch(logout());
