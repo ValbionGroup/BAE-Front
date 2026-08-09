@@ -7,10 +7,20 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { LucidePlus, LucideTrash2, LucideX } from '@lucide/angular';
+import {
+  LucideDynamicIcon,
+  type LucideIconInput,
+  LucidePackage,
+  LucidePlus,
+  LucideSettings,
+  LucideSparkles,
+  LucideTrash2,
+  LucideFlame,
+} from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { JOB_PERIODS, JOB_PERIOD_LABELS, type JobPeriod } from '#core/models/job-period.model';
 import { RoleModalJob, RoleModalRole, RolesModalConfig } from '../modal.models';
+import { ModalShell } from '../modal-shell/modal-shell';
 
 /** One `<optgroup>`: a moment of the soirée and the jobs still selectable in it. */
 interface JobOptionGroup {
@@ -19,9 +29,25 @@ interface JobOptionGroup {
   jobs: readonly RoleModalJob[];
 }
 
+/**
+ * Pastille de la maquette : une icône teintée devant chaque poste.
+ *
+ * La maquette donne une icône *par poste* (cuisine, caisse, bar…) ; rien en
+ * base ne porte cette information — `jobs` n'a ni icône ni couleur. On la
+ * dérive donc du seul attribut réel, la période, ce qui a l'avantage de dire
+ * quelque chose de vrai : la couleur code le moment de la soirée.
+ */
+const PERIOD_ICONS: Readonly<Record<JobPeriod, { icon: LucideIconInput; classes: string }>> = {
+  before: { icon: LucidePackage, classes: 'bg-blue-soft text-blue' },
+  during: { icon: LucideFlame, classes: 'bg-warn-soft text-warn' },
+  after: { icon: LucideSparkles, classes: 'bg-ok-soft text-ok' },
+};
+
 @Component({
   selector: 'bfd-roles-modal',
-  imports: [LucideX, LucidePlus, LucideTrash2, Btn],
+  // `LucidePlus` et `LucideTrash2` ne sont plus des directives ici : les icônes
+  // passent toutes par `[lucideIcon]`, donc seul `LucideDynamicIcon` s'importe.
+  imports: [LucideDynamicIcon, Btn, ModalShell],
   templateUrl: './roles-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -42,6 +68,35 @@ export class RolesModal {
   protected readonly canSave = computed(() =>
     this.draft().every((role) => role.jobId > 0 && role.requiredCount > 0),
   );
+
+  protected readonly icSettings = LucideSettings;
+  protected readonly icPlus = LucidePlus;
+  protected readonly icTrash = LucideTrash2;
+
+  /**
+   * Les deux seules tuiles du bandeau de la maquette qui reposent sur des
+   * données réelles. Les deux autres — « membres présents » et « couverture » —
+   * ont besoin du roster de la soirée, que la modale ne reçoit pas : les
+   * inventer donnerait un chiffre faux au-dessus d'un formulaire d'édition.
+   */
+  protected readonly totalRequired = computed(() =>
+    this.draft().reduce((sum, role) => sum + Math.max(0, role.requiredCount), 0),
+  );
+
+  /** Icône et teinte de la pastille, dérivées du moment du poste. */
+  protected periodStyle(jobId: number): { icon: LucideIconInput; classes: string } {
+    const job = this.config().availableJobs.find((candidate) => candidate.id === jobId);
+    return PERIOD_ICONS[job?.period ?? 'during'];
+  }
+
+  /** Pas du compteur d'effectif, borné à 1 : un poste armé à zéro se retire. */
+  protected step(index: number, delta: number): void {
+    this.draft.update((roles) =>
+      roles.map((role, i) =>
+        i === index ? { ...role, requiredCount: Math.max(1, role.requiredCount + delta) } : role,
+      ),
+    );
+  }
 
   constructor() {
     effect(() => {

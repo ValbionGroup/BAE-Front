@@ -22,6 +22,8 @@ interface RolesModalInternals {
   ): { period: JobPeriod; label: string; jobs: readonly RoleModalJob[] }[];
   jobName(jobId: number): string;
   jobPeriodLabel(jobId: number): string;
+  totalRequired(): number;
+  step(index: number, delta: number): void;
 }
 
 const JOBS: RoleModalJob[] = [
@@ -72,6 +74,50 @@ describe(RolesModal.name, () => {
   it('should create', async () => {
     await setup();
     expect(component).toBeTruthy();
+  });
+
+  it('totals the requested headcount across the postes', async () => {
+    await setup([
+      { jobId: 1, requiredCount: 2 },
+      { jobId: 4, requiredCount: 3 },
+    ]);
+
+    expect(internals.totalRequired()).toBe(5);
+  });
+
+  it('steps the headcount up and down', async () => {
+    await setup([{ jobId: 1, requiredCount: 2 }]);
+
+    internals.step(0, 1);
+    expect(internals.draft()[0].requiredCount).toBe(3);
+
+    internals.step(0, -1);
+    expect(internals.draft()[0].requiredCount).toBe(2);
+  });
+
+  it('never steps a poste below one person', async () => {
+    await setup([{ jobId: 1, requiredCount: 1 }]);
+
+    internals.step(0, -1);
+
+    // Un poste armé à zéro n'a pas de sens : on le retire, on ne le vide pas.
+    // Sans ce plancher le compteur passerait négatif et `canSave` bloquerait
+    // l'enregistrement sans que rien à l'écran n'explique pourquoi.
+    expect(internals.draft()[0].requiredCount).toBe(1);
+    expect(internals.canSave()).toBe(true);
+  });
+
+  it('gives each stepper button an accessible name naming its poste', async () => {
+    await setup([{ jobId: 1, requiredCount: 2 }]);
+    fixture.detectChanges();
+
+    const labels = [...fixture.nativeElement.querySelectorAll('button[aria-label]')].map(
+      (b: HTMLElement) => b.getAttribute('aria-label'),
+    );
+    // Deux boutons « + » identiques sur deux lignes sont inexploitables au
+    // lecteur d'écran, qui les annonce hors de leur contexte visuel.
+    expect(labels).toContain('Une personne de plus au poste Barman');
+    expect(labels).toContain('Une personne de moins au poste Barman');
   });
 
   /**
