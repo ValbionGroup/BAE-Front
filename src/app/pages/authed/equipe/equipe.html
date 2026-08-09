@@ -1,6 +1,15 @@
 <ng-template #actions>
   <bfd-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus">Inviter un membre</bfd-btn>
+  <!-- Aucune table `invitations` ni endpoint côté back (§3.2) : le bouton reste
+       en place — le manque est côté API — mais cesse de l'être en silence. -->
+  <bfd-btn
+    kind="primary"
+    size="md"
+    [icon]="icPlus"
+    [disabled]="true"
+    title="Endpoint d'invitation non disponible"
+    >Inviter un membre</bfd-btn
+  >
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
@@ -122,12 +131,18 @@
                   "
                   >{{ m.lastActivityLabel ?? '—' }}</span
                 >
-                <svg
-                  [lucideIcon]="icMore"
-                  [size]="14"
-                  class="text-muted justify-self-end"
-                  aria-hidden="true"
-                ></svg>
+                <button
+                  type="button"
+                  data-testid="member-actions"
+                  class="justify-self-end w-6 h-6 inline-flex items-center justify-center rounded-sm bg-transparent border-0 text-muted cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-blue/40"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'Actions pour ' + m.nom"
+                  [attr.title]="actionsReason(m.id)"
+                  [disabled]="actionsDisabled(m.id)"
+                  (click)="onActionsClick($event, m.id)"
+                >
+                  <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
+                </button>
               </div>
             }
           }

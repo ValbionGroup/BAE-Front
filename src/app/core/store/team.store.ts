@@ -8,6 +8,7 @@ import {
   type ApiTeamMember,
   type ApiTeamPermission,
   type ApiTeamRoleWithPermissions,
+  type UpdateMemberPatch,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
 
@@ -27,12 +28,12 @@ function settle<T>(source: Observable<T>): Observable<Settled<T>> {
 
 /**
  * `apiEnvelopeInterceptor` réduit le corps d'erreur à `{ code, message }`.
- * Le message vient de l'API parce que le 409 anti-verrouillage explique quoi
- * faire — un texte codé en dur ne le pourrait pas.
+ * Le message vient de l'API parce que ses refus (409 anti-verrouillage, 403 de
+ * hiérarchie) expliquent quoi faire — un texte codé en dur ne le pourrait pas.
  */
-function messageOf(error: unknown): string {
+function messageOf(error: unknown, fallback: string): string {
   const body = (error as HttpErrorResponse | undefined)?.error as { message?: string } | undefined;
-  return body?.message ?? 'Impossible de mettre à jour les permissions du rôle.';
+  return body?.message ?? fallback;
 }
 
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
@@ -58,6 +59,13 @@ interface TeamState {
   /** Role the current `permissionsError` describes; lets a retry on that same
    *  role clear it without touching an unrelated role's still-unseen error. */
   permissionsErrorRoleId: number | null;
+  /** Membres dont une écriture est en vol, pour empêcher deux mutations
+   *  concurrentes sur la même ligne de s'écraser. */
+  savingMemberIds: number[];
+  memberError: string | null;
+  /** Membre que `memberError` décrit ; une nouvelle tentative sur ce membre
+   *  l'efface sans toucher à l'erreur non vue d'un autre. */
+  memberErrorId: number | null;
 }
 
 const NO_ERRORS: TeamSectionErrors = {
@@ -78,6 +86,9 @@ const initialState: TeamState = {
   savingRoleIds: [],
   permissionsError: null,
   permissionsErrorRoleId: null,
+  savingMemberIds: [],
+  memberError: null,
+  memberErrorId: null,
 };
 
 export const TeamStore = signalStore(
@@ -157,12 +168,108 @@ export const TeamStore = signalStore(
         // whose write landed while this one was in flight.
         patchState(store, {
           roles: store.roles().map((role) => (role.id === roleId ? target : role)),
-          permissionsError: messageOf(error),
+          permissionsError: messageOf(error, 'Impossible de mettre à jour les permissions du rôle.'),
           permissionsErrorRoleId: roleId,
         });
       } finally {
         patchState(store, {
           savingRoleIds: store.savingRoleIds().filter((id) => id !== roleId),
+        });
+      }
+    },
+
+    async updateMember(id: number, patch: UpdateMemberPatch): Promise<void> {
+      if (store.savingMemberIds().includes(id)) return;
+
+      if (store.memberErrorId() === id) {
+        patchState(store, { memberError: null, memberErrorId: null });
+      }
+
+      const target = store.members().find((member) => member.id === id);
+      if (!target) {
+        // Membre disparu du store entre-temps (supprimé depuis un autre
+        // onglet pendant l'édition) : un retour muet laisserait `memberErrorId`
+        // à sa valeur précédente, la modale lirait « pas d'erreur pour ce
+        // membre » et se fermerait comme si l'écriture avait abouti.
+        patchState(store, {
+          memberError: 'Ce membre a été supprimé entre-temps.',
+          memberErrorId: id,
+        });
+        return;
+      }
+
+      // Écriture optimiste : le rôle affiché suit le patch tant que la réponse
+      // n'est pas là. `role` est recalculé localement pour que le badge change
+      // tout de suite — le serveur renverra la relation rechargée.
+      const optimistic = {
+        ...target,
+        ...(patch.firstName !== undefined ? { firstName: patch.firstName } : {}),
+        ...(patch.lastName !== undefined ? { lastName: patch.lastName } : {}),
+        ...(patch.roleId !== undefined
+          ? {
+              roleId: patch.roleId,
+              role:
+                patch.roleId === null
+                  ? null
+                  : (store.roles().find((role) => role.id === patch.roleId) ?? target.role),
+            }
+          : {}),
+      };
+
+      patchState(store, {
+        members: store.members().map((member) => (member.id === id ? optimistic : member)),
+        savingMemberIds: [...store.savingMemberIds(), id],
+      });
+
+      try {
+        const saved = await lastValueFrom(svc.updateMember(id, patch));
+        patchState(store, {
+          members: store.members().map((member) => (member.id === id ? saved : member)),
+        });
+      } catch (error) {
+        // Seule cette ligne est restaurée, fusionnée dans l'état vivant : un
+        // `before` global annulerait aussi l'écriture d'un autre membre qui a
+        // abouti pendant que celle-ci était en vol.
+        patchState(store, {
+          members: store.members().map((member) => (member.id === id ? target : member)),
+          memberError: messageOf(error, 'Impossible de modifier ce membre.'),
+          memberErrorId: id,
+        });
+      } finally {
+        patchState(store, {
+          savingMemberIds: store.savingMemberIds().filter((entry) => entry !== id),
+        });
+      }
+    },
+
+    /**
+     * Délibérément NON optimiste. Retirer la ligne puis la remettre sur un refus
+     * produit un clignotement qui se lit comme un bug — or le refus n'est pas un
+     * cas rare ici : deux des trois gardes du back (hiérarchie, auto-suppression)
+     * se déclenchent sur des gestes que l'interface ne peut pas toujours prévoir.
+     */
+    async deleteMember(id: number): Promise<void> {
+      if (store.savingMemberIds().includes(id)) return;
+
+      if (store.memberErrorId() === id) {
+        patchState(store, { memberError: null, memberErrorId: null });
+      }
+
+      patchState(store, { savingMemberIds: [...store.savingMemberIds(), id] });
+
+      try {
+        await lastValueFrom(svc.deleteMember(id));
+        patchState(store, {
+          members: store.members().filter((member) => member.id !== id),
+        });
+      } catch (error) {
+        patchState(store, {
+          memberError: messageOf(error, 'Impossible de supprimer ce membre.'),
+          memberErrorId: id,
+        });
+      } finally {
+        patchState(store, {
+          savingMemberIds: store.savingMemberIds().filter((entry) => entry !== id),
         });
       }
     },

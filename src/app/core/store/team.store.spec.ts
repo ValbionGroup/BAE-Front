@@ -266,4 +266,86 @@ describe(TeamStore.name, () => {
     expect(store.permissionsError()).toBe('Accordez d’abord role:write à un rôle occupé.');
     expect(store.permissionsErrorRoleId()).toBe(1);
   });
+
+  it('restores only the edited row, keeping a concurrent write that landed meanwhile', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER, { ...MEMBER, id: 3, firstName: 'Ana' }]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    // Les deux écritures partent avant que l'une ou l'autre ne réponde.
+    const failing = store.updateMember(2, { firstName: 'Refusé' });
+    const concurrent = store.updateMember(3, { firstName: 'Concurrent' });
+
+    // Celle du membre 3 aboutit la première : elle est désormais dans l'état vivant.
+    httpMock
+      .expectOne(`${baseUrl}/members/3`)
+      .flush({ ...MEMBER, id: 3, firstName: 'Concurrent' });
+    await concurrent;
+
+    // Celle du membre 2 est refusée ensuite.
+    httpMock
+      .expectOne(`${baseUrl}/members/2`)
+      .flush({ message: 'Refusé par le serveur.' }, { status: 403, statusText: 'Forbidden' });
+    await failing;
+
+    expect(store.members().find((m) => m.id === 2)?.firstName).toBe('Tommy');
+    // Le cœur du test : une restauration par instantané `before` ramènerait la
+    // ligne 3 à « Ana » et effacerait une écriture qui a pourtant abouti.
+    expect(store.members().find((m) => m.id === 3)?.firstName).toBe('Concurrent');
+    expect(store.memberError()).toBe('Refusé par le serveur.');
+    expect(store.memberErrorId()).toBe(2);
+  });
+
+  it('reports an error instead of silently no-opping when the target member is gone', async () => {
+    // Nothing loaded: `store.members()` is empty, so `updateMember` finds no
+    // target — the scenario is a member deleted in another tab mid-edit.
+    // Silently returning here would let the edit modal's close-on-success
+    // check pass on a write that never happened.
+    await store.updateMember(999, { firstName: 'Trop tard' });
+
+    httpMock.expectNone(`${baseUrl}/members/999`);
+    expect(store.memberError()).not.toBeNull();
+    expect(store.memberErrorId()).toBe(999);
+  });
+
+  it('does not remove the row before the delete succeeds', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const deleting = store.deleteMember(2);
+    expect(store.members().length).toBe(1);
+
+    httpMock.expectOne(`${baseUrl}/members/2`).flush(null, { status: 204, statusText: 'No Content' });
+    await deleting;
+
+    expect(store.members().length).toBe(0);
+  });
+
+  it('keeps the row and surfaces the API message when the delete is refused', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const deleting = store.deleteMember(2);
+    httpMock
+      .expectOne(`${baseUrl}/members/2`)
+      .flush(
+        { message: 'Vous ne pouvez pas supprimer votre propre compte.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await deleting;
+
+    expect(store.members().length).toBe(1);
+    expect(store.memberError()).toBe('Vous ne pouvez pas supprimer votre propre compte.');
+  });
 });

@@ -13,13 +13,18 @@ import {
   LucideDownload,
   LucideDynamicIcon,
   LucideEllipsis,
+  LucidePencil,
   LucidePlus,
   LucideSearch,
+  LucideTrash2,
 } from '@lucide/angular';
 import { Store } from '@ngrx/store';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { TeamStore } from '#core/store/team.store';
-import { selectPermissions } from '#core/store/auth/auth.selector';
+import { selectMember, selectPermissions } from '#core/store/auth/auth.selector';
+import { DropdownService } from '#shared/components/dropdown/dropdown.service';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { MemberEditModal } from '#shared/components/modal/member-edit-modal/member-edit-modal';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
@@ -30,6 +35,7 @@ import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { toAuditEntries, toMemberRows, toPermsMatrix } from './equipe.mappers';
 import type { AuditEntry, Invitation } from './equipe.types';
+import type { ApiTeamMember } from '#core/services/team/team-service';
 
 @Component({
   selector: 'bfd-equipe',
@@ -43,6 +49,8 @@ export class Equipe implements OnInit {
   protected readonly store = inject(TeamStore);
   private readonly store$ = inject(Store);
   private readonly toast = inject(ToastService);
+  private readonly dropdown = inject(DropdownService);
+  private readonly modal = inject(ModalService);
 
   /** Reference instant for every relative label; refreshed on each load. */
   private readonly now = signal(Date.now());
@@ -77,6 +85,8 @@ export class Equipe implements OnInit {
   protected readonly icPlus = LucidePlus;
   protected readonly icSearch = LucideSearch;
   protected readonly icMore = LucideEllipsis;
+  protected readonly icPencil = LucidePencil;
+  protected readonly icTrash = LucideTrash2;
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
@@ -140,6 +150,155 @@ export class Equipe implements OnInit {
     }
     return holders;
   });
+
+  protected readonly canWriteMembers = computed(() => this.permissions().includes('member:write'));
+
+  private readonly currentMember = this.store$.selectSignal(selectMember);
+
+  /** Permissions accordées par chaque rôle, indexées — la règle 1 comme la
+   *  règle 2 se ramènent à une inclusion dans cet ensemble. */
+  private readonly permissionsByRoleId = computed(() => {
+    const byRole = new Map<number, ReadonlySet<string>>();
+    for (const role of this.store.roles()) {
+      byRole.set(role.id, new Set(role.permissions.map((entry) => entry.permission)));
+    }
+    return byRole;
+  });
+
+  private permissionsOfRole(roleId: number | null): ReadonlySet<string> {
+    if (roleId === null) return new Set<string>();
+    return this.permissionsByRoleId().get(roleId) ?? new Set<string>();
+  }
+
+  private includedInActor(other: ReadonlySet<string>): boolean {
+    const actor = new Set(this.permissions());
+    for (const permission of other) {
+      if (!actor.has(permission)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Miroir de la règle 1 côté back. Le front n'autorise rien : il évite un
+   * refus que le serveur prononcerait de toute façon, et affiche le motif —
+   * un bouton inerte sans explication se lit comme un bug.
+   */
+  protected canActOn(memberId: number): boolean {
+    if (!this.canWriteMembers()) return false;
+    const member = this.store.members().find((entry) => entry.id === memberId);
+    if (!member) return false;
+    return this.includedInActor(this.permissionsOfRole(member.roleId));
+  }
+
+  /** Miroir de la règle 2 : les rôles que l'utilisateur peut attribuer. */
+  private readonly grantableRoleIds = computed(() =>
+    this.store
+      .roles()
+      .filter((role) => this.includedInActor(this.permissionsOfRole(role.id)))
+      .map((role) => role.id),
+  );
+
+  /**
+   * Miroir de l'invariant anti-verrouillage, côté membres cette fois :
+   * `soleLivingHolderByPermission()` désigne le rôle qui porte seul `role:read`
+   * ou `role:write` ; si ce rôle n'a qu'un occupant, le supprimer ou lui retirer
+   * son rôle viderait la permission.
+   */
+  private readonly lockedMemberIds = computed(() => {
+    const locked = new Set<number>();
+    for (const roleId of this.soleLivingHolderByPermission().values()) {
+      const holders = this.store.members().filter((member) => member.roleId === roleId);
+      if (holders.length === 1) locked.add(holders[0].id);
+    }
+    return locked;
+  });
+
+  protected actionsDisabled(memberId: number): boolean {
+    return !this.canActOn(memberId);
+  }
+
+  /** Motif affiché en `title`, pour que l'inertie soit lisible. */
+  protected actionsReason(memberId: number): string | null {
+    if (!this.canWriteMembers()) return 'Permission member:write requise.';
+    if (!this.canActOn(memberId)) return 'Ce membre porte des permissions que vous n’avez pas.';
+    return null;
+  }
+
+  protected openMemberMenu(event: MouseEvent, member: ApiTeamMember): void {
+    const locked = this.lockedMemberIds().has(member.id);
+    const isSelf = this.currentMember()?.id === member.id;
+
+    this.dropdown.toggle({
+      anchor: event.currentTarget as HTMLElement,
+      placement: 'bottom-end',
+      width: 200,
+      items: [
+        {
+          type: 'action',
+          icon: this.icPencil,
+          label: 'Modifier',
+          onClick: () => this.openEdit(member.id),
+        },
+        { type: 'separator' },
+        {
+          type: 'action',
+          icon: this.icTrash,
+          label: 'Supprimer',
+          danger: true,
+          disabled: isSelf || locked,
+          description: isSelf
+            ? 'Vous ne pouvez pas supprimer votre propre compte.'
+            : locked
+              ? 'Dernier porteur d’une permission d’administration.'
+              : undefined,
+          onClick: () => this.confirmDelete(member),
+        },
+      ],
+    });
+  }
+
+  private openEdit(memberId: number): void {
+    this.modal.open({
+      type: 'component',
+      component: MemberEditModal,
+      inputs: {
+        memberId,
+        grantableRoleIds: this.grantableRoleIds(),
+        roleLocked: this.lockedMemberIds().has(memberId),
+      },
+    });
+  }
+
+  private confirmDelete(member: ApiTeamMember): void {
+    const name = `${member.firstName} ${member.lastName}`.trim();
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer ce membre ?',
+      message: `${name} perdra aussi son compte utilisateur et ses sessions ouvertes.`,
+      details:
+        'Ses affectations et ses préférences de postes sont supprimées ; les commandes qu’il a encaissées et le journal d’activité sont conservés sans leur auteur.',
+      onConfirm: () => void this.deleteMember(member.id),
+    });
+  }
+
+  private async deleteMember(memberId: number): Promise<void> {
+    await this.store.deleteMember(memberId);
+
+    const error = this.store.memberErrorId() === memberId ? this.store.memberError() : null;
+    this.toast.show(
+      error
+        ? { type: 'error', title: 'Suppression refusée', message: error }
+        : { type: 'success', title: 'Membre supprimé' },
+    );
+  }
+
+  /** La ligne de tableau est une vue ; les actions travaillent sur la ressource
+   *  API. La garde évite un `!` sur une ligne qu'une suppression concurrente
+   *  aurait pu retirer du store entre le rendu et le clic. */
+  protected onActionsClick(event: MouseEvent, memberId: number): void {
+    const member = this.store.members().find((entry) => entry.id === memberId);
+    if (member) this.openMemberMenu(event, member);
+  }
 
   protected readonly audit = computed(() =>
     toAuditEntries(this.store.logs(), this.store.members(), this.now()),

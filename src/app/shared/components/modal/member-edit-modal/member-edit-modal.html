@@ -1,0 +1,50 @@
+<bfd-modal-shell
+  [icon]="icEdit"
+  tone="blue"
+  eyebrow="Équipe"
+  title="Modifier le membre"
+  [width]="480"
+  (close)="close()"
+>
+  <div class="flex flex-col gap-3">
+    <bfd-field label="Prénom">
+      <bfd-input [value]="firstName()" (valueChange)="onFirstName($event)" />
+    </bfd-field>
+
+    <bfd-field label="Nom">
+      <bfd-input [value]="lastName()" (valueChange)="onLastName($event)" />
+    </bfd-field>
+
+    <bfd-field
+      label="Rôle"
+      [hint]="
+        roleLocked()
+          ? 'Dernier porteur d’une permission d’administration : accordez-la d’abord à un autre rôle occupé.'
+          : null
+      "
+    >
+      <select
+        class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-60"
+        [value]="roleId() === null ? '' : roleId()"
+        [disabled]="roleLocked()"
+        (change)="onRole($any($event.target).value)"
+      >
+        <option value="">Sans rôle</option>
+        @for (role of roleOptions(); track role.id) {
+          <option [value]="role.id" [selected]="role.id === roleId()">{{ role.name }}</option>
+        }
+      </select>
+    </bfd-field>
+
+    @if (store.memberErrorId() === memberId() && store.memberError(); as message) {
+      <p role="alert" class="text-[12px] text-danger">{{ message }}</p>
+    }
+  </div>
+
+  <div modal-footer class="flex-1 flex justify-end gap-2">
+    <bfd-btn kind="ghost" size="md" (clicked)="close()">Annuler</bfd-btn>
+    <bfd-btn kind="primary" size="md" [disabled]="!canSubmit()" (clicked)="submit()">
+      Enregistrer
+    </bfd-btn>
+  </div>
+</bfd-modal-shell>

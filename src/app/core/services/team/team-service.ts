@@ -87,6 +87,17 @@ export interface ApiTeamLog {
   user: ApiTeamLogUser | null;
 }
 
+/**
+ * Corps de `PATCH /members/:id`. Les trois champs sont optionnels et le corps
+ * est un delta : ce qui n'y figure pas n'est pas touché. `roleId: null` signifie
+ * « sans rôle » et n'est donc pas équivalent à son absence.
+ */
+export interface UpdateMemberPatch {
+  firstName?: string;
+  lastName?: string;
+  roleId?: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TeamService {
   private readonly http = inject(HttpClient);
@@ -125,5 +136,19 @@ export class TeamService {
    */
   getLogs(): Observable<ApiTeamLog[]> {
     return this.http.get<ApiTeamLog[]>(`${this.baseUrl}/logs`);
+  }
+
+  /**
+   * `PATCH` et non `PUT` : le corps est partiel. La route accepte les deux verbes
+   * (`router.route(path, ['PUT','PATCH'], …)`), mais `PUT` annoncerait un
+   * remplacement complet que ce corps ne porte pas.
+   */
+  updateMember(id: number, patch: UpdateMemberPatch): Observable<ApiTeamMember> {
+    return this.http.patch<ApiTeamMember>(`${this.baseUrl}/members/${id}`, patch);
+  }
+
+  /** Supprime le membre ET son compte utilisateur : le back ne dissocie pas les deux. */
+  deleteMember(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/members/${id}`);
   }
 }
