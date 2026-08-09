@@ -3,8 +3,27 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { vi } from 'vitest';
+
 import { Logistique } from './logistique';
-import type { ApiGood, ApiSupplierPrice } from './logistique.types';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
+import type { ApiGood, ApiSupplierPrice, ApiVoucher } from './logistique.types';
+
+/** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 €. */
+const VOUCHER: ApiVoucher = {
+  id: 1,
+  supplierId: 3,
+  supplier: { id: 3, name: 'Leclerc' },
+  value: 50,
+  expiresAt: '2026-12-31',
+  condition: null,
+  usedAt: null,
+  used: false,
+  daysUntilExpiry: 148,
+  expired: false,
+  warn: false,
+};
 
 function supplier(id: number, name: string, price: number): ApiSupplierPrice {
   return { id, name, price };
@@ -44,19 +63,23 @@ describe(Logistique.name, () => {
 
   afterEach(() => http.verify());
 
-  /** Answers the two page requests and lets the template settle. */
-  async function load(goods: ApiGood[]): Promise<void> {
+  /** Answers the three page requests and lets the template settle. */
+  async function load(goods: ApiGood[], vouchers: ApiVoucher[] = []): Promise<void> {
     http.expectOne((r) => r.url.endsWith('/goods')).flush(goods);
-    http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/vouchers')).flush(vouchers);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
     await fixture.whenStable();
     fixture.detectChanges();
   }
 
+  /** Rend la page chargée avec un bon exploitable par les tests d'écriture. */
+  async function renderLoaded(): Promise<void> {
+    await load([], [VOUCHER]);
+  }
+
   /** Retailer column headers, i.e. the header cells between "Unité" and "Optimum". */
   function retailerHeaders(): string[] {
-    const headers = Array.from(
-      fixture.nativeElement.querySelectorAll('thead th'),
-    ) as HTMLElement[];
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('thead th')) as HTMLElement[];
     return headers
       .map((th) => (th.textContent ?? '').trim())
       .filter((text) => text.length > 0 && !['Produit', 'Unité', 'Optimum'].includes(text));
@@ -66,6 +89,7 @@ describe(Logistique.name, () => {
     expect(component).toBeTruthy();
     http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
   });
 
   it('renders no retailer column when nothing is priced', async () => {
@@ -107,5 +131,56 @@ describe(Logistique.name, () => {
       fixture.nativeElement.querySelectorAll('tbody [aria-label="Non référencé"]'),
     );
     expect(dashes).toHaveLength(2);
+  });
+
+  it('opens the creation modal from the add button', async () => {
+    const opened = vi.spyOn(TestBed.inject(ModalService), 'open');
+    await renderLoaded();
+
+    const addButton: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="add-voucher"] button',
+    );
+    addButton.click();
+
+    expect(opened).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'component', component: VoucherCreateModal }),
+    );
+  });
+
+  it('names the toggle button after the voucher it acts on', async () => {
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    // Douze boutons « Consommé » dans une liste sont inexploitables au lecteur
+    // d'écran, qui les annonce hors de leur contexte visuel.
+    expect(toggle.getAttribute('aria-label')).toContain('Leclerc');
+    expect(toggle.getAttribute('aria-label')).toContain('50');
+  });
+
+  it('sends the toggle to the API when the button is clicked', async () => {
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+
+    const req = http.expectOne((r) => r.url.endsWith('/vouchers/1'));
+    expect(req.request.method).toBe('PATCH');
+    // `usedAt` doit être présent et non nul : c'est ce qui consomme le bon.
+    expect(req.request.body.usedAt).toBeTruthy();
+    req.flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
+    await fixture.whenStable();
+  });
+
+  it('no longer shows the read-only padlock', async () => {
+    await renderLoaded();
+
+    // Le cadenas était le seul SVG décoratif positionné en absolu dans la
+    // carte : le chercher par sa forme DOM, faute de `data-testid` sur un
+    // élément qu'on supprime précisément.
+    expect(fixture.nativeElement.querySelector('li svg.absolute')).toBeNull();
   });
 });

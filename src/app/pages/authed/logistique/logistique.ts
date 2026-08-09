@@ -1,12 +1,28 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { LucideDynamicIcon, LucideLock, LucideTicket } from '@lucide/angular';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { LucideDynamicIcon, LucideTicket } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { LogistiqueStore } from '#core/store/logistique.store';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { Btn } from '#shared/components/ui/btn/btn';
-import type { ApiGood, CartCell, CartRow, SupplierColumn, SupplierTotal } from './logistique.types';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
+import type {
+  ApiGood,
+  CartCell,
+  CartRow,
+  SupplierColumn,
+  SupplierTotal,
+  VoucherCard,
+} from './logistique.types';
 
 /** Builds the dynamic retailer column set from the suppliers present in the data. */
 function buildColumns(goods: readonly ApiGood[]): SupplierColumn[] {
@@ -22,11 +38,13 @@ function buildColumns(goods: readonly ApiGood[]): SupplierColumn[] {
     }
   }
 
-  return [...coverage.entries()]
-    .map(([id, { name, coverage: c }]) => ({ id, name, coverage: c }))
-    // Widest coverage first so the most comparable retailers stay in view when
-    // the table has to scroll horizontally; name breaks ties for stable order.
-    .sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'fr'));
+  return (
+    [...coverage.entries()]
+      .map(([id, { name, coverage: c }]) => ({ id, name, coverage: c }))
+      // Widest coverage first so the most comparable retailers stay in view when
+      // the table has to scroll horizontally; name breaks ties for stable order.
+      .sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'fr'))
+  );
 }
 
 function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
@@ -57,6 +75,7 @@ function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
 })
 export class Logistique implements OnInit {
   private readonly store = inject(LogistiqueStore);
+  private readonly modalService = inject(ModalService);
 
   constructor() {
     inject(PageHeaderService).set({
@@ -72,11 +91,13 @@ export class Logistique implements OnInit {
   }
 
   protected readonly icTicket = LucideTicket;
-  protected readonly icLock = LucideLock;
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
   protected readonly vouchers = this.store.vouchers;
+  protected readonly savingVoucherIds = this.store.savingVoucherIds;
+  protected readonly voucherError = this.store.voucherError;
+  protected readonly voucherErrorId = this.store.voucherErrorId;
 
   /**
    * Rows the user has unticked. Tracking exclusions (rather than inclusions)
@@ -201,6 +222,30 @@ export class Logistique implements OnInit {
     return total.fullCoverage
       ? null
       : 'Total partiel : cette enseigne ne référence pas tous les articles sélectionnés';
+  }
+
+  protected openCreateVoucher(): void {
+    this.modalService.open({ type: 'component', component: VoucherCreateModal, inputs: {} });
+  }
+
+  protected isSaving(id: number): boolean {
+    return this.savingVoucherIds().includes(id);
+  }
+
+  protected toggleVoucher(voucher: VoucherCard): void {
+    void this.store.toggleVoucherUsed(voucher.id, !voucher.used);
+  }
+
+  /**
+   * Nom accessible complet du bouton de bascule. Un libellé « Consommé »
+   * répété sur chaque carte est inexploitable au lecteur d'écran, qui annonce
+   * le bouton hors de son contexte visuel.
+   */
+  protected toggleLabel(voucher: VoucherCard): string {
+    const identity = `le bon ${voucher.supplierName} de ${this.formatPrice(voucher.value)} €`;
+    return voucher.used
+      ? `Annuler la consommation ${identity}`
+      : `Marquer ${identity} comme consommé`;
   }
 
   protected voucherToneClass(warn: boolean, expired: boolean, used: boolean): string {

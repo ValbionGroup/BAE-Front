@@ -84,9 +84,7 @@
             mise en avant. Un tiret indique que l'enseigne ne référence pas l'article.
           </caption>
           <thead>
-            <tr
-              class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
-            >
+            <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
               <th scope="col" class="w-8 px-3.5 py-2.5">
                 <bfd-checkbox
                   [checked]="allSelected()"
@@ -150,9 +148,7 @@
               </th>
               <td class="px-3.5 py-3"></td>
               @for (total of supplierTotals(); track total.supplierId) {
-                <td
-                  [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)"
-                >
+                <td [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)">
                   @if (total.total === null) {
                     <span>—</span>
                   } @else {
@@ -184,9 +180,14 @@
   }
 
   <!-- Bons d'achat -->
-  <div class="mono mt-6 mb-2 flex items-center gap-1.5 text-[10px] tracking-wider text-muted">
-    <svg [lucideIcon]="icTicket" [size]="12" aria-hidden="true"></svg>
-    BONS D'ACHAT
+  <div class="mt-6 mb-2 flex items-center justify-between gap-3">
+    <div class="mono flex items-center gap-1.5 text-[10px] tracking-wider text-muted">
+      <svg [lucideIcon]="icTicket" [size]="12" aria-hidden="true"></svg>
+      BONS D'ACHAT
+    </div>
+    <span data-testid="add-voucher">
+      <bfd-btn kind="secondary" size="sm" (clicked)="openCreateVoucher()">Ajouter un bon</bfd-btn>
+    </span>
   </div>
 
   @if (loading() === 'init' || loading() === 'loading') {
@@ -209,29 +210,17 @@
       @for (voucher of vouchers(); track voucher.id) {
         <li
           [class]="
-            'relative rounded-md border border-dashed bg-surface p-3.5 ' +
+            'rounded-md border border-dashed bg-surface p-3.5 ' +
             voucherToneClass(voucher.warn, voucher.expired, voucher.used)
           "
         >
-          <svg
-            [lucideIcon]="icLock"
-            [size]="12"
-            class="absolute top-3 right-3 text-muted"
-            aria-hidden="true"
-          ></svg>
           <div class="mb-1.5 flex items-baseline gap-2">
             <span class="text-sm font-semibold text-text">{{ voucher.supplierName }}</span>
             <span class="mono tnum text-[22px] font-bold text-blue"
               >{{ formatPrice(voucher.value) }} €</span
             >
           </div>
-          <div class="mb-0.5 text-[11px] text-muted">
-            @if (voucher.expiresLabel) {
-              Expire le {{ voucher.expiresLabel }}
-            } @else {
-              Sans date d'expiration
-            }
-          </div>
+          <div class="mb-0.5 text-[11px] text-muted">Expire le {{ voucher.expiresLabel }}</div>
           <div class="flex flex-wrap items-center gap-1.5">
             @if (voucher.used) {
               <bfd-badge kind="neutral">Utilisé</bfd-badge>
@@ -246,6 +235,29 @@
               }}</span>
             }
           </div>
+
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <!--
+              `<button>` natif et non `bfd-btn` : ce dernier ne propage ni `id`
+              ni les attributs `aria-*` jusqu'au `<button>` interne — ils
+              atterrissent sur l'élément hôte, où ils ne sont jamais annoncés.
+            -->
+            <button
+              type="button"
+              [attr.data-testid]="'toggle-voucher-' + voucher.id"
+              [attr.aria-label]="toggleLabel(voucher)"
+              [attr.aria-busy]="isSaving(voucher.id)"
+              [disabled]="isSaving(voucher.id)"
+              (click)="toggleVoucher(voucher)"
+              class="inline-flex h-7 items-center rounded-md border border-border bg-surface-2 px-2.5 text-xs text-text transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {{ voucher.used ? 'Annuler' : 'Marquer consommé' }}
+            </button>
+          </div>
+
+          @if (voucherErrorId() === voucher.id && voucherError(); as message) {
+            <p role="alert" class="mt-1.5 mb-0 text-[11px] text-danger">{{ message }}</p>
+          }
         </li>
       }
     </ul>
