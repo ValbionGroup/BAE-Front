@@ -1,6 +1,6 @@
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { inject } from '@angular/core';
-import { catchError, forkJoin, lastValueFrom, map, of, type Observable } from 'rxjs';
+import { forkJoin, lastValueFrom } from 'rxjs';
 import {
   TeamService,
   type ApiTeamLog,
@@ -10,21 +10,7 @@ import {
   type UpdateMemberPatch,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf } from '#shared/utils/api-error';
-
-type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
-
-/**
- * Isolates a stream so a single failing endpoint cannot cancel the whole `forkJoin`.
- * forkJoin propagates the first error and unsubscribes every sibling, which is exactly
- * how the coordination page went blank when one of its endpoints 404'd.
- */
-function settle<T>(source: Observable<T>): Observable<Settled<T>> {
-  return source.pipe(
-    map((value) => ({ ok: true, value }) as const),
-    catchError(() => of({ ok: false } as const)),
-  );
-}
+import { messageOf, settle } from '#shared/utils/api-error';
 
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
 export interface TeamSectionErrors {

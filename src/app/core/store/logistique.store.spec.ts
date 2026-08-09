@@ -280,4 +280,60 @@ describe(LogistiqueStore.name, () => {
     // Un refus de création ne doit pas afficher son message sur une carte.
     expect(store.voucherError()).toBeNull();
   });
+
+  it('keeps the page alive when the vouchers are forbidden', async () => {
+    const loading = store.load();
+    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush([good()]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
+      .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
+    http
+      .expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET')
+      .flush([supplier()]);
+    await loading;
+
+    // Le comparatif d'enseignes n'a rien de confidentiel : un refus sur les
+    // bons ne doit pas l'emporter avec lui.
+    expect(store.loading()).toBe('loaded');
+    expect(store.loadError()).toBeNull();
+    expect(store.goods()).toHaveLength(1);
+    expect(store.vouchers()).toEqual([]);
+    expect(store.vouchersForbidden()).toBe(true);
+    expect(store.vouchersLoadError()).toBeNull();
+  });
+
+  it('separates a broken vouchers endpoint from a forbidden one', async () => {
+    const loading = store.load();
+    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush([good()]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    http
+      .expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET')
+      .flush([supplier()]);
+    await loading;
+
+    expect(store.loading()).toBe('loaded');
+    expect(store.vouchersForbidden()).toBe(false);
+    expect(store.vouchersLoadError()).toBeTruthy();
+  });
+
+  it('clears the forbidden flag when a refresh succeeds', async () => {
+    const loading = store.load();
+    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush([]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
+      .flush(null, { status: 403, statusText: 'x' });
+    http.expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET').flush([]);
+    await loading;
+    expect(store.vouchersForbidden()).toBe(true);
+
+    const again = store.refresh();
+    flush([], [voucher({ id: 1 })], [supplier()]);
+    await again;
+
+    // Un droit accordé entre-temps doit se voir sans recharger l'application.
+    expect(store.vouchersForbidden()).toBe(false);
+    expect(store.vouchers()).toHaveLength(1);
+  });
 });

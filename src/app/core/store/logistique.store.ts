@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { forkJoin, lastValueFrom } from 'rxjs';
 import { LogistiqueService } from '#core/services/logistique/logistique-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf } from '#shared/utils/api-error';
+import { messageOf, settle } from '#shared/utils/api-error';
 import type {
   ApiGood,
   ApiSupplier,
@@ -64,6 +64,12 @@ interface LogistiqueState {
   goods: ApiGood[];
   vouchers: VoucherCard[];
   suppliers: ApiSupplier[];
+  /** Vrai quand l'API a refusé la lecture des bons (403). Distinct d'une
+   *  panne : c'est une règle, pas un incident. */
+  vouchersForbidden: boolean;
+  /** Message d'une panne de la seule branche « bons ». Ne pas confondre avec
+   *  `voucherError`, qui porte l'échec d'une écriture sur une carte précise. */
+  vouchersLoadError: string | null;
   /** Verrou par bon : empêche deux écritures concurrentes sur la même ligne. */
   savingVoucherIds: number[];
   /** Erreur d'une carte, et le bon qu'elle concerne. */
@@ -81,6 +87,8 @@ const initialState: LogistiqueState = {
   goods: [],
   vouchers: [],
   suppliers: [],
+  vouchersForbidden: false,
+  vouchersLoadError: null,
   savingVoucherIds: [],
   voucherError: null,
   voucherErrorId: null,
@@ -99,14 +107,21 @@ export const LogistiqueStore = signalStore(
     async function fetch(status: LoadingStatus): Promise<void> {
       patchState(store, { loading: status, loadError: null });
       try {
+        // Seule la branche des bons est isolée : si le catalogue tombe, il ne
+        // reste aucune page à montrer et `loadError` est la bonne réponse.
         const [goods, vouchers, suppliers] = await lastValueFrom(
-          forkJoin([svc.getGoods(), svc.getVouchers(), svc.getSuppliers()]),
+          forkJoin([svc.getGoods(), settle(svc.getVouchers()), svc.getSuppliers()]),
         );
         patchState(store, {
           loading: 'loaded',
           goods,
-          vouchers: vouchers.map(toVoucherCard),
+          vouchers: vouchers.ok ? vouchers.value.map(toVoucherCard) : [],
           suppliers,
+          vouchersForbidden: !vouchers.ok && vouchers.status === 403,
+          vouchersLoadError:
+            vouchers.ok || vouchers.status === 403
+              ? null
+              : "Impossible de charger les bons d'achat.",
         });
       } catch {
         patchState(store, {
