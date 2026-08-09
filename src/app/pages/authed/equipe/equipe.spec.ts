@@ -220,4 +220,39 @@ describe(Equipe.name, () => {
     );
     expect(trigger?.disabled).toBe(true);
   });
+
+  it('enables the action menu for a member the actor is allowed to act on', async () => {
+    // Positive counterpart to the two refusal tests above: without this, a
+    // regressed mirror (inverted boolean, `canWriteMembers` stuck at false,
+    // `canActOn` always true or always false) would pass every test in this
+    // file in silence.
+    TestBed.inject(MockStore).setState({
+      auth: { permissions: ['member:write'], member: { id: 1 } },
+    });
+
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 2,
+        firstName: 'Tommy',
+        lastName: 'Klein',
+        roleId: null,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: null,
+      },
+    ]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await flushAsync(fixture);
+
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '[data-testid="member-actions"]',
+    );
+    // Existence first: on an absent element `trigger?.disabled` is `undefined`,
+    // and `expect(undefined).toBe(false)` would fail for the wrong reason.
+    expect(trigger).not.toBeNull();
+    expect(trigger?.disabled).toBe(false);
+  });
 });

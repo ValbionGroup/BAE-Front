@@ -107,4 +107,77 @@ describe(MemberEditModal.name, () => {
     expect(selectedOption?.value).toBe('2');
     expect(selectedOption?.textContent?.trim()).toBe('Admin');
   });
+
+  it('locks the role select and states why when this member is the last living holder', async () => {
+    const store = TestBed.inject(TeamStore);
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 4,
+        firstName: 'Ada',
+        lastName: 'Admin',
+        roleId: 9,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: { id: 9, name: 'Admin', createdAt: null, updatedAt: null },
+      },
+    ]);
+    httpMock
+      .expectOne(`${baseUrl}/roles`)
+      .flush([{ id: 9, name: 'Admin', createdAt: null, updatedAt: null, permissions: [] }]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const fixture = TestBed.createComponent(MemberEditModal);
+    fixture.componentRef.setInput('id', 'modal-1');
+    fixture.componentRef.setInput('memberId', 4);
+    fixture.componentRef.setInput('grantableRoleIds', [9]);
+    fixture.componentRef.setInput('roleLocked', true);
+    await fixture.whenStable();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const select = root.querySelector('select');
+    expect(select?.disabled).toBe(true);
+    // The reason must be readable text in the DOM, not just a `title` attribute
+    // that a screen reader would never announce.
+    expect(root.textContent).toContain("Dernier porteur d'une permission d'administration");
+  });
+
+  it('leaves the role select usable when this member is not the last living holder', async () => {
+    const store = TestBed.inject(TeamStore);
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 2,
+        firstName: 'Tommy',
+        lastName: 'Klein',
+        roleId: 1,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: { id: 1, name: 'Finance', createdAt: null, updatedAt: null },
+      },
+    ]);
+    httpMock
+      .expectOne(`${baseUrl}/roles`)
+      .flush([{ id: 1, name: 'Finance', createdAt: null, updatedAt: null, permissions: [] }]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const fixture = TestBed.createComponent(MemberEditModal);
+    fixture.componentRef.setInput('id', 'modal-1');
+    fixture.componentRef.setInput('memberId', 2);
+    fixture.componentRef.setInput('grantableRoleIds', [1]);
+    fixture.componentRef.setInput('roleLocked', false);
+    await fixture.whenStable();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const select = root.querySelector('select');
+    expect(select).not.toBeNull();
+    expect(select?.disabled).toBe(false);
+    expect(root.textContent).not.toContain("Dernier porteur d'une permission d'administration");
+  });
 });

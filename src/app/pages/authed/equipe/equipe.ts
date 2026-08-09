@@ -261,7 +261,11 @@ export class Equipe implements OnInit {
     this.modal.open({
       type: 'component',
       component: MemberEditModal,
-      inputs: { memberId, grantableRoleIds: this.grantableRoleIds() },
+      inputs: {
+        memberId,
+        grantableRoleIds: this.grantableRoleIds(),
+        roleLocked: this.lockedMemberIds().has(memberId),
+      },
     });
   }
 

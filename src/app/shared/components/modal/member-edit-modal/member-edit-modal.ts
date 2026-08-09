@@ -30,6 +30,13 @@ export class MemberEditModal {
   readonly memberId = input.required<number>();
   /** Rôles que l'utilisateur courant a le droit d'attribuer (règle 2). */
   readonly grantableRoleIds = input<readonly number[]>([]);
+  /**
+   * Vrai si ce membre est le dernier occupant vivant d'un rôle qui porte seul
+   * `role:read` ou `role:write` (miroir de l'invariant anti-verrouillage, côté
+   * page dans `lockedMemberIds`). Le renommer reste possible — seul le rôle
+   * est verrouillé, car c'est lui seul que le back refuserait de toucher ici.
+   */
+  readonly roleLocked = input<boolean>(false);
 
   private readonly modalService = inject(ModalService);
   protected readonly store = inject(TeamStore);
@@ -49,7 +56,9 @@ export class MemberEditModal {
   protected readonly firstName = computed(
     () => this.firstNameEdit() ?? this.member()?.firstName ?? '',
   );
-  protected readonly lastName = computed(() => this.lastNameEdit() ?? this.member()?.lastName ?? '');
+  protected readonly lastName = computed(
+    () => this.lastNameEdit() ?? this.member()?.lastName ?? '',
+  );
   protected readonly roleId = computed(() => {
     const edited = this.roleIdEdit();
     return edited === undefined ? (this.member()?.roleId ?? null) : edited;
