@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { MemberEditModal } from './member-edit-modal';
 import { TeamStore } from '#core/store/team.store';
+import { ModalService } from '../modal.service';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 const baseUrl = 'http://api.test/v1';
@@ -179,5 +180,99 @@ describe(MemberEditModal.name, () => {
     expect(select).not.toBeNull();
     expect(select?.disabled).toBe(false);
     expect(root.textContent).not.toContain('Dernier porteur d’une permission d’administration');
+  });
+
+  /**
+   * `submit()` was never driven by any test: the store's write path and the
+   * modal's rendering are each covered in isolation, but nothing exercised the
+   * wiring between them — in particular the close-only-on-success rule that
+   * keeps a refusal readable next to the form that caused it.
+   */
+  describe('submit()', () => {
+    const MEMBER = {
+      id: 2,
+      firstName: 'Tommy',
+      lastName: 'Klein',
+      roleId: null,
+      points: 0,
+      createdAt: null,
+      updatedAt: null,
+      role: null,
+    };
+
+    /** `submit()` is a plain async method: its completion is not tracked by
+     *  zoneless stability, so `whenStable()` alone can resolve before the
+     *  store's promise does. */
+    async function flushMicrotasks(): Promise<void> {
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+
+    async function openOnMember(): Promise<{
+      fixture: ReturnType<typeof TestBed.createComponent<MemberEditModal>>;
+      modalService: ModalService;
+      id: string;
+    }> {
+      const store = TestBed.inject(TeamStore);
+      const loaded = store.load();
+      httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+      httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+      httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+      httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+      await loaded;
+
+      // Opened through the real service, exactly as `Equipe.openEdit` does, so
+      // `id` is the same generated id the modal container would pass in —
+      // `close(id)` only removes the entry if the ids actually match.
+      const modalService = TestBed.inject(ModalService);
+      const id = modalService.open({
+        type: 'component',
+        component: MemberEditModal,
+        inputs: { memberId: MEMBER.id },
+      });
+
+      const fixture = TestBed.createComponent(MemberEditModal);
+      fixture.componentRef.setInput('id', id);
+      fixture.componentRef.setInput('memberId', MEMBER.id);
+      fixture.componentRef.setInput('grantableRoleIds', []);
+      await fixture.whenStable();
+
+      return { fixture, modalService, id };
+    }
+
+    it('closes the modal once a PATCH is flushed successfully', async () => {
+      const { fixture, modalService, id } = await openOnMember();
+
+      void (fixture.componentInstance as unknown as { submit(): Promise<void> }).submit();
+      const req = httpMock.expectOne(`${baseUrl}/members/${MEMBER.id}`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush({ ...MEMBER, firstName: 'Tommy', lastName: 'Klein' });
+      await flushMicrotasks();
+      await fixture.whenStable();
+
+      expect(modalService.modals().some((modal) => modal.id === id)).toBe(false);
+    });
+
+    it('stays open and renders the API message on a flushed 403', async () => {
+      const { fixture, modalService, id } = await openOnMember();
+
+      void (fixture.componentInstance as unknown as { submit(): Promise<void> }).submit();
+      const req = httpMock.expectOne(`${baseUrl}/members/${MEMBER.id}`);
+      req.flush(
+        {
+          code: 'E_RBAC_ABOVE_ACTOR',
+          message: 'Ce membre porte des permissions que vous n’avez pas : role:write.',
+        },
+        { status: 403, statusText: 'Forbidden' },
+      );
+      await flushMicrotasks();
+      await fixture.whenStable();
+
+      expect(modalService.modals().some((modal) => modal.id === id)).toBe(true);
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.textContent).toContain(
+        'Ce membre porte des permissions que vous n’avez pas : role:write.',
+      );
+    });
   });
 });
