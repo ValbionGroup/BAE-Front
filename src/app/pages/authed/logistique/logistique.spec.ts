@@ -77,6 +77,17 @@ describe(Logistique.name, () => {
     await load([], [VOUCHER]);
   }
 
+  /** Rend la page avec un 403 sur la seule branche des bons d'achat. */
+  async function renderForbidden(): Promise<void> {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([good(1, 'Saucisses', [])]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers'))
+      .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
   /** Retailer column headers, i.e. the header cells between "Unité" and "Optimum". */
   function retailerHeaders(): string[] {
     const headers = Array.from(fixture.nativeElement.querySelectorAll('thead th')) as HTMLElement[];
@@ -182,5 +193,28 @@ describe(Logistique.name, () => {
     // carte : le chercher par sa forme DOM, faute de `data-testid` sur un
     // élément qu'on supprime précisément.
     expect(fixture.nativeElement.querySelector('li svg.absolute')).toBeNull();
+  });
+
+  it('shows a restricted panel instead of the vouchers, keeping the table', async () => {
+    await renderForbidden();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="vouchers-forbidden"]'),
+    ).not.toBeNull();
+    // Le comparatif d'enseignes reste rendu : c'est tout l'intérêt de n'avoir
+    // gardé que le panneau.
+    expect(fixture.nativeElement.textContent).toContain('Saucisses');
+    // Proposer d'ajouter un bon à qui n'a pas le droit d'en voir un serait un
+    // clic voué au 403.
+    expect(fixture.nativeElement.querySelector('[data-testid="add-voucher"]')).toBeNull();
+  });
+
+  it('reads the usable-voucher KPI as unknown rather than zero', async () => {
+    await renderForbidden();
+
+    const kpi: HTMLElement = fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]');
+    // « 0 € » affirmerait qu'il n'y a aucun bon utilisable ; la vérité est
+    // qu'on n'a pas le droit de le savoir.
+    expect(kpi.textContent?.trim()).toBe('—');
   });
 });

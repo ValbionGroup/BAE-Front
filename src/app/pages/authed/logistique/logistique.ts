@@ -98,6 +98,8 @@ export class Logistique implements OnInit {
   protected readonly savingVoucherIds = this.store.savingVoucherIds;
   protected readonly voucherError = this.store.voucherError;
   protected readonly voucherErrorId = this.store.voucherErrorId;
+  protected readonly vouchersForbidden = this.store.vouchersForbidden;
+  protected readonly vouchersLoadError = this.store.vouchersLoadError;
 
   /**
    * Rows the user has unticked. Tracking exclusions (rather than inclusions)
@@ -166,6 +168,17 @@ export class Logistique implements OnInit {
   /** Vouchers that could still be spent: neither used nor expired. */
   protected readonly usableVoucherTotal = computed(() =>
     this.vouchers().reduce((sum, v) => (!v.used && !v.expired ? sum + v.value : sum), 0),
+  );
+
+  /**
+   * Le KPI dit « — » et non « 0 € » quand les bons sont hors de portée :
+   * `usableVoucherTotal` somme une liste vide et affirmerait donc qu'aucun bon
+   * n'est utilisable, là où la vérité est qu'on n'a pas le droit de le savoir.
+   */
+  protected readonly usableVoucherLabel = computed(() =>
+    this.vouchersForbidden() || this.vouchersLoadError() !== null
+      ? '—'
+      : `${this.formatPrice(this.usableVoucherTotal())} €`,
   );
 
   protected readonly savingLabel = computed(() => {
