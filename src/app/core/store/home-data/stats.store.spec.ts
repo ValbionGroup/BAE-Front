@@ -57,6 +57,9 @@ describe(StatsStore.name, () => {
         stockItem({ id: 1, totalRemainingQty: 12, expiredBatchCount: 1, soonBatchCount: 2 }),
         stockItem({ id: 2, totalRemainingQty: 0 }),
       ]);
+    // `StocksStore.load()` charge aussi les catégories du formulaire de
+    // création : sans cette réponse, le `forkJoin` n'émet jamais.
+    httpMock.expectOne(`${baseUrl}/categories`).flush([]);
     await loaded;
 
     const byLabel = new Map(store.data().map((k) => [k.label, k.value]));

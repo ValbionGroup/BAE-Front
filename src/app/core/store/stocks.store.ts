@@ -1,8 +1,14 @@
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { inject } from '@angular/core';
-import { lastValueFrom } from 'rxjs';
-import { StocksService, type ApiStockItem } from '#core/services/stocks/stocks-service';
+import { forkJoin, lastValueFrom } from 'rxjs';
+import {
+  StocksService,
+  type ApiCategory,
+  type ApiStockItem,
+  type CreateGoodPayload,
+} from '#core/services/stocks/stocks-service';
 import type { LoadingStatus } from '#core/models/global.model';
+import { messageOf, settle } from '#shared/utils/api-error';
 import type { DlcStatus, StockBatchRow, StockProduct } from '#pages/authed/stocks/stocks.types';
 
 function dlcStatus(expirationDate: string | null, today: Date): DlcStatus {
@@ -42,16 +48,39 @@ function toStockProduct(item: ApiStockItem): StockProduct {
   };
 }
 
+/**
+ * Insère un produit à sa place dans l'ordre alphabétique.
+ *
+ * `GET /stocks` renvoie les produits triés (`orderBy('name')`) et le tableau
+ * en dépend : un ajout en fin de liste mettrait « Bière » après « Vaisselle »
+ * jusqu'au prochain rechargement. Comparaison avec `localeCompare(…, 'fr')`,
+ * la même que le tri par nom de la page.
+ */
+function insertByName(products: readonly StockProduct[], product: StockProduct): StockProduct[] {
+  const index = products.findIndex((entry) => entry.name.localeCompare(product.name, 'fr') > 0);
+  return index === -1
+    ? [...products, product]
+    : [...products.slice(0, index), product, ...products.slice(index)];
+}
+
 interface StocksState {
   loading: LoadingStatus;
   loadError: string | null;
   products: StockProduct[];
+  /** Catégories du sélecteur de création. Vide si l'endpoint a échoué : ce
+   *  n'est pas une raison de vider la page, seulement d'empêcher la saisie. */
+  categories: ApiCategory[];
+  creatingGood: boolean;
+  createError: string | null;
 }
 
 const initialState: StocksState = {
   loading: 'init',
   loadError: null,
   products: [],
+  categories: [],
+  creatingGood: false,
+  createError: null,
 };
 
 export const StocksStore = signalStore(
@@ -62,13 +91,60 @@ export const StocksStore = signalStore(
       if (store.loading() === 'loaded' || store.loading() === 'loading') return;
       patchState(store, { loading: 'loading', loadError: null });
       try {
-        const items = await lastValueFrom(svc.getAll());
+        // Les catégories sont isolées : elles ne servent qu'au formulaire de
+        // création, donc leur panne ne doit pas emporter le tableau des stocks,
+        // qui est la raison d'être de la page.
+        const [items, categories] = await lastValueFrom(
+          forkJoin([svc.getAll(), settle(svc.getCategories())]),
+        );
         patchState(store, {
           loading: 'loaded',
           products: items.map(toStockProduct),
+          categories: categories.ok ? categories.value : [],
         });
       } catch {
         patchState(store, { loading: 'error', loadError: 'Impossible de charger les stocks.' });
+      }
+    },
+
+    /**
+     * Non optimiste : il n'y a pas d'id avant la réponse, et la liste est
+     * triée — un id fantôme y coûterait plus qu'il ne rapporte.
+     *
+     * `POST /goods` rend la ligne `goods` seule : ni catégorie préchargée, ni
+     * agrégats. Le produit naît donc sans lot, ce qui est exact — il apparaît
+     * à 0, et c'est un réassort qui lui donnera du stock.
+     */
+    async createGood(payload: CreateGoodPayload): Promise<boolean> {
+      if (store.creatingGood()) return false;
+      patchState(store, { creatingGood: true, createError: null });
+
+      try {
+        const created = await lastValueFrom(svc.createGood(payload));
+        const categoryName =
+          store.categories().find((c) => c.id === created.categoryId)?.name ?? '—';
+        patchState(store, {
+          products: insertByName(store.products(), {
+            id: created.id,
+            name: created.name,
+            unit: created.unit,
+            brand: created.brand,
+            categoryId: created.categoryId,
+            categoryName,
+            totalQty: 0,
+            batchCount: 0,
+            nearestDlc: null,
+            nearestDlcStatus: 'none',
+            expiredBatchCount: 0,
+            soonBatchCount: 0,
+          }),
+        });
+        return true;
+      } catch (error) {
+        patchState(store, { createError: messageOf(error, 'Impossible de créer ce produit.') });
+        return false;
+      } finally {
+        patchState(store, { creatingGood: false });
       }
     },
 

@@ -44,6 +44,9 @@ describe(AlertsStore.name, () => {
   async function loadStocks(items: ApiStockItem[]): Promise<void> {
     const loaded = stocks.load();
     httpMock.expectOne(`${baseUrl}/stocks`).flush(items);
+    // `StocksStore.load()` charge aussi les catégories du formulaire de
+    // création : sans cette réponse, le `forkJoin` n'émet jamais.
+    httpMock.expectOne(`${baseUrl}/categories`).flush([]);
     await loaded;
   }
 

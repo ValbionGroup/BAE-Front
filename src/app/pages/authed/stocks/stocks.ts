@@ -31,6 +31,8 @@ import { Card } from '#shared/components/ui/card/card';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Toggle } from '#shared/components/ui/toggle/toggle';
 import { Input } from '#shared/components/ui/input/input';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
@@ -38,11 +40,19 @@ import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from '.
   imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien : une
+  // hauteur en pourcentage se mesure sur le parent, et `<bfd-stocks>` est un
+  // élément sans style, donc de hauteur automatique. La grille prenait alors
+  // la hauteur de son contenu et c'est le conteneur de l'app-shell qui
+  // défilait — toute la page d'un bloc, au lieu du tableau et du panneau
+  // chacun de leur côté.
+  host: { class: 'block h-full' },
 })
 export class Stocks implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly store = inject(StocksStore);
+  private readonly modal = inject(ModalService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
@@ -52,10 +62,11 @@ export class Stocks implements OnInit {
       breadcrumb: ['Préparation', 'Stocks'],
       activeNavId: 'stocks',
     });
-    effect(() => {
-      const tpl = this.actionsTpl();
-      if (tpl) this.pageHeader.setActions(tpl);
-    });
+    // ⚠️ Un seul effect, et dans cet ordre. `set()` remet le gabarit d'actions
+    // à `null` : quand le rafraîchissement du sous-titre vivait dans un effect
+    // séparé, il s'exécutait après celui qui pousse les actions et effaçait les
+    // trois boutons dès le premier chargement — d'où une topbar vide. Même
+    // remède que sur la page Équipe.
     effect(() => {
       const products = this.store.products();
       const batches = products.reduce((sum, p) => sum + p.batchCount, 0);
@@ -65,6 +76,8 @@ export class Stocks implements OnInit {
         breadcrumb: ['Préparation', 'Stocks'],
         activeNavId: 'stocks',
       });
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
     effect(() => {
       const id = this.selectedId();
@@ -192,6 +205,10 @@ export class Stocks implements OnInit {
 
   protected openScanner(): void {
     void this.router.navigate(['/stocks/scanner']);
+  }
+
+  protected openCreateGood(): void {
+    this.modal.open({ type: 'component', component: GoodCreateModal, inputs: {} });
   }
 
   protected toggleSelect(id: number): void {

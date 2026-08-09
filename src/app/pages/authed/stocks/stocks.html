@@ -1,13 +1,30 @@
 <!-- Topbar actions -->
 <ng-template #actions>
   <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icDownload">Inventaire</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus">Produit</bfd-btn>
+  <!-- Aucun endpoint d'export d'inventaire côté API : le bouton reste en place
+       — le manque est côté back — mais cesse de l'être en silence, comme
+       « Inviter un membre » sur Équipe. -->
+  <bfd-btn
+    kind="secondary"
+    size="md"
+    [icon]="icDownload"
+    [disabled]="true"
+    title="Export d'inventaire non disponible côté API"
+    >Inventaire</bfd-btn
+  >
+  <span data-testid="add-good">
+    <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateGood()">Produit</bfd-btn>
+  </span>
 </ng-template>
 
-<div class="h-full grid grid-cols-[1fr_380px]">
+<!-- `grid-rows-[minmax(0,1fr)]` : une piste implicite est en `auto`, donc elle
+     s'étire à la hauteur de son contenu et déborde la grille. Le `minmax(0,1fr)`
+     la cloue à la hauteur disponible, ce qui est la condition pour que les deux
+     colonnes défilent chacune de leur côté. Même raison pour les `min-h-0` :
+     un item de grille a `min-height:auto`. -->
+<div class="grid h-full grid-cols-[1fr_380px] grid-rows-[minmax(0,1fr)]">
   <!-- LEFT: list -->
-  <div class="flex min-w-0 flex-col gap-3.5 p-5">
+  <div class="flex min-h-0 min-w-0 flex-col gap-3.5 p-5">
     <!-- KPI row -->
     <div class="grid grid-cols-4 gap-3">
       @for (k of kpis(); track k.label) {
@@ -208,7 +225,9 @@
   </div>
 
   <!-- RIGHT: detail panel -->
-  <aside class="flex flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5">
+  <aside
+    class="flex min-h-0 flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5"
+  >
     @if (selectedProduct(); as p) {
       <div class="flex items-start gap-2">
         <div class="flex-1">
