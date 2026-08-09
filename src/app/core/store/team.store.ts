@@ -1,6 +1,5 @@
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { inject } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, forkJoin, lastValueFrom, map, of, type Observable } from 'rxjs';
 import {
   TeamService,
@@ -11,6 +10,7 @@ import {
   type UpdateMemberPatch,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
+import { messageOf } from '#shared/utils/api-error';
 
 type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
 
@@ -24,16 +24,6 @@ function settle<T>(source: Observable<T>): Observable<Settled<T>> {
     map((value) => ({ ok: true, value }) as const),
     catchError(() => of({ ok: false } as const)),
   );
-}
-
-/**
- * `apiEnvelopeInterceptor` réduit le corps d'erreur à `{ code, message }`.
- * Le message vient de l'API parce que ses refus (409 anti-verrouillage, 403 de
- * hiérarchie) expliquent quoi faire — un texte codé en dur ne le pourrait pas.
- */
-function messageOf(error: unknown, fallback: string): string {
-  const body = (error as HttpErrorResponse | undefined)?.error as { message?: string } | undefined;
-  return body?.message ?? fallback;
 }
 
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
