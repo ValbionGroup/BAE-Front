@@ -267,7 +267,7 @@ describe(TeamStore.name, () => {
     expect(store.permissionsErrorRoleId()).toBe(1);
   });
 
-  it('restores only the edited row when the update is refused', async () => {
+  it('restores only the edited row, keeping a concurrent write that landed meanwhile', async () => {
     const loaded = store.load();
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER, { ...MEMBER, id: 3, firstName: 'Ana' }]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
@@ -275,17 +275,26 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/logs`).flush([]);
     await loaded;
 
+    // Les deux écritures partent avant que l'une ou l'autre ne réponde.
     const failing = store.updateMember(2, { firstName: 'Refusé' });
+    const concurrent = store.updateMember(3, { firstName: 'Concurrent' });
 
+    // Celle du membre 3 aboutit la première : elle est désormais dans l'état vivant.
+    httpMock
+      .expectOne(`${baseUrl}/members/3`)
+      .flush({ ...MEMBER, id: 3, firstName: 'Concurrent' });
+    await concurrent;
+
+    // Celle du membre 2 est refusée ensuite.
     httpMock
       .expectOne(`${baseUrl}/members/2`)
       .flush({ message: 'Refusé par le serveur.' }, { status: 403, statusText: 'Forbidden' });
     await failing;
 
     expect(store.members().find((m) => m.id === 2)?.firstName).toBe('Tommy');
-    // La restauration est ciblée : la ligne voisine n'est pas revenue à un
-    // instantané pris avant l'écriture.
-    expect(store.members().find((m) => m.id === 3)?.firstName).toBe('Ana');
+    // Le cœur du test : une restauration par instantané `before` ramènerait la
+    // ligne 3 à « Ana » et effacerait une écriture qui a pourtant abouti.
+    expect(store.members().find((m) => m.id === 3)?.firstName).toBe('Concurrent');
     expect(store.memberError()).toBe('Refusé par le serveur.');
     expect(store.memberErrorId()).toBe(2);
   });
