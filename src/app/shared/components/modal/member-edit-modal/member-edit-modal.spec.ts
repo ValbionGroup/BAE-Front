@@ -142,7 +142,7 @@ describe(MemberEditModal.name, () => {
     expect(select?.disabled).toBe(true);
     // The reason must be readable text in the DOM, not just a `title` attribute
     // that a screen reader would never announce.
-    expect(root.textContent).toContain("Dernier porteur d'une permission d'administration");
+    expect(root.textContent).toContain('Dernier porteur d’une permission d’administration');
   });
 
   it('leaves the role select usable when this member is not the last living holder', async () => {
@@ -178,6 +178,6 @@ describe(MemberEditModal.name, () => {
     const select = root.querySelector('select');
     expect(select).not.toBeNull();
     expect(select?.disabled).toBe(false);
-    expect(root.textContent).not.toContain("Dernier porteur d'une permission d'administration");
+    expect(root.textContent).not.toContain('Dernier porteur d’une permission d’administration');
   });
 });
