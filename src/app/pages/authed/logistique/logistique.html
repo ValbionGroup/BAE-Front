@@ -1,3 +1,34 @@
+<!--
+  Actions de la topbar, telles que la maquette Claude Design les porte
+  (`screen-logistique.jsx`). Deux écarts assumés :
+  — « Preuve d'achat » n'a aucun stockage de fichiers côté API (§23.1 de
+    HANDOFF2). Le bouton reste en place, désactivé et motivé, plutôt que de
+    manquer en silence — même parti pris que « Inviter un membre » sur Équipe.
+  — La maquette met « Exporter PDF » en primaire ; aucun endpoint d'export
+    n'existe, alors que créer un bon est la capacité réellement livrée. C'est
+    donc elle qui occupe la place primaire.
+-->
+<ng-template #actions>
+  <bfd-btn
+    kind="ghost"
+    size="md"
+    [icon]="icUpload"
+    [disabled]="true"
+    title="Aucun stockage de justificatifs côté API"
+    >Preuve d'achat</bfd-btn
+  >
+  @if (!vouchersForbidden()) {
+    <bfd-btn kind="secondary" size="md" [icon]="icTicket" (clicked)="scrollToVouchers()">
+      Bons d'achat ({{ vouchers().length }})
+    </bfd-btn>
+    <span data-testid="add-voucher">
+      <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateVoucher()">
+        Nouveau bon
+      </bfd-btn>
+    </span>
+  }
+</ng-template>
+
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
   <!-- KPI row -->
   <div class="mb-4 grid grid-cols-4 gap-3">
@@ -179,16 +210,19 @@
     </div>
   }
 
-  <!-- Bons d'achat -->
-  <div class="mt-6 mb-2 flex items-center justify-between gap-3">
-    <div class="mono flex items-center gap-1.5 text-[10px] tracking-wider text-muted">
-      <svg [lucideIcon]="icTicket" [size]="12" aria-hidden="true"></svg>
-      BONS D'ACHAT
-    </div>
-    @if (!vouchersForbidden()) {
-      <span data-testid="add-voucher">
-        <bfd-btn kind="secondary" size="sm" (clicked)="openCreateVoucher()">Ajouter un bon</bfd-btn>
-      </span>
+  <!-- Bons d'achat. L'ajout vit dans la topbar (gabarit `#actions`), comme dans
+       la maquette : la section n'a pas de bouton à elle. -->
+  <div #vouchersPanel class="mono mt-6 mb-2 flex items-center gap-1.5 text-[10px] tracking-wider">
+    <svg
+      [lucideIcon]="vouchersForbidden() ? icLock : icTicket"
+      [size]="12"
+      aria-hidden="true"
+    ></svg>
+    <span class="text-muted">BONS D'ACHAT</span>
+    @if (vouchersForbidden()) {
+      <!-- Le libellé verrouillé de la maquette ; il ne décrit plus une intention
+           de conception mais l'état réel du compte qui regarde. -->
+      <span class="text-muted">· ACCÈS VERROUILLÉ</span>
     }
   </div>
 
@@ -207,6 +241,7 @@
       role="status"
       class="rounded-md border border-dashed border-border bg-surface px-6 py-8 text-center text-[12px] text-muted"
     >
+      <svg [lucideIcon]="icLock" [size]="14" class="mx-auto mb-2 block" aria-hidden="true"></svg>
       Accès restreint — les bons d'achat sont réservés au pôle logistique et au trésorier.
     </div>
   } @else if (vouchersLoadError(); as message) {

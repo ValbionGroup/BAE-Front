@@ -1,12 +1,22 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  type ElementRef,
   OnInit,
+  type TemplateRef,
   computed,
+  effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
-import { LucideDynamicIcon, LucideTicket } from '@lucide/angular';
+import {
+  LucideDynamicIcon,
+  LucideLock,
+  LucidePlus,
+  LucideTicket,
+  LucideUpload,
+} from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { LogistiqueStore } from '#core/store/logistique.store';
 import { Badge } from '#shared/components/ui/badge/badge';
@@ -76,13 +86,25 @@ function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
 export class Logistique implements OnInit {
   private readonly store = inject(LogistiqueStore);
   private readonly modalService = inject(ModalService);
+  private readonly pageHeader = inject(PageHeaderService);
+
+  /** Actions poussées dans la topbar, comme sur la page Équipe. */
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+  private readonly vouchersPanel = viewChild<ElementRef<HTMLElement>>('vouchersPanel');
 
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Logistique',
       subtitle: 'Liste de courses · comparatif enseignes',
       breadcrumb: ['Préparation', 'Logistique', 'Courses'],
       activeNavId: 'log',
+    });
+    // `set()` efface le gabarit d'actions : il faut donc le repousser après,
+    // et depuis un `effect` — dans le constructeur, la vue n'existe pas encore
+    // et `actionsTpl()` vaut `undefined`.
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 
@@ -91,6 +113,9 @@ export class Logistique implements OnInit {
   }
 
   protected readonly icTicket = LucideTicket;
+  protected readonly icUpload = LucideUpload;
+  protected readonly icPlus = LucidePlus;
+  protected readonly icLock = LucideLock;
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
@@ -239,6 +264,17 @@ export class Logistique implements OnInit {
 
   protected openCreateVoucher(): void {
     this.modalService.open({ type: 'component', component: VoucherCreateModal, inputs: {} });
+  }
+
+  /**
+   * Le bouton « Bons d'achat (n) » de la topbar amène au panneau.
+   *
+   * Le compteur est la seule chose que la maquette lui donne à faire ; sur une
+   * page qui affiche déjà le panneau plus bas, le mener jusqu'à lui est ce qui
+   * reste d'utile — et évite un bouton décoratif.
+   */
+  protected scrollToVouchers(): void {
+    this.vouchersPanel()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   protected isSaving(id: number): boolean {

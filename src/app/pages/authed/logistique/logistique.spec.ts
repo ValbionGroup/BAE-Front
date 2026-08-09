@@ -1,4 +1,6 @@
+import { ViewContainerRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -61,7 +63,13 @@ describe(Logistique.name, () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => http.verify());
+  /** Conteneurs créés par `renderTopbarActions`, retirés après chaque test. */
+  const hosts: HTMLElement[] = [];
+
+  afterEach(() => {
+    for (const host of hosts.splice(0)) host.remove();
+    http.verify();
+  });
 
   /** Answers the three page requests and lets the template settle. */
   async function load(goods: ApiGood[], vouchers: ApiVoucher[] = []): Promise<void> {
@@ -75,6 +83,30 @@ describe(Logistique.name, () => {
   /** Rend la page chargée avec un bon exploitable par les tests d'écriture. */
   async function renderLoaded(): Promise<void> {
     await load([], [VOUCHER]);
+  }
+
+  /**
+   * Instancie le gabarit d'actions que la page pousse dans la topbar.
+   *
+   * Ces boutons vivent dans un `<ng-template #actions>` rendu par la topbar via
+   * `ngTemplateOutlet`, jamais dans le corps de la page : sur un fixture qui
+   * n'instancie que la page, ils n'existent pas dans le DOM tant qu'on ne les
+   * crée pas soi-même. On les rattache au document pour que les clics partent
+   * réellement.
+   */
+  function renderTopbarActions(): HTMLElement {
+    const tpl = TestBed.inject(PageHeaderService).actions();
+    expect(tpl).not.toBeNull();
+
+    const vcr = fixture.componentRef.injector.get(ViewContainerRef);
+    const view = vcr.createEmbeddedView(tpl!);
+    view.detectChanges();
+
+    const host = document.createElement('div');
+    for (const node of view.rootNodes as Node[]) host.appendChild(node);
+    document.body.appendChild(host);
+    hosts.push(host);
+    return host;
   }
 
   /** Rend la page avec un 403 sur la seule branche des bons d'achat. */
@@ -144,18 +176,27 @@ describe(Logistique.name, () => {
     expect(dashes).toHaveLength(2);
   });
 
-  it('opens the creation modal from the add button', async () => {
+  it('opens the creation modal from the topbar action', async () => {
     const opened = vi.spyOn(TestBed.inject(ModalService), 'open');
     await renderLoaded();
 
-    const addButton: HTMLElement = fixture.nativeElement.querySelector(
+    const addButton = renderTopbarActions().querySelector<HTMLElement>(
       '[data-testid="add-voucher"] button',
     );
-    addButton.click();
+    // Le point d'entrée vit dans la topbar, pas à côté du titre de section :
+    // c'est là que la maquette le place, et là qu'on le cherche.
+    expect(addButton).not.toBeNull();
+    addButton!.click();
 
     expect(opened).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'component', component: VoucherCreateModal }),
     );
+  });
+
+  it('counts the loaded vouchers on the topbar action', async () => {
+    await renderLoaded();
+
+    expect(renderTopbarActions().textContent).toContain("Bons d'achat (1)");
   });
 
   it('names the toggle button after the voucher it acts on', async () => {
@@ -205,8 +246,16 @@ describe(Logistique.name, () => {
     // gardé que le panneau.
     expect(fixture.nativeElement.textContent).toContain('Saucisses');
     // Proposer d'ajouter un bon à qui n'a pas le droit d'en voir un serait un
-    // clic voué au 403.
-    expect(fixture.nativeElement.querySelector('[data-testid="add-voucher"]')).toBeNull();
+    // clic voué au 403 — et le bouton vit désormais dans la topbar, donc c'est
+    // là qu'il faut vérifier son absence.
+    expect(renderTopbarActions().querySelector('[data-testid="add-voucher"]')).toBeNull();
+  });
+
+  it('locks the section label when the vouchers are out of reach', async () => {
+    await renderForbidden();
+
+    // Le vocabulaire de la maquette pour un panneau verrouillé.
+    expect(fixture.nativeElement.textContent).toContain('ACCÈS VERROUILLÉ');
   });
 
   it('reads the usable-voucher KPI as unknown rather than zero', async () => {
