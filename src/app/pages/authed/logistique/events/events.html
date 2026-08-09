@@ -91,6 +91,16 @@
             >
               {{ e.recipes.length ? 'Gérer recettes' : 'Assigner recettes' }}
             </bfd-btn>
+            <span [attr.data-testid]="'open-courses-' + e.id">
+              <bfd-btn
+                kind="ghost"
+                size="sm"
+                [iconRight]="icArrowRight"
+                (clicked)="openCourses(e.id)"
+              >
+                Liste de courses
+              </bfd-btn>
+            </span>
             <bfd-btn kind="ghost" size="sm" [icon]="icMore" />
           </div>
         </header>
