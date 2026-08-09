@@ -186,7 +186,17 @@ export const TeamStore = signalStore(
       }
 
       const target = store.members().find((member) => member.id === id);
-      if (!target) return;
+      if (!target) {
+        // Membre disparu du store entre-temps (supprimé depuis un autre
+        // onglet pendant l'édition) : un retour muet laisserait `memberErrorId`
+        // à sa valeur précédente, la modale lirait « pas d'erreur pour ce
+        // membre » et se fermerait comme si l'écriture avait abouti.
+        patchState(store, {
+          memberError: 'Ce membre a été supprimé entre-temps.',
+          memberErrorId: id,
+        });
+        return;
+      }
 
       // Écriture optimiste : le rôle affiché suit le patch tant que la réponse
       // n'est pas là. `role` est recalculé localement pour que le badge change

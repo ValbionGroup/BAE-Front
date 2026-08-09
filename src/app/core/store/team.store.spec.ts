@@ -299,6 +299,18 @@ describe(TeamStore.name, () => {
     expect(store.memberErrorId()).toBe(2);
   });
 
+  it('reports an error instead of silently no-opping when the target member is gone', async () => {
+    // Nothing loaded: `store.members()` is empty, so `updateMember` finds no
+    // target — the scenario is a member deleted in another tab mid-edit.
+    // Silently returning here would let the edit modal's close-on-success
+    // check pass on a write that never happened.
+    await store.updateMember(999, { firstName: 'Trop tard' });
+
+    httpMock.expectNone(`${baseUrl}/members/999`);
+    expect(store.memberError()).not.toBeNull();
+    expect(store.memberErrorId()).toBe(999);
+  });
+
   it('does not remove the row before the delete succeeds', async () => {
     const loaded = store.load();
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
