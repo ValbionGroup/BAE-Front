@@ -217,4 +217,21 @@ describe(Logistique.name, () => {
     // qu'on n'a pas le droit de le savoir.
     expect(kpi.textContent?.trim()).toBe('—');
   });
+
+  it('also reads the usable-voucher KPI as unknown on a load failure other than 403', async () => {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([good(1, 'Saucisses', [])]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers'))
+      .flush({ message: 'Erreur serveur' }, { status: 500, statusText: 'x' });
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Une 500 met `vouchersLoadError`, pas `vouchersForbidden` : le panneau
+    // restreint n'a donc pas lieu d'apparaître ici, contrairement au cas 403.
+    expect(fixture.nativeElement.querySelector('[data-testid="vouchers-forbidden"]')).toBeNull();
+
+    const kpi: HTMLElement = fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]');
+    expect(kpi.textContent?.trim()).toBe('—');
+  });
 });

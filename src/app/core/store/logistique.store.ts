@@ -112,16 +112,15 @@ export const LogistiqueStore = signalStore(
         const [goods, vouchers, suppliers] = await lastValueFrom(
           forkJoin([svc.getGoods(), settle(svc.getVouchers()), svc.getSuppliers()]),
         );
+        const forbidden = !vouchers.ok && vouchers.status === 403;
         patchState(store, {
           loading: 'loaded',
           goods,
           vouchers: vouchers.ok ? vouchers.value.map(toVoucherCard) : [],
           suppliers,
-          vouchersForbidden: !vouchers.ok && vouchers.status === 403,
+          vouchersForbidden: forbidden,
           vouchersLoadError:
-            vouchers.ok || vouchers.status === 403
-              ? null
-              : "Impossible de charger les bons d'achat.",
+            vouchers.ok || forbidden ? null : "Impossible de charger les bons d'achat.",
         });
       } catch {
         patchState(store, {
