@@ -28,7 +28,11 @@ describe(Equipe.name, () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: baseUrl },
-        provideMockStore({ initialState: { auth: { permissions: ['role:read', 'role:write'] } } }),
+        provideMockStore({
+          initialState: {
+            auth: { permissions: ['role:read', 'role:write', 'member:write'], member: { id: 1 } },
+          },
+        }),
       ],
     }).compileComponents();
 
@@ -151,5 +155,69 @@ describe(Equipe.name, () => {
 
     expect(component['cellDisabled'](1, 'stock:read')).toBe(true);
     httpMock.verify();
+  });
+
+  it('disables the action menu without member:write', async () => {
+    TestBed.inject(MockStore).setState({
+      auth: { permissions: ['role:read'], member: { id: 1 } },
+    });
+
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 2,
+        firstName: 'Tommy',
+        lastName: 'Klein',
+        roleId: null,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: null,
+      },
+    ]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await flushAsync(fixture);
+
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '[data-testid="member-actions"]',
+    );
+    expect(trigger?.disabled).toBe(true);
+  });
+
+  it('refuses to act on a member holding permissions the actor lacks', async () => {
+    TestBed.inject(MockStore).setState({
+      auth: { permissions: ['member:write'], member: { id: 1 } },
+    });
+
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 2,
+        firstName: 'Ada',
+        lastName: 'Admin',
+        roleId: 9,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: { id: 9, name: 'Admin', createdAt: null, updatedAt: null },
+      },
+    ]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([
+      {
+        id: 9,
+        name: 'Admin',
+        createdAt: null,
+        updatedAt: null,
+        permissions: [{ permission: 'role:write', createdAt: null, updatedAt: null }],
+      },
+    ]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await flushAsync(fixture);
+
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '[data-testid="member-actions"]',
+    );
+    expect(trigger?.disabled).toBe(true);
   });
 });
