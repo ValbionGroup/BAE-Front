@@ -1,0 +1,69 @@
+<bfd-modal-shell
+  [icon]="icTicket"
+  tone="blue"
+  eyebrow="Logistique"
+  title="Nouveau bon d'achat"
+  subtitle="Enregistrez un bon reçu d'une enseigne."
+  [width]="480"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    <bfd-field label="Enseigne">
+      <select
+        class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+        [value]="supplierId()"
+        (change)="onSupplierId($any($event.target).value)"
+      >
+        <option value="">Choisir une enseigne…</option>
+        @for (supplier of store.suppliers(); track supplier.id) {
+          <option [value]="supplier.id">{{ supplier.name }}</option>
+        }
+      </select>
+    </bfd-field>
+
+    <bfd-field label="Valeur" hint="En euros — la virgule est acceptée.">
+      <bfd-input
+        type="text"
+        placeholder="20"
+        suffix="€"
+        [value]="value()"
+        [invalid]="submitted() && parsedValue() === null"
+        (valueChange)="onValue($event)"
+      />
+    </bfd-field>
+
+    <bfd-field label="Date d'expiration">
+      <bfd-input
+        type="date"
+        [value]="expiresAt()"
+        [invalid]="submitted() && expiresAt() === ''"
+        (valueChange)="onExpiresAt($event)"
+      />
+    </bfd-field>
+
+    <bfd-field label="Condition" hint="Facultatif — par exemple « à partir de 80 € ».">
+      <bfd-input
+        placeholder="à partir de 80 €"
+        [value]="condition()"
+        (valueChange)="onCondition($event)"
+      />
+    </bfd-field>
+
+    @if (submitted() && !valid()) {
+      <p role="alert" class="m-0 text-[12px] text-danger">
+        Enseigne, valeur et date d'expiration sont requises.
+      </p>
+    }
+
+    @if (store.createError(); as message) {
+      <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+    }
+  </div>
+
+  <div modal-footer class="flex-1 flex justify-end gap-2">
+    <bfd-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bfd-btn>
+    <bfd-btn kind="primary" size="md" [disabled]="store.creatingVoucher()" (clicked)="submit()">
+      {{ store.creatingVoucher() ? 'Enregistrement…' : 'Enregistrer' }}
+    </bfd-btn>
+  </div>
+</bfd-modal-shell>
