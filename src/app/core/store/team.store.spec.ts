@@ -266,4 +266,65 @@ describe(TeamStore.name, () => {
     expect(store.permissionsError()).toBe('Accordez d’abord role:write à un rôle occupé.');
     expect(store.permissionsErrorRoleId()).toBe(1);
   });
+
+  it('restores only the edited row when the update is refused', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER, { ...MEMBER, id: 3, firstName: 'Ana' }]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const failing = store.updateMember(2, { firstName: 'Refusé' });
+
+    httpMock
+      .expectOne(`${baseUrl}/members/2`)
+      .flush({ message: 'Refusé par le serveur.' }, { status: 403, statusText: 'Forbidden' });
+    await failing;
+
+    expect(store.members().find((m) => m.id === 2)?.firstName).toBe('Tommy');
+    // La restauration est ciblée : la ligne voisine n'est pas revenue à un
+    // instantané pris avant l'écriture.
+    expect(store.members().find((m) => m.id === 3)?.firstName).toBe('Ana');
+    expect(store.memberError()).toBe('Refusé par le serveur.');
+    expect(store.memberErrorId()).toBe(2);
+  });
+
+  it('does not remove the row before the delete succeeds', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const deleting = store.deleteMember(2);
+    expect(store.members().length).toBe(1);
+
+    httpMock.expectOne(`${baseUrl}/members/2`).flush(null, { status: 204, statusText: 'No Content' });
+    await deleting;
+
+    expect(store.members().length).toBe(0);
+  });
+
+  it('keeps the row and surfaces the API message when the delete is refused', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const deleting = store.deleteMember(2);
+    httpMock
+      .expectOne(`${baseUrl}/members/2`)
+      .flush(
+        { message: 'Vous ne pouvez pas supprimer votre propre compte.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await deleting;
+
+    expect(store.members().length).toBe(1);
+    expect(store.memberError()).toBe('Vous ne pouvez pas supprimer votre propre compte.');
+  });
 });
