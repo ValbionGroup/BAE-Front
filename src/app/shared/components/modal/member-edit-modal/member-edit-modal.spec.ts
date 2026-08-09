@@ -60,4 +60,51 @@ describe(MemberEditModal.name, () => {
     expect(labels).toContain('Finance');
     expect(labels).not.toContain('Admin');
   });
+
+  it('selects the member current role in the DOM on first render', async () => {
+    const store = TestBed.inject(TeamStore);
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      {
+        id: 3,
+        firstName: 'Alix',
+        lastName: 'Roy',
+        roleId: 2,
+        points: 0,
+        createdAt: null,
+        updatedAt: null,
+        role: { id: 2, name: 'Admin', createdAt: null, updatedAt: null },
+      },
+    ]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([
+      { id: 1, name: 'Finance', createdAt: null, updatedAt: null, permissions: [] },
+      { id: 2, name: 'Admin', createdAt: null, updatedAt: null, permissions: [] },
+    ]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const fixture = TestBed.createComponent(MemberEditModal);
+    fixture.componentRef.setInput('id', 'modal-1');
+    fixture.componentRef.setInput('memberId', 3);
+    fixture.componentRef.setInput('grantableRoleIds', [1, 2]);
+    await fixture.whenStable();
+
+    // Regression guard: with only `[value]` on <select> and no `[selected]` on the
+    // <option>s, Ivy applies the element's property binding before its @for-created
+    // children exist. The browser then finds no matching <option> and silently falls
+    // back to the first one — the static "Sans rôle" — even though the member has a
+    // role. Assert on the DOM's own selection state, not a component signal, so this
+    // mismatch between model and rendered DOM can't hide.
+    const select = (fixture.nativeElement as HTMLElement).querySelector('select');
+    expect(select?.value).toBe('2');
+
+    // `.selected` is a DOM property, not a reflected HTML attribute — an
+    // attribute selector like `option[selected]` would silently match nothing
+    // even when Angular's `[selected]` binding worked, so read the property.
+    const options = Array.from(select?.querySelectorAll('option') ?? []);
+    const selectedOption = options.find((option) => option.selected);
+    expect(selectedOption?.value).toBe('2');
+    expect(selectedOption?.textContent?.trim()).toBe('Admin');
+  });
 });
