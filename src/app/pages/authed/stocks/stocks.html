@@ -1,9 +1,7 @@
 <!-- Topbar actions -->
 <ng-template #actions>
   <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
-  <!-- Aucun endpoint d'export d'inventaire côté API : le bouton reste en place
-       — le manque est côté back — mais cesse de l'être en silence, comme
-       « Inviter un membre » sur Équipe. -->
+  <!-- Aucun endpoint d'export : le bouton reste, désactivé et motivé. -->
   <bfd-btn
     kind="secondary"
     size="md"
@@ -17,11 +15,8 @@
   </span>
 </ng-template>
 
-<!-- `grid-rows-[minmax(0,1fr)]` : une piste implicite est en `auto`, donc elle
-     s'étire à la hauteur de son contenu et déborde la grille. Le `minmax(0,1fr)`
-     la cloue à la hauteur disponible, ce qui est la condition pour que les deux
-     colonnes défilent chacune de leur côté. Même raison pour les `min-h-0` :
-     un item de grille a `min-height:auto`. -->
+<!-- `minmax(0,1fr)` et `min-h-0` : une piste et un item de grille sont en
+     `auto`, donc ils s'étirent au contenu au lieu de laisser défiler. -->
 <div class="grid h-full grid-cols-[1fr_380px] grid-rows-[minmax(0,1fr)]">
   <!-- LEFT: list -->
   <div class="flex min-h-0 min-w-0 flex-col gap-3.5 p-5">

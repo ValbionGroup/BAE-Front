@@ -1,14 +1,8 @@
 <!--
-  Aligné sur `ScreenModalEditPostes` de la maquette Claude Design : coquille
-  commune, bandeau de compteurs, pastille teintée par poste, compteur à pas,
-  ligne d'ajout en pointillés, bandeau d'information.
-
-  Ce que la maquette porte et qu'on ne rend PAS, faute de données derrière :
+  Aligné sur `ScreenModalEditPostes`. Non rendus faute de données derrière :
   criticité, effectif minimum, spécialisation, tranche horaire, pré-requis,
-  référent de poste, réordonnancement, modèles. `event_jobs` ne porte que
-  `count`, `jobs` que `type` — les afficher reviendrait à inventer un modèle.
-  Le libellé « Enregistrer & relancer l'algo » est écarté pour la même raison :
-  `saveRoleEdits` écrit les postes et recharge, il ne relance rien.
+  référent, réordonnancement, modèles. Le libellé « Enregistrer & relancer
+  l'algo » est écarté aussi : `saveRoleEdits` ne relance rien.
 -->
 <bfd-modal-shell
   [icon]="icSettings"
@@ -81,13 +75,8 @@
 
           <span class="text-[12px] text-text-2">{{ jobPeriodLabel(role.jobId) }}</span>
 
-          <!--
-            Compteur à pas de la maquette. Le `<input type="number">` est
-            conservé au centre plutôt que remplacé par un simple affichage :
-            il garde la saisie au clavier et l'annonce correcte du champ, que
-            deux boutons seuls perdraient. La colonne « Effectif » est un
-            `<span>` associé à rien, d'où l'`aria-label` complet sur le champ.
-          -->
+          <!-- Le `<input type="number">` reste au centre du compteur : deux
+               boutons seuls perdraient la saisie clavier et l'annonce du champ. -->
           <div
             class="flex h-9 items-center rounded-md border border-border bg-surface-2 focus-within:ring-2 focus-within:ring-blue/40"
           >

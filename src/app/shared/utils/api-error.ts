@@ -22,8 +22,7 @@ function statusOf(error: unknown): number {
  * façon à l'utilisateur : l'un est une règle, l'autre un incident.
  */
 export type Settled<T> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly status: number };
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly status: number };
 
 /**
  * Isole un flux pour qu'un seul endpoint en panne ne puisse pas annuler tout

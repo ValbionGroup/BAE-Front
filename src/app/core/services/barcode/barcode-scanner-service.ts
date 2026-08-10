@@ -1,41 +1,39 @@
 import { Injectable } from '@angular/core';
 
-/**
- * Minimal shape of the browser's native `BarcodeDetector`.
- *
- * Il n'est pas dans les types du DOM (l'API n'est pas encore standardisée), et
- * on n'en utilise que deux membres : le déclarer ici évite un `any` et évite
- * surtout d'ajouter une dépendance de types pour deux signatures.
- */
+/** `BarcodeDetector` n'est pas dans les types du DOM : l'API n'est pas standardisée. */
 interface BarcodeDetectorLike {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>;
 }
 
 interface BarcodeDetectorCtor {
   new (options?: { formats?: string[] }): BarcodeDetectorLike;
-  getSupportedFormats?(): Promise<string[]>;
 }
 
-/** Les formats que portent les emballages alimentaires. */
 const FORMATS = ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'];
 
 /**
- * Caméra + décodage de code-barres, isolés de la page.
+ * Fenêtre pendant laquelle un même code relu ne compte pas.
  *
- * Isolés pour deux raisons. D'abord `getUserMedia` et `BarcodeDetector`
- * n'existent pas sous jsdom : les mêler à la page rendrait sa logique de
- * session intestable. Ensuite `BarcodeDetector` n'est natif que sur Chrome et
- * Edge — Firefox et Safari desktop ne l'ont pas. Toute la page doit donc
- * fonctionner sans lui, la saisie manuelle étant le chemin de repli, et c'est
- * `isSupported()` qui le dit.
+ * Le décodage tourne à la fréquence d'affichage : un paquet tenu deux secondes
+ * devant l'objectif est lu cent fois, et sans ce délai il entrerait cent unités
+ * en stock.
+ */
+export const SCAN_COOLDOWN_MS = 1500;
+
+/**
+ * Caméra et décodage, isolés de la page.
+ *
+ * `getUserMedia` et `BarcodeDetector` n'existent ni sous jsdom ni sur Firefox
+ * et Safari desktop : la page doit fonctionner sans eux, la saisie manuelle
+ * servant de repli.
  */
 @Injectable({ providedIn: 'root' })
 export class BarcodeScannerService {
   private stream: MediaStream | null = null;
   private detector: BarcodeDetectorLike | null = null;
   private stopped = false;
+  private readonly lastEmitted = new Map<string, number>();
 
-  /** Vrai si ce navigateur sait décoder sans bibliothèque tierce. */
   isSupported(): boolean {
     return (
       typeof globalThis !== 'undefined' &&
@@ -46,10 +44,18 @@ export class BarcodeScannerService {
   }
 
   /**
-   * Ouvre la caméra arrière si elle existe et pousse chaque code lu dans
-   * `onCode`. Rend `false` si le navigateur ou l'utilisateur refuse — la page
-   * bascule alors sur la saisie manuelle plutôt que d'afficher un écran mort.
+   * Décide si un code lu compte comme une nouvelle lecture. Le délai est **par
+   * code** : viser deux produits différents à la suite les enregistre tous les
+   * deux, seule la répétition du même code est absorbée.
    */
+  accepts(code: string, now: number = Date.now()): boolean {
+    const previous = this.lastEmitted.get(code);
+    if (previous !== undefined && now - previous < SCAN_COOLDOWN_MS) return false;
+    this.lastEmitted.set(code, now);
+    return true;
+  }
+
+  /** Rend `false` si le navigateur ou l'utilisateur refuse la caméra. */
   async start(video: HTMLVideoElement, onCode: (code: string) => void): Promise<boolean> {
     if (!this.isSupported()) return false;
 
@@ -58,8 +64,6 @@ export class BarcodeScannerService {
         video: { facingMode: 'environment' },
       });
     } catch {
-      // Permission refusée, ou aucune caméra. Ce n'est pas une panne : c'est le
-      // cas où la saisie manuelle prend le relais.
       return false;
     }
 
@@ -75,9 +79,7 @@ export class BarcodeScannerService {
       if (this.stopped || !this.detector) return;
       try {
         const found = await this.detector.detect(video);
-        // Un seul code par image : viser deux emballages à la fois n'a pas de
-        // sens ici, et prendre le premier évite d'empiler deux lignes d'un coup.
-        if (found.length > 0) onCode(found[0].rawValue);
+        if (found.length > 0 && this.accepts(found[0].rawValue)) onCode(found[0].rawValue);
       } catch {
         // Une image illisible n'a rien d'exceptionnel — on retente.
       }
@@ -88,11 +90,13 @@ export class BarcodeScannerService {
     return true;
   }
 
-  /** Coupe la caméra. À appeler en quittant l'écran, sinon la LED reste allumée. */
   stop(): void {
     this.stopped = true;
     this.detector = null;
     this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = null;
+    // Le service est `providedIn: 'root'` : sans cet oubli, revenir sur l'écran
+    // ferait ignorer le premier scan.
+    this.lastEmitted.clear();
   }
 }

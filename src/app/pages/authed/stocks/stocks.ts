@@ -40,12 +40,8 @@ import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from '.
   imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien : une
-  // hauteur en pourcentage se mesure sur le parent, et `<bfd-stocks>` est un
-  // élément sans style, donc de hauteur automatique. La grille prenait alors
-  // la hauteur de son contenu et c'est le conteneur de l'app-shell qui
-  // défilait — toute la page d'un bloc, au lieu du tableau et du panneau
-  // chacun de leur côté.
+  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est
+  // l'app-shell qui défile, toute la page d'un bloc.
   host: { class: 'block h-full' },
 })
 export class Stocks implements OnInit {
@@ -62,11 +58,8 @@ export class Stocks implements OnInit {
       breadcrumb: ['Préparation', 'Stocks'],
       activeNavId: 'stocks',
     });
-    // ⚠️ Un seul effect, et dans cet ordre. `set()` remet le gabarit d'actions
-    // à `null` : quand le rafraîchissement du sous-titre vivait dans un effect
-    // séparé, il s'exécutait après celui qui pousse les actions et effaçait les
-    // trois boutons dès le premier chargement — d'où une topbar vide. Même
-    // remède que sur la page Équipe.
+    // ⚠️ Un seul effect, dans cet ordre : `set()` remet les actions à `null`,
+    // donc un effect séparé effacerait les boutons au premier chargement.
     effect(() => {
       const products = this.store.products();
       const batches = products.reduce((sum, p) => sum + p.batchCount, 0);

@@ -36,13 +36,7 @@ export interface ApiCategory {
   readonly name: string;
 }
 
-/**
- * Ce que rend `POST /goods` : la ligne `goods` telle quelle.
- *
- * Ce n'est **pas** un `ApiStockItem` : le contrôleur ne précharge ni la
- * catégorie ni les lots, et il n'y a de toute façon aucun agrégat à calculer
- * sur un produit qui vient de naître. Le store complète le reste à zéro.
- */
+/** Réponse de `POST /goods` : la ligne `goods` seule, sans catégorie ni agrégats. */
 export interface ApiCreatedGood {
   readonly id: number;
   readonly name: string;
@@ -51,30 +45,18 @@ export interface ApiCreatedGood {
   readonly categoryId: number;
 }
 
-/**
- * Unités autorisées par la contrainte `goods_unit_check`.
- *
- * C'est un `enum` en base, pas du texte libre : « pc » ou « paq » sont refusés
- * par la contrainte, pas par une validation applicative. La source est la
- * migration `create_goods_table`.
- */
+/** Contrainte `goods_unit_check` : un enum en base, pas du texte libre. */
 export const GOOD_UNITS = ['pcs', 'kg', 'liter'] as const;
 
 export type GoodUnit = (typeof GOOD_UNITS)[number];
 
-/** Libellés d'interface des unités. */
 export const GOOD_UNIT_LABELS: Readonly<Record<GoodUnit, string>> = {
   pcs: 'Pièce',
   kg: 'Kilogramme',
   liter: 'Litre',
 };
 
-/**
- * Corps de `POST /goods`.
- *
- * `brand` est une chaîne, jamais `null` : la colonne est `NOT NULL`, et une
- * marque inconnue s'écrit `''`.
- */
+/** `brand` est une chaîne, jamais `null` : la colonne est `NOT NULL`. */
 export interface CreateGoodPayload {
   readonly name: string;
   readonly unit: GoodUnit;
@@ -101,13 +83,8 @@ export class StocksService {
     return this.http.post<ApiCreatedGood>(`${this.baseUrl}/goods`, payload);
   }
 
-  /**
-   * Résout un code lu au scanner.
-   *
-   * Rend une liste — vide si le code n'est rattaché à rien, ce qui est une
-   * réponse normale et non une erreur : c'est elle qui déclenche la création du
-   * produit. La colonne étant unique, elle ne peut pas en contenir deux.
-   */
+  /** Liste vide si le code n'est rattaché à rien : réponse normale, pas une
+   *  erreur — c'est elle qui déclenche la création. */
   findByBarcode(barcode: string): Observable<ApiCreatedGood[]> {
     return this.http.get<ApiCreatedGood[]>(`${this.baseUrl}/goods`, { params: { barcode } });
   }

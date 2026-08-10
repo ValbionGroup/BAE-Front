@@ -48,8 +48,6 @@
           @if (cameraLive()) {
             EAN-13, EAN-8, CODE-128 · lecture continue
           } @else if (!cameraSupported) {
-            <!-- BarcodeDetector n'existe que sur Chrome et Edge : le dire, plutôt
-                 que de laisser croire à une caméra en panne. -->
             Ce navigateur ne sait pas décoder de code-barres — utilisez Chrome, ou saisissez le
             code.
           } @else {

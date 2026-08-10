@@ -287,9 +287,7 @@ describe(LogistiqueStore.name, () => {
     http
       .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
       .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
-    http
-      .expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET')
-      .flush([supplier()]);
+    http.expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET').flush([supplier()]);
     await loading;
 
     // Le comparatif d'enseignes n'a rien de confidentiel : un refus sur les
@@ -308,9 +306,7 @@ describe(LogistiqueStore.name, () => {
     http
       .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
       .flush(null, { status: 500, statusText: 'Server Error' });
-    http
-      .expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET')
-      .flush([supplier()]);
+    http.expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET').flush([supplier()]);
     await loading;
 
     expect(store.loading()).toBe('loaded');

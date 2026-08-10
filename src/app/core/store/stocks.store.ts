@@ -49,12 +49,8 @@ function toStockProduct(item: ApiStockItem): StockProduct {
 }
 
 /**
- * Insère un produit à sa place dans l'ordre alphabétique.
- *
- * `GET /stocks` renvoie les produits triés (`orderBy('name')`) et le tableau
- * en dépend : un ajout en fin de liste mettrait « Bière » après « Vaisselle »
- * jusqu'au prochain rechargement. Comparaison avec `localeCompare(…, 'fr')`,
- * la même que le tri par nom de la page.
+ * `GET /stocks` trie par nom et le tableau en dépend : un ajout en fin de liste
+ * mettrait « Bière » après « Vaisselle » jusqu'au prochain rechargement.
  */
 function insertByName(products: readonly StockProduct[], product: StockProduct): StockProduct[] {
   const index = products.findIndex((entry) => entry.name.localeCompare(product.name, 'fr') > 0);
@@ -91,9 +87,8 @@ export const StocksStore = signalStore(
       if (store.loading() === 'loaded' || store.loading() === 'loading') return;
       patchState(store, { loading: 'loading', loadError: null });
       try {
-        // Les catégories sont isolées : elles ne servent qu'au formulaire de
-        // création, donc leur panne ne doit pas emporter le tableau des stocks,
-        // qui est la raison d'être de la page.
+        // Les catégories ne servent qu'au formulaire : leur panne ne doit pas
+        // emporter le tableau.
         const [items, categories] = await lastValueFrom(
           forkJoin([svc.getAll(), settle(svc.getCategories())]),
         );
@@ -108,12 +103,8 @@ export const StocksStore = signalStore(
     },
 
     /**
-     * Non optimiste : il n'y a pas d'id avant la réponse, et la liste est
-     * triée — un id fantôme y coûterait plus qu'il ne rapporte.
-     *
-     * `POST /goods` rend la ligne `goods` seule : ni catégorie préchargée, ni
-     * agrégats. Le produit naît donc sans lot, ce qui est exact — il apparaît
-     * à 0, et c'est un réassort qui lui donnera du stock.
+     * Non optimiste : pas d'id avant la réponse, et la liste est triée. Le
+     * produit naît sans lot — c'est un réassort qui lui donnera du stock.
      */
     async createGood(payload: CreateGoodPayload): Promise<boolean> {
       if (store.creatingGood()) return false;
@@ -148,13 +139,8 @@ export const StocksStore = signalStore(
       }
     },
 
-    /**
-     * Rechargement explicite, sans le garde d'idempotence de `load()`.
-     *
-     * Le scanner en a besoin : après une session, les quantités du tableau sont
-     * périmées, et `load()` sortirait immédiatement puisque l'état est déjà
-     * `loaded`.
-     */
+    /** Rechargement explicite : `load()` sortirait aussitôt, l'état étant
+     *  déjà `loaded`. */
     async refresh(): Promise<void> {
       try {
         const [items, categories] = await lastValueFrom(

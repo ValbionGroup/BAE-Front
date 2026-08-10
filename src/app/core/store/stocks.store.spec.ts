@@ -104,7 +104,13 @@ describe(StocksStore.name, () => {
   it('creates the product with no stock at all', async () => {
     await loadWith([]);
 
-    const created = store.createGood({ name: 'Moutarde', unit: 'pcs', brand: '', categoryId: 2, barcode: null });
+    const created = store.createGood({
+      name: 'Moutarde',
+      unit: 'pcs',
+      brand: '',
+      categoryId: 2,
+      barcode: null,
+    });
     http
       .expectOne(`${baseUrl}/goods`)
       .flush({ id: 9, name: 'Moutarde', unit: 'pcs', brand: '', categoryId: 2 });
@@ -126,7 +132,13 @@ describe(StocksStore.name, () => {
   it('reports the API message when a creation is refused', async () => {
     await loadWith([]);
 
-    const created = store.createGood({ name: 'Moutarde', unit: 'pcs', brand: '', categoryId: 2, barcode: null });
+    const created = store.createGood({
+      name: 'Moutarde',
+      unit: 'pcs',
+      brand: '',
+      categoryId: 2,
+      barcode: null,
+    });
     http
       .expectOne(`${baseUrl}/goods`)
       .flush({ message: 'Unité invalide.' }, { status: 422, statusText: 'Unprocessable' });

@@ -34,13 +34,8 @@ import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import { messageOf } from '#shared/utils/api-error';
 
-/**
- * Une ligne de la session de scan.
- *
- * `goodId` à `null` veut dire « ce code n'est rattaché à aucun produit » : la
- * ligne reste visible — c'est elle qui propose la création — mais elle ne part
- * pas en stock à la validation.
- */
+/** `goodId` à `null` : code non rattaché, la ligne propose la création et ne
+ *  part pas en stock. */
 export interface ScanLine {
   readonly barcode: string;
   readonly goodId: number | null;
@@ -75,14 +70,12 @@ export class StocksScanner {
       breadcrumb: ['Préparation', 'Stocks', 'Scanner'],
       activeNavId: 'stocks',
     });
-    // Même piège que sur la page Stocks : `set()` efface les actions, donc le
-    // gabarit se repousse après, dans le même effect.
+    // `set()` efface les actions : les repousser après, dans le même effect.
     effect(() => {
       const tpl = this.actionsTpl();
       if (tpl) this.pageHeader.setActions(tpl);
     });
 
-    // Les catégories servent à la modale de création d'un produit inconnu.
     void this.store.load();
 
     effect(() => {
@@ -117,7 +110,7 @@ export class StocksScanner {
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
 
-  /** Lignes réellement entrables en stock : produit connu et quantité utile. */
+  /** Lignes entrables en stock : produit connu et quantité utile. */
   protected readonly ready = computed(() =>
     this.lines().filter((line) => line.goodId !== null && line.quantity > 0),
   );
@@ -137,13 +130,8 @@ export class StocksScanner {
     void this.onBarcode(code);
   }
 
-  /**
-   * Traite un code lu, au scanner ou à la main.
-   *
-   * Un code déjà dans la session **incrémente** sa ligne au lieu d'en ajouter
-   * une seconde : la caméra lit la même étiquette plusieurs fois par seconde, et
-   * sans cela un seul paquet remplirait l'écran.
-   */
+  /** Un code déjà dans la session incrémente sa ligne au lieu d'en ajouter une
+   *  seconde. Le délai de relecture vit dans `BarcodeScannerService`. */
   protected async onBarcode(rawCode: string): Promise<void> {
     const barcode = rawCode.replace(/\s/g, '');
     if (barcode === '') return;
@@ -196,7 +184,6 @@ export class StocksScanner {
     this.saveError.set(null);
   }
 
-  /** Ouvre la création de produit avec le code déjà rempli. */
   protected createUnknown(barcode: string): void {
     this.modals.open({
       type: 'component',
@@ -206,11 +193,9 @@ export class StocksScanner {
   }
 
   /**
-   * Entre en stock toutes les lignes exploitables.
-   *
    * Séquentiel et non `forkJoin` : un lot refusé ne doit pas empêcher les
-   * suivants, et la ligne qui a réussi disparaît de la session pour que
-   * relancer la validation ne la crée pas deux fois.
+   * suivants, et la ligne aboutie quitte la session pour qu'une relance ne la
+   * crée pas deux fois.
    */
   protected async validate(): Promise<void> {
     if (this.saving() || this.ready().length === 0) return;
@@ -235,8 +220,7 @@ export class StocksScanner {
 
     this.saveError.set(failed);
     this.saving.set(false);
-    // Le tableau des stocks est derrière : sans ce rafraîchissement il
-    // afficherait encore les quantités d'avant la session.
+    // Sans ce rafraîchissement, le tableau derrière garde les quantités d'avant.
     if (failed === null) await this.store.refresh();
   }
 

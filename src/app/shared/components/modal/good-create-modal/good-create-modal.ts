@@ -11,16 +11,9 @@ import { ModalShell } from '../modal-shell/modal-shell';
 /**
  * Saisie d'un produit du catalogue.
  *
- * La catégorie est un `<select>` natif : il n'existe pas de `bfd-select` dans
- * le dépôt, et en fabriquer un pour ce seul cas donnerait un composant partagé
- * conçu sur un unique usage — sans compter le clavier et les lecteurs d'écran,
- * que le natif donne gratuitement. Même raisonnement que `MemberEditModal` et
- * `VoucherCreateModal`.
- *
- * Le produit naît **sans lot**, donc à quantité zéro : créer une référence au
- * catalogue et en avoir en stock sont deux gestes distincts, et c'est un
- * réassort qui fait le second. Le sous-titre le dit, sans quoi on croirait
- * l'écran cassé en voyant apparaître une ligne à 0.
+ * Le produit naît sans lot, donc à zéro : créer une référence et en avoir en
+ * stock sont deux gestes distincts. Le sous-titre le dit, sans quoi la ligne à
+ * 0 passerait pour un bug.
  */
 @Component({
   selector: 'bfd-good-create-modal',
@@ -48,8 +41,7 @@ export class GoodCreateModal {
   protected readonly brand = signal<string>('');
   protected readonly categoryId = signal<string>('');
 
-  /** Vrai une fois qu'on a tenté d'envoyer : les erreurs de champ ne
-   *  s'affichent pas tant que l'utilisateur n'a rien soumis. */
+  /** Les erreurs de champ ne s'affichent qu'après une tentative d'envoi. */
   protected readonly submitted = signal(false);
 
   protected onName(v: string): void {
@@ -69,10 +61,7 @@ export class GoodCreateModal {
     () => this.name().trim() !== '' && this.unit().trim() !== '' && this.categoryId() !== '',
   );
 
-  /**
-   * Sans catégorie chargée, le formulaire ne peut rien produire de valide : on
-   * le dit plutôt que de laisser l'utilisateur buter sur un sélecteur vide.
-   */
+  /** Sans catégorie chargée, le formulaire ne peut rien produire de valide. */
   protected readonly categoriesMissing = computed(() => this.store.categories().length === 0);
 
   protected async submit(): Promise<void> {

@@ -105,10 +105,8 @@ export const RoleAssignmentStore = signalStore(
             .assignments()
             .filter((a) => a.eventId === eventId && a.jobId === assignment.jobId);
           const needed =
-            store
-              .eventJobs()
-              .find((ej) => ej.eventId === eventId && ej.jobId === assignment.jobId)?.count ??
-            null;
+            store.eventJobs().find((ej) => ej.eventId === eventId && ej.jobId === assignment.jobId)
+              ?.count ?? null;
 
           const teammates = onSameJob
             .filter((a) => a.memberId !== memberId)
@@ -119,9 +117,7 @@ export const RoleAssignmentStore = signalStore(
           // Which of the member's own choices this poste was. Absent from
           // their ranking means the engine placed them there as a last resort.
           const preferenceRank =
-            store
-              .preferences()
-              .find((p) => p.memberId === memberId && p.jobId === assignment.jobId)
+            store.preferences().find((p) => p.memberId === memberId && p.jobId === assignment.jobId)
               ?.preferenceRank ?? null;
 
           // D5: a good rank COSTS priority credit — this is often negative,

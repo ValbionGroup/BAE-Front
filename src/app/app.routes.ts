@@ -73,9 +73,7 @@ export const routes: Routes = [
             path: '',
             pathMatch: 'full',
             loadComponent: () =>
-              import('#pages/authed/coordination/events/events').then(
-                (m) => m.CoordinationEvents,
-              ),
+              import('#pages/authed/coordination/events/events').then((m) => m.CoordinationEvents),
           },
           {
             path: ':id',
@@ -128,8 +126,7 @@ export const routes: Routes = [
           { path: '', redirectTo: 'live', pathMatch: 'full' },
           {
             path: 'live',
-            loadComponent: () =>
-              import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
+            loadComponent: () => import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
           },
           {
             path: 'bilan',

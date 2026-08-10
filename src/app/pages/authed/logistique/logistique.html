@@ -1,12 +1,7 @@
 <!--
-  Actions de la topbar, telles que la maquette Claude Design les porte
-  (`screen-logistique.jsx`). Deux écarts assumés :
-  — « Preuve d'achat » n'a aucun stockage de fichiers côté API (§23.1 de
-    HANDOFF2). Le bouton reste en place, désactivé et motivé, plutôt que de
-    manquer en silence — même parti pris que « Inviter un membre » sur Équipe.
-  — La maquette met « Exporter PDF » en primaire ; aucun endpoint d'export
-    n'existe, alors que créer un bon est la capacité réellement livrée. C'est
-    donc elle qui occupe la place primaire.
+  Actions de la topbar, d'après `screen-logistique.jsx`. Deux écarts assumés :
+  « Preuve d'achat » n'a aucun stockage de fichiers côté API, et « Exporter PDF »
+  cède la place primaire à « Nouveau bon », seule des deux à exister.
 -->
 <ng-template #actions>
   <bfd-btn
@@ -292,11 +287,8 @@
           </div>
 
           <div class="mt-2 flex items-center justify-between gap-2">
-            <!--
-              `<button>` natif et non `bfd-btn` : ce dernier ne propage ni `id`
-              ni les attributs `aria-*` jusqu'au `<button>` interne — ils
-              atterrissent sur l'élément hôte, où ils ne sont jamais annoncés.
-            -->
+            <!-- `<button>` natif : `bfd-btn` ne propage pas les `aria-*` jusqu'au
+                 bouton interne. -->
             <button
               type="button"
               [attr.data-testid]="'toggle-voucher-' + voucher.id"

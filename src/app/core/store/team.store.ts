@@ -144,7 +144,10 @@ export const TeamStore = signalStore(
         // whose write landed while this one was in flight.
         patchState(store, {
           roles: store.roles().map((role) => (role.id === roleId ? target : role)),
-          permissionsError: messageOf(error, 'Impossible de mettre à jour les permissions du rôle.'),
+          permissionsError: messageOf(
+            error,
+            'Impossible de mettre à jour les permissions du rôle.',
+          ),
           permissionsErrorRoleId: roleId,
         });
       } finally {
