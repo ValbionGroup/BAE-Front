@@ -148,6 +148,27 @@ export const StocksStore = signalStore(
       }
     },
 
+    /**
+     * Rechargement explicite, sans le garde d'idempotence de `load()`.
+     *
+     * Le scanner en a besoin : après une session, les quantités du tableau sont
+     * périmées, et `load()` sortirait immédiatement puisque l'état est déjà
+     * `loaded`.
+     */
+    async refresh(): Promise<void> {
+      try {
+        const [items, categories] = await lastValueFrom(
+          forkJoin([svc.getAll(), settle(svc.getCategories())]),
+        );
+        patchState(store, {
+          products: items.map(toStockProduct),
+          categories: categories.ok ? categories.value : store.categories(),
+        });
+      } catch {
+        patchState(store, { loadError: 'Impossible de recharger les stocks.' });
+      }
+    },
+
     async discardBatch(goodsId: number, batchId: number, remainingQty: number): Promise<void> {
       await lastValueFrom(svc.discardBatch(goodsId, batchId, remainingQty));
       const items = await lastValueFrom(svc.getAll());

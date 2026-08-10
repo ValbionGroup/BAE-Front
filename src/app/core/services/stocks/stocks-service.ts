@@ -51,12 +51,37 @@ export interface ApiCreatedGood {
   readonly categoryId: number;
 }
 
-/** Corps de `POST /goods`. */
+/**
+ * Unités autorisées par la contrainte `goods_unit_check`.
+ *
+ * C'est un `enum` en base, pas du texte libre : « pc » ou « paq » sont refusés
+ * par la contrainte, pas par une validation applicative. La source est la
+ * migration `create_goods_table`.
+ */
+export const GOOD_UNITS = ['pcs', 'kg', 'liter'] as const;
+
+export type GoodUnit = (typeof GOOD_UNITS)[number];
+
+/** Libellés d'interface des unités. */
+export const GOOD_UNIT_LABELS: Readonly<Record<GoodUnit, string>> = {
+  pcs: 'Pièce',
+  kg: 'Kilogramme',
+  liter: 'Litre',
+};
+
+/**
+ * Corps de `POST /goods`.
+ *
+ * `brand` est une chaîne, jamais `null` : la colonne est `NOT NULL`, et une
+ * marque inconnue s'écrit `''`.
+ */
 export interface CreateGoodPayload {
   readonly name: string;
-  readonly unit: string;
-  readonly brand: string | null;
+  readonly unit: GoodUnit;
+  readonly brand: string;
   readonly categoryId: number;
+  /** `null` quand le produit n'a pas été créé depuis un scan. */
+  readonly barcode: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -74,6 +99,26 @@ export class StocksService {
 
   createGood(payload: CreateGoodPayload): Observable<ApiCreatedGood> {
     return this.http.post<ApiCreatedGood>(`${this.baseUrl}/goods`, payload);
+  }
+
+  /**
+   * Résout un code lu au scanner.
+   *
+   * Rend une liste — vide si le code n'est rattaché à rien, ce qui est une
+   * réponse normale et non une erreur : c'est elle qui déclenche la création du
+   * produit. La colonne étant unique, elle ne peut pas en contenir deux.
+   */
+  findByBarcode(barcode: string): Observable<ApiCreatedGood[]> {
+    return this.http.get<ApiCreatedGood[]>(`${this.baseUrl}/goods`, { params: { barcode } });
+  }
+
+  /** Entre un lot en stock. `expirationDate` est un `YYYY-MM-DD`, ou `null`. */
+  createBatch(payload: {
+    goodId: number;
+    quantity: number;
+    expirationDate: string | null;
+  }): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/stock-batches`, payload);
   }
 
   getBatches(goodsId: number, showEmpty = false): Observable<ApiStockBatch[]> {

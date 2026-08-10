@@ -31,9 +31,7 @@ describe(CoordinationService.name, () => {
 
     httpMock.expectOne(`${baseUrl}/events`).flush([]);
     httpMock.expectOne(`${baseUrl}/members`).flush([]);
-    httpMock
-      .expectOne(`${baseUrl}/jobs`)
-      .flush([{ id: 1, name: 'Barman', type: 'during' }]);
+    httpMock.expectOne(`${baseUrl}/jobs`).flush([{ id: 1, name: 'Barman', type: 'during' }]);
     httpMock.expectOne(`${baseUrl}/event-jobs`).flush([]);
     httpMock.expectOne(`${baseUrl}/assignments`).flush([]);
     httpMock.expectOne(`${baseUrl}/responses`).flush([]);

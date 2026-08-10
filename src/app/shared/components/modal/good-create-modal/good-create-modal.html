@@ -32,19 +32,34 @@
         </select>
       </bfd-field>
 
-      <bfd-field label="Unité de stock" hint="ex. pc, kg, paq.">
-        <bfd-input
-          placeholder="pc"
+      <!-- `<select>` et non texte libre : `goods.unit` est un enum contraint en
+           base (`goods_unit_check`), une valeur hors liste part en 500. -->
+      <bfd-field label="Unité de stock">
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
           [value]="unit()"
-          [invalid]="submitted() && unit().trim() === ''"
-          (valueChange)="onUnit($event)"
-        />
+          (change)="onUnit($any($event.target).value)"
+        >
+          <option value="">Choisir…</option>
+          @for (u of units; track u.value) {
+            <option [value]="u.value">{{ u.label }}</option>
+          }
+        </select>
       </bfd-field>
     </div>
 
     <bfd-field label="Marque" hint="Facultatif.">
       <bfd-input placeholder="ex. Maille" [value]="brand()" (valueChange)="onBrand($event)" />
     </bfd-field>
+
+    @if (barcode(); as code) {
+      <div
+        class="flex items-center gap-2.5 rounded-md border border-blue bg-blue-soft p-3 text-[12.5px] text-text-2"
+      >
+        <span class="text-muted">Code-barres scanné</span>
+        <span class="mono ml-auto font-semibold text-text">{{ code }}</span>
+      </div>
+    }
 
     @if (categoriesMissing()) {
       <p role="alert" class="m-0 text-[12px] text-danger">

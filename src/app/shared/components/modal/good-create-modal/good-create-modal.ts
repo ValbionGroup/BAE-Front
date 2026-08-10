@@ -4,6 +4,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { StocksStore } from '#core/store/stocks.store';
+import { GOOD_UNITS, GOOD_UNIT_LABELS, type GoodUnit } from '#core/services/stocks/stocks-service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -29,6 +30,13 @@ import { ModalShell } from '../modal-shell/modal-shell';
 })
 export class GoodCreateModal {
   readonly id = input.required<string>();
+  /** Code lu au scanner, quand la modale est ouverte depuis un produit inconnu. */
+  readonly barcode = input<string | null>(null);
+
+  protected readonly units = GOOD_UNITS.map((unit) => ({
+    value: unit,
+    label: GOOD_UNIT_LABELS[unit],
+  }));
 
   private readonly modalService = inject(ModalService);
   protected readonly store = inject(StocksStore);
@@ -71,12 +79,13 @@ export class GoodCreateModal {
     this.submitted.set(true);
     if (!this.valid()) return;
 
-    const brand = this.brand().trim();
     const ok = await this.store.createGood({
       name: this.name().trim(),
-      unit: this.unit().trim(),
-      brand: brand === '' ? null : brand,
+      unit: this.unit() as GoodUnit,
+      // `''` et non `null` : la colonne est `NOT NULL` côté base.
+      brand: this.brand().trim(),
       categoryId: Number(this.categoryId()),
+      barcode: this.barcode(),
     });
 
     if (ok) this.modalService.close(this.id());
