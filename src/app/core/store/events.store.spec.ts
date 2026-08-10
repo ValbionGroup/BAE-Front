@@ -209,5 +209,39 @@ describe(EventsStore.name, () => {
 
       expect(store.getEventById('7')?.menu?.map((line) => line.productId)).toEqual([4]);
     });
+
+    /**
+     * `removeMenuLine` ne doit pas capturer `menu` avant l'attente réseau : une
+     * écriture concurrente aboutie sur une autre ligne pendant que la
+     * suppression est en vol doit survivre, pas disparaître sous une copie
+     * filtrée d'un état déjà périmé.
+     */
+    it('conserve une écriture concurrente aboutie pendant qu’une suppression est en vol', async () => {
+      await seedMenu('7', [
+        menuLine({ productId: 3, quantity: 100 }),
+        menuLine({ productId: 4, quantity: 50 }),
+      ]);
+
+      const removePromise = store.removeMenuLine('7', 3);
+      const deleteReq = httpMock.expectOne({
+        method: 'DELETE',
+        url: `${baseUrl}/events/7/products/3`,
+      });
+
+      // Pendant que la suppression de la ligne 3 est en vol, une autre écriture
+      // aboutit sur la ligne 4.
+      const quantityPromise = store.setMenuLineQuantity('7', 4, 999);
+      httpMock
+        .expectOne({ method: 'PATCH', url: `${baseUrl}/events/7/products/4` })
+        .flush(menuLine({ productId: 4, quantity: 999 }));
+      await quantityPromise;
+
+      deleteReq.flush(null);
+      await removePromise;
+
+      const menu = store.getEventById('7')?.menu ?? [];
+      expect(menu.map((line) => line.productId)).toEqual([4]);
+      expect(menu[0].quantity).toBe(999);
+    });
   });
 });

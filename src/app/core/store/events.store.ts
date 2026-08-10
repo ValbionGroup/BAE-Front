@@ -310,13 +310,15 @@ export const EventsStore = signalStore(
       },
 
       async removeMenuLine(eventId: string, productId: number): Promise<void> {
-        const lines = store.events()[eventId]?.menu ?? [];
         patchState(store, { menuError: null });
         try {
           await lastValueFrom(menu.removeMenuLine(eventId, productId));
+          // Relu après l'attente, jamais capturé avant : une écriture concurrente
+          // aboutie pendant ce vol doit survivre à la suppression, pas disparaître
+          // sous une copie filtrée d'un état périmé.
           patchMenu(
             eventId,
-            lines.filter((line) => line.productId !== productId),
+            (store.events()[eventId]?.menu ?? []).filter((line) => line.productId !== productId),
           );
         } catch (error) {
           patchState(store, {
