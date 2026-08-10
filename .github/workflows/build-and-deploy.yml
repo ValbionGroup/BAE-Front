@@ -13,21 +13,44 @@ jobs:
     concurrency: production
     steps:
       - name: Generate environment.ts
+        env:
+          API_URL: ${{ vars.BAE_API_URL }}
         run: |
-          cat <<EOF > src/environments/environment.ts
+          set -euo pipefail
+
+          # nginx serves the bundle without proxying the API, so a missing URL
+          # would ship an image whose every request goes nowhere.
+          if [ -z "$API_URL" ]; then
+            echo "::error::Repository variable BAE_API_URL is not set."
+            exit 1
+          fi
+
+          mkdir -p src/environment
+          cat > src/environment/environment.ts <<EOF
           export const environment = {
-          production: true,
-          apiUrl: "${{ vars['BAE_API_URL'] }}",
+            production: true,
+            apiUrl: '$API_URL',
+          };
           EOF
+
+      - name: Upload environment file
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment
+          path: src/environment/environment.ts
+          retention-days: 1
 
   build-and-push:
     name: Build and push Docker image
+    needs: [create-env]
     permissions:
       id-token: write
     uses: Eirbware/.github/.github/workflows/build-and-publish.yml@master
     with:
       file: './Dockerfile'
       image_name: ${{ github.repository }}
+      artifact_name: environment
+      artifact_path: src/environment
     secrets:
       registry_username: ${{ secrets.registry_username }}
       registry_api_key: ${{ secrets.registry_api_key }}

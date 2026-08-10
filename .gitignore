@@ -48,3 +48,5 @@ src/environment/environment.ts
 
 # Design specs — documents de travail, jamais versionnés
 docs/superpowers/
+
+.pnpm-store/
