@@ -45,8 +45,6 @@ const PERIOD_ICONS: Readonly<Record<JobPeriod, { icon: LucideIconInput; classes:
 
 @Component({
   selector: 'bfd-roles-modal',
-  // `LucidePlus` et `LucideTrash2` ne sont plus des directives ici : les icônes
-  // passent toutes par `[lucideIcon]`, donc seul `LucideDynamicIcon` s'importe.
   imports: [LucideDynamicIcon, Btn, ModalShell],
   templateUrl: './roles-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -19,7 +19,6 @@ const TONE_CLASSES: Record<Tone, { bg: string; fg: string }> = {
 export class ModalShell {
   readonly icon = input<LucideIconInput | null>(null);
   readonly tone = input<Tone>('blue');
-  readonly eyebrow = input<string | null>(null);
   readonly title = input<string>('');
   readonly subtitle = input<string | null>(null);
   readonly width = input<number>(560);

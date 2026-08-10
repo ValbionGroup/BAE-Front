@@ -40,6 +40,14 @@ export class Input implements ControlValueAccessor {
   readonly disabled = input<boolean>(false);
   readonly invalid = input<boolean>(false);
 
+  /**
+   * Transmis au `<input>` interne, comme `bfd-btn` le fait pour son `<button>` :
+   * un attribut écrit sur `<bfd-input>` atterrit sur l'hôte, qui ne prend pas le
+   * focus, et n'est donc jamais annoncé. Nécessaire dès qu'un champ vit hors
+   * d'un `<label>` — une ligne de tableau, par exemple.
+   */
+  readonly ariaLabel = input<string | null>(null);
+
   readonly valueChange = output<string>();
 
   protected innerValue = '';

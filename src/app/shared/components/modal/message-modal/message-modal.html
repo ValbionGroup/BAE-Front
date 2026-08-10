@@ -3,12 +3,10 @@
   aria-modal="true"
   [attr.aria-labelledby]="'modal-title-' + config().id"
   tabindex="-1"
-  class="w-full max-w-[560px] bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
+  class="w-full max-w-140 bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
 >
-  <div class="px-[22px] py-[18px] border-b border-border-s flex items-center gap-3">
-    <span
-      [class]="'w-9 h-9 rounded-[10px] inline-flex items-center justify-center ' + meta().iconBg"
-    >
+  <div class="px-5.5 py-4.5 border-b border-border-s flex items-center gap-3">
+    <span [class]="'w-9 h-9 rounded-lg inline-flex items-center justify-center ' + meta().iconBg">
       <svg
         [lucideIcon]="meta().icon"
         [size]="18"
@@ -32,7 +30,7 @@
     </button>
   </div>
 
-  <div class="p-[22px] flex flex-col gap-3.5 overflow-y-auto">
+  <div class="p-5.5 flex flex-col gap-3.5 overflow-y-auto">
     <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
     @if (config().details) {
       <button
@@ -50,7 +48,7 @@
     }
   </div>
 
-  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
+  <div class="px-5.5 py-3.5 border-t border-border-s flex items-center justify-end gap-2">
     @for (a of actions(); track $index) {
       <bfd-btn
         [kind]="a.variant === 'primary' ? 'primary' : 'ghost'"
