@@ -1,14 +1,13 @@
 <bfd-modal-shell
   tone="blue"
   [icon]="icChef"
-  [eyebrow]="'LOGISTIQUE · ' + eventLabel()"
   title="Assigner les recettes"
   subtitle="Choisis les recettes et leurs quantités prévisionnelles"
   [width]="780"
   (close)="close()"
 >
   <div class="flex gap-1.5 mb-3 flex-wrap items-center">
-    @for (c of cats; track c; let i = $index) {
+    @for (c of cats(); track c; let i = $index) {
       <button
         type="button"
         (click)="activeCat.set(i)"
@@ -125,7 +124,7 @@
       </div>
     </div>
     <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" [icon]="icCheck" (clicked)="close()"
+    <bfd-btn kind="primary" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
       >Enregistrer &amp; générer courses</bfd-btn
     >
   </div>

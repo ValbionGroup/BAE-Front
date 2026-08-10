@@ -25,6 +25,8 @@ import {
 } from '@lucide/angular';
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { LogistiqueAssignModal } from '#shared/components/modal/logistique-assign-modal/logistique-assign-modal';
 import { EventsStore } from '#core/store/events.store';
 import { RecipesStore } from '#core/store/recipes.store';
 import { EventDetail, MenuItem } from '#core/models/event.model';
@@ -85,6 +87,7 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly modals = inject(ModalService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   ngOnInit(): void {
@@ -255,6 +258,25 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
    */
   protected openCourses(eventId: string): void {
     void this.router.navigate(['/logistique', eventId]);
+  }
+
+  /**
+   * Ouvre la modale d'assignation des recettes — l'interface prévue pour
+   * composer un menu en une passe : cocher, quantifier, enregistrer.
+   *
+   * Le sélecteur déroulant (`openRecipePicker`) reste sur « Ajouter une
+   * recette » : il sert le geste unitaire, ajouter une recette de plus à un menu
+   * déjà composé, sans ouvrir toute la modale.
+   */
+  protected openAssign(event: EventDetail): void {
+    this.modals.open({
+      type: 'component',
+      component: LogistiqueAssignModal,
+      inputs: {
+        eventId: event.id,
+        eventLabel: `${event.name.toUpperCase()} · ${this.dayOf(event)}/${this.monthOf(event)}`,
+      },
+    });
   }
 
   protected openRecipePicker(event: EventDetail, ev: MouseEvent): void {

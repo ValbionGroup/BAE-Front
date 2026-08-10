@@ -45,9 +45,14 @@
       @let state = statusOf(event);
       @let badge = stateBadge(event);
       @let total = menuCost(menu);
+      <!-- `shrink-0` est indispensable, pas décoratif : un item de flex porte
+           `flex-shrink: 1` par défaut, donc dans un conteneur colonne à hauteur
+           contrainte les cartes se COMPRESSENT pour tenir au lieu de déborder —
+           et l'`overflow-y-auto` du conteneur n'a alors jamais rien à faire
+           défiler. C'est ce qui donnait des cartes écrasées et non défilables. -->
       <article
         [class]="
-          'overflow-hidden rounded-lg border bg-surface ' +
+          'shrink-0 overflow-hidden rounded-lg border bg-surface ' +
           eventBorderClass(event) +
           (state === 'past' ? ' opacity-85' : '')
         "
@@ -94,7 +99,7 @@
               [kind]="menu.length ? 'secondary' : 'primary'"
               size="sm"
               [icon]="menu.length ? icEdit : icPlus"
-              (clicked)="openRecipePicker(event, $event)"
+              (clicked)="openAssign(event)"
             >
               {{ menu.length ? 'Gérer recettes' : 'Assigner recettes' }}
             </bfd-btn>
