@@ -132,3 +132,59 @@ export interface VoucherCard {
   readonly expired: boolean;
   readonly warn: boolean;
 }
+
+/** Un prix d'enseigne sur une ligne de la liste de courses. */
+export interface ApiShoppingSupplier {
+  readonly id: number;
+  readonly name: string;
+  readonly price: number;
+}
+
+/**
+ * Une ligne de la liste de courses — quelque chose à acheter.
+ *
+ * `kind` commande la lecture : une **denrée** a des enseignes à comparer, un
+ * article **non alimentaire** n'en a aucune (`furnitures` n'a pas de relation
+ * fournisseur) et porte son propre prix dans `bestPrice`. Les deux ne peuvent
+ * donc pas figurer dans le même tableau à colonnes d'enseignes.
+ */
+export interface ApiShoppingLine {
+  readonly kind: 'good' | 'furniture';
+  readonly id: number;
+  readonly name: string;
+  readonly unit: string | null;
+  readonly brand: string | null;
+  readonly categoryName: string | null;
+  readonly needQty: number;
+  readonly stockQty: number;
+  readonly missingQty: number;
+  readonly suppliers: readonly ApiShoppingSupplier[];
+  readonly bestSupplier: ApiShoppingSupplier | null;
+  readonly bestPrice: number | null;
+}
+
+/** Ce que coûterait la liste entière chez une seule enseigne. */
+export interface ApiShoppingSupplierTotal {
+  readonly id: number;
+  readonly name: string;
+  readonly total: number;
+  /**
+   * Faux quand l'enseigne ne price pas toutes les lignes. Sans ce drapeau, une
+   * enseigne qui en couvre trois sur douze affiche le total le plus bas *parce
+   * qu'elle en compte moins*.
+   */
+  readonly fullCoverage: boolean;
+}
+
+/** `GET /events/:id/shopping-list`. */
+export interface ApiShoppingList {
+  readonly eventId: number;
+  readonly eventName: string;
+  readonly lines: readonly ApiShoppingLine[];
+  readonly lineCount: number;
+  readonly optimumTotal: number;
+  readonly supplierTotals: readonly ApiShoppingSupplierTotal[];
+  /** `null` quand aucune enseigne ne couvre toute la liste. */
+  readonly savings: number | null;
+  readonly unpricedCount: number;
+}

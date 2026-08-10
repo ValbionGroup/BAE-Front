@@ -56,6 +56,7 @@ export class EventsService {
       date: new Date(dto.date),
       description: dto.description,
       duration: dto.duration,
+      status: dto.status,
     };
   }
 

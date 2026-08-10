@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
-import { Presence } from '#core/models/event.model';
+import { MenuItem, Presence } from '#core/models/event.model';
 
 import { EventsStore } from './events.store';
 
@@ -12,6 +12,20 @@ const LOCK_ERROR = {
     'Vous tenez un poste sur cette soirée : vous ne pouvez plus vous déclarer absent·e. ' +
     'Demandez au bureau ou au coordinateur de vous retirer de votre poste.',
 };
+
+function menuLine(overrides: Partial<MenuItem> = {}): MenuItem {
+  return {
+    productId: 3,
+    name: 'Hot-dog classique',
+    isVegetarian: false,
+    quantity: 100,
+    price: 350,
+    unitCost: 1.12,
+    totalCost: 112,
+    category: 'Plats',
+    ...overrides,
+  };
+}
 
 describe(EventsStore.name, () => {
   let store: InstanceType<typeof EventsStore>;
@@ -38,6 +52,19 @@ describe(EventsStore.name, () => {
       },
     ]);
     await loaded;
+  }
+
+  /**
+   * Place le menu de la soirée '7' dans le store en repassant par le réseau,
+   * comme `loadOneEvent()` : le store n'expose aucune autre façon de le
+   * peupler que `loadEventMenu()`, donc c'est elle qui sert de semis plutôt
+   * qu'un `patchState` direct depuis le test.
+   */
+  async function seedMenu(eventId: string, menu: MenuItem[]): Promise<void> {
+    await loadOneEvent();
+    const pending = store.loadEventMenu(eventId);
+    httpMock.expectOne(`${baseUrl}/events/${eventId}/products`).flush(menu);
+    await pending;
   }
 
   it('should be created', () => {
@@ -112,6 +139,75 @@ describe(EventsStore.name, () => {
       httpMock.expectOne(`${baseUrl}/events/404/response`).flush(Presence.PRESENT);
 
       expect((await pending).ok).toBe(true);
+    });
+  });
+
+  describe('menu', () => {
+    it('charge le menu d’une soirée', async () => {
+      await loadOneEvent();
+
+      const promise = store.loadEventMenu('7');
+      httpMock.expectOne(`${baseUrl}/events/7/products`).flush([
+        {
+          productId: 3,
+          name: 'Hot-dog classique',
+          isVegetarian: false,
+          quantity: 220,
+          price: 350,
+          unitCost: 1.12,
+          totalCost: 246.4,
+          category: 'Plats',
+        },
+      ]);
+      await promise;
+
+      expect(store.getEventById('7')?.menu).toHaveLength(1);
+      expect(store.getEventById('7')?.menuStatus).toBe('loaded');
+    });
+
+    it('met à jour la quantité de façon optimiste et confirme avec la réponse', async () => {
+      await seedMenu('7', [menuLine({ productId: 3, quantity: 100, totalCost: 112 })]);
+
+      const promise = store.setMenuLineQuantity('7', 3, 240);
+      // Optimiste : la valeur a déjà bougé, avant toute réponse réseau.
+      expect(store.getEventById('7')?.menu?.[0].quantity).toBe(240);
+
+      httpMock
+        .expectOne({ method: 'PATCH', url: `${baseUrl}/events/7/products/3` })
+        .flush(menuLine({ productId: 3, quantity: 240, totalCost: 268.8 }));
+      await promise;
+
+      // Le coût total ne peut pas être deviné côté client : il vient du serveur.
+      expect(store.getEventById('7')?.menu?.[0].totalCost).toBe(268.8);
+    });
+
+    it('ne restaure que la ligne fautive quand l’écriture échoue', async () => {
+      await seedMenu('7', [
+        menuLine({ productId: 3, quantity: 100 }),
+        menuLine({ productId: 4, quantity: 50 }),
+      ]);
+
+      const promise = store.setMenuLineQuantity('7', 3, 240);
+      httpMock
+        .expectOne({ method: 'PATCH', url: `${baseUrl}/events/7/products/3` })
+        .flush({ message: 'Refusé' }, { status: 403, statusText: 'Forbidden' });
+      await promise;
+
+      // Ligne 3 revenue à 100, ligne 4 intacte : un instantané global annulerait
+      // aussi une écriture concurrente aboutie pendant que celle-ci était en vol.
+      expect(store.getEventById('7')?.menu?.[0].quantity).toBe(100);
+      expect(store.getEventById('7')?.menu?.[1].quantity).toBe(50);
+      expect(store.menuError()).toBeTruthy();
+    });
+
+    it('retire une ligne du menu', async () => {
+      await seedMenu('7', [menuLine({ productId: 3 }), menuLine({ productId: 4 })]);
+
+      const promise = store.removeMenuLine('7', 3);
+      httpMock.expectOne({ method: 'DELETE', url: `${baseUrl}/events/7/products/3` }).flush(null);
+      await promise;
+
+      expect(store.getEventById('7')?.menu?.map((line) => line.productId)).toEqual([4]);
     });
   });
 });

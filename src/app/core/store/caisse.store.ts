@@ -6,10 +6,19 @@ import { EventDetail, MenuItem } from '#core/models/event.model';
 import { LoadingStatus } from '#core/models/global.model';
 
 export interface CaisseCartItem {
-  readonly recipeId: string;
+  readonly productId: number;
   readonly name: string;
   readonly price: number;
   readonly quantity: number;
+}
+
+/**
+ * Un article sans catégorie reste atteignable sous son propre onglet plutôt
+ * que de disparaître de la grille : `products` n'a pas de catégorie propre, et
+ * une recette sans ingrédient catégorisé est un cas normal, pas une anomalie.
+ */
+function categoryLabel(item: MenuItem): string {
+  return item.category ?? 'Sans catégorie';
 }
 
 interface CaisseState {
@@ -45,9 +54,10 @@ export const CaisseStore = signalStore(
         const seen = new Set<string>();
         const ordered: string[] = [];
         for (const item of menu()) {
-          if (!seen.has(item.category)) {
-            seen.add(item.category);
-            ordered.push(item.category);
+          const label = categoryLabel(item);
+          if (!seen.has(label)) {
+            seen.add(label);
+            ordered.push(label);
           }
         }
         return ordered;
@@ -57,7 +67,7 @@ export const CaisseStore = signalStore(
         const cat = activeCategory();
         const items = menu();
         if (!cat) return items;
-        return items.filter((it) => it.category === cat);
+        return items.filter((it) => categoryLabel(it) === cat);
       });
 
       const subtotal = computed(() =>
@@ -91,13 +101,13 @@ export const CaisseStore = signalStore(
       patchState(store, { activeCategory: category });
     },
     addToCart(item: MenuItem): void {
-      const existing = store.cart().find((line) => line.recipeId === item.recipeId);
+      const existing = store.cart().find((line) => line.productId === item.productId);
       if (existing) {
         patchState(store, {
           cart: store
             .cart()
             .map((line) =>
-              line.recipeId === item.recipeId ? { ...line, quantity: line.quantity + 1 } : line,
+              line.productId === item.productId ? { ...line, quantity: line.quantity + 1 } : line,
             ),
         });
         return;
@@ -105,32 +115,32 @@ export const CaisseStore = signalStore(
       patchState(store, {
         cart: [
           ...store.cart(),
-          { recipeId: item.recipeId, name: item.recipeName, price: item.price, quantity: 1 },
+          { productId: item.productId, name: item.name, price: item.price, quantity: 1 },
         ],
       });
     },
-    incrementItem(recipeId: string): void {
+    incrementItem(productId: number): void {
       patchState(store, {
         cart: store
           .cart()
           .map((line) =>
-            line.recipeId === recipeId ? { ...line, quantity: line.quantity + 1 } : line,
+            line.productId === productId ? { ...line, quantity: line.quantity + 1 } : line,
           ),
       });
     },
-    decrementItem(recipeId: string): void {
+    decrementItem(productId: number): void {
       patchState(store, {
         cart: store
           .cart()
           .map((line) =>
-            line.recipeId === recipeId ? { ...line, quantity: line.quantity - 1 } : line,
+            line.productId === productId ? { ...line, quantity: line.quantity - 1 } : line,
           )
           .filter((line) => line.quantity > 0),
       });
     },
-    removeFromCart(recipeId: string): void {
+    removeFromCart(productId: number): void {
       patchState(store, {
-        cart: store.cart().filter((line) => line.recipeId !== recipeId),
+        cart: store.cart().filter((line) => line.productId !== productId),
       });
     },
     clearCart(): void {

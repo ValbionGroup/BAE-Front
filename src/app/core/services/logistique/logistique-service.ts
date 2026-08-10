@@ -2,14 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
+import type { MenuItem } from '#core/models/event.model';
 import type {
   ApiGood,
+  ApiShoppingList,
   ApiSupplier,
   ApiVoucher,
   CreateVoucherPayload,
 } from '#pages/authed/logistique/logistique.types';
 
-export type { ApiGood, ApiSupplier, ApiVoucher, CreateVoucherPayload };
+export type { ApiGood, ApiShoppingList, ApiSupplier, ApiVoucher, CreateVoucherPayload };
 
 @Injectable({ providedIn: 'root' })
 export class LogistiqueService {
@@ -46,5 +48,43 @@ export class LogistiqueService {
    */
   setVoucherUsed(id: number, usedAt: string | null): Observable<ApiVoucher> {
     return this.http.patch<ApiVoucher>(`${this.baseUrl}/vouchers/${id}`, { usedAt });
+  }
+
+  /** Le menu d'une soirée, recettes par ordre alphabétique. */
+  getEventMenu(eventId: string): Observable<MenuItem[]> {
+    return this.http.get<MenuItem[]>(`${this.baseUrl}/events/${eventId}/products`);
+  }
+
+  /**
+   * Ajoute une recette au menu. `price` est omis volontairement : le back
+   * reporte le dernier prix de vente connu de cet article, ce qu'aucun écran ne
+   * saurait faire aussi bien.
+   */
+  addMenuLine(eventId: string, productId: number, quantity: number): Observable<MenuItem> {
+    return this.http.post<MenuItem>(`${this.baseUrl}/events/${eventId}/products`, {
+      productId,
+      quantity,
+    });
+  }
+
+  /**
+   * Change la quantité de production d'une ligne.
+   *
+   * `PATCH` : une clé absente signifie « ne touche pas à cette colonne », donc
+   * le prix de vente reste intact.
+   */
+  setMenuLineQuantity(eventId: string, productId: number, quantity: number): Observable<MenuItem> {
+    return this.http.patch<MenuItem>(`${this.baseUrl}/events/${eventId}/products/${productId}`, {
+      quantity,
+    });
+  }
+
+  removeMenuLine(eventId: string, productId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/events/${eventId}/products/${productId}`);
+  }
+
+  /** La liste de courses générée pour cette soirée. */
+  getShoppingList(eventId: string): Observable<ApiShoppingList> {
+    return this.http.get<ApiShoppingList>(`${this.baseUrl}/events/${eventId}/shopping-list`);
   }
 }
