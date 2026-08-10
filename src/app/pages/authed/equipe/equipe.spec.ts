@@ -271,7 +271,8 @@ describe(Equipe.name, () => {
     function findSupprimer(): DropdownItemAction {
       const dropdown = TestBed.inject(DropdownService).current();
       const item = dropdown?.items.find(
-        (entry): entry is DropdownItemAction => entry.type === 'action' && entry.label === 'Supprimer',
+        (entry): entry is DropdownItemAction =>
+          entry.type === 'action' && entry.label === 'Supprimer',
       );
       if (!item) throw new Error('"Supprimer" item not found in the open dropdown');
       return item;

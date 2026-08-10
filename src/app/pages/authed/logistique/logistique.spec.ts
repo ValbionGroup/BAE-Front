@@ -1,10 +1,32 @@
+import { ViewContainerRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { vi } from 'vitest';
+
 import { Logistique } from './logistique';
-import type { ApiGood, ApiSupplierPrice } from './logistique.types';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { ToastService } from '#shared/components/toast/toast.service';
+import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
+import type { ApiGood, ApiSupplierPrice, ApiVoucher } from './logistique.types';
+
+/** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 €. */
+const VOUCHER: ApiVoucher = {
+  id: 1,
+  supplierId: 3,
+  supplier: { id: 3, name: 'Leclerc' },
+  value: 50,
+  expiresAt: '2026-12-31',
+  condition: null,
+  usedAt: null,
+  used: false,
+  daysUntilExpiry: 148,
+  expired: false,
+  warn: false,
+};
 
 function supplier(id: number, name: string, price: number): ApiSupplierPrice {
   return { id, name, price };
@@ -42,21 +64,66 @@ describe(Logistique.name, () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => http.verify());
+  /** Conteneurs créés par `renderTopbarActions`, retirés après chaque test. */
+  const hosts: HTMLElement[] = [];
 
-  /** Answers the two page requests and lets the template settle. */
-  async function load(goods: ApiGood[]): Promise<void> {
+  afterEach(() => {
+    for (const host of hosts.splice(0)) host.remove();
+    http.verify();
+  });
+
+  /** Answers the three page requests and lets the template settle. */
+  async function load(goods: ApiGood[], vouchers: ApiVoucher[] = []): Promise<void> {
     http.expectOne((r) => r.url.endsWith('/goods')).flush(goods);
-    http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/vouchers')).flush(vouchers);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  /** Rend la page chargée avec un bon exploitable par les tests d'écriture. */
+  async function renderLoaded(): Promise<void> {
+    await load([], [VOUCHER]);
+  }
+
+  /**
+   * Instancie le gabarit d'actions que la page pousse dans la topbar.
+   *
+   * Ces boutons vivent dans un `<ng-template #actions>` rendu par la topbar via
+   * `ngTemplateOutlet`, jamais dans le corps de la page : sur un fixture qui
+   * n'instancie que la page, ils n'existent pas dans le DOM tant qu'on ne les
+   * crée pas soi-même. On les rattache au document pour que les clics partent
+   * réellement.
+   */
+  function renderTopbarActions(): HTMLElement {
+    const tpl = TestBed.inject(PageHeaderService).actions();
+    expect(tpl).not.toBeNull();
+
+    const vcr = fixture.componentRef.injector.get(ViewContainerRef);
+    const view = vcr.createEmbeddedView(tpl!);
+    view.detectChanges();
+
+    const host = document.createElement('div');
+    for (const node of view.rootNodes as Node[]) host.appendChild(node);
+    document.body.appendChild(host);
+    hosts.push(host);
+    return host;
+  }
+
+  /** Rend la page avec un 403 sur la seule branche des bons d'achat. */
+  async function renderForbidden(): Promise<void> {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([good(1, 'Saucisses', [])]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers'))
+      .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
     await fixture.whenStable();
     fixture.detectChanges();
   }
 
   /** Retailer column headers, i.e. the header cells between "Unité" and "Optimum". */
   function retailerHeaders(): string[] {
-    const headers = Array.from(
-      fixture.nativeElement.querySelectorAll('thead th'),
-    ) as HTMLElement[];
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('thead th')) as HTMLElement[];
     return headers
       .map((th) => (th.textContent ?? '').trim())
       .filter((text) => text.length > 0 && !['Produit', 'Unité', 'Optimum'].includes(text));
@@ -66,6 +133,7 @@ describe(Logistique.name, () => {
     expect(component).toBeTruthy();
     http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
   });
 
   it('renders no retailer column when nothing is priced', async () => {
@@ -107,5 +175,149 @@ describe(Logistique.name, () => {
       fixture.nativeElement.querySelectorAll('tbody [aria-label="Non référencé"]'),
     );
     expect(dashes).toHaveLength(2);
+  });
+
+  it('opens the creation modal from the topbar action', async () => {
+    const opened = vi.spyOn(TestBed.inject(ModalService), 'open');
+    await renderLoaded();
+
+    const addButton = renderTopbarActions().querySelector<HTMLElement>(
+      '[data-testid="add-voucher"] button',
+    );
+    // Le point d'entrée vit dans la topbar, pas à côté du titre de section :
+    // c'est là que la maquette le place, et là qu'on le cherche.
+    expect(addButton).not.toBeNull();
+    addButton!.click();
+
+    expect(opened).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'component', component: VoucherCreateModal }),
+    );
+  });
+
+  it('counts the loaded vouchers on the topbar action', async () => {
+    await renderLoaded();
+
+    expect(renderTopbarActions().textContent).toContain("Bons d'achat (1)");
+  });
+
+  it('names the toggle button after the voucher it acts on', async () => {
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    // Douze boutons « Consommé » dans une liste sont inexploitables au lecteur
+    // d'écran, qui les annonce hors de leur contexte visuel.
+    expect(toggle.getAttribute('aria-label')).toContain('Leclerc');
+    expect(toggle.getAttribute('aria-label')).toContain('50');
+  });
+
+  it('sends the toggle to the API when the button is clicked', async () => {
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+
+    const req = http.expectOne((r) => r.url.endsWith('/vouchers/1'));
+    expect(req.request.method).toBe('PATCH');
+    // `usedAt` doit être présent et non nul : c'est ce qui consomme le bon.
+    expect(req.request.body.usedAt).toBeTruthy();
+    req.flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
+    await fixture.whenStable();
+  });
+
+  it('confirms a consumption with a toast', async () => {
+    const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers/1'))
+      .flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
+    await fixture.whenStable();
+
+    expect(shown).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', title: 'Bon consommé' }),
+    );
+  });
+
+  it('reports a refused consumption in a toast', async () => {
+    const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers/1'))
+      .flush({ message: 'Bon introuvable.' }, { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+
+    expect(shown).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'error', message: 'Bon introuvable.' }),
+    );
+  });
+
+  it('no longer shows the read-only padlock', async () => {
+    await renderLoaded();
+
+    // Le cadenas était le seul SVG décoratif positionné en absolu dans la
+    // carte : le chercher par sa forme DOM, faute de `data-testid` sur un
+    // élément qu'on supprime précisément.
+    expect(fixture.nativeElement.querySelector('li svg.absolute')).toBeNull();
+  });
+
+  it('shows a restricted panel instead of the vouchers, keeping the table', async () => {
+    await renderForbidden();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="vouchers-forbidden"]'),
+    ).not.toBeNull();
+    // Le comparatif d'enseignes reste rendu : c'est tout l'intérêt de n'avoir
+    // gardé que le panneau.
+    expect(fixture.nativeElement.textContent).toContain('Saucisses');
+    // Proposer d'ajouter un bon à qui n'a pas le droit d'en voir un serait un
+    // clic voué au 403 — et le bouton vit désormais dans la topbar, donc c'est
+    // là qu'il faut vérifier son absence.
+    expect(renderTopbarActions().querySelector('[data-testid="add-voucher"]')).toBeNull();
+  });
+
+  it('locks the section label when the vouchers are out of reach', async () => {
+    await renderForbidden();
+
+    // Le vocabulaire de la maquette pour un panneau verrouillé.
+    expect(fixture.nativeElement.textContent).toContain('ACCÈS VERROUILLÉ');
+  });
+
+  it('reads the usable-voucher KPI as unknown rather than zero', async () => {
+    await renderForbidden();
+
+    const kpi: HTMLElement = fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]');
+    // « 0 € » affirmerait qu'il n'y a aucun bon utilisable ; la vérité est
+    // qu'on n'a pas le droit de le savoir.
+    expect(kpi.textContent?.trim()).toBe('—');
+  });
+
+  it('also reads the usable-voucher KPI as unknown on a load failure other than 403', async () => {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([good(1, 'Saucisses', [])]);
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers'))
+      .flush({ message: 'Erreur serveur' }, { status: 500, statusText: 'x' });
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Une 500 met `vouchersLoadError`, pas `vouchersForbidden` : le panneau
+    // restreint n'a donc pas lieu d'apparaître ici, contrairement au cas 403.
+    expect(fixture.nativeElement.querySelector('[data-testid="vouchers-forbidden"]')).toBeNull();
+
+    const kpi: HTMLElement = fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]');
+    expect(kpi.textContent?.trim()).toBe('—');
   });
 });

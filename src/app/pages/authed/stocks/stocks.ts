@@ -31,6 +31,8 @@ import { Card } from '#shared/components/ui/card/card';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Toggle } from '#shared/components/ui/toggle/toggle';
 import { Input } from '#shared/components/ui/input/input';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
@@ -38,11 +40,15 @@ import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from '.
   imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est
+  // l'app-shell qui défile, toute la page d'un bloc.
+  host: { class: 'block h-full' },
 })
 export class Stocks implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly store = inject(StocksStore);
+  private readonly modal = inject(ModalService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
@@ -52,10 +58,8 @@ export class Stocks implements OnInit {
       breadcrumb: ['Préparation', 'Stocks'],
       activeNavId: 'stocks',
     });
-    effect(() => {
-      const tpl = this.actionsTpl();
-      if (tpl) this.pageHeader.setActions(tpl);
-    });
+    // ⚠️ Un seul effect, dans cet ordre : `set()` remet les actions à `null`,
+    // donc un effect séparé effacerait les boutons au premier chargement.
     effect(() => {
       const products = this.store.products();
       const batches = products.reduce((sum, p) => sum + p.batchCount, 0);
@@ -65,6 +69,8 @@ export class Stocks implements OnInit {
         breadcrumb: ['Préparation', 'Stocks'],
         activeNavId: 'stocks',
       });
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
     effect(() => {
       const id = this.selectedId();
@@ -192,6 +198,10 @@ export class Stocks implements OnInit {
 
   protected openScanner(): void {
     void this.router.navigate(['/stocks/scanner']);
+  }
+
+  protected openCreateGood(): void {
+    this.modal.open({ type: 'component', component: GoodCreateModal, inputs: {} });
   }
 
   protected toggleSelect(id: number): void {

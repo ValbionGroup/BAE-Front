@@ -5,14 +5,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { SessionsService } from '#core/services/sessions/sessions-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import {
-  maskIpAddress,
-  parseUserAgent,
-} from '#pages/authed/parametres/securite/session-format';
-import type {
-  ApiSession,
-  SessionRow,
-} from '#pages/authed/parametres/securite/sessions.types';
+import { maskIpAddress, parseUserAgent } from '#pages/authed/parametres/securite/session-format';
+import type { ApiSession, SessionRow } from '#pages/authed/parametres/securite/sessions.types';
 
 function relativeLabel(iso: string): string {
   const date = new Date(iso);

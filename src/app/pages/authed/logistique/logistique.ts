@@ -1,12 +1,39 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { LucideDynamicIcon, LucideLock, LucideTicket } from '@lucide/angular';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  type ElementRef,
+  OnInit,
+  type TemplateRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import {
+  LucideDynamicIcon,
+  LucideLock,
+  LucidePlus,
+  LucideTicket,
+  LucideUpload,
+} from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { LogistiqueStore } from '#core/store/logistique.store';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { Btn } from '#shared/components/ui/btn/btn';
-import type { ApiGood, CartCell, CartRow, SupplierColumn, SupplierTotal } from './logistique.types';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { ToastService } from '#shared/components/toast/toast.service';
+import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
+import type {
+  ApiGood,
+  CartCell,
+  CartRow,
+  SupplierColumn,
+  SupplierTotal,
+  VoucherCard,
+} from './logistique.types';
 
 /** Builds the dynamic retailer column set from the suppliers present in the data. */
 function buildColumns(goods: readonly ApiGood[]): SupplierColumn[] {
@@ -22,11 +49,13 @@ function buildColumns(goods: readonly ApiGood[]): SupplierColumn[] {
     }
   }
 
-  return [...coverage.entries()]
-    .map(([id, { name, coverage: c }]) => ({ id, name, coverage: c }))
-    // Widest coverage first so the most comparable retailers stay in view when
-    // the table has to scroll horizontally; name breaks ties for stable order.
-    .sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'fr'));
+  return (
+    [...coverage.entries()]
+      .map(([id, { name, coverage: c }]) => ({ id, name, coverage: c }))
+      // Widest coverage first so the most comparable retailers stay in view when
+      // the table has to scroll horizontally; name breaks ties for stable order.
+      .sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'fr'))
+  );
 }
 
 function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
@@ -57,13 +86,27 @@ function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
 })
 export class Logistique implements OnInit {
   private readonly store = inject(LogistiqueStore);
+  private readonly modalService = inject(ModalService);
+  private readonly toast = inject(ToastService);
+  private readonly pageHeader = inject(PageHeaderService);
+
+  /** Actions poussées dans la topbar, comme sur la page Équipe. */
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+  private readonly vouchersPanel = viewChild<ElementRef<HTMLElement>>('vouchersPanel');
 
   constructor() {
-    inject(PageHeaderService).set({
+    this.pageHeader.set({
       title: 'Logistique',
       subtitle: 'Liste de courses · comparatif enseignes',
       breadcrumb: ['Préparation', 'Logistique', 'Courses'],
       activeNavId: 'log',
+    });
+    // `set()` efface le gabarit d'actions : il faut donc le repousser après,
+    // et depuis un `effect` — dans le constructeur, la vue n'existe pas encore
+    // et `actionsTpl()` vaut `undefined`.
+    effect(() => {
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
     });
   }
 
@@ -72,11 +115,18 @@ export class Logistique implements OnInit {
   }
 
   protected readonly icTicket = LucideTicket;
+  protected readonly icUpload = LucideUpload;
+  protected readonly icPlus = LucidePlus;
   protected readonly icLock = LucideLock;
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
   protected readonly vouchers = this.store.vouchers;
+  protected readonly savingVoucherIds = this.store.savingVoucherIds;
+  protected readonly voucherError = this.store.voucherError;
+  protected readonly voucherErrorId = this.store.voucherErrorId;
+  protected readonly vouchersForbidden = this.store.vouchersForbidden;
+  protected readonly vouchersLoadError = this.store.vouchersLoadError;
 
   /**
    * Rows the user has unticked. Tracking exclusions (rather than inclusions)
@@ -147,6 +197,17 @@ export class Logistique implements OnInit {
     this.vouchers().reduce((sum, v) => (!v.used && !v.expired ? sum + v.value : sum), 0),
   );
 
+  /**
+   * Le KPI dit « — » et non « 0 € » quand les bons sont hors de portée :
+   * `usableVoucherTotal` somme une liste vide et affirmerait donc qu'aucun bon
+   * n'est utilisable, là où la vérité est qu'on n'a pas le droit de le savoir.
+   */
+  protected readonly usableVoucherLabel = computed(() =>
+    this.vouchersForbidden() || this.vouchersLoadError() !== null
+      ? '—'
+      : `${this.formatPrice(this.usableVoucherTotal())} €`,
+  );
+
   protected readonly savingLabel = computed(() => {
     const saving = this.multiRetailerSaving();
     if (saving === null) return '—';
@@ -201,6 +262,53 @@ export class Logistique implements OnInit {
     return total.fullCoverage
       ? null
       : 'Total partiel : cette enseigne ne référence pas tous les articles sélectionnés';
+  }
+
+  protected openCreateVoucher(): void {
+    this.modalService.open({ type: 'component', component: VoucherCreateModal, inputs: {} });
+  }
+
+  /**
+   * Le bouton « Bons d'achat (n) » de la topbar amène au panneau.
+   *
+   * Le compteur est la seule chose que la maquette lui donne à faire ; sur une
+   * page qui affiche déjà le panneau plus bas, le mener jusqu'à lui est ce qui
+   * reste d'utile — et évite un bouton décoratif.
+   */
+  protected scrollToVouchers(): void {
+    this.vouchersPanel()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  protected isSaving(id: number): boolean {
+    return this.savingVoucherIds().includes(id);
+  }
+
+  protected async toggleVoucher(voucher: VoucherCard): Promise<void> {
+    const used = !voucher.used;
+    await this.store.toggleVoucherUsed(voucher.id, used);
+
+    const error = this.voucherErrorId() === voucher.id ? this.voucherError() : null;
+    this.toast.show(
+      error
+        ? { type: 'error', title: 'Mise à jour refusée', message: error }
+        : {
+            type: 'success',
+            title: used ? 'Bon consommé' : 'Consommation annulée',
+            message: `${voucher.supplierName} · ${this.formatPrice(voucher.value)} €`,
+          },
+    );
+  }
+
+  /**
+   * Nom accessible complet du bouton de bascule. Un libellé « Consommé »
+   * répété sur chaque carte est inexploitable au lecteur d'écran, qui annonce
+   * le bouton hors de son contexte visuel.
+   */
+  protected toggleLabel(voucher: VoucherCard): string {
+    const identity = `le bon ${voucher.supplierName} de ${this.formatPrice(voucher.value)} €`;
+    return voucher.used
+      ? `Annuler la consommation ${identity}`
+      : `Marquer ${identity} comme consommé`;
   }
 
   protected voucherToneClass(warn: boolean, expired: boolean, used: boolean): string {

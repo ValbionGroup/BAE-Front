@@ -269,7 +269,9 @@ describe(TeamStore.name, () => {
 
   it('restores only the edited row, keeping a concurrent write that landed meanwhile', async () => {
     const loaded = store.load();
-    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER, { ...MEMBER, id: 3, firstName: 'Ana' }]);
+    httpMock
+      .expectOne(`${baseUrl}/members`)
+      .flush([MEMBER, { ...MEMBER, id: 3, firstName: 'Ana' }]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
     httpMock.expectOne(`${baseUrl}/logs`).flush([]);
@@ -280,9 +282,7 @@ describe(TeamStore.name, () => {
     const concurrent = store.updateMember(3, { firstName: 'Concurrent' });
 
     // Celle du membre 3 aboutit la première : elle est désormais dans l'état vivant.
-    httpMock
-      .expectOne(`${baseUrl}/members/3`)
-      .flush({ ...MEMBER, id: 3, firstName: 'Concurrent' });
+    httpMock.expectOne(`${baseUrl}/members/3`).flush({ ...MEMBER, id: 3, firstName: 'Concurrent' });
     await concurrent;
 
     // Celle du membre 2 est refusée ensuite.
@@ -322,7 +322,9 @@ describe(TeamStore.name, () => {
     const deleting = store.deleteMember(2);
     expect(store.members().length).toBe(1);
 
-    httpMock.expectOne(`${baseUrl}/members/2`).flush(null, { status: 204, statusText: 'No Content' });
+    httpMock
+      .expectOne(`${baseUrl}/members/2`)
+      .flush(null, { status: 204, statusText: 'No Content' });
     await deleting;
 
     expect(store.members().length).toBe(0);

@@ -1,13 +1,25 @@
 <!-- Topbar actions -->
 <ng-template #actions>
   <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icDownload">Inventaire</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus">Produit</bfd-btn>
+  <!-- Aucun endpoint d'export : le bouton reste, désactivé et motivé. -->
+  <bfd-btn
+    kind="secondary"
+    size="md"
+    [icon]="icDownload"
+    [disabled]="true"
+    title="Export d'inventaire non disponible côté API"
+    >Inventaire</bfd-btn
+  >
+  <span data-testid="add-good">
+    <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateGood()">Produit</bfd-btn>
+  </span>
 </ng-template>
 
-<div class="h-full grid grid-cols-[1fr_380px]">
+<!-- `minmax(0,1fr)` et `min-h-0` : une piste et un item de grille sont en
+     `auto`, donc ils s'étirent au contenu au lieu de laisser défiler. -->
+<div class="grid h-full grid-cols-[1fr_380px] grid-rows-[minmax(0,1fr)]">
   <!-- LEFT: list -->
-  <div class="flex min-w-0 flex-col gap-3.5 p-5">
+  <div class="flex min-h-0 min-w-0 flex-col gap-3.5 p-5">
     <!-- KPI row -->
     <div class="grid grid-cols-4 gap-3">
       @for (k of kpis(); track k.label) {
@@ -72,7 +84,9 @@
     }
 
     <!-- Products table -->
-    <bfd-card [padding]="0" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <!-- `fill` : sans lui les classes de flex s'arrêtent à l'hôte et le corps du
+         tableau, projeté dans le `<div>` interne, ne défile pas. -->
+    <bfd-card [padding]="0" [fill]="true" class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <!-- Header -->
       <div
         class="grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] gap-3 border-b border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
@@ -208,7 +222,9 @@
   </div>
 
   <!-- RIGHT: detail panel -->
-  <aside class="flex flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5">
+  <aside
+    class="flex min-h-0 flex-col gap-3.5 overflow-y-auto border-l border-border-s bg-surface p-5"
+  >
     @if (selectedProduct(); as p) {
       <div class="flex items-start gap-2">
         <div class="flex-1">

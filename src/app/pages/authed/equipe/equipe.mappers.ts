@@ -145,8 +145,8 @@ export function toPermsMatrix(
     .sort((a, b) => a.permission.localeCompare(b.permission, 'fr'))
     .map((permission) => ({
       permission: permission.permission,
-      cells: grantedByColumn.map(
-        (granted): PermState => (granted.has(permission.permission) ? 'granted' : 'none'),
+      cells: grantedByColumn.map((granted): PermState =>
+        granted.has(permission.permission) ? 'granted' : 'none',
       ),
     }));
 

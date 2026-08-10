@@ -195,11 +195,7 @@ describe(RoleAssignmentStore.name, () => {
 
     const data = store.data();
     expect(data.map((r) => r.period)).toEqual(['before', 'during', 'after']);
-    expect(data.map((r) => r.poste)).toEqual([
-      'Installation tables',
-      'Service',
-      'Vaisselle',
-    ]);
+    expect(data.map((r) => r.poste)).toEqual(['Installation tables', 'Service', 'Vaisselle']);
     expect(data.map((r) => r.preferenceRank)).toEqual([null, 1, null]);
     expect(data.map((r) => r.meta.find((m) => m.label === 'Crédit de priorité')?.value)).toEqual([
       '+4 pts',

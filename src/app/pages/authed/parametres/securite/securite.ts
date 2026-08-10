@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Store } from '@ngrx/store';
 import { LucideDynamicIcon, LucideLogOut, LucideMonitor, LucideShield } from '@lucide/angular';
@@ -25,16 +32,7 @@ const LOCATION_PLACEHOLDER = 'Localisation indisponible';
 
 @Component({
   selector: 'bfd-parametres-securite',
-  imports: [
-    Btn,
-    Badge,
-    Card,
-    Field,
-    Input,
-    Skeleton,
-    ParametresSideNav,
-    LucideDynamicIcon,
-  ],
+  imports: [Btn, Badge, Card, Field, Input, Skeleton, ParametresSideNav, LucideDynamicIcon],
   templateUrl: './securite.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

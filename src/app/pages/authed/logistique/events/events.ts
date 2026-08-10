@@ -21,6 +21,7 @@ import {
   LucideSearch,
   LucideTriangleAlert,
 } from '@lucide/angular';
+import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { LogistiqueAssignModal } from '#shared/components/modal/logistique-assign-modal/logistique-assign-modal';
@@ -99,7 +100,18 @@ export class LogistiqueEvents {
   private readonly dropdown = inject(DropdownService);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
+  private readonly router = inject(Router);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  /**
+   * Ouvre la liste de courses de la soirée.
+   *
+   * `/logistique/:id` existait sans qu'aucun écran n'y mène : la page était
+   * inatteignable autrement qu'en tapant l'URL à la main.
+   */
+  protected openCourses(eventId: string): void {
+    void this.router.navigate(['/logistique', eventId]);
+  }
 
   protected openAssign(eventId: string): void {
     const ev = this.events().find((e) => e.id === eventId);

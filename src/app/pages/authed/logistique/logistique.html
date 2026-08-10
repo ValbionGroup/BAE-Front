@@ -1,3 +1,29 @@
+<!--
+  Actions de la topbar, d'après `screen-logistique.jsx`. Deux écarts assumés :
+  « Preuve d'achat » n'a aucun stockage de fichiers côté API, et « Exporter PDF »
+  cède la place primaire à « Nouveau bon », seule des deux à exister.
+-->
+<ng-template #actions>
+  <bfd-btn
+    kind="ghost"
+    size="md"
+    [icon]="icUpload"
+    [disabled]="true"
+    title="Aucun stockage de justificatifs côté API"
+    >Preuve d'achat</bfd-btn
+  >
+  @if (!vouchersForbidden()) {
+    <bfd-btn kind="secondary" size="md" [icon]="icTicket" (clicked)="scrollToVouchers()">
+      Bons d'achat ({{ vouchers().length }})
+    </bfd-btn>
+    <span data-testid="add-voucher">
+      <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateVoucher()">
+        Nouveau bon
+      </bfd-btn>
+    </span>
+  }
+</ng-template>
+
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
   <!-- KPI row -->
   <div class="mb-4 grid grid-cols-4 gap-3">
@@ -34,8 +60,8 @@
       @if (loading() === 'init' || loading() === 'loading') {
         <bfd-skeleton width="80px" height="19px" rounded="md" />
       } @else {
-        <div class="mono tnum text-[19px] font-semibold text-blue">
-          {{ formatPrice(usableVoucherTotal()) }} €
+        <div data-testid="kpi-vouchers" class="mono tnum text-[19px] font-semibold text-blue">
+          {{ usableVoucherLabel() }}
         </div>
       }
     </div>
@@ -84,9 +110,7 @@
             mise en avant. Un tiret indique que l'enseigne ne référence pas l'article.
           </caption>
           <thead>
-            <tr
-              class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
-            >
+            <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
               <th scope="col" class="w-8 px-3.5 py-2.5">
                 <bfd-checkbox
                   [checked]="allSelected()"
@@ -150,9 +174,7 @@
               </th>
               <td class="px-3.5 py-3"></td>
               @for (total of supplierTotals(); track total.supplierId) {
-                <td
-                  [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)"
-                >
+                <td [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)">
                   @if (total.total === null) {
                     <span>—</span>
                   } @else {
@@ -183,10 +205,20 @@
     </div>
   }
 
-  <!-- Bons d'achat -->
-  <div class="mono mt-6 mb-2 flex items-center gap-1.5 text-[10px] tracking-wider text-muted">
-    <svg [lucideIcon]="icTicket" [size]="12" aria-hidden="true"></svg>
-    BONS D'ACHAT
+  <!-- Bons d'achat. L'ajout vit dans la topbar (gabarit `#actions`), comme dans
+       la maquette : la section n'a pas de bouton à elle. -->
+  <div #vouchersPanel class="mono mt-6 mb-2 flex items-center gap-1.5 text-[10px] tracking-wider">
+    <svg
+      [lucideIcon]="vouchersForbidden() ? icLock : icTicket"
+      [size]="12"
+      aria-hidden="true"
+    ></svg>
+    <span class="text-muted">BONS D'ACHAT</span>
+    @if (vouchersForbidden()) {
+      <!-- Le libellé verrouillé de la maquette ; il ne décrit plus une intention
+           de conception mais l'état réel du compte qui regarde. -->
+      <span class="text-muted">· ACCÈS VERROUILLÉ</span>
+    }
   </div>
 
   @if (loading() === 'init' || loading() === 'loading') {
@@ -197,6 +229,25 @@
           <div class="mt-2"><bfd-skeleton width="70%" height="10px" /></div>
         </div>
       }
+    </div>
+  } @else if (vouchersForbidden()) {
+    <div
+      data-testid="vouchers-forbidden"
+      role="status"
+      class="rounded-md border border-dashed border-border bg-surface px-6 py-8 text-center text-[12px] text-muted"
+    >
+      <svg [lucideIcon]="icLock" [size]="14" class="mx-auto mb-2 block" aria-hidden="true"></svg>
+      Accès restreint — les bons d'achat sont réservés au pôle logistique et au trésorier.
+    </div>
+  } @else if (vouchersLoadError(); as message) {
+    <div
+      class="rounded-md border border-dashed border-border bg-surface px-6 py-8 text-center"
+      role="alert"
+    >
+      <p class="m-0 text-[12px] text-danger">{{ message }}</p>
+      <div class="mt-3 flex justify-center">
+        <bfd-btn kind="secondary" size="sm" (clicked)="retry()">Réessayer</bfd-btn>
+      </div>
     </div>
   } @else if (vouchers().length === 0) {
     <div
@@ -209,29 +260,17 @@
       @for (voucher of vouchers(); track voucher.id) {
         <li
           [class]="
-            'relative rounded-md border border-dashed bg-surface p-3.5 ' +
+            'rounded-md border border-dashed bg-surface p-3.5 ' +
             voucherToneClass(voucher.warn, voucher.expired, voucher.used)
           "
         >
-          <svg
-            [lucideIcon]="icLock"
-            [size]="12"
-            class="absolute top-3 right-3 text-muted"
-            aria-hidden="true"
-          ></svg>
           <div class="mb-1.5 flex items-baseline gap-2">
             <span class="text-sm font-semibold text-text">{{ voucher.supplierName }}</span>
             <span class="mono tnum text-[22px] font-bold text-blue"
               >{{ formatPrice(voucher.value) }} €</span
             >
           </div>
-          <div class="mb-0.5 text-[11px] text-muted">
-            @if (voucher.expiresLabel) {
-              Expire le {{ voucher.expiresLabel }}
-            } @else {
-              Sans date d'expiration
-            }
-          </div>
+          <div class="mb-0.5 text-[11px] text-muted">Expire le {{ voucher.expiresLabel }}</div>
           <div class="flex flex-wrap items-center gap-1.5">
             @if (voucher.used) {
               <bfd-badge kind="neutral">Utilisé</bfd-badge>
@@ -246,6 +285,26 @@
               }}</span>
             }
           </div>
+
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <!-- `<button>` natif : `bfd-btn` ne propage pas les `aria-*` jusqu'au
+                 bouton interne. -->
+            <button
+              type="button"
+              [attr.data-testid]="'toggle-voucher-' + voucher.id"
+              [attr.aria-label]="toggleLabel(voucher)"
+              [attr.aria-busy]="isSaving(voucher.id)"
+              [disabled]="isSaving(voucher.id)"
+              (click)="toggleVoucher(voucher)"
+              class="inline-flex h-7 items-center rounded-md border border-border bg-surface-2 px-2.5 text-xs text-text transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {{ voucher.used ? 'Annuler' : 'Marquer consommé' }}
+            </button>
+          </div>
+
+          @if (voucherErrorId() === voucher.id && voucherError(); as message) {
+            <p role="alert" class="mt-1.5 mb-0 text-[11px] text-danger">{{ message }}</p>
+          }
         </li>
       }
     </ul>

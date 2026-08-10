@@ -1,0 +1,90 @@
+<bfd-modal-shell
+  [icon]="icPackage"
+  tone="blue"
+  eyebrow="STOCKS · CATALOGUE"
+  title="Nouveau produit"
+  subtitle="Crée la référence au catalogue. Elle apparaîtra à 0 : c'est un réassort qui lui donnera du stock."
+  [width]="520"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    <bfd-field label="Nom du produit">
+      <bfd-input
+        placeholder="ex. Cornichons aigres-doux 720g"
+        [value]="name()"
+        [invalid]="submitted() && name().trim() === ''"
+        (valueChange)="onName($event)"
+      />
+    </bfd-field>
+
+    <div class="grid grid-cols-2 gap-3">
+      <bfd-field label="Catégorie">
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-60"
+          [value]="categoryId()"
+          [disabled]="categoriesMissing()"
+          (change)="onCategoryId($any($event.target).value)"
+        >
+          <option value="">Choisir une catégorie…</option>
+          @for (category of store.categories(); track category.id) {
+            <option [value]="category.id">{{ category.name }}</option>
+          }
+        </select>
+      </bfd-field>
+
+      <!-- `<select>` et non texte libre : `goods.unit` est un enum contraint en
+           base (`goods_unit_check`), une valeur hors liste part en 500. -->
+      <bfd-field label="Unité de stock">
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="unit()"
+          (change)="onUnit($any($event.target).value)"
+        >
+          <option value="">Choisir…</option>
+          @for (u of units; track u.value) {
+            <option [value]="u.value">{{ u.label }}</option>
+          }
+        </select>
+      </bfd-field>
+    </div>
+
+    <bfd-field label="Marque" hint="Facultatif.">
+      <bfd-input placeholder="ex. Maille" [value]="brand()" (valueChange)="onBrand($event)" />
+    </bfd-field>
+
+    @if (barcode(); as code) {
+      <div
+        class="flex items-center gap-2.5 rounded-md border border-blue bg-blue-soft p-3 text-[12.5px] text-text-2"
+      >
+        <span class="text-muted">Code-barres scanné</span>
+        <span class="mono ml-auto font-semibold text-text">{{ code }}</span>
+      </div>
+    }
+
+    @if (categoriesMissing()) {
+      <p role="alert" class="m-0 text-[12px] text-danger">
+        Aucune catégorie n'a pu être chargée — impossible de créer un produit pour l'instant.
+      </p>
+    } @else if (submitted() && !valid()) {
+      <p role="alert" class="m-0 text-[12px] text-danger">
+        Nom, catégorie et unité de stock sont requis.
+      </p>
+    }
+
+    @if (store.createError(); as message) {
+      <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+    }
+  </div>
+
+  <div modal-footer class="flex flex-1 justify-end gap-2">
+    <bfd-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bfd-btn>
+    <bfd-btn
+      kind="primary"
+      size="md"
+      [disabled]="store.creatingGood() || categoriesMissing()"
+      (clicked)="submit()"
+    >
+      {{ store.creatingGood() ? 'Enregistrement…' : 'Créer le produit' }}
+    </bfd-btn>
+  </div>
+</bfd-modal-shell>

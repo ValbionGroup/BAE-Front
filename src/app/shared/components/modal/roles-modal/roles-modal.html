@@ -1,113 +1,161 @@
-<div
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-labelledby]="'modal-title-' + config().id"
-  tabindex="-1"
-  class="w-full max-w-[680px] bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
+<!--
+  Aligné sur `ScreenModalEditPostes`. Non rendus faute de données derrière :
+  criticité, effectif minimum, spécialisation, tranche horaire, pré-requis,
+  référent, réordonnancement, modèles. Le libellé « Enregistrer & relancer
+  l'algo » est écarté aussi : `saveRoleEdits` ne relance rien.
+-->
+<bfd-modal-shell
+  [icon]="icSettings"
+  tone="blue"
+  eyebrow="COORDINATION · POSTES DEMANDÉS"
+  [title]="config().title ?? 'Configurer les postes de la soirée'"
+  [subtitle]="config().message ?? null"
+  [width]="720"
+  (close)="onClose()"
 >
-  <div class="px-[22px] py-[18px] border-b border-border-s flex items-center gap-3">
-    <h2
-      [id]="'modal-title-' + config().id"
-      class="text-[15px] font-semibold text-text flex-1 min-w-0 truncate"
-    >
-      {{ config().title }}
-    </h2>
-    <button
-      type="button"
-      (click)="onClose()"
-      aria-label="Fermer"
-      class="text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded"
-    >
-      <svg lucideX [size]="16" aria-hidden="true"></svg>
-    </button>
-  </div>
-
-  <div class="p-[22px] flex flex-col gap-4 overflow-y-auto">
-    <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
+  <div class="flex flex-col gap-4">
+    <!-- Bandeau de compteurs -->
+    <div class="grid grid-cols-2 gap-2.5">
+      <div class="rounded-md border border-border-s bg-surface-2 px-3 py-2.5">
+        <div class="text-[10px] tracking-wider text-muted uppercase">Postes définis</div>
+        <div class="mono tnum mt-0.5 text-[18px] leading-none font-semibold text-text">
+          {{ draft().length }}
+        </div>
+      </div>
+      <div class="rounded-md border border-border-s bg-surface-2 px-3 py-2.5">
+        <div class="text-[10px] tracking-wider text-muted uppercase">Effectif demandé</div>
+        <div class="mono tnum mt-0.5 text-[18px] leading-none font-semibold text-text">
+          {{ totalRequired() }}
+        </div>
+      </div>
+    </div>
 
     <div
-      class="grid grid-cols-[1fr_120px_110px_36px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="grid grid-cols-[1fr_120px_132px_36px] gap-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
     >
       <span>Poste</span>
       <span>Moment</span>
-      <span>Besoin</span>
+      <span>Effectif</span>
       <span></span>
     </div>
 
     <div class="flex flex-col gap-2">
       @for (role of draft(); track $index) {
         @let countInvalid = role.requiredCount <= 0;
-        <div class="grid grid-cols-[1fr_120px_110px_36px] gap-2 items-center">
-          <select
-            [value]="role.jobId"
-            [class]="inputClass(false)"
-            [attr.aria-label]="
-              'Poste : ' + jobName(role.jobId) + ' — moment : ' + jobPeriodLabel(role.jobId)
-            "
-            (change)="onJobChange($index, $event)"
-          >
-            @for (group of optionGroupsFor(role); track group.period) {
-              <optgroup [label]="group.label">
-                @for (job of group.jobs; track job.id) {
-                  <option [value]="job.id" [selected]="job.id === role.jobId">
-                    {{ job.name }}
-                  </option>
-                }
-              </optgroup>
-            }
-          </select>
+        @let style = periodStyle(role.jobId);
+        <div class="grid grid-cols-[1fr_120px_132px_36px] items-center gap-2">
+          <div class="flex min-w-0 items-center gap-2.5">
+            <span
+              [class]="
+                'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border ' +
+                style.classes
+              "
+            >
+              <svg [lucideIcon]="style.icon" [size]="15" aria-hidden="true"></svg>
+            </span>
+            <select
+              [value]="role.jobId"
+              [class]="inputClass(false)"
+              [attr.aria-label]="
+                'Poste : ' + jobName(role.jobId) + ' — moment : ' + jobPeriodLabel(role.jobId)
+              "
+              (change)="onJobChange($index, $event)"
+            >
+              @for (group of optionGroupsFor(role); track group.period) {
+                <optgroup [label]="group.label">
+                  @for (job of group.jobs; track job.id) {
+                    <option [value]="job.id" [selected]="job.id === role.jobId">
+                      {{ job.name }}
+                    </option>
+                  }
+                </optgroup>
+              }
+            </select>
+          </div>
+
           <span class="text-[12px] text-text-2">{{ jobPeriodLabel(role.jobId) }}</span>
-          <!-- The "Besoin" column header is a plain <span>, associated with nothing:
-               without this the field announced as a bare "nombre, 1", and with
-               several rows nothing said which poste it counted for. -->
-          <input
-            type="number"
-            min="1"
-            [value]="role.requiredCount"
-            [class]="inputClass(countInvalid)"
-            [attr.aria-label]="
-              'Nombre de personnes nécessaires au poste ' +
-              jobName(role.jobId) +
-              ' (' +
-              jobPeriodLabel(role.jobId) +
-              ')'
-            "
-            (input)="onCountInput($index, $event)"
-          />
+
+          <!-- Le `<input type="number">` reste au centre du compteur : deux
+               boutons seuls perdraient la saisie clavier et l'annonce du champ. -->
+          <div
+            class="flex h-9 items-center rounded-md border border-border bg-surface-2 focus-within:ring-2 focus-within:ring-blue/40"
+          >
+            <button
+              type="button"
+              class="inline-flex h-full w-8 shrink-0 cursor-pointer items-center justify-center rounded-l-md text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+              [disabled]="role.requiredCount <= 1"
+              (click)="step($index, -1)"
+              [attr.aria-label]="'Une personne de moins au poste ' + jobName(role.jobId)"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min="1"
+              [value]="role.requiredCount"
+              [class]="
+                'mono tnum h-full w-full min-w-0 border-0 bg-transparent text-center text-[13px] focus:outline-none ' +
+                (countInvalid ? 'text-danger' : 'text-text')
+              "
+              [attr.aria-label]="
+                'Nombre de personnes nécessaires au poste ' +
+                jobName(role.jobId) +
+                ' (' +
+                jobPeriodLabel(role.jobId) +
+                ')'
+              "
+              (input)="onCountInput($index, $event)"
+            />
+            <button
+              type="button"
+              class="inline-flex h-full w-8 shrink-0 cursor-pointer items-center justify-center rounded-r-md text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+              (click)="step($index, 1)"
+              [attr.aria-label]="'Une personne de plus au poste ' + jobName(role.jobId)"
+            >
+              +
+            </button>
+          </div>
+
           <button
             type="button"
-            class="h-9 w-9 inline-flex items-center justify-center rounded-md border border-border bg-surface-2 text-muted hover:text-text"
+            class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-border bg-surface-2 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
             (click)="removeRole($index)"
             [attr.aria-label]="'Retirer le poste ' + jobName(role.jobId) + ' de cette soirée'"
           >
-            <svg lucideTrash2 [size]="14" aria-hidden="true"></svg>
+            <svg [lucideIcon]="icTrash" [size]="14" aria-hidden="true"></svg>
           </button>
         </div>
       }
     </div>
 
+    <!-- Ligne d'ajout en pointillés, comme dans la maquette. -->
     <button
       type="button"
-      class="inline-flex items-center gap-2 text-[12px] text-blue hover:text-blue-600 self-start disabled:text-muted disabled:cursor-not-allowed"
+      class="flex w-full cursor-pointer items-center gap-2.5 rounded-md border border-dashed border-border px-3 py-2.5 text-[12.5px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-60"
       [disabled]="!canAdd()"
       (click)="addRole()"
     >
-      <svg lucidePlus [size]="14" aria-hidden="true"></svg>
+      <svg [lucideIcon]="icPlus" [size]="14" aria-hidden="true"></svg>
       Ajouter un poste
     </button>
 
     @if (!canAdd()) {
-      <p class="text-[11.5px] text-muted">
-        Tous les postes existants sont déjà sur cette soirée. Les postes se créent depuis
-        l'administration.
-      </p>
+      <div
+        class="flex items-start gap-2.5 rounded-md border border-blue bg-blue-soft p-3 text-[12.5px] text-text-2"
+      >
+        <svg [lucideIcon]="icSettings" [size]="15" class="mt-px text-blue" aria-hidden="true"></svg>
+        <span>
+          Tous les postes existants sont déjà sur cette soirée. Les postes se créent et se renomment
+          depuis l'administration.
+        </span>
+      </div>
     }
   </div>
 
-  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
+  <div modal-footer class="flex flex-1 justify-end gap-2">
     <bfd-btn kind="ghost" size="md" (clicked)="onClose()">Annuler</bfd-btn>
     <bfd-btn kind="primary" size="md" [disabled]="!canSave()" (clicked)="onSave()">
       Enregistrer
     </bfd-btn>
   </div>
-</div>
+</bfd-modal-shell>

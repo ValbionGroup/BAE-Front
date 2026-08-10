@@ -39,14 +39,39 @@ export interface ApiVoucher {
   readonly supplierId: number | null;
   readonly supplier: { readonly id: number; readonly name: string } | null;
   readonly value: number;
-  /** `YYYY-MM-DD` — a DATE, not a datetime. */
-  readonly expiresAt: string | null;
+  /** `YYYY-MM-DD` — une DATE, jamais nulle : la colonne est `NOT NULL`. */
+  readonly expiresAt: string;
   readonly condition: string | null;
   readonly usedAt: string | null;
   readonly used: boolean;
   readonly daysUntilExpiry: number | null;
   readonly expired: boolean;
   readonly warn: boolean;
+}
+
+/**
+ * `GET /suppliers` — allégé : l'endpoint ne précharge plus `goods` ni
+ * `restocks`, il ne sert qu'à peupler le sélecteur d'enseigne.
+ */
+export interface ApiSupplier {
+  readonly id: number;
+  readonly name: string;
+}
+
+/**
+ * Corps de `POST /vouchers`.
+ *
+ * `supplierId` et `expiresAt` sont requis ici alors que le schéma tolère un
+ * `supplier_id` nul : un bon dont on ignore l'enseigne est un bon qu'on ne sait
+ * pas où dépenser. `expiresAt` l'est aussi côté colonne (`NOT NULL`).
+ */
+export interface CreateVoucherPayload {
+  readonly supplierId: number;
+  readonly value: number;
+  /** `YYYY-MM-DD` — le format qu'attend `voucherValidator`, et celui que
+   *  `<input type="date">` produit nativement. */
+  readonly expiresAt: string;
+  readonly condition: string | null;
 }
 
 /**
@@ -94,8 +119,13 @@ export interface VoucherCard {
   readonly id: number;
   readonly supplierName: string;
   readonly value: number;
-  /** `DD/MM/YYYY`, or `null` when the voucher has no expiry date. */
-  readonly expiresLabel: string | null;
+  /** `DD/MM/YYYY`, pour l'affichage seul. */
+  readonly expiresLabel: string;
+  /**
+   * `YYYY-MM-DD` brut, **clé de tri**. `expiresLabel` ne peut pas servir : son
+   * ordre lexicographique trie par jour du mois.
+   */
+  readonly expiresAt: string;
   readonly condition: string | null;
   readonly daysUntilExpiry: number | null;
   readonly used: boolean;

@@ -123,9 +123,12 @@ export class TeamService {
     roleId: number,
     permissions: readonly string[],
   ): Observable<ApiTeamRoleWithPermissions> {
-    return this.http.put<ApiTeamRoleWithPermissions>(`${this.baseUrl}/roles/${roleId}/permissions`, {
-      permissions,
-    });
+    return this.http.put<ApiTeamRoleWithPermissions>(
+      `${this.baseUrl}/roles/${roleId}/permissions`,
+      {
+        permissions,
+      },
+    );
   }
 
   /**

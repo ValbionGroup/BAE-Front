@@ -762,10 +762,11 @@ export class Coordination implements OnInit {
 
     this.modal.open({
       type: 'roles',
-      title: 'Gérer les postes',
-      message:
-        'Choisissez les postes à armer sur cette soirée et le nombre de personnes par poste. ' +
-        "Les postes eux-mêmes se créent et se renomment depuis l'administration.",
+      title: 'Configurer les postes de la soirée',
+      // Devient le sous-titre de la coquille : une ligne, pas deux. La seconde
+      // phrase — les postes se créent depuis l'administration — est déjà dite
+      // par le bandeau de la modale, à l'endroit où elle devient utile.
+      message: 'Choisissez les postes à armer et le nombre de personnes par poste.',
       roles: eventData.roles.map((role) => ({
         jobId: role.id,
         requiredCount: role.requiredCount,
@@ -1057,9 +1058,7 @@ export class Coordination implements OnInit {
         // whatever it was before, not the `0` the optimistic patch guessed at.
         this.patchRole(eventId, jobId, (assigned) =>
           assigned.map((a) =>
-            a.memberId === memberId
-              ? { ...a, locked: !next, pointsDelta: previousPointsDelta }
-              : a,
+            a.memberId === memberId ? { ...a, locked: !next, pointsDelta: previousPointsDelta } : a,
           ),
         );
         this.toast.show({

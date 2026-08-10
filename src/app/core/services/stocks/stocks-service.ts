@@ -30,6 +30,42 @@ export interface ApiStockBatch {
   openedAt: string | null;
 }
 
+/** `GET /categories` — alimente le sélecteur de la modale de création. */
+export interface ApiCategory {
+  readonly id: number;
+  readonly name: string;
+}
+
+/** Réponse de `POST /goods` : la ligne `goods` seule, sans catégorie ni agrégats. */
+export interface ApiCreatedGood {
+  readonly id: number;
+  readonly name: string;
+  readonly unit: string;
+  readonly brand: string | null;
+  readonly categoryId: number;
+}
+
+/** Contrainte `goods_unit_check` : un enum en base, pas du texte libre. */
+export const GOOD_UNITS = ['pcs', 'kg', 'liter'] as const;
+
+export type GoodUnit = (typeof GOOD_UNITS)[number];
+
+export const GOOD_UNIT_LABELS: Readonly<Record<GoodUnit, string>> = {
+  pcs: 'Pièce',
+  kg: 'Kilogramme',
+  liter: 'Litre',
+};
+
+/** `brand` est une chaîne, jamais `null` : la colonne est `NOT NULL`. */
+export interface CreateGoodPayload {
+  readonly name: string;
+  readonly unit: GoodUnit;
+  readonly brand: string;
+  readonly categoryId: number;
+  /** `null` quand le produit n'a pas été créé depuis un scan. */
+  readonly barcode: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StocksService {
   private readonly http = inject(HttpClient);
@@ -37,6 +73,29 @@ export class StocksService {
 
   getAll(): Observable<ApiStockItem[]> {
     return this.http.get<ApiStockItem[]>(`${this.baseUrl}/stocks`);
+  }
+
+  getCategories(): Observable<ApiCategory[]> {
+    return this.http.get<ApiCategory[]>(`${this.baseUrl}/categories`);
+  }
+
+  createGood(payload: CreateGoodPayload): Observable<ApiCreatedGood> {
+    return this.http.post<ApiCreatedGood>(`${this.baseUrl}/goods`, payload);
+  }
+
+  /** Liste vide si le code n'est rattaché à rien : réponse normale, pas une
+   *  erreur — c'est elle qui déclenche la création. */
+  findByBarcode(barcode: string): Observable<ApiCreatedGood[]> {
+    return this.http.get<ApiCreatedGood[]>(`${this.baseUrl}/goods`, { params: { barcode } });
+  }
+
+  /** Entre un lot en stock. `expirationDate` est un `YYYY-MM-DD`, ou `null`. */
+  createBatch(payload: {
+    goodId: number;
+    quantity: number;
+    expirationDate: string | null;
+  }): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/stock-batches`, payload);
   }
 
   getBatches(goodsId: number, showEmpty = false): Observable<ApiStockBatch[]> {
