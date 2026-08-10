@@ -77,8 +77,8 @@
       role="status"
       class="mb-4 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12px] text-warn"
     >
-      {{ unpricedCount() }} article{{ unpricedCount() > 1 ? 's' : '' }} sans prix connu — non compris
-      dans le coût estimé.
+      {{ unpricedCount() }} article{{ unpricedCount() > 1 ? 's' : '' }} sans prix connu — non
+      compris dans le coût estimé.
     </div>
   }
 
@@ -130,7 +130,10 @@
   } @else {
     <!-- Denrées : seule catégorie qui a des enseignes à comparer. -->
     @if (goodRows().length > 0) {
-      <div data-testid="section-goods" class="mb-6 overflow-hidden rounded-md border border-border-s bg-surface">
+      <div
+        data-testid="section-goods"
+        class="mb-6 overflow-hidden rounded-md border border-border-s bg-surface"
+      >
         <div
           class="mono border-b border-border-s bg-surface-2 px-3.5 py-2 text-[10px] tracking-wider text-muted"
         >
@@ -139,11 +142,13 @@
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-[12.5px]">
             <caption class="sr-only">
-              Denrées manquantes pour la soirée, prix par enseigne, avec l'enseigne la moins chère mise
-              en avant. Un tiret indique que l'enseigne ne référence pas l'article.
+              Denrées manquantes pour la soirée, prix par enseigne, avec l'enseigne la moins chère
+              mise en avant. Un tiret indique que l'enseigne ne référence pas l'article.
             </caption>
             <thead>
-              <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
+              <tr
+                class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
+              >
                 <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">
                   Produit
                 </th>
@@ -223,7 +228,10 @@
     <!-- Non-alimentaire : `furnitures` n'a aucune relation fournisseur, donc
          aucune colonne d'enseigne — un prix propre par ligne, c'est tout. -->
     @if (furnitureRows().length > 0) {
-      <div data-testid="section-furniture" class="overflow-hidden rounded-md border border-border-s bg-surface">
+      <div
+        data-testid="section-furniture"
+        class="overflow-hidden rounded-md border border-border-s bg-surface"
+      >
         <div
           class="mono border-b border-border-s bg-surface-2 px-3.5 py-2 text-[10px] tracking-wider text-muted"
         >
@@ -231,12 +239,14 @@
         </div>
         <table class="w-full border-collapse text-[12.5px]">
           <caption class="sr-only">
-            Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes : ces
-            articles n'ont aucun fournisseur rattaché.
+            Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes :
+            ces articles n'ont aucun fournisseur rattaché.
           </caption>
           <thead>
             <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
-              <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">Produit</th>
+              <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">
+                Produit
+              </th>
               <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
               <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Prix</th>
             </tr>

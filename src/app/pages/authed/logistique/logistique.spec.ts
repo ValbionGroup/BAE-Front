@@ -74,7 +74,10 @@ describe(Logistique.name, () => {
         provideHttpClientTesting(),
         // La page lit `:id` sur le snapshot, jamais réactivement : un stub
         // fixe suffit, pas besoin de simuler une navigation.
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } },
+        },
       ],
     }).compileComponents();
 
@@ -239,14 +242,22 @@ describe(Logistique.name, () => {
       shoppingList({
         lines: [
           shoppingLine({ kind: 'good', id: 1, name: 'Pain hot-dog' }),
-          shoppingLine({ kind: 'furniture', id: 2, name: 'Barquettes', suppliers: [], bestPrice: 3.2 }),
+          shoppingLine({
+            kind: 'furniture',
+            id: 2,
+            name: 'Barquettes',
+            suppliers: [],
+            bestPrice: 3.2,
+          }),
         ],
         lineCount: 2,
       }),
     );
 
     const goodsSection = fixture.nativeElement.querySelector('[data-testid="section-goods"]');
-    const furnitureSection = fixture.nativeElement.querySelector('[data-testid="section-furniture"]');
+    const furnitureSection = fixture.nativeElement.querySelector(
+      '[data-testid="section-furniture"]',
+    );
     expect(goodsSection.textContent).toContain('Pain hot-dog');
     expect(goodsSection.textContent).not.toContain('Barquettes');
     expect(furnitureSection.textContent).toContain('Barquettes');
@@ -355,9 +366,7 @@ describe(Logistique.name, () => {
   });
 
   it('affiche un bandeau quand des lignes n’ont pas de prix connu', async () => {
-    await renderLoaded(
-      shoppingList({ lines: [shoppingLine()], lineCount: 1, unpricedCount: 2 }),
-    );
+    await renderLoaded(shoppingList({ lines: [shoppingLine()], lineCount: 1, unpricedCount: 2 }));
 
     const banner = fixture.nativeElement.querySelector('[data-testid="unpriced-banner"]');
     expect(banner).not.toBeNull();
@@ -388,9 +397,9 @@ describe(Logistique.name, () => {
     // Le panneau des bons est une branche indépendante : le refus sur la liste
     // ne doit rien lui retirer.
     expect(fixture.nativeElement.textContent).toContain('Leclerc');
-    expect(fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]').textContent).toContain(
-      '50,00',
-    );
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]').textContent,
+    ).toContain('50,00');
   });
 
   it('distingue une panne réseau d’un refus sur la liste de courses', async () => {

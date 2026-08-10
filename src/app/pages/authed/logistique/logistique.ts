@@ -207,7 +207,13 @@ export class Logistique implements OnInit {
   protected readonly supplierTotals = computed<ApiShoppingSupplierTotal[]>(() => {
     const totals = new Map(this.shoppingList()?.supplierTotals.map((t) => [t.id, t]) ?? []);
     return this.retailerColumns().map(
-      (column) => totals.get(column.id) ?? { id: column.id, name: column.name, total: 0, fullCoverage: false },
+      (column) =>
+        totals.get(column.id) ?? {
+          id: column.id,
+          name: column.name,
+          total: 0,
+          fullCoverage: false,
+        },
     );
   });
 
@@ -285,15 +291,23 @@ export class Logistique implements OnInit {
     return cell.isBest ? 'text-ok font-semibold' : 'text-muted';
   }
 
+  /**
+   * Met en avant, en pied de tableau, la seule enseigne comparable la moins
+   * chère — l'équivalent, au niveau de la colonne, du badge qui marque déjà
+   * la moins chère de chaque ligne.
+   */
   protected totalClass(total: ApiShoppingSupplierTotal): string {
-    return this.isComparable(total) ? 'text-text-2' : 'text-muted/60';
+    if (!this.isComparable(total)) return 'text-muted/60';
+    return this.cheapestComparable(this.supplierTotals())?.id === total.id
+      ? 'text-ok font-semibold'
+      : 'text-text-2';
   }
 
   /** Screen-reader wording for a column total that only covers part of the basket. */
   protected totalHint(total: ApiShoppingSupplierTotal): string | null {
     return this.isComparable(total)
       ? null
-      : "Total partiel : cette enseigne ne référence pas tous les articles de la liste";
+      : 'Total partiel : cette enseigne ne référence pas tous les articles de la liste';
   }
 
   protected openCreateVoucher(): void {
