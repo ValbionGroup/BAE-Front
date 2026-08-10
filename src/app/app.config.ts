@@ -7,8 +7,6 @@ import {
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import { providePrimeNG } from 'primeng/config';
-import Aura from '@primeuix/themes/aura';
 import { provideLucideConfig } from '@lucide/angular';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { apiCaseRequestInterceptor } from '#core/interceptors/api-case-request/api-case-request-interceptor';
@@ -44,12 +42,6 @@ export const appConfig: ApplicationConfig = {
     ),
     storeConfig,
     provideEffects([AuthEffects]),
-    providePrimeNG({
-      ripple: true,
-      theme: {
-        preset: Aura,
-      },
-    }),
     provideLucideConfig({
       strokeWidth: 2,
     }),
