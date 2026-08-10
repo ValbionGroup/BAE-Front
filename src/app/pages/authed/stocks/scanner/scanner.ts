@@ -33,6 +33,7 @@ import { Input } from '#shared/components/ui/input/input';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import { messageOf } from '#shared/utils/api-error';
+import type { StockProduct } from '../stocks.types';
 
 /** `goodId` à `null` : code non rattaché, la ligne propose la création et ne
  *  part pas en stock. */
@@ -188,8 +189,25 @@ export class StocksScanner {
     this.modals.open({
       type: 'component',
       component: GoodCreateModal,
-      inputs: { barcode },
+      inputs: {
+        barcode,
+        created: (product: StockProduct) => this.attach(barcode, product),
+      },
     });
+  }
+
+  /**
+   * Rattache le produit tout juste créé à la ligne qui l'a demandé.
+   *
+   * Sans cela la ligne resterait « à créer » : elle ne connaît que le code, et
+   * `POST /goods` ne dit à personne qu'il vient de le rattacher.
+   */
+  private attach(barcode: string, product: StockProduct): void {
+    this.lines.update((lines) =>
+      lines.map((line) =>
+        line.barcode === barcode ? { ...line, goodId: product.id, name: product.name } : line,
+      ),
+    );
   }
 
   /**

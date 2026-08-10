@@ -3,8 +3,11 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { vi } from 'vitest';
+
 import { StocksScanner } from './scanner';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { ModalService } from '#shared/components/modal/modal.service';
 
 const baseUrl = 'http://api.test/v1';
 
@@ -150,6 +153,25 @@ describe(StocksScanner.name, () => {
 
     // La ligne enregistrée disparaît : revalider ne doit pas la créer deux fois.
     expect(scanner.lines()).toHaveLength(0);
+  });
+
+  it('attaches a freshly created product to the line that asked for it', async () => {
+    const opened = vi.spyOn(TestBed.inject(ModalService), 'open');
+    const scanned = scanner.onBarcode('0000000000000');
+    flushLookup('0000000000000', null);
+    await scanned;
+    expect(scanner.lines()[0].goodId).toBeNull();
+
+    (scanner as unknown as { createUnknown(b: string): void }).createUnknown('0000000000000');
+    const config = opened.mock.calls.at(0)?.at(0) as unknown as {
+      inputs: { created: (p: unknown) => void };
+    };
+    config.inputs.created({ id: 42, name: 'Cornichons' });
+
+    // Sans ce rattachement la ligne resterait « à créer » et ne partirait
+    // jamais en stock, alors que le produit existe désormais.
+    expect(scanner.lines()[0]).toMatchObject({ goodId: 42, name: 'Cornichons' });
+    expect(scanner.ready()).toHaveLength(1);
   });
 
   it('keeps a refused line in the session and says so', async () => {

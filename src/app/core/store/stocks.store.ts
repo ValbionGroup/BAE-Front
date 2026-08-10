@@ -106,34 +106,33 @@ export const StocksStore = signalStore(
      * Non optimiste : pas d'id avant la réponse, et la liste est triée. Le
      * produit naît sans lot — c'est un réassort qui lui donnera du stock.
      */
-    async createGood(payload: CreateGoodPayload): Promise<boolean> {
-      if (store.creatingGood()) return false;
+    async createGood(payload: CreateGoodPayload): Promise<StockProduct | null> {
+      if (store.creatingGood()) return null;
       patchState(store, { creatingGood: true, createError: null });
 
       try {
         const created = await lastValueFrom(svc.createGood(payload));
-        const categoryName =
-          store.categories().find((c) => c.id === created.categoryId)?.name ?? '—';
-        patchState(store, {
-          products: insertByName(store.products(), {
-            id: created.id,
-            name: created.name,
-            unit: created.unit,
-            brand: created.brand,
-            categoryId: created.categoryId,
-            categoryName,
-            totalQty: 0,
-            batchCount: 0,
-            nearestDlc: null,
-            nearestDlcStatus: 'none',
-            expiredBatchCount: 0,
-            soonBatchCount: 0,
-          }),
-        });
-        return true;
+        const product: StockProduct = {
+          id: created.id,
+          name: created.name,
+          unit: created.unit,
+          brand: created.brand,
+          categoryId: created.categoryId,
+          categoryName: store.categories().find((c) => c.id === created.categoryId)?.name ?? '—',
+          totalQty: 0,
+          batchCount: 0,
+          nearestDlc: null,
+          nearestDlcStatus: 'none',
+          expiredBatchCount: 0,
+          soonBatchCount: 0,
+        };
+        patchState(store, { products: insertByName(store.products(), product) });
+        // Rendu à l'appelant : le scanner en a besoin pour rattacher la ligne
+        // qui vient d'être créée, qui sans cela resterait « à créer ».
+        return product;
       } catch (error) {
         patchState(store, { createError: messageOf(error, 'Impossible de créer ce produit.') });
-        return false;
+        return null;
       } finally {
         patchState(store, { creatingGood: false });
       }

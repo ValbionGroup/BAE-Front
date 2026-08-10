@@ -5,6 +5,7 @@ import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { StocksStore } from '#core/store/stocks.store';
 import { GOOD_UNITS, GOOD_UNIT_LABELS, type GoodUnit } from '#core/services/stocks/stocks-service';
+import type { StockProduct } from '#pages/authed/stocks/stocks.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -25,6 +26,9 @@ export class GoodCreateModal {
   readonly id = input.required<string>();
   /** Code lu au scanner, quand la modale est ouverte depuis un produit inconnu. */
   readonly barcode = input<string | null>(null);
+  /** Prévient l'appelant du produit créé — le scanner s'en sert pour rattacher
+   *  la ligne qui l'a demandé. */
+  readonly created = input<((product: StockProduct) => void) | null>(null);
 
   protected readonly units = GOOD_UNITS.map((unit) => ({
     value: unit,
@@ -68,7 +72,7 @@ export class GoodCreateModal {
     this.submitted.set(true);
     if (!this.valid()) return;
 
-    const ok = await this.store.createGood({
+    const product = await this.store.createGood({
       name: this.name().trim(),
       unit: this.unit() as GoodUnit,
       // `''` et non `null` : la colonne est `NOT NULL` côté base.
@@ -77,7 +81,9 @@ export class GoodCreateModal {
       barcode: this.barcode(),
     });
 
-    if (ok) this.modalService.close(this.id());
+    if (!product) return;
+    this.created()?.(product);
+    this.modalService.close(this.id());
   }
 
   protected cancel(): void {

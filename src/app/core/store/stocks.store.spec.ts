@@ -144,7 +144,7 @@ describe(StocksStore.name, () => {
       .flush({ message: 'Unité invalide.' }, { status: 422, statusText: 'Unprocessable' });
     const ok = await created;
 
-    expect(ok).toBe(false);
+    expect(ok).toBeNull();
     expect(store.createError()).toBe('Unité invalide.');
     expect(store.products()).toHaveLength(0);
   });
