@@ -5,14 +5,17 @@ import {
   effect,
   inject,
   signal,
+  TemplateRef,
+  viewChild,
 } from '@angular/core';
 import {
   LucideChefHat,
   LucideDynamicIcon,
-  LucideMoreHorizontal,
   LucidePencil,
+  LucidePlus,
   LucideSearch,
   LucideStar,
+  LucideTrash2,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RecipesStore } from '#core/store/recipes.store';
@@ -20,6 +23,9 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { RecipeEditModal } from '#shared/components/modal/recipe-edit-modal/recipe-edit-modal';
+import { ToastService } from '#shared/components/toast/toast.service';
 import type { RecipeIngredient, RecipeProduct } from './recipes.types';
 
 interface RecetteRow {
@@ -52,14 +58,21 @@ interface RecetteDetail extends RecetteRow {
   imports: [Btn, Badge, Input, Skeleton, LucideDynamicIcon],
   templateUrl: './recettes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est
+  // l'app-shell qui défile, liste et détail d'un seul bloc.
+  host: { class: 'block h-full' },
 })
 export class Recettes {
   protected readonly store = inject(RecipesStore);
+  private readonly modal = inject(ModalService);
+  private readonly toast = inject(ToastService);
+  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   protected readonly icChef = LucideChefHat;
   protected readonly icSearch = LucideSearch;
   protected readonly icEdit = LucidePencil;
-  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icPlus = LucidePlus;
+  protected readonly icTrash = LucideTrash2;
   protected readonly icStar = LucideStar;
 
   protected readonly r5 = Array(5).fill(null);
@@ -106,6 +119,12 @@ export class Recettes {
   private readonly rawIngredients = signal<readonly RecipeIngredient[]>([]);
   private readonly _detailLoading = signal(false);
   private readonly _detailError = signal(false);
+  /**
+   * Force le rechargement des ingrédients après une écriture. Réaffecter
+   * `selectedId` ne suffit pas : éditer la recette déjà sélectionnée y remet la
+   * même valeur, et un signal ne notifie pas sur une valeur identique.
+   */
+  private readonly detailVersion = signal(0);
 
   protected readonly detailLoading = this._detailLoading;
   protected readonly detailError = this._detailError;
@@ -132,6 +151,8 @@ export class Recettes {
       activeNavId: 'recettes',
     });
 
+    // ⚠️ Un seul effect, dans cet ordre : `set()` remet les actions à `null`,
+    // donc un effect séparé effacerait les boutons au premier chargement.
     effect(() => {
       const products = this.store.products();
       pageHeader.set({
@@ -140,10 +161,13 @@ export class Recettes {
         breadcrumb: ['Préparation', 'Recettes'],
         activeNavId: 'recettes',
       });
+      const tpl = this.actionsTpl();
+      if (tpl) pageHeader.setActions(tpl);
     });
 
     effect(() => {
       const id = this.selectedId();
+      this.detailVersion();
       if (id === null) return;
       this.rawIngredients.set([]);
       this._detailLoading.set(true);
@@ -165,6 +189,52 @@ export class Recettes {
 
   protected select(id: number): void {
     this.selectedId.set(id);
+  }
+
+  protected openCreate(): void {
+    this.openEditor(null);
+  }
+
+  protected openEdit(recipeId: number): void {
+    this.openEditor(recipeId);
+  }
+
+  private openEditor(recipeId: number | null): void {
+    this.modal.open({
+      type: 'component',
+      component: RecipeEditModal,
+      inputs: { recipeId, saved: (id: number) => this.onSaved(id) },
+    });
+  }
+
+  /** La liste est rechargée par le store ; le panneau de détail, lui, tient
+   *  ses ingrédients d'un second endpoint qu'il faut redemander. */
+  private onSaved(recipeId: number): void {
+    this.selectedId.set(recipeId);
+    this.detailVersion.update((version) => version + 1);
+  }
+
+  protected confirmDelete(recipeId: number, nom: string): void {
+    this.store.clearDeleteError();
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer la recette',
+      message: `« ${nom} » sera retirée du catalogue.`,
+      details:
+        'Refusé si la recette figure déjà dans une commande, une précommande ou un menu de soirée.',
+      onConfirm: () => void this.deleteRecipe(recipeId, nom),
+    });
+  }
+
+  private async deleteRecipe(recipeId: number, nom: string): Promise<void> {
+    const ok = await this.store.deleteRecipe(recipeId);
+    if (!ok) return;
+    if (this.selectedId() === recipeId) this.selectedId.set(null);
+    this.toast.show({
+      type: 'success',
+      title: 'Recette supprimée',
+      message: `« ${nom} » n'est plus au catalogue.`,
+    });
   }
 
   protected setSearch(q: string): void {

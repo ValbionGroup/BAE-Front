@@ -1,26 +1,69 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Recettes } from './recettes';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+
+const baseUrl = 'http://api.test/v1';
+
+interface PageApi {
+  select(id: number): void;
+  onSaved(recipeId: number): void;
+}
 
 describe(Recettes.name, () => {
-  let component: Recettes;
-  let fixture: ComponentFixture<Recettes>;
+  let http: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Recettes],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: baseUrl },
+      ],
     }).compileComponents();
-
-    fixture = TestBed.createComponent(Recettes);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  afterEach(() => http.verify());
+
+  /**
+   * Le panneau de détail tient ses ingrédients d'un second endpoint, que
+   * `RecipesStore.refresh()` ne touche pas. Éditer la recette déjà sélectionnée
+   * lui réaffecte le même id, et un signal ne notifie pas sur une valeur
+   * identique : sans le compteur de version, l'écran garderait la composition
+   * d'avant l'enregistrement.
+   */
+  it('reloads the ingredients after saving the recipe already on screen', async () => {
+    const fixture = TestBed.createComponent(Recettes);
+    fixture.detectChanges();
+    http.expectOne(`${baseUrl}/products/summary`).flush([
+      {
+        id: 1,
+        name: 'Crêpe',
+        isVegetarian: true,
+        category: 'Dessert',
+        ingredientCount: 1,
+        lastPrice: 3,
+        cost: 1,
+      },
+    ]);
+    await fixture.whenStable();
+
+    const page = fixture.componentInstance as unknown as PageApi;
+    page.select(1);
+    fixture.detectChanges();
+    http.expectOne(`${baseUrl}/products/1/ingredients`).flush([]);
+    await fixture.whenStable();
+
+    page.onSaved(1);
+    fixture.detectChanges();
+
+    http.expectOne(`${baseUrl}/products/1/ingredients`).flush([]);
+    await fixture.whenStable();
   });
 });

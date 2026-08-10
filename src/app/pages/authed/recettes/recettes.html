@@ -1,4 +1,21 @@
+<!-- Topbar actions -->
+<ng-template #actions>
+  <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
+    >Nouvelle recette</bfd-btn
+  >
+</ng-template>
+
 <div class="flex h-full flex-col overflow-hidden">
+  @if (store.deleteError(); as message) {
+    <div
+      role="alert"
+      class="flex items-center gap-3 border-b border-border-s bg-danger-soft px-6 py-2.5 text-[12.5px] text-danger"
+    >
+      <span class="flex-1">{{ message }}</span>
+      <bfd-btn kind="quiet" size="sm" (clicked)="store.clearDeleteError()">Fermer</bfd-btn>
+    </div>
+  }
+
   <!-- Filter bar -->
   <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
     <div class="flex gap-1.5">
@@ -76,6 +93,9 @@
               Créez votre première recette pour la voir apparaître ici.
             </div>
           </div>
+          <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
+            >Nouvelle recette</bfd-btn
+          >
         </div>
       } @else {
         @for (r of recettes(); track r.id) {
@@ -186,8 +206,16 @@
               {{ recipe.usage }} · {{ recipe.ing }} ingrédient{{ recipe.ing !== 1 ? 's' : '' }}
             </div>
           </div>
-          <bfd-btn kind="ghost" size="sm" [icon]="icEdit">Éditer</bfd-btn>
-          <bfd-btn kind="ghost" size="sm" [icon]="icMore"></bfd-btn>
+          <bfd-btn kind="ghost" size="sm" [icon]="icEdit" (clicked)="openEdit(recipe.id)"
+            >Éditer</bfd-btn
+          >
+          <bfd-btn
+            kind="ghost"
+            size="sm"
+            [icon]="icTrash"
+            ariaLabel="Supprimer la recette"
+            (clicked)="confirmDelete(recipe.id, recipe.nom)"
+          />
         </div>
 
         <!-- Cost summary -->
