@@ -97,6 +97,9 @@ jobs:
           path: '**/node_modules'
           key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
+      - name: Create environment
+        run: cp src/environment/environment.example.ts src/environment/environment.ts
+
       - name: Check type checking
         run: pnpm typecheck
 
