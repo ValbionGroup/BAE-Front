@@ -6,6 +6,7 @@ import { Input } from '#shared/components/ui/input/input';
 import { StocksStore } from '#core/store/stocks.store';
 import { GOOD_UNITS, GOOD_UNIT_LABELS, type GoodUnit } from '#core/services/stocks/stocks-service';
 import type { StockProduct } from '#pages/authed/stocks/stocks.types';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -36,6 +37,7 @@ export class GoodCreateModal {
   }));
 
   private readonly modalService = inject(ModalService);
+  private readonly toast = inject(ToastService);
   protected readonly store = inject(StocksStore);
 
   protected readonly icPackage = LucidePackage;
@@ -83,6 +85,11 @@ export class GoodCreateModal {
 
     if (!product) return;
     this.created()?.(product);
+    this.toast.show({
+      type: 'success',
+      title: 'Produit créé',
+      message: `${product.name} est au catalogue, sans stock pour l'instant.`,
+    });
     this.modalService.close(this.id());
   }
 

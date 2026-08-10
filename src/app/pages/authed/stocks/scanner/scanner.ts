@@ -32,6 +32,7 @@ import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { messageOf } from '#shared/utils/api-error';
 import type { StockProduct } from '../stocks.types';
 
@@ -60,6 +61,7 @@ export class StocksScanner {
   private readonly svc = inject(StocksService);
   private readonly store = inject(StocksStore);
   private readonly camera = inject(BarcodeScannerService);
+  private readonly toast = inject(ToastService);
 
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
@@ -220,6 +222,7 @@ export class StocksScanner {
     this.saving.set(true);
     this.saveError.set(null);
 
+    let saved = 0;
     let failed: string | null = null;
     for (const line of this.ready()) {
       try {
@@ -231,12 +234,22 @@ export class StocksScanner {
           }),
         );
         this.remove(line.barcode);
+        saved += 1;
       } catch (error) {
         failed = messageOf(error, "Certains lots n'ont pas pu être enregistrés.");
       }
     }
 
     this.saveError.set(failed);
+    this.toast.show(
+      failed
+        ? { type: 'error', title: 'Enregistrement incomplet', message: failed }
+        : {
+            type: 'success',
+            title: `${saved} lot${saved > 1 ? 's' : ''} enregistré${saved > 1 ? 's' : ''}`,
+            message: 'Les quantités sont à jour dans les stocks.',
+          },
+    );
     this.saving.set(false);
     // Sans ce rafraîchissement, le tableau derrière garde les quantités d'avant.
     if (failed === null) await this.store.refresh();

@@ -8,6 +8,7 @@ import { vi } from 'vitest';
 import { StocksScanner } from './scanner';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 import { ModalService } from '#shared/components/modal/modal.service';
+import { ToastService } from '#shared/components/toast/toast.service';
 
 const baseUrl = 'http://api.test/v1';
 
@@ -153,6 +154,53 @@ describe(StocksScanner.name, () => {
 
     // La ligne enregistrée disparaît : revalider ne doit pas la créer deux fois.
     expect(scanner.lines()).toHaveLength(0);
+  });
+
+  it('confirms the save with a toast', async () => {
+    const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const scanned = scanner.onBarcode('3268754117904');
+    flushLookup('3268754117904', {
+      id: 7,
+      name: 'Moutarde',
+      unit: 'pcs',
+      brand: '',
+      categoryId: 2,
+    });
+    await scanned;
+
+    const validated = scanner.validate();
+    http.expectOne(`${baseUrl}/stock-batches`).flush({ id: 1 });
+    await tick();
+    http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    await validated;
+
+    expect(shown).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', title: '1 lot enregistré' }),
+    );
+  });
+
+  it('says so in a toast when a batch is refused', async () => {
+    const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const scanned = scanner.onBarcode('3268754117904');
+    flushLookup('3268754117904', {
+      id: 7,
+      name: 'Moutarde',
+      unit: 'pcs',
+      brand: '',
+      categoryId: 2,
+    });
+    await scanned;
+
+    const validated = scanner.validate();
+    http
+      .expectOne(`${baseUrl}/stock-batches`)
+      .flush({ message: 'Quantité invalide.' }, { status: 422, statusText: 'x' });
+    await validated;
+
+    expect(shown).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'error', message: 'Quantité invalide.' }),
+    );
   });
 
   it('attaches a freshly created product to the line that asked for it', async () => {
