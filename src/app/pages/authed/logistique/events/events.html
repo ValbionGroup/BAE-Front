@@ -81,7 +81,8 @@
             <div class="text-right">
               <div
                 [class]="
-                  'mono tnum text-[16px] font-semibold ' + (total !== null ? 'text-text' : 'text-muted')
+                  'mono tnum text-[16px] font-semibold ' +
+                  (total !== null ? 'text-text' : 'text-muted')
                 "
               >
                 {{ total !== null ? formatPriceInt(total) + ' €' : '—' }}
@@ -93,7 +94,7 @@
               [kind]="menu.length ? 'secondary' : 'primary'"
               size="sm"
               [icon]="menu.length ? icEdit : icPlus"
-              (clicked)="openAssign(event.id)"
+              (clicked)="openRecipePicker(event, $event)"
             >
               {{ menu.length ? 'Gérer recettes' : 'Assigner recettes' }}
             </bfd-btn>
@@ -139,58 +140,64 @@
             <span></span>
           </div>
 
-          @for (line of menu; track line.productId) {
-            <div
-              class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
-            >
-              <span
-                class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-surface-3 text-text-2"
-              >
-                <svg [lucideIcon]="icChef" [size]="12" aria-hidden="true"></svg>
-              </span>
-              <span class="font-medium text-text">{{ line.name }}</span>
-
+          <!-- Les lignes de recettes défilent ici, pas la carte entière :
+               l'en-tête de la soirée (date, état, coût, actions) et le pied
+               (« Ajouter une recette », « Générer liste de courses ») doivent
+               rester atteignables sans défiler, y compris sur un menu long. -->
+          <div class="max-h-[19rem] overflow-y-auto">
+            @for (line of menu; track line.productId) {
               <div
-                class="inline-flex items-center gap-px justify-self-end rounded-md border border-border bg-surface-2 p-0.5"
+                class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
               >
-                <button
-                  type="button"
-                  (click)="step(event.id, line, -1)"
-                  class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center border-none bg-transparent font-sans text-muted hover:text-text"
-                  [attr.aria-label]="'Diminuer ' + line.name"
+                <span
+                  class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-surface-3 text-text-2"
                 >
-                  −
-                </button>
-                <span class="tnum w-9 text-center text-[12px] text-text">
-                  {{ quantityOf(event.id, line) }}
+                  <svg [lucideIcon]="icChef" [size]="12" aria-hidden="true"></svg>
                 </span>
+                <span class="font-medium text-text">{{ line.name }}</span>
+
+                <div
+                  class="inline-flex items-center gap-px justify-self-end rounded-md border border-border bg-surface-2 p-0.5"
+                >
+                  <button
+                    type="button"
+                    (click)="step(event.id, line, -1)"
+                    class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center border-none bg-transparent font-sans text-muted hover:text-text"
+                    [attr.aria-label]="'Diminuer ' + line.name"
+                  >
+                    −
+                  </button>
+                  <span class="tnum w-9 text-center text-[12px] text-text">
+                    {{ quantityOf(event.id, line) }}
+                  </span>
+                  <button
+                    type="button"
+                    (click)="step(event.id, line, 1)"
+                    class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-sm border-none bg-blue font-sans text-white hover:bg-blue-deep"
+                    [attr.aria-label]="'Augmenter ' + line.name"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <span class="mono tnum text-right text-muted">
+                  {{ formatPriceOrDash(line.unitCost) }}
+                </span>
+                <span class="mono tnum text-right font-semibold text-text">
+                  {{ formatPriceOrDash(line.totalCost) }}
+                </span>
+
                 <button
                   type="button"
-                  (click)="step(event.id, line, 1)"
-                  class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-sm border-none bg-blue font-sans text-white hover:bg-blue-deep"
-                  [attr.aria-label]="'Augmenter ' + line.name"
+                  (click)="openLineMenu(event, line, $event)"
+                  class="inline-flex h-6 w-6 cursor-pointer items-center justify-center justify-self-end rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
+                  [attr.aria-label]="'Options pour ' + line.name"
                 >
-                  +
+                  <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
                 </button>
               </div>
-
-              <span class="mono tnum text-right text-muted">
-                {{ formatPriceOrDash(line.unitCost) }}
-              </span>
-              <span class="mono tnum text-right font-semibold text-text">
-                {{ formatPriceOrDash(line.totalCost) }}
-              </span>
-
-              <button
-                type="button"
-                (click)="openLineMenu(event, line, $event)"
-                class="inline-flex h-6 w-6 cursor-pointer items-center justify-center justify-self-end rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
-                [attr.aria-label]="'Options pour ' + line.name"
-              >
-                <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
-              </button>
-            </div>
-          }
+            }
+          </div>
 
           <!-- Footer -->
           <footer

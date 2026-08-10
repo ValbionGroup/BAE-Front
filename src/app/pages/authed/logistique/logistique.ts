@@ -100,6 +100,10 @@ function buildGoodRow(line: ApiShoppingLine, columns: readonly SupplierColumn[])
   imports: [Badge, Btn, Skeleton, LucideDynamicIcon],
   templateUrl: './logistique.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Voir le commentaire équivalent sur `LogistiqueEvents` : sans hauteur sur
+  // l'hôte, aucun `h-full` du gabarit ne résout et le défilement remonte à
+  // l'app-shell.
+  host: { class: 'block h-full' },
 })
 export class Logistique implements OnInit {
   private readonly store = inject(LogistiqueStore);

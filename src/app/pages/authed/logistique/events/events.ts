@@ -29,8 +29,6 @@ import { EventsStore } from '#core/store/events.store';
 import { RecipesStore } from '#core/store/recipes.store';
 import { EventDetail, MenuItem } from '#core/models/event.model';
 import type { RecipeProduct } from '#pages/authed/recettes/recipes.types';
-import { ModalService } from '#shared/components/modal/modal.service';
-import { LogistiqueAssignModal } from '#shared/components/modal/logistique-assign-modal/logistique-assign-modal';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
@@ -73,13 +71,18 @@ const WEEKDAY_FR: readonly string[] = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', '
   imports: [Btn, Badge, Input, LucideDynamicIcon],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien : un
+  // composant Angular est un élément inline sans dimension propre. La page
+  // s'étirait donc à la hauteur de son contenu, son `overflow-y-auto` ne se
+  // déclenchait jamais, et c'est le conteneur de l'app-shell qui défilait — en
+  // écrasant les cartes pour les faire tenir. Même correctif qu'au lot Stocks.
+  host: { class: 'block h-full' },
 })
 export class LogistiqueEvents implements OnInit, OnDestroy {
   private readonly store = inject(EventsStore);
   private readonly recipes = inject(RecipesStore);
   private readonly dropdown = inject(DropdownService);
   private readonly pageHeader = inject(PageHeaderService);
-  private readonly modals = inject(ModalService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
@@ -252,18 +255,6 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
    */
   protected openCourses(eventId: string): void {
     void this.router.navigate(['/logistique', eventId]);
-  }
-
-  protected openAssign(eventId: string): void {
-    const event = this.store.getEventById(eventId);
-    const label = event
-      ? `${event.name.toUpperCase()} · ${this.dayOf(event)}/${this.monthOf(event)}`
-      : 'SOIRÉE';
-    this.modals.open({
-      type: 'component',
-      component: LogistiqueAssignModal,
-      inputs: { eventLabel: label },
-    });
   }
 
   protected openRecipePicker(event: EventDetail, ev: MouseEvent): void {
