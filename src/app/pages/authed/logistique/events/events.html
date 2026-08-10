@@ -1,10 +1,3 @@
-<!-- Topbar actions -->
-<ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icCalendar">Vue calendrier</bfd-btn>
-  <bfd-btn kind="ghost" size="md" [icon]="icFilter">Filtres</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus">Planifier une soirée</bfd-btn>
-</ng-template>
-
 <div class="flex h-full flex-col overflow-hidden">
   <!-- Segment tabs + search -->
   <div class="flex items-center gap-1.5 border-b border-border-s px-6 py-3">
@@ -67,7 +60,7 @@
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <h3 class="m-0 truncate text-[16px] font-semibold -tracking-[0.2px] text-text">
+              <h3 class="m-0 truncate text-[16px] font-semibold tracking-[-0.2px] text-text">
                 {{ event.name }}
               </h3>
               <bfd-badge [kind]="badge.kind" [dot]="true">{{ badge.label }}</bfd-badge>
@@ -103,16 +96,6 @@
             >
               {{ menu.length ? 'Gérer recettes' : 'Assigner recettes' }}
             </bfd-btn>
-            <span [attr.data-testid]="'open-courses-' + event.id">
-              <bfd-btn
-                kind="ghost"
-                size="sm"
-                [iconRight]="icArrowRight"
-                (clicked)="openCourses(event.id)"
-              >
-                Liste de courses
-              </bfd-btn>
-            </span>
             <bfd-btn kind="ghost" size="sm" [icon]="icMore" />
           </div>
         </header>
@@ -123,14 +106,6 @@
             <div class="mb-2.5 text-[12.5px] text-muted">
               Aucune recette assignée pour cette soirée.
             </div>
-            <bfd-btn
-              kind="outline"
-              size="sm"
-              [icon]="icPlus"
-              (clicked)="openRecipePicker(event, $event)"
-            >
-              Ajouter une recette
-            </bfd-btn>
           </div>
         } @else {
           <!-- Recipe table header -->
@@ -149,7 +124,7 @@
                l'en-tête de la soirée (date, état, coût, actions) et le pied
                (« Ajouter une recette », « Générer liste de courses ») doivent
                rester atteignables sans défiler, y compris sur un menu long. -->
-          <div class="max-h-[19rem] overflow-y-auto">
+          <div class="max-h-76 overflow-y-auto">
             @for (line of menu; track line.productId) {
               <div
                 class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
@@ -167,7 +142,7 @@
                   <button
                     type="button"
                     (click)="step(event.id, line, -1)"
-                    class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center border-none bg-transparent font-sans text-muted hover:text-text"
+                    class="inline-flex h-5.5 w-5.5 cursor-pointer items-center justify-center border-none bg-transparent font-sans text-muted hover:text-text"
                     [attr.aria-label]="'Diminuer ' + line.name"
                   >
                     −
@@ -178,7 +153,7 @@
                   <button
                     type="button"
                     (click)="step(event.id, line, 1)"
-                    class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-sm border-none bg-blue font-sans text-white hover:bg-blue-deep"
+                    class="inline-flex h-5.5 w-5.5 cursor-pointer items-center justify-center rounded-sm border-none bg-blue font-sans text-white hover:bg-blue-deep"
                     [attr.aria-label]="'Augmenter ' + line.name"
                   >
                     +
@@ -209,14 +184,6 @@
             class="flex items-center gap-2 border-t border-border-s bg-surface-2 px-4 py-3 text-[12px] text-text-2"
           >
             <div class="flex-1"></div>
-            <bfd-btn
-              kind="ghost"
-              size="sm"
-              [icon]="icPlus"
-              (clicked)="openRecipePicker(event, $event)"
-            >
-              Ajouter une recette
-            </bfd-btn>
             <bfd-btn kind="ghost" size="sm" [icon]="icDownload">Fiche logistique</bfd-btn>
             @if (state !== 'past') {
               <bfd-btn

@@ -16,7 +16,11 @@ import {
   LucideChefHat,
   LucideDownload,
   LucideDynamicIcon,
+  LucideEllipse,
+  LucideEllipsis,
   LucideFilter,
+  LucideFunctionSquare,
+  LucideFunnel,
   LucideMoreHorizontal,
   LucidePencil,
   LucidePlus,
@@ -73,11 +77,6 @@ const WEEKDAY_FR: readonly string[] = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', '
   imports: [Btn, Badge, Input, LucideDynamicIcon],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien : un
-  // composant Angular est un élément inline sans dimension propre. La page
-  // s'étirait donc à la hauteur de son contenu, son `overflow-y-auto` ne se
-  // déclenchait jamais, et c'est le conteneur de l'app-shell qui défilait — en
-  // écrasant les cartes pour les faire tenir. Même correctif qu'au lot Stocks.
   host: { class: 'block h-full' },
 })
 export class LogistiqueEvents implements OnInit, OnDestroy {
@@ -96,9 +95,6 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
   }
 
   constructor() {
-    // `set()` remet les actions à `null` : les deux appels doivent vivre dans
-    // le MÊME effect, dans cet ordre, sinon la topbar se vide au premier
-    // chargement sans erreur nulle part.
     effect(() => {
       this.pageHeader.set({
         title: 'Logistique',
@@ -110,9 +106,6 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
       if (tpl) this.pageHeader.setActions(tpl);
     });
 
-    // Charge le menu de chaque soirée dès que la liste arrive. Un menu par
-    // soirée est une requête de plus, mais la carte affiche ses recettes sans
-    // qu'on la déplie : les charger à la demande ferait clignoter la page.
     effect(() => {
       for (const event of this.store.allEvents()) {
         if (event.menuStatus === 'init') void this.store.loadEventMenu(event.id);
@@ -121,20 +114,18 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Un minuteur qui se déclenche après la navigation écrirait sur une page
-    // qu'on ne regarde plus.
     for (const timer of this.pendingTimers.values()) clearTimeout(timer);
     this.pendingTimers.clear();
   }
 
   protected readonly icPlus = LucidePlus;
   protected readonly icEdit = LucidePencil;
-  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icMore = LucideEllipsis;
   protected readonly icTrash = LucideTrash2;
   protected readonly icChef = LucideChefHat;
   protected readonly icArrowRight = LucideArrowRight;
   protected readonly icCalendar = LucideCalendar;
-  protected readonly icFilter = LucideFilter;
+  protected readonly icFilter = LucideFunnel;
   protected readonly icSearch = LucideSearch;
   protected readonly icDownload = LucideDownload;
 
@@ -276,32 +267,6 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
         eventId: event.id,
         eventLabel: `${event.name.toUpperCase()} · ${this.dayOf(event)}/${this.monthOf(event)}`,
       },
-    });
-  }
-
-  protected openRecipePicker(event: EventDetail, ev: MouseEvent): void {
-    ev.stopPropagation();
-    const anchor = this.resolveAnchor(ev.currentTarget);
-    if (!anchor) return;
-
-    const available = this.availableRecipes(this.recipes.products(), event.menu ?? []);
-
-    const items: readonly DropdownItem[] = available.map((recipe) => ({
-      type: 'action',
-      icon: this.icChef,
-      label: recipe.name,
-      description: recipe.category ?? undefined,
-      trailing: recipe.cost !== null ? `${this.formatPrice(recipe.cost)} €` : '—',
-      onClick: () => void this.addRecipe(event, recipe),
-    }));
-
-    this.dropdown.toggle({
-      anchor,
-      placement: 'bottom-end',
-      width: 320,
-      header: `Recettes disponibles (${available.length})`,
-      emptyLabel: 'Toutes les recettes sont déjà ajoutées.',
-      items,
     });
   }
 
