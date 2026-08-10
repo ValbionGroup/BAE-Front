@@ -28,31 +28,33 @@
   <!-- KPI row -->
   <div class="mb-4 grid grid-cols-4 gap-3">
     <div class="rounded-md border border-border-s bg-surface p-3.5">
-      <div class="mb-1 text-[11px] text-muted">Articles sélectionnés</div>
-      @if (loading() === 'init' || loading() === 'loading') {
+      <div class="mb-1 text-[11px] text-muted">Articles à acheter</div>
+      @if (shoppingListLoading() === 'init' || shoppingListLoading() === 'loading') {
         <bfd-skeleton width="60px" height="19px" rounded="md" />
       } @else {
-        <div class="mono tnum text-[19px] font-semibold text-text">
-          {{ selectedRows().length }} / {{ rows().length }}
+        <div data-testid="kpi-line-count" class="mono tnum text-[19px] font-semibold text-text">
+          {{ lineCountLabel() }}
         </div>
       }
     </div>
     <div class="rounded-md border border-border-s bg-surface p-3.5">
       <div class="mb-1 text-[11px] text-muted">Coût estimé (optimum)</div>
-      @if (loading() === 'init' || loading() === 'loading') {
+      @if (shoppingListLoading() === 'init' || shoppingListLoading() === 'loading') {
         <bfd-skeleton width="80px" height="19px" rounded="md" />
       } @else {
-        <div class="mono tnum text-[19px] font-semibold text-text">
-          {{ formatPrice(optimumTotal()) }} €
+        <div data-testid="kpi-optimum" class="mono tnum text-[19px] font-semibold text-text">
+          {{ optimumTotalLabel() }}
         </div>
       }
     </div>
     <div class="rounded-md border border-border-s bg-surface p-3.5">
       <div class="mb-1 text-[11px] text-muted">Économie multi-enseigne</div>
-      @if (loading() === 'init' || loading() === 'loading') {
+      @if (shoppingListLoading() === 'init' || shoppingListLoading() === 'loading') {
         <bfd-skeleton width="80px" height="19px" rounded="md" />
       } @else {
-        <div class="mono tnum text-[19px] font-semibold text-ok">{{ savingLabel() }}</div>
+        <div data-testid="kpi-savings" class="mono tnum text-[19px] font-semibold text-ok">
+          {{ savingsKpiLabel() }}
+        </div>
       }
     </div>
     <div class="rounded-md border border-border-s bg-surface p-3.5">
@@ -67,27 +69,51 @@
     </div>
   </div>
 
-  <!-- Cart table -->
+  <!-- Des lignes sans prix connu contribuent 0 à l'optimum : le taire ferait
+       passer un total incomplet pour un total. -->
+  @if (!shoppingListUnavailable() && unpricedCount() > 0) {
+    <div
+      data-testid="unpriced-banner"
+      role="status"
+      class="mb-4 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12px] text-warn"
+    >
+      {{ unpricedCount() }} article{{ unpricedCount() > 1 ? 's' : '' }} sans prix connu — non compris
+      dans le coût estimé.
+    </div>
+  }
+
+  <!-- Liste de courses -->
   <div class="mono mb-2 text-[10px] tracking-wider text-muted">
-    LISTE DE COURSES · COMPARATIF ENSEIGNE
+    LISTE DE COURSES
+    @if (shoppingList(); as list) {
+      · {{ list.eventName }}
+    }
   </div>
 
-  @if (loadError()) {
+  @if (shoppingListForbidden()) {
+    <div
+      data-testid="shopping-list-forbidden"
+      role="status"
+      class="rounded-md border border-dashed border-border bg-surface px-6 py-10 text-center text-[12.5px] text-muted"
+    >
+      <svg [lucideIcon]="icLock" [size]="14" class="mx-auto mb-2 block" aria-hidden="true"></svg>
+      Accès restreint — la liste de courses est réservée aux membres habilités à consulter le stock.
+    </div>
+  } @else if (shoppingListLoadError(); as message) {
     <div
       class="rounded-md border border-border-s bg-surface px-6 py-10 text-center"
       role="alert"
       aria-live="polite"
     >
-      <p class="m-0 text-[12.5px] text-danger">{{ loadError() }}</p>
+      <p class="m-0 text-[12.5px] text-danger">{{ message }}</p>
       <div class="mt-3 flex justify-center">
-        <bfd-btn kind="secondary" size="sm" (clicked)="retry()">Réessayer</bfd-btn>
+        <bfd-btn kind="secondary" size="sm" (clicked)="retryShoppingList()">Réessayer</bfd-btn>
       </div>
     </div>
-  } @else if (loading() === 'init' || loading() === 'loading') {
+  } @else if (shoppingListLoading() === 'init' || shoppingListLoading() === 'loading') {
     <div class="overflow-hidden rounded-md border border-border-s bg-surface">
       @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
         <div class="flex items-center gap-3 border-b border-border-s px-3.5 py-3 last:border-b-0">
-          <bfd-skeleton width="14px" height="14px" />
           <bfd-skeleton width="30%" height="12px" />
           <bfd-skeleton width="60px" height="12px" />
           <bfd-skeleton width="70px" height="12px" />
@@ -95,114 +121,151 @@
         </div>
       }
     </div>
-  } @else if (rows().length === 0) {
+  } @else if (goodRows().length === 0 && furnitureRows().length === 0) {
     <div class="rounded-md border border-border-s bg-surface px-6 py-10 text-center">
       <p class="m-0 text-[12.5px] text-muted">
-        Aucun article au catalogue. Ajoutez des produits pour construire une liste de courses.
+        Rien à acheter : le stock couvre déjà tout le menu de cette soirée.
       </p>
     </div>
   } @else {
-    <div class="overflow-hidden rounded-md border border-border-s bg-surface">
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse text-[12.5px]">
-          <caption class="sr-only">
-            Liste de courses : prix par enseigne pour chaque article, avec l'enseigne la moins chère
-            mise en avant. Un tiret indique que l'enseigne ne référence pas l'article.
-          </caption>
-          <thead>
-            <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
-              <th scope="col" class="w-8 px-3.5 py-2.5">
-                <bfd-checkbox
-                  [checked]="allSelected()"
-                  ariaLabel="Sélectionner tous les articles"
-                  (change)="toggleAll($event)"
-                />
-              </th>
-              <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">
-                Produit
-              </th>
-              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Unité</th>
-              @for (column of columns(); track column.id) {
-                <th scope="col" class="min-w-[110px] px-3.5 py-2.5 text-right font-semibold">
-                  {{ column.name }}
+    <!-- Denrées : seule catégorie qui a des enseignes à comparer. -->
+    @if (goodRows().length > 0) {
+      <div data-testid="section-goods" class="mb-6 overflow-hidden rounded-md border border-border-s bg-surface">
+        <div
+          class="mono border-b border-border-s bg-surface-2 px-3.5 py-2 text-[10px] tracking-wider text-muted"
+        >
+          DENRÉES
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-[12.5px]">
+            <caption class="sr-only">
+              Denrées manquantes pour la soirée, prix par enseigne, avec l'enseigne la moins chère mise
+              en avant. Un tiret indique que l'enseigne ne référence pas l'article.
+            </caption>
+            <thead>
+              <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
+                <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">
+                  Produit
                 </th>
-              }
-              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Optimum</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of rows(); track row.id) {
-              <tr class="border-t border-border-s">
-                <td class="px-3.5 py-2.5">
-                  <bfd-checkbox
-                    [checked]="isSelected(row.id)"
-                    [ariaLabel]="'Sélectionner ' + row.name"
-                    (change)="toggleRow(row.id, $event)"
-                  />
-                </td>
-                <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
-                  {{ row.name }}
-                  @if (row.brand) {
-                    <span class="text-muted"> · {{ row.brand }}</span>
+                <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
+                @for (column of retailerColumns(); track column.id) {
+                  <th scope="col" class="min-w-[110px] px-3.5 py-2.5 text-right font-semibold">
+                    {{ column.name }}
+                  </th>
+                }
+                <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Optimum</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of goodRows(); track row.id) {
+                <tr class="border-t border-border-s">
+                  <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
+                    {{ row.name }}
+                    @if (row.brand) {
+                      <span class="text-muted"> · {{ row.brand }}</span>
+                    }
+                  </th>
+                  <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
+                    {{ row.missingQty }} {{ row.unit }}
+                  </td>
+                  @for (cell of row.cells; track cell.supplierId) {
+                    <td [class]="'mono tnum px-3.5 py-2.5 text-right ' + cellClass(cell)">
+                      @if (cell.price === null) {
+                        <span aria-label="Non référencé">—</span>
+                      } @else {
+                        {{ formatPrice(cell.price) }} €
+                      }
+                    </td>
                   }
-                </th>
-                <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">{{ row.unit }}</td>
-                @for (cell of row.cells; track cell.supplierId) {
-                  <td [class]="'mono tnum px-3.5 py-2.5 text-right ' + cellClass(cell)">
-                    @if (cell.price === null) {
-                      <span aria-label="Non référencé">—</span>
+                  <td class="px-3.5 py-2.5 text-right">
+                    @if (row.bestSupplierName) {
+                      <bfd-badge kind="ok">{{ row.bestSupplierName }}</bfd-badge>
                     } @else {
-                      {{ formatPrice(cell.price) }} €
+                      <span class="text-[11px] text-muted">Aucun tarif</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="border-t-2 border-border bg-surface-2">
+                <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
+                  Total enseigne
+                </th>
+                <td class="px-3.5 py-3"></td>
+                @for (total of supplierTotals(); track total.id) {
+                  <td [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)">
+                    {{ formatPrice(total.total) }} €
+                    @if (!isComparable(total)) {
+                      <span class="text-[10px]" aria-hidden="true">*</span>
+                    }
+                    @if (totalHint(total); as hint) {
+                      <span class="sr-only">{{ hint }}</span>
                     }
                   </td>
                 }
-                <td class="px-3.5 py-2.5 text-right">
-                  @if (row.bestSupplierName) {
-                    <bfd-badge kind="ok">{{ row.bestSupplierName }}</bfd-badge>
+                <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
+                  {{ optimumTotalLabel() }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        @if (!hasSuppliers()) {
+          <p class="m-0 border-t border-border-s px-3.5 py-2.5 text-[11px] text-muted">
+            Aucun tarif fournisseur enregistré pour ces denrées.
+          </p>
+        }
+      </div>
+    }
+
+    <!-- Non-alimentaire : `furnitures` n'a aucune relation fournisseur, donc
+         aucune colonne d'enseigne — un prix propre par ligne, c'est tout. -->
+    @if (furnitureRows().length > 0) {
+      <div data-testid="section-furniture" class="overflow-hidden rounded-md border border-border-s bg-surface">
+        <div
+          class="mono border-b border-border-s bg-surface-2 px-3.5 py-2 text-[10px] tracking-wider text-muted"
+        >
+          NON-ALIMENTAIRE
+        </div>
+        <table class="w-full border-collapse text-[12.5px]">
+          <caption class="sr-only">
+            Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes : ces
+            articles n'ont aucun fournisseur rattaché.
+          </caption>
+          <thead>
+            <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
+              <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">Produit</th>
+              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
+              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Prix</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of furnitureRows(); track line.id) {
+              <tr class="border-t border-border-s">
+                <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
+                  {{ line.name }}
+                  @if (line.brand) {
+                    <span class="text-muted"> · {{ line.brand }}</span>
+                  }
+                </th>
+                <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
+                  {{ line.missingQty }} {{ line.unit }}
+                </td>
+                <td class="mono tnum px-3.5 py-2.5 text-right text-text">
+                  @if (line.bestPrice === null) {
+                    <span aria-label="Prix inconnu">—</span>
                   } @else {
-                    <span class="text-[11px] text-muted">Aucun tarif</span>
+                    {{ formatPrice(line.bestPrice) }} €
                   }
                 </td>
               </tr>
             }
           </tbody>
-          <tfoot>
-            <tr class="border-t-2 border-border bg-surface-2">
-              <td class="px-3.5 py-3"></td>
-              <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
-                Total enseigne
-              </th>
-              <td class="px-3.5 py-3"></td>
-              @for (total of supplierTotals(); track total.supplierId) {
-                <td [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)">
-                  @if (total.total === null) {
-                    <span>—</span>
-                  } @else {
-                    {{ formatPrice(total.total) }} €
-                    @if (!total.fullCoverage) {
-                      <span class="text-[10px]" aria-hidden="true">*</span>
-                    }
-                  }
-                  @if (totalHint(total); as hint) {
-                    <span class="sr-only">{{ hint }}</span>
-                  }
-                </td>
-              }
-              <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
-                {{ formatPrice(optimumTotal()) }} €
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
-
-      @if (!hasSuppliers()) {
-        <p class="m-0 border-t border-border-s px-3.5 py-2.5 text-[11px] text-muted">
-          Aucun tarif fournisseur enregistré : le comparatif s'affichera dès qu'une enseigne
-          référencera un article.
-        </p>
-      }
-    </div>
+    }
   }
 
   <!-- Bons d'achat. L'ajout vit dans la topbar (gabarit `#actions`), comme dans

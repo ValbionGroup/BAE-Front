@@ -6,6 +6,7 @@ import type { LoadingStatus } from '#core/models/global.model';
 import { messageOf, settle } from '#shared/utils/api-error';
 import type {
   ApiGood,
+  ApiShoppingList,
   ApiSupplier,
   ApiVoucher,
   CreateVoucherPayload,
@@ -79,6 +80,35 @@ interface LogistiqueState {
    *  précédente : un refus de création ne doit pas s'afficher sur une carte. */
   creatingVoucher: boolean;
   createError: string | null;
+  /**
+   * Compteur de génération de `fetch()` (catalogue + bons + enseignes).
+   *
+   * Ferme la course laissée ouverte entre `load()` et `refresh()` : sans lui,
+   * un double clic sur « Réessayer » pourrait laisser la réponse du premier
+   * appel écraser celle, plus fraîche, du second si elle revient après.
+   *
+   * Volontairement distinct de `shoppingListGeneration` : ce sont deux
+   * chargements indépendants qui partent ensemble depuis `ngOnInit`, et les
+   * faire concourir sur un seul compteur ferait que démarrer l'un invalide
+   * systématiquement l'autre, encore en vol, comme périmé à tort.
+   */
+  fetchGeneration: number;
+  /** Liste de courses de la soirée courante, `null` avant tout chargement. */
+  shoppingList: ApiShoppingList | null;
+  shoppingListEventId: string | null;
+  shoppingListLoading: LoadingStatus;
+  /** Vrai quand l'API a refusé la liste (403) : une règle, pas un incident. */
+  shoppingListForbidden: boolean;
+  shoppingListLoadError: string | null;
+  /**
+   * Compteur de génération de `loadShoppingList()`. Chaque chargement prend un
+   * numéro et n'écrit son résultat que s'il est encore le plus récent.
+   *
+   * Sans lui, la réponse tardive d'une soirée quittée écrase celle de la
+   * soirée affichée — et la page montre la liste d'une autre soirée que celle
+   * demandée.
+   */
+  shoppingListGeneration: number;
 }
 
 const initialState: LogistiqueState = {
@@ -94,6 +124,13 @@ const initialState: LogistiqueState = {
   voucherErrorId: null,
   creatingVoucher: false,
   createError: null,
+  fetchGeneration: 0,
+  shoppingList: null,
+  shoppingListEventId: null,
+  shoppingListLoading: 'init',
+  shoppingListForbidden: false,
+  shoppingListLoadError: null,
+  shoppingListGeneration: 0,
 };
 
 export const LogistiqueStore = signalStore(
@@ -105,13 +142,16 @@ export const LogistiqueStore = signalStore(
      * `refresh()` calls it directly so an explicit reload always hits the API.
      */
     async function fetch(status: LoadingStatus): Promise<void> {
-      patchState(store, { loading: status, loadError: null });
+      const generation = store.fetchGeneration() + 1;
+      patchState(store, { fetchGeneration: generation, loading: status, loadError: null });
       try {
         // Seule la branche des bons est isolée : si le catalogue tombe, il ne
         // reste aucune page à montrer et `loadError` est la bonne réponse.
         const [goods, vouchers, suppliers] = await lastValueFrom(
           forkJoin([svc.getGoods(), settle(svc.getVouchers()), svc.getSuppliers()]),
         );
+        // Un appel dépassé (double `refresh()`) est jeté, pas appliqué.
+        if (store.fetchGeneration() !== generation) return;
         const forbidden = !vouchers.ok && vouchers.status === 403;
         patchState(store, {
           loading: 'loaded',
@@ -123,6 +163,7 @@ export const LogistiqueStore = signalStore(
             vouchers.ok || forbidden ? null : "Impossible de charger les bons d'achat.",
         });
       } catch {
+        if (store.fetchGeneration() !== generation) return;
         patchState(store, {
           loading: 'error',
           loadError: 'Impossible de charger la logistique.',
@@ -225,6 +266,47 @@ export const LogistiqueStore = signalStore(
             savingVoucherIds: store.savingVoucherIds().filter((entry) => entry !== id),
           });
         }
+      },
+
+      /**
+       * Charge la liste de courses calculée par le back pour une soirée.
+       *
+       * Isolée via `settle()`, indépendamment du `fetch()` catalogue/bons : un
+       * membre sans `stock:read` peut lire le menu et voir la page, mais se
+       * voit refuser cette seule branche. Un 403 est donc une règle
+       * (`shoppingListForbidden`), pas une panne (`shoppingListLoadError`).
+       */
+      async loadShoppingList(eventId: string): Promise<void> {
+        const generation = store.shoppingListGeneration() + 1;
+        patchState(store, {
+          shoppingListGeneration: generation,
+          shoppingListLoading: 'loading',
+          shoppingListForbidden: false,
+          shoppingListLoadError: null,
+        });
+
+        const result = await lastValueFrom(settle(svc.getShoppingList(eventId)));
+
+        // Une réponse d'une génération dépassée est jetée, pas appliquée.
+        if (store.shoppingListGeneration() !== generation) return;
+
+        if (result.ok) {
+          patchState(store, {
+            shoppingList: result.value,
+            shoppingListEventId: eventId,
+            shoppingListLoading: 'loaded',
+          });
+          return;
+        }
+
+        patchState(store, {
+          shoppingList: null,
+          shoppingListEventId: eventId,
+          shoppingListLoading: result.status === 403 ? 'loaded' : 'error',
+          shoppingListForbidden: result.status === 403,
+          shoppingListLoadError:
+            result.status === 403 ? null : 'Impossible de générer la liste de courses.',
+        });
       },
     };
   }),

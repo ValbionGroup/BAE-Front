@@ -7,9 +7,9 @@ import {
   computed,
   effect,
   inject,
-  signal,
   viewChild,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import {
   LucideDynamicIcon,
   LucideLock,
@@ -20,26 +20,41 @@ import {
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { LogistiqueStore } from '#core/store/logistique.store';
 import { Badge } from '#shared/components/ui/badge/badge';
-import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import type {
-  ApiGood,
+  ApiShoppingLine,
+  ApiShoppingSupplierTotal,
   CartCell,
-  CartRow,
   SupplierColumn,
-  SupplierTotal,
   VoucherCard,
 } from './logistique.types';
 
-/** Builds the dynamic retailer column set from the suppliers present in the data. */
-function buildColumns(goods: readonly ApiGood[]): SupplierColumn[] {
+/** Une ligne « denrée » prête pour le tableau à colonnes d'enseignes. */
+interface GoodRow {
+  readonly id: number;
+  readonly name: string;
+  readonly unit: string | null;
+  readonly brand: string | null;
+  readonly categoryName: string | null;
+  readonly missingQty: number;
+  readonly cells: readonly CartCell[];
+  readonly bestSupplierName: string | null;
+  readonly bestPrice: number | null;
+}
+
+/**
+ * Colonnes d'enseignes dérivées des seules lignes « denrée » : le
+ * non-alimentaire n'a aucune relation fournisseur (`furnitures` ne pointe vers
+ * aucune enseigne) et ne peut donc pas peupler ce jeu de colonnes.
+ */
+function buildRetailerColumns(lines: readonly ApiShoppingLine[]): SupplierColumn[] {
   const coverage = new Map<number, { name: string; coverage: number }>();
-  for (const good of goods) {
-    for (const supplier of good.suppliers) {
+  for (const line of lines) {
+    for (const supplier of line.suppliers) {
       const entry = coverage.get(supplier.id);
       if (entry) {
         entry.coverage += 1;
@@ -52,40 +67,43 @@ function buildColumns(goods: readonly ApiGood[]): SupplierColumn[] {
   return (
     [...coverage.entries()]
       .map(([id, { name, coverage: c }]) => ({ id, name, coverage: c }))
-      // Widest coverage first so the most comparable retailers stay in view when
-      // the table has to scroll horizontally; name breaks ties for stable order.
+      // Couverture la plus large en tête pour garder les enseignes les plus
+      // comparables visibles quand le tableau doit défiler horizontalement ;
+      // le nom départage les égalités pour un ordre stable.
       .sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'fr'))
   );
 }
 
-function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
-  const byId = new Map(good.suppliers.map((s) => [s.id, s.price]));
+function buildGoodRow(line: ApiShoppingLine, columns: readonly SupplierColumn[]): GoodRow {
+  const byId = new Map(line.suppliers.map((s) => [s.id, s.price]));
   const cells: CartCell[] = columns.map((column) => ({
     supplierId: column.id,
     price: byId.get(column.id) ?? null,
-    isBest: good.bestSupplier !== null && good.bestSupplier.id === column.id,
+    isBest: line.bestSupplier !== null && line.bestSupplier.id === column.id,
   }));
 
   return {
-    id: good.id,
-    name: good.name,
-    unit: good.unit,
-    brand: good.brand,
-    categoryName: good.category?.name ?? '—',
+    id: line.id,
+    name: line.name,
+    unit: line.unit,
+    brand: line.brand,
+    categoryName: line.categoryName,
+    missingQty: line.missingQty,
     cells,
-    bestSupplierName: good.bestSupplier?.name ?? null,
-    bestPrice: good.bestPrice,
+    bestSupplierName: line.bestSupplier?.name ?? null,
+    bestPrice: line.bestPrice,
   };
 }
 
 @Component({
   selector: 'bfd-logistique',
-  imports: [Badge, Btn, Checkbox, Skeleton, LucideDynamicIcon],
+  imports: [Badge, Btn, Skeleton, LucideDynamicIcon],
   templateUrl: './logistique.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Logistique implements OnInit {
   private readonly store = inject(LogistiqueStore);
+  private readonly route = inject(ActivatedRoute);
   private readonly modalService = inject(ModalService);
   private readonly toast = inject(ToastService);
   private readonly pageHeader = inject(PageHeaderService);
@@ -94,17 +112,27 @@ export class Logistique implements OnInit {
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
   private readonly vouchersPanel = viewChild<ElementRef<HTMLElement>>('vouchersPanel');
 
+  /** L'id de soirée du segment `/logistique/:id` ; la liste de courses n'a
+   *  de sens que pour une soirée précise. */
+  private readonly eventId = this.route.snapshot.paramMap.get('id') ?? '';
+
   constructor() {
-    this.pageHeader.set({
-      title: 'Logistique',
-      subtitle: 'Liste de courses · comparatif enseignes',
-      breadcrumb: ['Préparation', 'Logistique', 'Courses'],
-      activeNavId: 'log',
-    });
-    // `set()` efface le gabarit d'actions : il faut donc le repousser après,
-    // et depuis un `effect` — dans le constructeur, la vue n'existe pas encore
-    // et `actionsTpl()` vaut `undefined`.
+    // `set()` et `setActions()` vivent dans le MÊME effect, dans cet ordre :
+    // `set()` réinitialise les actions à `null`, donc les séparer viderait la
+    // topbar au premier passage, silencieusement. Regrouper les deux ici sert
+    // aussi le sous-titre, qui doit suivre le nom de la soirée une fois la
+    // liste chargée — encore une raison de ne jamais appeler `set()` seul.
     effect(() => {
+      const eventName = this.store.shoppingList()?.eventName;
+      this.pageHeader.set({
+        title: 'Logistique',
+        subtitle: eventName ? `Liste de courses · ${eventName}` : 'Liste de courses',
+        breadcrumb: ['Préparation', 'Logistique', 'Courses'],
+        activeNavId: 'log',
+      });
+      // Dans le premier passage (avant que la vue existe), `actionsTpl()` vaut
+      // `undefined` : l'effect se redéclenchera de lui-même quand le gabarit
+      // apparaîtra, puisqu'il est lu ici.
       const tpl = this.actionsTpl();
       if (tpl) this.pageHeader.setActions(tpl);
     });
@@ -112,6 +140,7 @@ export class Logistique implements OnInit {
 
   ngOnInit(): void {
     void this.store.load();
+    void this.store.loadShoppingList(this.eventId);
   }
 
   protected readonly icTicket = LucideTicket;
@@ -119,78 +148,86 @@ export class Logistique implements OnInit {
   protected readonly icPlus = LucidePlus;
   protected readonly icLock = LucideLock;
 
-  protected readonly loading = this.store.loading;
-  protected readonly loadError = this.store.loadError;
   protected readonly vouchers = this.store.vouchers;
   protected readonly savingVoucherIds = this.store.savingVoucherIds;
   protected readonly voucherError = this.store.voucherError;
   protected readonly voucherErrorId = this.store.voucherErrorId;
   protected readonly vouchersForbidden = this.store.vouchersForbidden;
   protected readonly vouchersLoadError = this.store.vouchersLoadError;
+  /** Chargement du catalogue/bons/enseignes — pilote uniquement le panneau bons. */
+  protected readonly loading = this.store.loading;
+
+  protected readonly shoppingList = this.store.shoppingList;
+  protected readonly shoppingListLoading = this.store.shoppingListLoading;
+  protected readonly shoppingListForbidden = this.store.shoppingListForbidden;
+  protected readonly shoppingListLoadError = this.store.shoppingListLoadError;
 
   /**
-   * Rows the user has unticked. Tracking exclusions (rather than inclusions)
-   * means a freshly loaded list starts fully selected without seeding state.
+   * Vrai quand aucune donnée exploitable n'est disponible pour la soirée :
+   * refus (403) ou panne. Les deux cas affichent les mêmes KPI à « — », par
+   * le même raisonnement que `usableVoucherLabel` sur le panneau des bons —
+   * un « 0 » affirmerait à tort une liste vide.
    */
-  private readonly excludedIds = signal<ReadonlySet<number>>(new Set());
+  protected readonly shoppingListUnavailable = computed(() => this.shoppingList() === null);
 
-  /** One column per supplier actually present in the loaded goods. */
-  protected readonly columns = computed(() => buildColumns(this.store.goods()));
-
-  protected readonly rows = computed(() => {
-    const columns = this.columns();
-    return this.store.goods().map((good) => buildRow(good, columns));
-  });
-
-  protected readonly selectedRows = computed(() => {
-    const excluded = this.excludedIds();
-    return this.rows().filter((row) => !excluded.has(row.id));
-  });
-
-  protected readonly hasSuppliers = computed(() => this.columns().length > 0);
-
-  /** Column totals over the selected rows only. */
-  protected readonly supplierTotals = computed<SupplierTotal[]>(() => {
-    const selected = this.selectedRows();
-    return this.columns().map((column, index) => {
-      let total = 0;
-      let priced = 0;
-      for (const row of selected) {
-        const price = row.cells[index]?.price ?? null;
-        if (price !== null) {
-          total += price;
-          priced += 1;
-        }
-      }
-      return {
-        supplierId: column.id,
-        total: priced > 0 ? total : null,
-        fullCoverage: selected.length > 0 && priced === selected.length,
-      };
-    });
-  });
-
-  /** Sum of the cheapest available price for every selected row. */
-  protected readonly optimumTotal = computed(() =>
-    this.selectedRows().reduce((sum, row) => sum + (row.bestPrice ?? 0), 0),
+  private readonly lines = computed<readonly ApiShoppingLine[]>(
+    () => this.shoppingList()?.lines ?? [],
   );
 
-  /**
-   * What buying everything at a single retailer would cost, taking the cheapest
-   * retailer that stocks *every* selected row. `null` when none does — the
-   * comparison would otherwise be between different baskets.
-   */
-  private readonly bestSingleRetailerTotal = computed(() => {
-    const totals = this.supplierTotals().filter((t) => t.fullCoverage && t.total !== null);
-    if (totals.length === 0) return null;
-    return Math.min(...totals.map((t) => t.total as number));
+  /** Lignes « denrée » : celles qui ont des enseignes à comparer. */
+  protected goodLines(lines: readonly ApiShoppingLine[]): ApiShoppingLine[] {
+    return lines.filter((line) => line.kind === 'good');
+  }
+
+  /** Lignes « non-alimentaire » : `furnitures` n'a aucune relation fournisseur. */
+  protected furnitureLines(lines: readonly ApiShoppingLine[]): ApiShoppingLine[] {
+    return lines.filter((line) => line.kind === 'furniture');
+  }
+
+  /** Une colonne par enseigne effectivement présente sur les denrées de la soirée. */
+  protected readonly retailerColumns = computed(() =>
+    buildRetailerColumns(this.goodLines(this.lines())),
+  );
+
+  protected readonly goodRows = computed<GoodRow[]>(() => {
+    const columns = this.retailerColumns();
+    return this.goodLines(this.lines()).map((line) => buildGoodRow(line, columns));
   });
 
-  /** Amount saved by splitting the basket across retailers; `null` if not comparable. */
-  protected readonly multiRetailerSaving = computed(() => {
-    const single = this.bestSingleRetailerTotal();
-    return single === null ? null : single - this.optimumTotal();
+  protected readonly furnitureRows = computed(() => this.furnitureLines(this.lines()));
+
+  protected readonly hasSuppliers = computed(() => this.retailerColumns().length > 0);
+
+  /**
+   * Totaux par enseigne calculés côté back sur la liste entière, réalignés
+   * sur l'ordre des colonnes affichées. Aucun recalcul local : l'API connaît
+   * déjà `fullCoverage`, qui dépend de *toutes* les lignes, pas seulement de
+   * celles visibles dans ce tableau.
+   */
+  protected readonly supplierTotals = computed<ApiShoppingSupplierTotal[]>(() => {
+    const totals = new Map(this.shoppingList()?.supplierTotals.map((t) => [t.id, t]) ?? []);
+    return this.retailerColumns().map(
+      (column) => totals.get(column.id) ?? { id: column.id, name: column.name, total: 0, fullCoverage: false },
+    );
   });
+
+  /**
+   * Une enseigne à couverture partielle n'est pas comparable aux autres :
+   * elle ne « gagne » que parce qu'elle price moins de lignes, jamais parce
+   * qu'elle serait réellement moins chère sur le panier complet.
+   */
+  protected isComparable(total: ApiShoppingSupplierTotal): boolean {
+    return total.fullCoverage;
+  }
+
+  /** La moins chère des enseignes réellement comparables ; `null` si aucune ne l'est. */
+  protected cheapestComparable(
+    totals: readonly ApiShoppingSupplierTotal[],
+  ): ApiShoppingSupplierTotal | null {
+    const comparable = totals.filter((total) => this.isComparable(total));
+    if (comparable.length === 0) return null;
+    return comparable.reduce((best, total) => (total.total < best.total ? total : best));
+  }
 
   /** Vouchers that could still be spent: neither used nor expired. */
   protected readonly usableVoucherTotal = computed(() =>
@@ -208,35 +245,31 @@ export class Logistique implements OnInit {
       : `${this.formatPrice(this.usableVoucherTotal())} €`,
   );
 
-  protected readonly savingLabel = computed(() => {
-    const saving = this.multiRetailerSaving();
-    if (saving === null) return '—';
-    if (saving <= 0) return `${this.formatPrice(0)} €`;
-    return `−${this.formatPrice(saving)} €`;
-  });
-
-  protected isSelected(id: number): boolean {
-    return !this.excludedIds().has(id);
+  /** `—` quand aucune enseigne ne couvre toute la liste : aucune comparaison honnête n'existe. */
+  protected savingsLabel(savings: number | null): string {
+    return savings === null ? '—' : `${this.formatPrice(savings)} €`;
   }
 
-  protected toggleRow(id: number, selected: boolean): void {
-    this.excludedIds.update((current) => {
-      const next = new Set(current);
-      if (selected) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
-  protected readonly allSelected = computed(
-    () => this.rows().length > 0 && this.selectedRows().length === this.rows().length,
+  protected readonly lineCountLabel = computed(() =>
+    this.shoppingListUnavailable() ? '—' : `${this.shoppingList()!.lineCount}`,
   );
 
-  protected toggleAll(selected: boolean): void {
-    this.excludedIds.set(selected ? new Set() : new Set(this.rows().map((row) => row.id)));
+  protected readonly optimumTotalLabel = computed(() =>
+    this.shoppingListUnavailable()
+      ? '—'
+      : `${this.formatPrice(this.shoppingList()!.optimumTotal)} €`,
+  );
+
+  protected readonly savingsKpiLabel = computed(() =>
+    this.shoppingListUnavailable() ? '—' : this.savingsLabel(this.shoppingList()!.savings),
+  );
+
+  /** `unpricedCount > 0` : ces lignes ne comptent pas dans `optimumTotal`, et
+   *  le taire ferait passer un total incomplet pour un total. */
+  protected readonly unpricedCount = computed(() => this.shoppingList()?.unpricedCount ?? 0);
+
+  protected retryShoppingList(): void {
+    void this.store.loadShoppingList(this.eventId);
   }
 
   protected retry(): void {
@@ -252,16 +285,15 @@ export class Logistique implements OnInit {
     return cell.isBest ? 'text-ok font-semibold' : 'text-muted';
   }
 
-  protected totalClass(total: SupplierTotal): string {
-    return total.fullCoverage ? 'text-text-2' : 'text-muted/60';
+  protected totalClass(total: ApiShoppingSupplierTotal): string {
+    return this.isComparable(total) ? 'text-text-2' : 'text-muted/60';
   }
 
   /** Screen-reader wording for a column total that only covers part of the basket. */
-  protected totalHint(total: SupplierTotal): string | null {
-    if (total.total === null) return 'Cette enseigne ne référence aucun article sélectionné';
-    return total.fullCoverage
+  protected totalHint(total: ApiShoppingSupplierTotal): string | null {
+    return this.isComparable(total)
       ? null
-      : 'Total partiel : cette enseigne ne référence pas tous les articles sélectionnés';
+      : "Total partiel : cette enseigne ne référence pas tous les articles de la liste";
   }
 
   protected openCreateVoucher(): void {

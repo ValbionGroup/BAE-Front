@@ -1,7 +1,7 @@
 import { ViewContainerRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -11,7 +11,7 @@ import { Logistique } from './logistique';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
-import type { ApiGood, ApiSupplierPrice, ApiVoucher } from './logistique.types';
+import type { ApiShoppingList, ApiShoppingLine, ApiVoucher } from './logistique.types';
 
 /** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 €. */
 const VOUCHER: ApiVoucher = {
@@ -28,22 +28,35 @@ const VOUCHER: ApiVoucher = {
   warn: false,
 };
 
-function supplier(id: number, name: string, price: number): ApiSupplierPrice {
-  return { id, name, price };
-}
-
-function good(id: number, name: string, suppliers: ApiSupplierPrice[]): ApiGood {
-  const best = suppliers.length > 0 ? suppliers[0] : null;
+function shoppingLine(overrides: Partial<ApiShoppingLine> = {}): ApiShoppingLine {
   return {
-    id,
-    name,
+    kind: 'good',
+    id: 1,
+    name: 'Saucisses',
     unit: 'kg',
     brand: null,
-    categoryId: null,
-    category: null,
-    suppliers,
-    bestSupplier: best,
-    bestPrice: best?.price ?? null,
+    categoryName: 'Sec',
+    needQty: 10,
+    stockQty: 0,
+    missingQty: 10,
+    suppliers: [],
+    bestSupplier: null,
+    bestPrice: null,
+    ...overrides,
+  };
+}
+
+function shoppingList(overrides: Partial<ApiShoppingList> = {}): ApiShoppingList {
+  return {
+    eventId: 7,
+    eventName: 'Soirée Hivernale',
+    lines: [],
+    lineCount: 0,
+    optimumTotal: 0,
+    supplierTotals: [],
+    savings: null,
+    unpricedCount: 0,
+    ...overrides,
   };
 }
 
@@ -55,7 +68,14 @@ describe(Logistique.name, () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Logistique],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // La page lit `:id` sur le snapshot, jamais réactivement : un stub
+        // fixe suffit, pas besoin de simuler une navigation.
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Logistique);
@@ -72,18 +92,22 @@ describe(Logistique.name, () => {
     http.verify();
   });
 
-  /** Answers the three page requests and lets the template settle. */
-  async function load(goods: ApiGood[], vouchers: ApiVoucher[] = []): Promise<void> {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush(goods);
+  /** Répond aux quatre appels que fait `ngOnInit` (catalogue/bons/enseignes + liste de courses). */
+  async function load(
+    vouchers: ApiVoucher[] = [],
+    list: ApiShoppingList = shoppingList(),
+  ): Promise<void> {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush(vouchers);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(list);
     await fixture.whenStable();
     fixture.detectChanges();
   }
 
   /** Rend la page chargée avec un bon exploitable par les tests d'écriture. */
-  async function renderLoaded(): Promise<void> {
-    await load([], [VOUCHER]);
+  async function renderLoaded(list: ApiShoppingList = shoppingList()): Promise<void> {
+    await load([VOUCHER], list);
   }
 
   /**
@@ -111,70 +135,287 @@ describe(Logistique.name, () => {
   }
 
   /** Rend la page avec un 403 sur la seule branche des bons d'achat. */
-  async function renderForbidden(): Promise<void> {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([good(1, 'Saucisses', [])]);
+  async function renderVouchersForbidden(): Promise<void> {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers'))
       .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    http
+      .expectOne((r) => r.url.endsWith('/events/7/shopping-list'))
+      .flush(shoppingList({ lines: [shoppingLine()], lineCount: 1 }));
     await fixture.whenStable();
     fixture.detectChanges();
   }
 
-  /** Retailer column headers, i.e. the header cells between "Unité" and "Optimum". */
+  /** Rend la page avec un 403 sur la seule branche de la liste de courses. */
+  async function renderShoppingListForbidden(): Promise<void> {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/vouchers')).flush([VOUCHER]);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    http
+      .expectOne((r) => r.url.endsWith('/events/7/shopping-list'))
+      .flush({ message: 'Missing permission: stock:read' }, { status: 403, statusText: 'x' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  /** Retailer column headers, i.e. the header cells between "Qté" and "Optimum". */
   function retailerHeaders(): string[] {
     const headers = Array.from(fixture.nativeElement.querySelectorAll('thead th')) as HTMLElement[];
     return headers
       .map((th) => (th.textContent ?? '').trim())
-      .filter((text) => text.length > 0 && !['Produit', 'Unité', 'Optimum'].includes(text));
+      .filter((text) => text.length > 0 && !['Produit', 'Qté', 'Optimum', 'Prix'].includes(text));
   }
 
-  it('should create', () => {
+  it('should create', async () => {
     expect(component).toBeTruthy();
+    await load();
+  });
+
+  it('demande la liste de courses de la soirée du segment de route', async () => {
+    // L'id vient du stub `ActivatedRoute` (`7`) : la requête doit cibler cette
+    // soirée précisément, pas une autre.
     http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
+    const req = http.expectOne((r) => r.url.includes('/shopping-list'));
+    expect(req.request.url).toContain('/events/7/shopping-list');
+    req.flush(shoppingList());
+    await fixture.whenStable();
+  });
+
+  it('affiche les quatre KPIs de la soirée', async () => {
+    await renderLoaded(
+      shoppingList({
+        lines: [shoppingLine()],
+        lineCount: 4,
+        optimumTotal: 42.5,
+        savings: 5.25,
+      }),
+    );
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-line-count"]').textContent.trim(),
+    ).toBe('4');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-optimum"]').textContent,
+    ).toContain('42,50');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-savings"]').textContent,
+    ).toContain('5,25');
+    // Le bon chargé vaut 50 €, ni utilisé ni expiré : entièrement utilisable.
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]').textContent,
+    ).toContain('50,00');
+  });
+
+  it('affiche « — » pour l’économie quand aucune enseigne ne couvre toute la liste', async () => {
+    await renderLoaded(shoppingList({ savings: null }));
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-savings"]').textContent.trim(),
+    ).toBe('—');
+  });
+
+  it('sépare les denrées du non-alimentaire', () => {
+    // furnitures n'a aucune relation fournisseur : ces lignes ne peuvent pas
+    // figurer dans un tableau à colonnes d'enseignes.
+    const lines = [
+      { kind: 'good', id: 1, name: 'Pain' },
+      { kind: 'furniture', id: 2, name: 'Barquettes' },
+    ] as never;
+    expect(component['goodLines'](lines).map((l) => l.id)).toEqual([1]);
+    expect(component['furnitureLines'](lines).map((l) => l.id)).toEqual([2]);
+    // Requêtes obligatoires : on solde celles ouvertes par `beforeEach`.
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(shoppingList());
+  });
+
+  it('rend deux sections distinctes dans le gabarit, denrées et non-alimentaire', async () => {
+    await renderLoaded(
+      shoppingList({
+        lines: [
+          shoppingLine({ kind: 'good', id: 1, name: 'Pain hot-dog' }),
+          shoppingLine({ kind: 'furniture', id: 2, name: 'Barquettes', suppliers: [], bestPrice: 3.2 }),
+        ],
+        lineCount: 2,
+      }),
+    );
+
+    const goodsSection = fixture.nativeElement.querySelector('[data-testid="section-goods"]');
+    const furnitureSection = fixture.nativeElement.querySelector('[data-testid="section-furniture"]');
+    expect(goodsSection.textContent).toContain('Pain hot-dog');
+    expect(goodsSection.textContent).not.toContain('Barquettes');
+    expect(furnitureSection.textContent).toContain('Barquettes');
+    expect(furnitureSection.textContent).not.toContain('Pain hot-dog');
+  });
+
+  it('affiche la colonne Qté avec le manque, pas le besoin brut', async () => {
+    await renderLoaded(
+      shoppingList({
+        lines: [shoppingLine({ needQty: 140, stockQty: 20, missingQty: 120, unit: 'pcs' })],
+        lineCount: 1,
+      }),
+    );
+
+    // 140 (besoin) ne doit apparaître nulle part comme quantité affichée :
+    // c'est 120 (le manque) que l'équipe doit acheter, pas la production totale.
+    const goodsSection = fixture.nativeElement.querySelector('[data-testid="section-goods"]');
+    expect(goodsSection.textContent).toContain('120 pcs');
   });
 
   it('renders no retailer column when nothing is priced', async () => {
-    await load([good(1, 'Saucisses', [])]);
+    await renderLoaded(shoppingList({ lines: [shoppingLine({ suppliers: [] })], lineCount: 1 }));
 
     expect(retailerHeaders()).toEqual([]);
-    // The row still renders, flagged as having no price.
     expect(fixture.nativeElement.textContent).toContain('Saucisses');
     expect(fixture.nativeElement.textContent).toContain('Aucun tarif');
   });
 
-  it('renders exactly one retailer column when a single supplier prices the basket', async () => {
-    await load([good(1, 'Saucisses', [supplier(3, 'Leclerc', 4.95)])]);
+  it('derives one retailer column per distinct supplier priced on the good lines', async () => {
+    await renderLoaded(
+      shoppingList({
+        lines: [
+          shoppingLine({
+            id: 1,
+            name: 'Saucisses',
+            suppliers: [
+              { id: 3, name: 'Leclerc', price: 4.95 },
+              { id: 1, name: 'Auchan', price: 5.4 },
+            ],
+            bestSupplier: { id: 3, name: 'Leclerc', price: 4.95 },
+            bestPrice: 4.95,
+          }),
+          shoppingLine({
+            id: 2,
+            name: 'Pain',
+            suppliers: [
+              { id: 3, name: 'Leclerc', price: 2.75 },
+              { id: 2, name: 'Carrefour', price: 2.9 },
+            ],
+            bestSupplier: { id: 3, name: 'Leclerc', price: 2.75 },
+            bestPrice: 2.75,
+          }),
+        ],
+        lineCount: 2,
+      }),
+    );
 
-    expect(retailerHeaders()).toEqual(['Leclerc']);
-    expect(fixture.nativeElement.textContent).toContain('4,95 €');
-  });
-
-  it('derives one column per distinct supplier across all goods', async () => {
-    await load([
-      good(1, 'Saucisses', [supplier(3, 'Leclerc', 4.95), supplier(1, 'Auchan', 5.4)]),
-      good(2, 'Pain', [supplier(3, 'Leclerc', 2.75), supplier(2, 'Carrefour', 2.9)]),
-    ]);
-
-    // Leclerc prices both goods, so it leads; Auchan and Carrefour tie on
-    // coverage and fall back to alphabetical order.
+    // Leclerc price les deux lignes, donc en tête ; Auchan et Carrefour sont à
+    // égalité de couverture et se départagent par ordre alphabétique.
     expect(retailerHeaders()).toEqual(['Leclerc', 'Auchan', 'Carrefour']);
   });
 
-  it('marks a good a supplier does not stock rather than inventing a price', async () => {
-    await load([
-      good(1, 'Saucisses', [supplier(1, 'Auchan', 5.4)]),
-      good(2, 'Pain', [supplier(2, 'Carrefour', 2.9)]),
-    ]);
+  it('marque une enseigne à couverture incomplète', () => {
+    const totals = [
+      { id: 3, name: 'Leclerc', total: 385, fullCoverage: true },
+      { id: 4, name: 'Auchan', total: 90, fullCoverage: false },
+    ] as never;
+    // Auchan est « moins chère » seulement parce qu'elle compte moins de
+    // lignes : la colonne doit le dire, pas laisser croire au meilleur prix.
+    expect(component['isComparable'](totals[1])).toBe(false);
+    expect(component['cheapestComparable'](totals)?.name).toBe('Leclerc');
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(shoppingList());
+  });
 
-    expect(retailerHeaders()).toEqual(['Auchan', 'Carrefour']);
-    // Every row has a cell per column, and the unstocked ones read as a dash.
-    const dashes = Array.from(
-      fixture.nativeElement.querySelectorAll('tbody [aria-label="Non référencé"]'),
+  it('affiche le total par enseigne en pied de tableau, avec une marque sur la couverture incomplète', async () => {
+    await renderLoaded(
+      shoppingList({
+        lines: [
+          shoppingLine({
+            suppliers: [{ id: 4, name: 'Auchan', price: 9 }],
+            bestSupplier: { id: 4, name: 'Auchan', price: 9 },
+            bestPrice: 9,
+          }),
+        ],
+        lineCount: 1,
+        supplierTotals: [{ id: 4, name: 'Auchan', total: 9, fullCoverage: false }],
+      }),
     );
-    expect(dashes).toHaveLength(2);
+
+    const footer = fixture.nativeElement.querySelector('tfoot');
+    expect(footer.textContent).toContain('9,00');
+    // L'astérisque n'est pas décoratif : c'est le seul signal visuel qu'un
+    // total « bas » ne couvre pas toute la liste.
+    expect(footer.querySelector('[aria-hidden="true"]')?.textContent).toBe('*');
+  });
+
+  it('affiche l’économie multi-enseigne, et « — » quand elle est indécidable', async () => {
+    expect(component['savingsLabel'](12.8)).toContain('12,80');
+    // null = aucune enseigne ne couvre toute la liste, donc aucune comparaison
+    // honnête possible.
+    expect(component['savingsLabel'](null)).toBe('—');
+    await load();
+  });
+
+  it('affiche un bandeau quand des lignes n’ont pas de prix connu', async () => {
+    await renderLoaded(
+      shoppingList({ lines: [shoppingLine()], lineCount: 1, unpricedCount: 2 }),
+    );
+
+    const banner = fixture.nativeElement.querySelector('[data-testid="unpriced-banner"]');
+    expect(banner).not.toBeNull();
+    expect(banner.textContent).toContain('2');
+  });
+
+  it('n’affiche aucun bandeau quand toutes les lignes ont un prix connu', async () => {
+    await renderLoaded(shoppingList({ lines: [shoppingLine()], lineCount: 1, unpricedCount: 0 }));
+
+    expect(fixture.nativeElement.querySelector('[data-testid="unpriced-banner"]')).toBeNull();
+  });
+
+  it('affiche un panneau Accès restreint sur un 403 de la liste de courses, KPIs à —', async () => {
+    await renderShoppingListForbidden();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="shopping-list-forbidden"]'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-line-count"]').textContent.trim(),
+    ).toBe('—');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-optimum"]').textContent.trim(),
+    ).toBe('—');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="kpi-savings"]').textContent.trim(),
+    ).toBe('—');
+    // Le panneau des bons est une branche indépendante : le refus sur la liste
+    // ne doit rien lui retirer.
+    expect(fixture.nativeElement.textContent).toContain('Leclerc');
+    expect(fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]').textContent).toContain(
+      '50,00',
+    );
+  });
+
+  it('distingue une panne réseau d’un refus sur la liste de courses', async () => {
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
+    http
+      .expectOne((r) => r.url.endsWith('/events/7/shopping-list'))
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="shopping-list-forbidden"]'),
+    ).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+
+    // Le bouton Réessayer relance uniquement la branche liste de courses.
+    const retryButtons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    const retry = retryButtons.find((b) => b.textContent?.includes('Réessayer'));
+    retry!.click();
+    http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(shoppingList());
+    await fixture.whenStable();
   });
 
   it('opens the creation modal from the topbar action', async () => {
@@ -273,14 +514,14 @@ describe(Logistique.name, () => {
     expect(fixture.nativeElement.querySelector('li svg.absolute')).toBeNull();
   });
 
-  it('shows a restricted panel instead of the vouchers, keeping the table', async () => {
-    await renderForbidden();
+  it('shows a restricted panel instead of the vouchers, keeping the shopping list', async () => {
+    await renderVouchersForbidden();
 
     expect(
       fixture.nativeElement.querySelector('[data-testid="vouchers-forbidden"]'),
     ).not.toBeNull();
-    // Le comparatif d'enseignes reste rendu : c'est tout l'intérêt de n'avoir
-    // gardé que le panneau.
+    // La liste de courses reste rendue : c'est tout l'intérêt de n'avoir
+    // restreint que le panneau des bons.
     expect(fixture.nativeElement.textContent).toContain('Saucisses');
     // Proposer d'ajouter un bon à qui n'a pas le droit d'en voir un serait un
     // clic voué au 403 — et le bouton vit désormais dans la topbar, donc c'est
@@ -289,14 +530,14 @@ describe(Logistique.name, () => {
   });
 
   it('locks the section label when the vouchers are out of reach', async () => {
-    await renderForbidden();
+    await renderVouchersForbidden();
 
     // Le vocabulaire de la maquette pour un panneau verrouillé.
     expect(fixture.nativeElement.textContent).toContain('ACCÈS VERROUILLÉ');
   });
 
   it('reads the usable-voucher KPI as unknown rather than zero', async () => {
-    await renderForbidden();
+    await renderVouchersForbidden();
 
     const kpi: HTMLElement = fixture.nativeElement.querySelector('[data-testid="kpi-vouchers"]');
     // « 0 € » affirmerait qu'il n'y a aucun bon utilisable ; la vérité est
@@ -305,11 +546,12 @@ describe(Logistique.name, () => {
   });
 
   it('also reads the usable-voucher KPI as unknown on a load failure other than 403', async () => {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([good(1, 'Saucisses', [])]);
+    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers'))
       .flush({ message: 'Erreur serveur' }, { status: 500, statusText: 'x' });
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
+    http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(shoppingList());
     await fixture.whenStable();
     fixture.detectChanges();
 

@@ -4,9 +4,43 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { LogistiqueStore } from './logistique.store';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
-import type { ApiGood, ApiSupplier, ApiVoucher } from '#pages/authed/logistique/logistique.types';
+import type {
+  ApiGood,
+  ApiShoppingList,
+  ApiSupplier,
+  ApiVoucher,
+} from '#pages/authed/logistique/logistique.types';
 
 const baseUrl = 'http://api.test/v1';
+
+function shoppingList(overrides: Partial<ApiShoppingList> = {}): ApiShoppingList {
+  return {
+    eventId: 7,
+    eventName: 'Soirée Hivernale',
+    lines: [
+      {
+        kind: 'good',
+        id: 1,
+        name: 'Pain hot-dog x12',
+        unit: 'pcs',
+        brand: 'Harrys',
+        categoryName: 'Sec',
+        needQty: 140,
+        stockQty: 0,
+        missingQty: 140,
+        suppliers: [{ id: 3, name: 'Leclerc', price: 2.75 }],
+        bestSupplier: { id: 3, name: 'Leclerc', price: 2.75 },
+        bestPrice: 2.75,
+      },
+    ],
+    lineCount: 1,
+    optimumTotal: 385,
+    supplierTotals: [{ id: 3, name: 'Leclerc', total: 385, fullCoverage: true }],
+    savings: 0,
+    unpricedCount: 0,
+    ...overrides,
+  };
+}
 
 function good(overrides: Partial<ApiGood> = {}): ApiGood {
   return {
@@ -331,5 +365,55 @@ describe(LogistiqueStore.name, () => {
     // Un droit accordé entre-temps doit se voir sans recharger l'application.
     expect(store.vouchersForbidden()).toBe(false);
     expect(store.vouchers()).toHaveLength(1);
+  });
+
+  it('charge la liste de courses de la soirée demandée', async () => {
+    const promise = store.loadShoppingList('7');
+    // La branche « liste » est isolée : les autres appels de la page partent
+    // aussi, et un 403 sur la liste ne doit rien annuler.
+    http.expectOne(`${baseUrl}/events/7/shopping-list`).flush(shoppingList());
+    await promise;
+
+    expect(store.shoppingList()?.lineCount).toBe(1);
+    expect(store.shoppingListEventId()).toBe('7');
+    expect(store.shoppingListForbidden()).toBe(false);
+  });
+
+  it('traite un 403 sur la liste comme un refus, pas comme une panne', async () => {
+    const promise = store.loadShoppingList('7');
+    http
+      .expectOne(`${baseUrl}/events/7/shopping-list`)
+      .flush({ message: 'Missing permission: stock:read' }, { status: 403, statusText: 'F' });
+    await promise;
+
+    // Un refus est une règle, une panne est un incident : la page doit dire
+    // « accès restreint », pas « erreur ».
+    expect(store.shoppingListForbidden()).toBe(true);
+    expect(store.shoppingListLoadError()).toBeNull();
+  });
+
+  it('traite une coupure réseau comme une panne, pas comme un refus', async () => {
+    const promise = store.loadShoppingList('7');
+    http.expectOne(`${baseUrl}/events/7/shopping-list`).error(new ProgressEvent('error'));
+    await promise;
+
+    // `settle` rend `status: 0` hors réponse HTTP : côté incident.
+    expect(store.shoppingListForbidden()).toBe(false);
+    expect(store.shoppingListLoadError()).toBeTruthy();
+  });
+
+  it('ignore la réponse d’un chargement périmé', async () => {
+    const stale = store.loadShoppingList('7');
+    const fresh = store.loadShoppingList('8');
+
+    const [first, second] = http.match((request) => request.url.includes('/shopping-list'));
+    // La réponse de la soirée 8 arrive AVANT celle de la 7.
+    second.flush(shoppingList({ eventId: 8, eventName: 'Carnaval' }));
+    first.flush(shoppingList({ eventId: 7, eventName: 'Hivernale' }));
+    await Promise.all([stale, fresh]);
+
+    // Sans compteur de génération, la réponse tardive de la 7 écraserait la 8
+    // et la page afficherait la liste d'une autre soirée que celle demandée.
+    expect(store.shoppingList()?.eventName).toBe('Carnaval');
   });
 });
