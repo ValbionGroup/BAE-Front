@@ -40,63 +40,69 @@
 
   <!-- Event cards -->
   <div class="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-6 pb-8 pt-4">
-    @for (e of visibleEvents(); track e.id) {
-      @let total = totalCost(e);
-      @let missing = hasMissing(e);
+    @for (event of visibleEvents(); track event.id) {
+      @let menu = event.menu ?? [];
+      @let state = statusOf(event);
+      @let badge = stateBadge(event);
+      @let total = menuCost(menu);
       <article
         [class]="
           'overflow-hidden rounded-lg border bg-surface ' +
-          eventBorderClass(e) +
-          (e.status === 'past' ? ' opacity-85' : '')
+          eventBorderClass(event) +
+          (state === 'past' ? ' opacity-85' : '')
         "
       >
         <!-- Header -->
         <header class="flex items-center gap-3.5 border-b border-border-s p-4">
-          <div [class]="'w-14 shrink-0 rounded-md border py-1.5 text-center ' + dateChipClass(e)">
-            <div class="tnum text-[20px] font-semibold leading-none">{{ e.day }}</div>
-            <div class="mono mt-0.5 text-[9.5px] tracking-widest">{{ e.month }}</div>
+          <div
+            [class]="'w-14 shrink-0 rounded-md border py-1.5 text-center ' + dateChipClass(event)"
+          >
+            <div class="tnum text-[20px] font-semibold leading-none">{{ dayOf(event) }}</div>
+            <div class="mono mt-0.5 text-[9.5px] tracking-widest">{{ monthOf(event) }}</div>
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <h3 class="m-0 truncate text-[16px] font-semibold -tracking-[0.2px] text-text">
-                {{ e.name }}
+                {{ event.name }}
               </h3>
-              <bfd-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bfd-badge>
+              <bfd-badge [kind]="badge.kind" [dot]="true">{{ badge.label }}</bfd-badge>
             </div>
-            <div class="mt-1 text-[12px] text-muted">{{ e.when }}</div>
+            <div class="mt-1 text-[12px] text-muted">{{ whenLabel(event) }}</div>
           </div>
 
           <div class="flex items-center gap-5">
             <div class="text-right">
-              <div class="mono tnum text-[16px] font-semibold text-text">{{ e.expected }}</div>
+              <!-- Aucune colonne derrière : `events` ne porte ni capacité ni
+                   inscriptions, comme « Emplacement » sur la page Stocks. -->
+              <div class="mono tnum text-[16px] font-semibold text-muted">—</div>
               <div class="text-[10px] text-muted">attendus</div>
             </div>
             <div class="h-6.5 w-px bg-border"></div>
             <div class="text-right">
               <div
                 [class]="
-                  'mono tnum text-[16px] font-semibold ' + (total ? 'text-text' : 'text-muted')
+                  'mono tnum text-[16px] font-semibold ' + (total !== null ? 'text-text' : 'text-muted')
                 "
               >
-                {{ total ? formatPriceInt(total) + ' €' : '—' }}
+                {{ total !== null ? formatPriceInt(total) + ' €' : '—' }}
               </div>
               <div class="text-[10px] text-muted">coût denrées</div>
             </div>
             <div class="h-6.5 w-px bg-border"></div>
             <bfd-btn
-              [kind]="e.recipes.length ? 'secondary' : 'primary'"
+              [kind]="menu.length ? 'secondary' : 'primary'"
               size="sm"
-              [icon]="e.recipes.length ? icEdit : icPlus"
-              (clicked)="openAssign(e.id)"
+              [icon]="menu.length ? icEdit : icPlus"
+              (clicked)="openAssign(event.id)"
             >
-              {{ e.recipes.length ? 'Gérer recettes' : 'Assigner recettes' }}
+              {{ menu.length ? 'Gérer recettes' : 'Assigner recettes' }}
             </bfd-btn>
-            <span [attr.data-testid]="'open-courses-' + e.id">
+            <span [attr.data-testid]="'open-courses-' + event.id">
               <bfd-btn
                 kind="ghost"
                 size="sm"
                 [iconRight]="icArrowRight"
-                (clicked)="openCourses(e.id)"
+                (clicked)="openCourses(event.id)"
               >
                 Liste de courses
               </bfd-btn>
@@ -106,7 +112,7 @@
         </header>
 
         <!-- Body -->
-        @if (e.recipes.length === 0) {
+        @if (menu.length === 0) {
           <div class="px-4 py-5 text-center">
             <div class="mb-2.5 text-[12.5px] text-muted">
               Aucune recette assignée pour cette soirée.
@@ -115,7 +121,7 @@
               kind="outline"
               size="sm"
               [icon]="icPlus"
-              (clicked)="openRecipePicker(e, $event)"
+              (clicked)="openRecipePicker(event, $event)"
             >
               Ajouter une recette
             </bfd-btn>
@@ -123,96 +129,63 @@
         } @else {
           <!-- Recipe table header -->
           <div
-            class="grid grid-cols-[24px_1.6fr_100px_90px_110px_120px_120px_60px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+            class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
           >
             <span></span>
             <span>Recette</span>
             <span class="text-right">Quantité</span>
             <span class="text-right">Coût/u.</span>
             <span class="text-right">Coût total</span>
-            <span>Stock denrées</span>
-            <span>Validation</span>
             <span></span>
           </div>
 
-          @for (r of e.recipes; track r.id) {
-            @let stk = stockText(r);
-            @let val = validationBadge(r);
+          @for (line of menu; track line.productId) {
             <div
-              class="grid grid-cols-[24px_1.6fr_100px_90px_110px_120px_120px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
+              class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
             >
               <span
                 class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-surface-3 text-text-2"
               >
                 <svg [lucideIcon]="icChef" [size]="12" aria-hidden="true"></svg>
               </span>
-              <span class="font-medium text-text">{{ r.name }}</span>
+              <span class="font-medium text-text">{{ line.name }}</span>
 
               <div
                 class="inline-flex items-center gap-px justify-self-end rounded-md border border-border bg-surface-2 p-0.5"
               >
                 <button
                   type="button"
-                  (click)="dec(e, r)"
+                  (click)="step(event.id, line, -1)"
                   class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center border-none bg-transparent font-sans text-muted hover:text-text"
-                  [attr.aria-label]="'Diminuer ' + r.name"
+                  [attr.aria-label]="'Diminuer ' + line.name"
                 >
                   −
                 </button>
-                <span class="tnum w-9 text-center text-[12px] text-text">{{ r.count }}</span>
+                <span class="tnum w-9 text-center text-[12px] text-text">
+                  {{ quantityOf(event.id, line) }}
+                </span>
                 <button
                   type="button"
-                  (click)="inc(e, r)"
+                  (click)="step(event.id, line, 1)"
                   class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-sm border-none bg-blue font-sans text-white hover:bg-blue-deep"
-                  [attr.aria-label]="'Augmenter ' + r.name"
+                  [attr.aria-label]="'Augmenter ' + line.name"
                 >
                   +
                 </button>
               </div>
 
-              <span class="mono tnum text-right text-muted">{{ formatPrice(r.unitCost) }} €</span>
+              <span class="mono tnum text-right text-muted">
+                {{ formatPriceOrDash(line.unitCost) }}
+              </span>
               <span class="mono tnum text-right font-semibold text-text">
-                {{ formatPrice(r.unitCost * r.count) }} €
-              </span>
-
-              <!-- Stock cell -->
-              <span>
-                @if (stk) {
-                  <span
-                    [class]="
-                      'inline-flex items-center gap-1.5 text-[11.5px] ' + stockToneClass(stk.tone)
-                    "
-                  >
-                    <span
-                      [class]="
-                        'inline-block h-1.5 w-1.5 rounded-full ' +
-                        (stk.tone === 'ok'
-                          ? 'bg-ok'
-                          : stk.tone === 'warn'
-                            ? 'bg-warn'
-                            : stk.tone === 'danger'
-                              ? 'bg-danger'
-                              : 'bg-muted')
-                      "
-                    ></span>
-                    {{ stk.label }}
-                  </span>
-                } @else {
-                  <span class="text-[11px] text-muted">—</span>
-                }
-              </span>
-
-              <!-- Validation cell -->
-              <span>
-                @if (val) {
-                  <bfd-badge [kind]="val.kind" [dot]="val.dot">{{ val.label }}</bfd-badge>
-                }
+                {{ formatPriceOrDash(line.totalCost) }}
               </span>
 
               <button
                 type="button"
+                (click)="openLineMenu(event, line, $event)"
                 class="inline-flex h-6 w-6 cursor-pointer items-center justify-center justify-self-end rounded-sm border-none bg-transparent text-muted hover:bg-surface-3 hover:text-text"
-                [attr.aria-label]="'Plus pour ' + r.name"
+                [attr.aria-label]="'Options pour ' + line.name"
               >
                 <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
               </button>
@@ -223,25 +196,22 @@
           <footer
             class="flex items-center gap-2 border-t border-border-s bg-surface-2 px-4 py-3 text-[12px] text-text-2"
           >
-            @if (missing) {
-              <div class="flex items-center gap-2">
-                <svg [lucideIcon]="icAlert" [size]="14" class="text-warn" aria-hidden="true"></svg>
-                <span>
-                  {{ missingCount(e) }} recettes nécessitent une commande supplémentaire de denrées.
-                </span>
-              </div>
-            }
             <div class="flex-1"></div>
-            <bfd-btn kind="ghost" size="sm" [icon]="icPlus" (clicked)="openRecipePicker(e, $event)">
+            <bfd-btn
+              kind="ghost"
+              size="sm"
+              [icon]="icPlus"
+              (clicked)="openRecipePicker(event, $event)"
+            >
               Ajouter une recette
             </bfd-btn>
             <bfd-btn kind="ghost" size="sm" [icon]="icDownload">Fiche logistique</bfd-btn>
-            @if (e.status !== 'past') {
+            @if (state !== 'past') {
               <bfd-btn
                 kind="primary"
                 size="sm"
                 [iconRight]="icArrowRight"
-                (clicked)="openGenerate()"
+                (clicked)="openCourses(event.id)"
               >
                 Générer liste de courses
               </bfd-btn>

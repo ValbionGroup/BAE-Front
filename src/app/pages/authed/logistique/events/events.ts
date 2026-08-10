@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
+  OnInit,
   TemplateRef,
   computed,
   effect,
@@ -19,61 +21,35 @@ import {
   LucidePencil,
   LucidePlus,
   LucideSearch,
-  LucideTriangleAlert,
+  LucideTrash2,
 } from '@lucide/angular';
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { EventsStore } from '#core/store/events.store';
+import { RecipesStore } from '#core/store/recipes.store';
+import { EventDetail, MenuItem } from '#core/models/event.model';
+import type { RecipeProduct } from '#pages/authed/recettes/recipes.types';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { LogistiqueAssignModal } from '#shared/components/modal/logistique-assign-modal/logistique-assign-modal';
-import { LogistiqueGenerateModal } from '#shared/components/modal/logistique-generate-modal/logistique-generate-modal';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
 import { DropdownService } from '#shared/components/dropdown/dropdown.service';
 import { DropdownItem } from '#shared/components/dropdown/dropdown.models';
 
-interface Recipe {
-  readonly id: string;
-  readonly nom: string;
-  readonly cout: number;
-  readonly usage: string;
-}
-
-const RECIPE_CATALOG: readonly Recipe[] = [
-  { id: 'hd-clas', nom: 'Burger Classic', cout: 2.8, usage: 'Plat principal' },
-  { id: 'hd-veg', nom: 'Burger Végétarien', cout: 2.5, usage: 'Plat principal' },
-  { id: 'frites', nom: 'Frites maison', cout: 0.6, usage: 'Accompagnement' },
-  { id: 'crepe-n', nom: 'Crêpe Nutella', cout: 0.9, usage: 'Dessert' },
-  { id: 'crepe-s', nom: 'Crêpe Sucre', cout: 0.7, usage: 'Dessert' },
-  { id: 'pano', nom: 'Panoplie Boissons', cout: 1.1, usage: 'Boisson' },
-  { id: 'tapas', nom: 'Tapas assortis', cout: 3.2, usage: 'Entrée' },
-  { id: 'sangria', nom: 'Sangria maison', cout: 1.4, usage: 'Boisson' },
-];
-
-type EventStatus = 'preparing' | 'planning' | 'past';
-type RecipeStock = 'ok' | 'warn' | 'low' | 'todo' | 'past';
 type TabKey = 'upcoming' | 'preparing' | 'past' | 'all';
 
-interface RecipeLine {
-  readonly id: string;
-  readonly name: string;
-  readonly unitCost: number;
-  count: number;
-  stock: RecipeStock;
-}
+/**
+ * Les trois états affichés d'une soirée — jamais stockés, voir `statusOf()`.
+ */
+type SoireeState = 'past' | 'preparing' | 'planning';
 
-interface EventBlock {
-  readonly id: string;
-  readonly day: string;
-  readonly month: string;
-  readonly name: string;
-  readonly when: string;
-  readonly status: EventStatus;
-  readonly statusLabel: string;
-  readonly statusKind: BadgeKind;
-  readonly expected: number;
-  recipes: RecipeLine[];
-}
+const STATE_BADGE: Record<SoireeState, { readonly label: string; readonly kind: BadgeKind }> = {
+  past: { label: 'Passée', kind: 'ok' },
+  preparing: { label: 'En préparation', kind: 'warn' },
+  planning: { label: 'À planifier', kind: 'blue' },
+};
 
 const MONTH_FR: readonly string[] = [
   'JAN',
@@ -90,18 +66,183 @@ const MONTH_FR: readonly string[] = [
   'DÉC',
 ];
 
+const WEEKDAY_FR: readonly string[] = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
+
 @Component({
   selector: 'bfd-logistique-events',
   imports: [Btn, Badge, Input, LucideDynamicIcon],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LogistiqueEvents {
+export class LogistiqueEvents implements OnInit, OnDestroy {
+  private readonly store = inject(EventsStore);
+  private readonly recipes = inject(RecipesStore);
   private readonly dropdown = inject(DropdownService);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  ngOnInit(): void {
+    void this.store.load();
+    void this.recipes.load();
+  }
+
+  constructor() {
+    // `set()` remet les actions à `null` : les deux appels doivent vivre dans
+    // le MÊME effect, dans cet ordre, sinon la topbar se vide au premier
+    // chargement sans erreur nulle part.
+    effect(() => {
+      this.pageHeader.set({
+        title: 'Logistique',
+        subtitle: 'Vue par soirée · recettes & quantités',
+        breadcrumb: ['Préparation', 'Logistique', 'Soirées'],
+        activeNavId: 'log',
+      });
+      const tpl = this.actionsTpl();
+      if (tpl) this.pageHeader.setActions(tpl);
+    });
+
+    // Charge le menu de chaque soirée dès que la liste arrive. Un menu par
+    // soirée est une requête de plus, mais la carte affiche ses recettes sans
+    // qu'on la déplie : les charger à la demande ferait clignoter la page.
+    effect(() => {
+      for (const event of this.store.allEvents()) {
+        if (event.menuStatus === 'init') void this.store.loadEventMenu(event.id);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Un minuteur qui se déclenche après la navigation écrirait sur une page
+    // qu'on ne regarde plus.
+    for (const timer of this.pendingTimers.values()) clearTimeout(timer);
+    this.pendingTimers.clear();
+  }
+
+  protected readonly icPlus = LucidePlus;
+  protected readonly icEdit = LucidePencil;
+  protected readonly icMore = LucideMoreHorizontal;
+  protected readonly icTrash = LucideTrash2;
+  protected readonly icChef = LucideChefHat;
+  protected readonly icArrowRight = LucideArrowRight;
+  protected readonly icCalendar = LucideCalendar;
+  protected readonly icFilter = LucideFilter;
+  protected readonly icSearch = LucideSearch;
+  protected readonly icDownload = LucideDownload;
+
+  protected readonly activeTab = signal<TabKey>('upcoming');
+
+  protected readonly tabs = computed(() => {
+    const list = this.store.allEvents();
+    const upcoming = list.filter((e) => this.statusOf(e) !== 'past').length;
+    const preparing = list.filter((e) => this.statusOf(e) === 'preparing').length;
+    const past = list.filter((e) => this.statusOf(e) === 'past').length;
+    return [
+      { key: 'upcoming' as TabKey, label: 'À venir', count: upcoming },
+      { key: 'preparing' as TabKey, label: 'En préparation', count: preparing },
+      { key: 'past' as TabKey, label: 'Passées', count: past },
+      { key: 'all' as TabKey, label: 'Tout', count: list.length },
+    ];
+  });
+
+  protected readonly visibleEvents = computed<readonly EventDetail[]>(() => {
+    const tab = this.activeTab();
+    const list = this.store.allEvents();
+    if (tab === 'all') return list;
+    if (tab === 'preparing') return list.filter((e) => this.statusOf(e) === 'preparing');
+    if (tab === 'past') return list.filter((e) => this.statusOf(e) === 'past');
+    return list.filter((e) => this.statusOf(e) !== 'past');
+  });
+
+  protected setTab(key: TabKey): void {
+    this.activeTab.set(key);
+  }
+
+  /**
+   * L'état affiché d'une soirée.
+   *
+   * Trois états pour une seule colonne en base. `events.status` distingue
+   * `scheduled | ongoing | completed`, mais ne dit pas si la logistique a fait
+   * son travail : « en préparation » veut dire « un menu existe », « à
+   * planifier » veut dire « il n'y en a pas encore ». C'est dérivé, jamais
+   * stocké — une colonne d'état de plus serait une vérité que rien ne tient à
+   * jour.
+   */
+  protected statusOf(event: EventDetail): SoireeState {
+    if (event.status === 'completed') return 'past';
+    return (event.menu?.length ?? 0) > 0 ? 'preparing' : 'planning';
+  }
+
+  protected stateBadge(event: EventDetail): { readonly label: string; readonly kind: BadgeKind } {
+    return STATE_BADGE[this.statusOf(event)];
+  }
+
+  /**
+   * Coût des denrées de tout le menu, ou `null` si une seule recette a un coût
+   * inconnu : additionner ce qu'on sait donnerait un chiffre faussement
+   * rassurant, et la maquette affiche « — » pour ce cas.
+   */
+  protected menuCost(menu: readonly MenuItem[]): number | null {
+    let total = 0;
+    for (const line of menu) {
+      if (line.totalCost === null) return null;
+      total += line.totalCost;
+    }
+    return total;
+  }
+
+  /** Les recettes qu'on peut encore ajouter à ce menu. */
+  protected availableRecipes(
+    catalog: readonly RecipeProduct[],
+    menu: readonly MenuItem[],
+  ): readonly RecipeProduct[] {
+    const taken = new Set(menu.map((line) => line.productId));
+    return catalog.filter((recipe) => !taken.has(recipe.id));
+  }
+
+  protected dayOf(event: EventDetail): string {
+    return event.date.getDate().toString().padStart(2, '0');
+  }
+
+  protected monthOf(event: EventDetail): string {
+    return MONTH_FR[event.date.getMonth()];
+  }
+
+  /** « Ven. 19:30 — 23:00 », ou juste l'heure de début si la durée est inconnue. */
+  protected whenLabel(event: EventDetail): string {
+    const weekday = WEEKDAY_FR[event.date.getDay()];
+    const start = event.date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    if (event.duration == null) return `${weekday} ${start}`;
+    const end = new Date(event.date.getTime() + event.duration * 1000);
+    const endLabel = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${weekday} ${start} — ${endLabel}`;
+  }
+
+  protected formatPrice(n: number): string {
+    return n.toFixed(2).replace('.', ',');
+  }
+
+  protected formatPriceInt(n: number): string {
+    return n.toFixed(0);
+  }
+
+  /** « — » plutôt qu'un nombre : `unitCost`/`totalCost` valent `null` dès
+   *  qu'un ingrédient de la recette n'a aucun fournisseur prix. */
+  protected formatPriceOrDash(n: number | null): string {
+    return n === null ? '—' : `${this.formatPrice(n)} €`;
+  }
+
+  protected eventBorderClass(event: EventDetail): string {
+    return this.statusOf(event) === 'preparing' ? 'border-warn' : 'border-border-s';
+  }
+
+  protected dateChipClass(event: EventDetail): string {
+    return this.statusOf(event) === 'preparing'
+      ? 'bg-red-soft text-red border-red'
+      : 'bg-surface-2 text-text-2 border-border-s';
+  }
 
   /**
    * Ouvre la liste de courses de la soirée.
@@ -114,8 +255,10 @@ export class LogistiqueEvents {
   }
 
   protected openAssign(eventId: string): void {
-    const ev = this.events().find((e) => e.id === eventId);
-    const label = ev ? `${ev.name.toUpperCase()} · ${ev.day}/${ev.month}` : 'SOIRÉE';
+    const event = this.store.getEventById(eventId);
+    const label = event
+      ? `${event.name.toUpperCase()} · ${this.dayOf(event)}/${this.monthOf(event)}`
+      : 'SOIRÉE';
     this.modals.open({
       type: 'component',
       component: LogistiqueAssignModal,
@@ -123,232 +266,20 @@ export class LogistiqueEvents {
     });
   }
 
-  protected openGenerate(): void {
-    this.modals.open({ type: 'component', component: LogistiqueGenerateModal });
-  }
-
-  constructor() {
-    this.pageHeader.set({
-      title: 'Logistique',
-      subtitle: 'Vue par soirée · recettes & quantités',
-      breadcrumb: ['Préparation', 'Logistique', 'Soirées'],
-      activeNavId: 'log',
-    });
-    effect(() => {
-      const tpl = this.actionsTpl();
-      if (tpl) this.pageHeader.setActions(tpl);
-    });
-  }
-
-  protected readonly icPlus = LucidePlus;
-  protected readonly icEdit = LucidePencil;
-  protected readonly icMore = LucideMoreHorizontal;
-  protected readonly icChef = LucideChefHat;
-  protected readonly icAlert = LucideTriangleAlert;
-  protected readonly icArrowRight = LucideArrowRight;
-  protected readonly icCalendar = LucideCalendar;
-  protected readonly icFilter = LucideFilter;
-  protected readonly icSearch = LucideSearch;
-  protected readonly icDownload = LucideDownload;
-
-  protected readonly catalog = signal<readonly Recipe[]>(RECIPE_CATALOG);
-
-  protected readonly events = signal<EventBlock[]>([
-    {
-      id: 'hiv26',
-      day: '14',
-      month: 'FÉV',
-      name: 'Soirée Hivernale',
-      when: 'Ven. 19:30 — 23:00',
-      status: 'preparing',
-      statusLabel: 'En préparation',
-      statusKind: 'warn',
-      expected: 360,
-      recipes: this.seed([
-        ['hd-clas', 220, 'ok'],
-        ['hd-veg', 40, 'warn'],
-        ['frites', 180, 'ok'],
-        ['crepe-n', 90, 'ok'],
-        ['pano', 220, 'low'],
-      ]),
-    },
-    {
-      id: 'carn26',
-      day: '07',
-      month: 'MAR',
-      name: 'Carnaval BAE',
-      when: 'Ven. 19:00 — 23:30',
-      status: 'planning',
-      statusLabel: 'À planifier',
-      statusKind: 'blue',
-      expected: 280,
-      recipes: this.seed([
-        ['tapas', 280, 'todo'],
-        ['sangria', 180, 'todo'],
-      ]),
-    },
-    {
-      id: 'rep26',
-      day: '28',
-      month: 'MAR',
-      name: 'Repas Alternants',
-      when: 'Jeu. 19:30 — 22:00',
-      status: 'planning',
-      statusLabel: 'À planifier',
-      statusKind: 'blue',
-      expected: 80,
-      recipes: [],
-    },
-    {
-      id: 'bv26',
-      day: '24',
-      month: 'JAN',
-      name: 'Bienvenue 2026',
-      when: 'Passée · 218 commandes',
-      status: 'past',
-      statusLabel: 'Passée',
-      statusKind: 'ok',
-      expected: 220,
-      recipes: this.seed([
-        ['hd-clas', 150, 'past'],
-        ['crepe-s', 80, 'past'],
-        ['pano', 160, 'past'],
-      ]),
-    },
-  ]);
-
-  protected readonly activeTab = signal<TabKey>('upcoming');
-
-  protected readonly tabs = computed(() => {
-    const list = this.events();
-    const upcoming = list.filter((e) => e.status !== 'past').length;
-    const preparing = list.filter((e) => e.status === 'preparing').length;
-    const past = list.filter((e) => e.status === 'past').length;
-    return [
-      { key: 'upcoming' as TabKey, label: 'À venir', count: upcoming },
-      { key: 'preparing' as TabKey, label: 'En préparation', count: preparing },
-      { key: 'past' as TabKey, label: 'Passées', count: past },
-      { key: 'all' as TabKey, label: 'Tout', count: list.length },
-    ];
-  });
-
-  protected readonly visibleEvents = computed<readonly EventBlock[]>(() => {
-    const tab = this.activeTab();
-    const list = this.events();
-    if (tab === 'all') return list;
-    if (tab === 'preparing') return list.filter((e) => e.status === 'preparing');
-    if (tab === 'past') return list.filter((e) => e.status === 'past');
-    return list.filter((e) => e.status !== 'past');
-  });
-
-  protected setTab(key: TabKey): void {
-    this.activeTab.set(key);
-  }
-
-  private seed(entries: readonly (readonly [string, number, RecipeStock])[]): RecipeLine[] {
-    return entries.flatMap(([id, count, stock]) => {
-      const r = RECIPE_CATALOG.find((x) => x.id === id);
-      return r ? [{ id: r.id, name: r.nom, unitCost: r.cout, count, stock }] : [];
-    });
-  }
-
-  protected monthOf(day: string, month: string): string {
-    // month string may already be French short; pass through.
-    return month;
-  }
-
-  protected formatPrice(n: number): string {
-    return n.toFixed(2).replace('.', ',');
-  }
-
-  protected formatPriceInt(n: number): string {
-    return n.toFixed(0);
-  }
-
-  protected totalCost(e: EventBlock): number {
-    return e.recipes.reduce((s, r) => s + r.unitCost * r.count, 0);
-  }
-
-  protected hasMissing(e: EventBlock): boolean {
-    return e.recipes.some((r) => r.stock === 'warn' || r.stock === 'low');
-  }
-
-  protected missingCount(e: EventBlock): number {
-    return e.recipes.filter((r) => r.stock === 'warn' || r.stock === 'low').length;
-  }
-
-  protected eventBorderClass(e: EventBlock): string {
-    return e.status === 'preparing' ? 'border-warn' : 'border-border-s';
-  }
-
-  protected dateChipClass(e: EventBlock): string {
-    return e.status === 'preparing'
-      ? 'bg-red-soft text-red border-red'
-      : 'bg-surface-2 text-text-2 border-border-s';
-  }
-
-  protected stockText(
-    r: RecipeLine,
-  ): { label: string; tone: 'ok' | 'warn' | 'danger' | 'muted' } | null {
-    switch (r.stock) {
-      case 'ok':
-        return { label: 'Suffisant', tone: 'ok' };
-      case 'warn':
-        return { label: 'Manque 12 u.', tone: 'warn' };
-      case 'low':
-        return { label: 'Manque 40 u.', tone: 'danger' };
-      case 'todo':
-        return { label: 'À calculer', tone: 'muted' };
-      case 'past':
-        return null;
-    }
-  }
-
-  protected stockToneClass(tone: 'ok' | 'warn' | 'danger' | 'muted'): string {
-    switch (tone) {
-      case 'ok':
-        return 'text-ok';
-      case 'warn':
-        return 'text-warn';
-      case 'danger':
-        return 'text-danger';
-      case 'muted':
-        return 'text-muted';
-    }
-  }
-
-  protected validationBadge(
-    r: RecipeLine,
-  ): { label: string; kind: BadgeKind; dot: boolean } | null {
-    switch (r.stock) {
-      case 'past':
-        return { label: 'Servie', kind: 'ok', dot: false };
-      case 'todo':
-        return { label: 'Brouillon', kind: 'ghost', dot: false };
-      case 'ok':
-        return { label: 'Validée', kind: 'ok', dot: false };
-      case 'warn':
-        return { label: 'À recompter', kind: 'warn', dot: true };
-      case 'low':
-        return { label: 'Bloquant', kind: 'danger', dot: true };
-    }
-  }
-
-  protected openRecipePicker(e: EventBlock, ev: MouseEvent): void {
+  protected openRecipePicker(event: EventDetail, ev: MouseEvent): void {
     ev.stopPropagation();
     const anchor = this.resolveAnchor(ev.currentTarget);
     if (!anchor) return;
 
-    const taken = new Set(e.recipes.map((r) => r.id));
-    const available = this.catalog().filter((c: Recipe) => !taken.has(c.id));
+    const available = this.availableRecipes(this.recipes.products(), event.menu ?? []);
 
-    const items: readonly DropdownItem[] = available.map((c: Recipe) => ({
+    const items: readonly DropdownItem[] = available.map((recipe) => ({
       type: 'action',
-      icon: LucideChefHat,
-      label: c.nom,
-      description: c.usage,
-      trailing: `${this.formatPrice(c.cout)} €`,
-      onClick: () => this.addFromCatalog(e, c),
+      icon: this.icChef,
+      label: recipe.name,
+      description: recipe.category ?? undefined,
+      trailing: recipe.cost !== null ? `${this.formatPrice(recipe.cost)} €` : '—',
+      onClick: () => void this.addRecipe(event, recipe),
     }));
 
     this.dropdown.toggle({
@@ -361,52 +292,109 @@ export class LogistiqueEvents {
     });
   }
 
+  protected openLineMenu(event: EventDetail, line: MenuItem, ev: MouseEvent): void {
+    ev.stopPropagation();
+    const anchor = this.resolveAnchor(ev.currentTarget);
+    if (!anchor) return;
+
+    this.dropdown.toggle({
+      anchor,
+      placement: 'bottom-end',
+      width: 220,
+      items: [
+        {
+          type: 'action',
+          icon: this.icTrash,
+          label: 'Retirer du menu',
+          danger: true,
+          onClick: () => void this.removeRecipe(event.id, line),
+        },
+      ],
+    });
+  }
+
   private resolveAnchor(target: EventTarget | null): HTMLElement | null {
     if (!(target instanceof HTMLElement)) return null;
     return target.closest('button') ?? target;
   }
 
-  private addFromCatalog(e: EventBlock, c: Recipe): void {
-    this.events.update((list) =>
-      list.map((ev) =>
-        ev.id !== e.id
-          ? ev
-          : {
-              ...ev,
-              recipes: [
-                ...ev.recipes,
-                { id: c.id, name: c.nom, unitCost: c.cout, count: 10, stock: 'todo' },
-              ],
-            },
-      ),
+  /** Ajoute la recette au menu puis confirme par un toast — même geste que les
+   *  enregistrements de stocks et de bons d'achat. */
+  protected async addRecipe(event: EventDetail, recipe: RecipeProduct): Promise<void> {
+    await this.store.addMenuLine(event.id, recipe.id);
+    const error = this.store.menuError();
+    this.toast.show(
+      error
+        ? { type: 'error', title: 'Ajout refusé', message: error }
+        : { type: 'success', title: 'Recette ajoutée', message: recipe.name },
     );
   }
 
-  protected inc(e: EventBlock, r: RecipeLine): void {
-    this.events.update((list) =>
-      list.map((ev) =>
-        ev.id !== e.id
-          ? ev
-          : {
-              ...ev,
-              recipes: ev.recipes.map((x) => (x.id === r.id ? { ...x, count: x.count + 1 } : x)),
-            },
-      ),
+  protected async removeRecipe(eventId: string, line: MenuItem): Promise<void> {
+    await this.store.removeMenuLine(eventId, line.productId);
+    const error = this.store.menuError();
+    this.toast.show(
+      error
+        ? { type: 'error', title: 'Retrait refusé', message: error }
+        : { type: 'success', title: 'Recette retirée', message: line.name },
     );
   }
 
-  protected dec(e: EventBlock, r: RecipeLine): void {
-    this.events.update((list) =>
-      list.map((ev) =>
-        ev.id !== e.id
-          ? ev
-          : {
-              ...ev,
-              recipes: ev.recipes.map((x) =>
-                x.id === r.id ? { ...x, count: Math.max(0, x.count - 1) } : x,
-              ),
-            },
-      ),
+  /**
+   * Quantités en cours d'édition, indexées par `"<eventId>:<productId>"`.
+   *
+   * Le gabarit lit toujours `quantityOf()`, jamais `line.quantity`
+   * directement : le pas-à-pas doit répondre au clic sans attendre le réseau,
+   * alors que la requête, elle, est différée et coalescée.
+   */
+  private readonly pendingQuantities = signal<ReadonlyMap<string, number>>(new Map());
+  private readonly pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private static readonly DEBOUNCE_MS = 400;
+
+  protected quantityOf(eventId: string, line: MenuItem): number {
+    return this.pendingQuantities().get(`${eventId}:${line.productId}`) ?? line.quantity;
+  }
+
+  /**
+   * Le pas-à-pas est débouncé par ligne : dix clics consécutifs ne font qu'une
+   * requête, avec la valeur finale. L'affichage, lui, bouge à chaque clic —
+   * il vit dans `pendingQuantities`, lu en priorité par le gabarit, jamais
+   * dans l'attente du réseau.
+   */
+  protected step(eventId: string, line: MenuItem, delta: number): void {
+    const key = `${eventId}:${line.productId}`;
+    const current = this.quantityOf(eventId, line);
+    // Quantité 0 signifierait « retirer la ligne » — c'est le retrait qui
+    // porte cette intention, pas ce pas-à-pas ; l'API refuse d'ailleurs toute
+    // valeur < 1 par un 422.
+    const next = Math.max(1, current + delta);
+    if (next === current) return;
+
+    this.pendingQuantities.update((map) => {
+      const copy = new Map(map);
+      copy.set(key, next);
+      return copy;
+    });
+
+    const existing = this.pendingTimers.get(key);
+    if (existing) clearTimeout(existing);
+
+    this.pendingTimers.set(
+      key,
+      setTimeout(() => {
+        this.pendingTimers.delete(key);
+        void this.store.setMenuLineQuantity(eventId, line.productId, next).finally(() => {
+          // Le store porte déjà la valeur, optimiste depuis l'appel : l'entrée
+          // locale n'a plus lieu d'être, qu'il ait réussi ou échoué (le store
+          // restaure alors lui-même la ligne fautive).
+          this.pendingQuantities.update((map) => {
+            if (!map.has(key)) return map;
+            const copy = new Map(map);
+            copy.delete(key);
+            return copy;
+          });
+        });
+      }, LogistiqueEvents.DEBOUNCE_MS),
     );
   }
 }
