@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  type ElementRef,
   OnInit,
   type TemplateRef,
   computed,
@@ -11,6 +10,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
+  LucideDownload,
   LucideDynamicIcon,
   LucideLock,
   LucidePlus,
@@ -114,7 +114,6 @@ export class Logistique implements OnInit {
 
   /** Actions poussées dans la topbar, comme sur la page Équipe. */
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
-  private readonly vouchersPanel = viewChild<ElementRef<HTMLElement>>('vouchersPanel');
 
   /** L'id de soirée du segment `/logistique/:id` ; la liste de courses n'a
    *  de sens que pour une soirée précise. */
@@ -148,6 +147,7 @@ export class Logistique implements OnInit {
   }
 
   protected readonly icTicket = LucideTicket;
+  protected readonly icDownload = LucideDownload;
   protected readonly icUpload = LucideUpload;
   protected readonly icPlus = LucidePlus;
   protected readonly icLock = LucideLock;
@@ -316,17 +316,6 @@ export class Logistique implements OnInit {
 
   protected openCreateVoucher(): void {
     this.modalService.open({ type: 'component', component: VoucherCreateModal, inputs: {} });
-  }
-
-  /**
-   * Le bouton « Bons d'achat (n) » de la topbar amène au panneau.
-   *
-   * Le compteur est la seule chose que la maquette lui donne à faire ; sur une
-   * page qui affiche déjà le panneau plus bas, le mener jusqu'à lui est ce qui
-   * reste d'utile — et évite un bouton décoratif.
-   */
-  protected scrollToVouchers(): void {
-    this.vouchersPanel()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   protected isSaving(id: number): boolean {

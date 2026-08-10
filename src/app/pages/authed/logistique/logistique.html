@@ -1,8 +1,3 @@
-<!--
-  Actions de la topbar, d'après `screen-logistique.jsx`. Deux écarts assumés :
-  « Preuve d'achat » n'a aucun stockage de fichiers côté API, et « Exporter PDF »
-  cède la place primaire à « Nouveau bon », seule des deux à exister.
--->
 <ng-template #actions>
   <bfd-btn
     kind="ghost"
@@ -12,10 +7,15 @@
     title="Aucun stockage de justificatifs côté API"
     >Preuve d'achat</bfd-btn
   >
+  <bfd-btn
+    kind="secondary"
+    size="md"
+    [icon]="icDownload"
+    [disabled]="true"
+    title="Génération de PDF non implémentée"
+    >Fiche logistique</bfd-btn
+  >
   @if (!vouchersForbidden()) {
-    <bfd-btn kind="secondary" size="md" [icon]="icTicket" (clicked)="scrollToVouchers()">
-      Bons d'achat ({{ vouchers().length }})
-    </bfd-btn>
     <span data-testid="add-voucher">
       <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateVoucher()">
         Nouveau bon
@@ -149,12 +149,10 @@
               <tr
                 class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
               >
-                <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">
-                  Produit
-                </th>
+                <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">Produit</th>
                 <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
                 @for (column of retailerColumns(); track column.id) {
-                  <th scope="col" class="min-w-[110px] px-3.5 py-2.5 text-right font-semibold">
+                  <th scope="col" class="min-w-27.5 px-3.5 py-2.5 text-right font-semibold">
                     {{ column.name }}
                   </th>
                 }
@@ -280,7 +278,7 @@
 
   <!-- Bons d'achat. L'ajout vit dans la topbar (gabarit `#actions`), comme dans
        la maquette : la section n'a pas de bouton à elle. -->
-  <div #vouchersPanel class="mono mt-6 mb-2 flex items-center gap-1.5 text-[10px] tracking-wider">
+  <div class="mono mt-6 mb-2 flex items-center gap-1.5 text-[10px] tracking-wider">
     <svg
       [lucideIcon]="vouchersForbidden() ? icLock : icTicket"
       [size]="12"

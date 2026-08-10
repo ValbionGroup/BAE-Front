@@ -444,10 +444,26 @@ describe(Logistique.name, () => {
     );
   });
 
-  it('counts the loaded vouchers on the topbar action', async () => {
+  /**
+   * « Fiche logistique » remplace l'ancien raccourci « Bons d'achat (n) » —
+   * le panneau des bons reste atteignable en défilant.
+   *
+   * Le bouton est **désactivé**, pas simplement sans gestionnaire : aucune
+   * génération de PDF n'existe côté API (§31 de `HANDOFF2.md`), et un bouton
+   * qui ne réagit pas au clic est plus déroutant qu'un bouton grisé. C'est la
+   * convention que « Preuve d'achat » suit déjà dans la même topbar.
+   */
+  it('offre une fiche logistique désactivée tant que le PDF n’existe pas', async () => {
     await renderLoaded();
 
-    expect(renderTopbarActions().textContent).toContain("Bons d'achat (1)");
+    const actions = renderTopbarActions();
+    expect(actions.textContent).toContain('Fiche logistique');
+    expect(actions.textContent).not.toContain("Bons d'achat (");
+
+    const disabled = actions.querySelectorAll('button[disabled]');
+    // Deux actions désactivées : « Preuve d'achat » (aucun stockage de
+    // fichiers) et « Fiche logistique » (aucune génération de PDF).
+    expect(disabled.length).toBe(2);
   });
 
   it('names the toggle button after the voucher it acts on', async () => {
