@@ -11,6 +11,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": ">=11.0.0 <12.0.0",
+      "onFail": "download"
+    }
+  },
   "private": true,
   "imports": {
     "#core/*": "./src/app/core/*",
