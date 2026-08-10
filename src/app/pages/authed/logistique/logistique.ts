@@ -24,6 +24,7 @@ import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { ModalService } from '#shared/components/modal/modal.service';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import type {
   ApiGood,
@@ -86,6 +87,7 @@ function buildRow(good: ApiGood, columns: readonly SupplierColumn[]): CartRow {
 export class Logistique implements OnInit {
   private readonly store = inject(LogistiqueStore);
   private readonly modalService = inject(ModalService);
+  private readonly toast = inject(ToastService);
   private readonly pageHeader = inject(PageHeaderService);
 
   /** Actions poussées dans la topbar, comme sur la page Équipe. */
@@ -281,8 +283,20 @@ export class Logistique implements OnInit {
     return this.savingVoucherIds().includes(id);
   }
 
-  protected toggleVoucher(voucher: VoucherCard): void {
-    void this.store.toggleVoucherUsed(voucher.id, !voucher.used);
+  protected async toggleVoucher(voucher: VoucherCard): Promise<void> {
+    const used = !voucher.used;
+    await this.store.toggleVoucherUsed(voucher.id, used);
+
+    const error = this.voucherErrorId() === voucher.id ? this.voucherError() : null;
+    this.toast.show(
+      error
+        ? { type: 'error', title: 'Mise à jour refusée', message: error }
+        : {
+            type: 'success',
+            title: used ? 'Bon consommé' : 'Consommation annulée',
+            message: `${voucher.supplierName} · ${this.formatPrice(voucher.value)} €`,
+          },
+    );
   }
 
   /**

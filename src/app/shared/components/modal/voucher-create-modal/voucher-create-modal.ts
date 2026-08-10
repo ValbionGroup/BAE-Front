@@ -4,6 +4,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { LogistiqueStore } from '#core/store/logistique.store';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -31,6 +32,7 @@ export class VoucherCreateModal {
   readonly id = input.required<string>();
 
   private readonly modalService = inject(ModalService);
+  private readonly toast = inject(ToastService);
   protected readonly store = inject(LogistiqueStore);
 
   protected readonly icTicket = LucideTicket;
@@ -82,7 +84,23 @@ export class VoucherCreateModal {
       condition: condition === '' ? null : condition,
     });
 
-    if (ok) this.modalService.close(this.id());
+    if (!ok) return;
+    this.toast.show({
+      type: 'success',
+      title: "Bon d'achat créé",
+      message: `${this.formatAmount(amount)} € chez ${this.supplierName()}.`,
+    });
+    this.modalService.close(this.id());
+  }
+
+  /** Nom de l'enseigne choisie, pour le message de confirmation. */
+  private supplierName(): string {
+    const id = Number(this.supplierId());
+    return this.store.suppliers().find((s) => s.id === id)?.name ?? 'une enseigne';
+  }
+
+  private formatAmount(value: number): string {
+    return value.toFixed(2).replace('.', ',');
   }
 
   protected cancel(): void {

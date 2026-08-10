@@ -9,6 +9,7 @@ import { vi } from 'vitest';
 
 import { Logistique } from './logistique';
 import { ModalService } from '#shared/components/modal/modal.service';
+import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import type { ApiGood, ApiSupplierPrice, ApiVoucher } from './logistique.types';
 
@@ -225,6 +226,42 @@ describe(Logistique.name, () => {
     expect(req.request.body.usedAt).toBeTruthy();
     req.flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
     await fixture.whenStable();
+  });
+
+  it('confirms a consumption with a toast', async () => {
+    const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers/1'))
+      .flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
+    await fixture.whenStable();
+
+    expect(shown).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', title: 'Bon consommé' }),
+    );
+  });
+
+  it('reports a refused consumption in a toast', async () => {
+    const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
+    await renderLoaded();
+
+    const toggle: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers/1'))
+      .flush({ message: 'Bon introuvable.' }, { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+
+    expect(shown).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'error', message: 'Bon introuvable.' }),
+    );
   });
 
   it('no longer shows the read-only padlock', async () => {
