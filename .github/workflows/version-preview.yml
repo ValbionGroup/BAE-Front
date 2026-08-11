@@ -60,6 +60,9 @@ jobs:
 
           pnpm version "$NEW_VERSION" --message "chore(release): v%s" --no-git-tag-version --allow-same-version
 
+          git add package.json pnpm-lock.yaml
+          git commit -m "chore(release): v$NEW_VERSION"
+
           git push origin "HEAD:refs/heads/$HEAD_REF"
 
       - name: Comment PR with next version
