@@ -33,13 +33,14 @@
 <div class="flex h-full flex-col">
   <!-- Bandeau de service -->
   <div class="flex items-center gap-4 border-b border-border-s bg-sidebar px-6 py-3.5">
-    <div
-      class="inline-flex items-center gap-2 rounded-full bg-danger-soft px-3 py-1 text-[11.5px] font-semibold text-danger"
-    >
-      <span class="bae-pulse h-1.5 w-1.5 rounded-full bg-danger"></span>
-      LIVE · Soirée en cours
-    </div>
     @if (currentEvent(); as event) {
+      <div
+        class="inline-flex items-center gap-2 rounded-full bg-danger-soft px-3 py-1 text-[11.5px] font-semibold text-danger"
+      >
+        <span class="bae-pulse h-1.5 w-1.5 rounded-full bg-danger"></span>
+        LIVE · Soirée en cours
+      </div>
+
       <div class="text-[13px] text-text-2">{{ event.name }}</div>
       @if (event.status === 'ongoing') {
         <bfd-badge kind="ok" [dot]="true">ouverte</bfd-badge>
