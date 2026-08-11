@@ -842,7 +842,28 @@ faux sur un écran de service sont pires qu'un écran vide, parce qu'on les croi
 
 Ce qui reste est branché : la soirée réelle, l'horloge, l'heure de début lue sur la soirée (et non
 plus la constante `'19:30'`), la production et sa clôture. Un encart dit ce que la page ne fait pas
-encore. `screen-soiree-live.jsx` reste la spécification d'interface pour le jour où `orders` existera.
+encore.
+
+#### Comment récupérer la file de tickets le jour où `orders` existera
+
+**Rien n'est perdu.** Le commit de suppression est `c5bb77a` ; son parent porte les 514 lignes du
+gabarit et le composant complet :
+
+```bash
+git show c5bb77a^:src/app/pages/authed/soiree/live/live.html
+git show c5bb77a^:src/app/pages/authed/soiree/live/live.ts
+```
+
+⚠️ **Récupérer le gabarit, réécrire les types.** Ce qui vaut d'être repris est la **mise en page** :
+les trois colonnes, les minuteurs colorés, les cartes de commande. Le modèle, lui, a été dessiné à
+l'envers — `Ticket` porte un `client: string`, un temps écoulé calculé depuis un nombre de secondes
+en dur et un statut à trois valeurs inventé pour la maquette. Rien de tout ça ne vient
+d'`order_products`.
+
+Reprendre ces interfaces telles quelles ferait plier l'API sur une forme née d'une maquette, ce qui
+est exactement le piège que le §0 septies raconte à propos de `MenuItem` (il portait `servings` et
+`prepNotes` que rien n'alimentait). La **source d'interface** est
+`screen-soiree-live.jsx` dans Claude Design, pas le code supprimé.
 
 ### Ce qui reste ouvert
 
