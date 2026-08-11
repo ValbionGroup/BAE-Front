@@ -808,13 +808,48 @@ avant que la chaîne n'aboutisse. Il faut céder la main à la file de microtâc
 requête, appeler `fixture.detectChanges()` **avant** de l'attendre : un effect ne tourne qu'à la
 détection de changements.
 
+### La règle « quelle soirée » — corrigée le 2026-08-11 après signalement
+
+Première version : « la plus proche parmi les non clôturées ». **Faux**, et la caisse proposait alors
+d'encaisser sur une soirée de **2027**. Deux défauts sur la même ligne :
+
+- **La sémantique.** Le dépôt disait déjà la bonne règle et je ne l'ai pas lue : le champ s'appelle
+  `CaisseStore.todayEvent`, et le texte de son état vide dit « Aucune soirée n'est programmée **pour
+  aujourd'hui** ». Élargir à « la prochaine à venir » contredisait le nom et la copie.
+- **Le tri.** `new Date(dto.date)` sur une date absente donne `Invalid Date`, dont `getTime()` vaut
+  `NaN`. Un comparateur qui rend `NaN` laisse le tri **ne rien réordonner** : l'ordre d'arrivée de
+  l'API l'emporte, et une soirée lointaine sort en tête sans être la plus proche. C'est ce qui rendait
+  le choix « ni le plus proche, ni celui du jour ».
+
+**Règle en vigueur**, dans `EventsStore.activeEvent` et nulle part ailleurs :
+
+1. une soirée explicitement **`ongoing`** — le bureau l'a ouverte, elle prime ;
+2. sinon, une soirée non clôturée **datée d'aujourd'hui** ;
+3. sinon **rien**, et les écrans le disent.
+
+Les dates invalides passent en dernier, explicitement. Préparer une soirée future est le rôle de la
+**Logistique**, pas d'un écran de service — relâcher cette règle rouvrirait exactement le bug.
+
+### La maquette inventée de `soiree/live` a été supprimée
+
+Signalé le 2026-08-11 : la page affichait toujours ses données factices. Elles ne sont plus
+annoncées, elles sont **parties** — plus de 400 lignes : file de tickets à trois colonnes avec noms
+de clients, KPIs d'encaissement, cadence, flux de transactions, alertes, stock critique. Aucune ne
+consommait d'endpoint.
+
+**515 → 213 lignes de TS, 480 → 145 de gabarit.** Un test garde désormais leur absence : des chiffres
+faux sur un écran de service sont pires qu'un écran vide, parce qu'on les croit.
+
+Ce qui reste est branché : la soirée réelle, l'horloge, l'heure de début lue sur la soirée (et non
+plus la constante `'19:30'`), la production et sa clôture. Un encart dit ce que la page ne fait pas
+encore. `screen-soiree-live.jsx` reste la spécification d'interface pour le jour où `orders` existera.
+
 ### Ce qui reste ouvert
 
 - **Les trois tests du nouvel endpoint n'ont pas tourné** (voir plus haut). C'est le premier geste à
   refaire.
-- **`soiree/live` reste factice pour tout le reste** : tickets, cadence, transactions, alertes et
-  stock critique n'ont aucun endpoint. C'est désormais **annoncé à l'écran** par un bandeau et deux
-  boutons désactivés, mais ce n'est pas branché. Le §32 de `HANDOFF2.md` décrit le lot.
+- **La file de commandes, les KPIs d'encaissement et le stock critique** attendent `orders`, sans
+  contrôleur (§3.4). Le §32 de `HANDOFF2.md` décrit le lot.
 - **La caisse n'encaisse toujours pas.** Elle s'ouvre, affiche le menu réel et remplit un panier —
   mais `orders` n'a aucun contrôleur côté back (§3.4), donc rien n'est enregistré.
 - **`soiree/bilan` n'a pas été touchée** et reste entièrement factice.
