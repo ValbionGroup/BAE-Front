@@ -5,6 +5,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '#core/services/auth/auth-service';
 import { TokensService } from '#core/services/tokens/tokens-service';
+import { ThemeService } from '#core/services/theme/theme-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { isNil } from '#shared/utils/base-function';
 import { ApiError, isApiError } from '#core/models/api-response.model';
@@ -112,7 +113,14 @@ export class AuthEffects {
         tap(() => {
           this.websocketService.shutdown();
           this.tokensService.clear();
+          // La préférence de thème n'est pas une donnée de session : elle doit
+          // survivre à localStorage.clear() plutôt que se réinitialiser à chaque
+          // déconnexion.
+          const theme = localStorage.getItem(ThemeService.STORAGE_KEY);
           localStorage.clear();
+          if (theme !== null) {
+            localStorage.setItem(ThemeService.STORAGE_KEY, theme);
+          }
           this.router.navigate([AppRoutes.login]);
         }),
       ),

@@ -9,8 +9,8 @@ et de suivre les branches. À maintenir avec le code, donc — plus à supprimer
 Dépôts : `~/Documents/Projets/BAE/BAE-Front` (Angular 21) et `../BAE-Back` (**AdonisJS 7 + Lucid**,
 port 3333). Branche `feat/fix-frontend` des deux côtés, rien n'est poussé.
 
-⚠️ `.claude/CLAUDE.md` (front) annonce « AdonisJS 6 » : c'est faux, `@adonisjs/core` est en `^7.3.4`
-et `@adonisjs/auth` en `^10.1.0`. À corriger — l'écart envoie vers la mauvaise documentation.
+~~⚠️ `.claude/CLAUDE.md` (front) annonce « AdonisJS 6 »~~ — **corrigé**, vérifié le 2026-08-11 : le
+fichier dit désormais « AdonisJS 7 », en phase avec `@adonisjs/core` en `^7.3.4`.
 
 État (2026-08-06) : back **139 tests**, front **125 fichiers / 435 tests**, typecheck vert partout.
 Après les lots rôles × permissions et écritures Équipe (§0 bis, §0 ter) : back **157 tests**, front
@@ -22,6 +22,11 @@ Après les lots rôles × permissions et écritures Équipe (§0 bis, §0 ter) :
 > Mis à jour le 2026-08-08 (suite) : le lot **écritures Équipe** (modifier/supprimer un membre,
 > §2.1) est livré sur `feat/member-crud` dans les deux dépôts, non poussé. Voir le §0 ter — il
 > corrige aussi une note du §0 bis devenue fausse (le rôle `President`).
+>
+> Mis à jour le 2026-08-11 : clôture des points ouverts laissés par le §0 nonies et par
+> `HANDOFF2.md` §18.2/§20.1/§22.5 — tests de `production-returns` enfin exécutés, verrou d'office
+> sur une affectation manuelle, thème préservé à la déconnexion, première vérification à l'écran
+> outillée (Puppeteer) depuis six lots. Voir le §0 decies.
 
 ---
 
@@ -867,15 +872,91 @@ est exactement le piège que le §0 septies raconte à propos de `MenuItem` (il 
 
 ### Ce qui reste ouvert
 
-- **Les trois tests du nouvel endpoint n'ont pas tourné** (voir plus haut). C'est le premier geste à
-  refaire.
+- ~~**Les trois tests du nouvel endpoint n'ont pas tourné**~~ — **fait le 2026-08-11**, voir §0
+  decies : `bae-postgres-dev` relancé, `node ace test` intégralement vert (260 tests).
 - **La file de commandes, les KPIs d'encaissement et le stock critique** attendent `orders`, sans
   contrôleur (§3.4). Le §32 de `HANDOFF2.md` décrit le lot.
 - **La caisse n'encaisse toujours pas.** Elle s'ouvre, affiche le menu réel et remplit un panier —
   mais `orders` n'a aucun contrôleur côté back (§3.4), donc rien n'est enregistré.
 - **`soiree/bilan` n'a pas été touchée** et reste entièrement factice.
-- Aucune vérification à l'œil de ces écrans : pas d'outil de navigateur dans la session. Les 546
-  tests Vitest assertent sur le DOM rendu, ce qui n'est pas un regard.
+- ~~Aucune vérification à l'œil de ces écrans~~ — **faite le 2026-08-11** pour Équipe, Logistique
+  (bons + liste de courses), Stocks/lots, soirée/live et caisse ; voir §0 decies. `soiree/bilan`
+  n'était pas dans ce périmètre et reste à vérifier.
+
+---
+
+## 0 decies. Clôture des points ouverts du §0 nonies et de HANDOFF2 §18/20/22 — 2026-08-11
+
+Suite immédiate du §0 nonies, même branche `feat/production-fefo` des deux côtés.
+Back : 2 commits (fix `assignments_controller.ts` + tests). Front : 3 commits (thème,
+`puppeteer-core` en devDependency, ce fichier). Back **262 tests**, front **551 tests** (130
+fichiers), typecheck vert des deux côtés.
+
+| Sujet                                                             | État                | Où                                                                  |
+| ----------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
+| Les 3 tests de `production-returns` (jamais exécutés)             | ✅ **fait**         | `bae-postgres-dev` relancé, 260 tests verts avant ce lot            |
+| Affectation manuelle verrouillée d'office                         | ✅ **fait**         | `assignments_controller.ts:102`, `locked ?? true`                   |
+| Chemin d'écriture de `openedAt`                                   | ✅ **vérifié**      | rien à corriger — voir `HANDOFF2.md` §18.2                          |
+| Thème : écran de préférences à 3 choix                            | ✅ **déjà fait**    | §22.5 de `HANDOFF2.md` était fondé sur une lecture obsolète du code |
+| `logout$` effaçait `bae_theme`                                    | ✅ **corrigé**      | `auth.effect.ts`, préserve la clé avant `localStorage.clear()`      |
+| `.claude/CLAUDE.md` annonçait « AdonisJS 6 »                      | ✅ **déjà corrigé** | plus la peine d'y revenir                                           |
+| Vérification à l'écran (Équipe, Logistique, Stocks, live, caisse) | ✅ **faite**        | `puppeteer-core` + Chrome local, voir plus bas                      |
+
+### Le back a de nouveau perdu sa base de dev pendant la session
+
+Même symptôme qu'au §0 nonies : `bae-postgres-dev` s'est arrêté (code 0) tout seul, cette fois
+entre le premier lancement de `node ace test` et le second. Ce n'est donc pas un incident isolé du
+lot précédent — le conteneur semble s'arrêter spontanément après quelques minutes d'inactivité, à
+surveiller si ça recommence. `docker start bae-postgres-dev` suffit à repartir ; aucune donnée
+perdue (volume persistant).
+
+### Le dépôt back a changé de branche tout seul en cours de session
+
+Découvert via `git reflog` : `BAE-Back` est passé de `feat/production-fefo` à `feat/member-crud`
+sans commande explicite de ce lot — le `reflog` pointe vers un `checkout` externe (l'IDE de
+l'utilisateur, IntelliJ/PhpStorm, avait aussi fait une série de `reword` sur l'historique juste
+avant). Conséquence concrète : un premier `node ace test` a tourné sur `feat/member-crud` (161
+tests, la mauvaise branche) sans que rien ne le signale — le nombre de tests est la seule alarme.
+**Toujours vérifier `git branch --show-current` avant un geste qui dépend de la branche**, surtout
+si une commande git a été lancée depuis la dernière vérification et qu'un IDE tourne en parallèle.
+Remis sur `feat/production-fefo` sans perte : le seul fichier modifié était un artefact de codegen
+auto-généré (`.adonisjs/**`, jamais à éditer à la main de toute façon).
+
+### Vérification à l'écran — première fois outillée depuis six lots
+
+`puppeteer-core` (paquet léger, sans Chromium embarqué) pointé vers le Chrome déjà installé sur la
+machine évite le téléchargement de ~150-300 Mo que les lots précédents avaient justement refusé de
+payer. Script ad hoc, non commité, contre les deux serveurs de dev réels et les quatre comptes de
+`dev_account_seeder`. 13/14 vérifications passent du premier coup ; la 14ᵉ n'était pas un bug :
+
+- **Le libellé de lot périmé traîne encore en base.** Un lot de « Bière blonde 25cl x24 » affiche
+  toujours `#Practical Plastic Fish` au lieu de `#L26-x` — exactement la réserve notée au §0
+  octies (« les lots déjà en base gardent leurs libellés absurdes, seul un reseed les corrige »).
+  Pas un nouveau bug, la confirmation à l'écran d'un point déjà écrit.
+- **Piège de route retombé dedans une fois** : `/logistique` n'affiche plus le panneau bons
+  d'achat / liste de courses depuis le §0 septies — c'est devenu la liste des soirées
+  (`LogistiqueEvents`), et le panneau vit désormais sur `/logistique/:id`. Le premier passage du
+  script testait `/logistique` et concluait à tort que le panneau « bons d'achat » était absent
+  pour `membre@bae.test` (donc pas gardé) ; en réalité c'est la mauvaise page. Corrigé en pointant
+  vers `/logistique/4`, où les deux gardes (`vouchers-forbidden`, `shopping-list-forbidden`) se
+  comportent comme documenté au §0 quinquies et au §0 septies.
+- **`soiree/live` et `caisse` vérifiées en conditions réelles** : aucune soirée n'était `ongoing`
+  ni datée d'aujourd'hui dans les données semées (toutes en 2027), donc l'événement 4 a été mis en
+  `ongoing` via l'API le temps du test puis **remis à `scheduled`** ensuite — aucune donnée de
+  démonstration laissée modifiée. `soiree/live` affiche la vraie soirée, les 5 recettes du menu
+  avec leurs objectifs, et l'encart « ce qui n'est pas encore ici » ; `caisse` propose « Lancer la
+  session pour <soirée du jour> » plutôt que le faux « aucune soirée » d'avant §0 nonies.
+- **Équipe** vérifiée avec `admin@bae.test` (14 membres, rôles réels, aucun `?`) et
+  `membre@bae.test` (redirigé vers l'accueil, faute de `role:read` — comportement attendu).
+
+### Ce qui reste ouvert
+
+- **Les libellés de lots absurdes antérieurs à la correction persistent** — seul un
+  `migration:fresh` + reseed les corrige, pas fait ici pour ne pas perdre l'état de dev courant
+  (production run id 50 du §0 octies, entre autres).
+  `soiree/bilan` n'a toujours pas été vérifiée à l'écran (hors périmètre de ce lot).
+- Le reste des points ouverts du §0 nonies (`orders` sans contrôleur, file de commandes, KPIs
+  d'encaissement) est inchangé — voir §3.4.
 
 ---
 

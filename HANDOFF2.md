@@ -277,9 +277,14 @@ conservation (frigo / congélateur / sec / cave). C'est une migration d'une colo
 avant l'écran d'ajout de produit**, pas après : ajouter un champ obligatoire à une table déjà
 peuplée coûte plus cher.
 
-⚠️ Ne pas la confondre avec `stock_batches.openedAt` (« date d'ouverture du paquet », P1), qui est
-déjà présent en lecture (`StockBatchRow.openedAt`). **Vérifier si le chemin d'écriture existe** —
-marquer un lot comme entamé est un geste quotidien, et le HANDOFF ne mentionne que `discardBatch`.
+⚠️ Ne pas la confondre avec `stock_batches.openedAt` (« date d'ouverture du paquet », P1) — **vérifié
+le 2026-08-11, rien à corriger**. `stock_batches` n'a pas de colonne `opened_at` : la valeur est
+dérivée à la lecture (`stock_service.ts:55-58`) du plus ancien mouvement `'out'` du lot. Marquer un
+lot comme entamé se fait donc **implicitement**, par toute consommation — ce que fait déjà chaque
+lancement de production (§0 octies). Aucun bouton front n'attend d'endpoint dédié
+(`stocks.html` n'affiche `openedAt` qu'en lecture seule) ; il n'y a pas de chemin d'écriture séparé
+à ajouter tant que le produit ne demande pas un geste explicite « marquer entamé » indépendant de
+toute consommation.
 
 ---
 
