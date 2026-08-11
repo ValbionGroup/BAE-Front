@@ -58,12 +58,85 @@ function toEventsDict(eventsList: readonly EventDetail[]): Record<string, EventD
   );
 }
 
+/**
+ * ⚠️ `new Date(dto.date)` sur une date absente ou malformée donne
+ * `Invalid Date`, dont `getTime()` vaut `NaN`. Un comparateur qui rend `NaN`
+ * laisse le tri **ne rien réordonner** — une soirée lointaine peut alors sortir
+ * en tête sans que rien ne le signale. Les dates invalides passent donc en
+ * dernier, explicitement.
+ */
+function isValidDate(date: Date): boolean {
+  return !Number.isNaN(date.getTime());
+}
+
+function earliest(events: readonly EventDetail[]): EventDetail | null {
+  const datable = events.filter((event) => isValidDate(event.date));
+  if (datable.length === 0) return events[0] ?? null;
+  return [...datable].sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+}
+
+/** Même jour civil, dans le fuseau du navigateur — celui de la personne au comptoir. */
+function isSameDay(a: Date, b: Date): boolean {
+  if (!isValidDate(a) || !isValidDate(b)) return false;
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 export const EventsStore = signalStore(
   { providedIn: 'root' },
   withState<EventsState>(initialState),
-  withComputed(({ events }) => ({
-    allEvents: computed(() => Object.values(events())),
-  })),
+  withComputed(({ events }) => {
+    const allEvents = computed(() => Object.values(events()));
+
+    /**
+     * **La** soirée du service en cours — source unique pour la vue live, la
+     * caisse et les commandes.
+     *
+     * Deux règles, dans cet ordre :
+     *
+     * 1. une soirée explicitement `ongoing` — le bureau l'a ouverte, elle prime ;
+     * 2. sinon, une soirée non clôturée **datée d'aujourd'hui**.
+     *
+     * `null` sinon, et les écrans doivent alors **le dire** plutôt que d'en
+     * inventer une.
+     *
+     * ⚠️ **Surtout pas « la plus proche à venir ».** C'est ce qu'une première
+     * version faisait, et la caisse proposait alors d'encaisser sur une soirée
+     * de 2027. Le nom de `CaisseStore.todayEvent` et le texte de son état vide
+     * (« Aucune soirée n'est programmée pour aujourd'hui ») disaient déjà la
+     * bonne règle. Préparer une soirée future est le rôle de la Logistique, pas
+     * celui d'un écran de service.
+     *
+     * ⚠️ Cette dérivation vit ici et nulle part ailleurs. Deux calculs séparés
+     * finiraient par diverger, et on encaisserait sur une soirée pendant qu'on
+     * produirait pour une autre.
+     *
+     * Elle remplace `EventsService.currentActiveEvent`, qui était un
+     * `computed(() => null)` inconditionnel — et rendait la caisse
+     * **inatteignable depuis toujours**, quel que soit l'état des soirées.
+     */
+    const activeEvent = computed<EventDetail | null>(() => {
+      const all = allEvents();
+
+      const ongoing = all.filter((event) => event.status === 'ongoing');
+      if (ongoing.length > 0) return earliest(ongoing);
+
+      const now = new Date();
+      const today = all.filter(
+        (event) => event.status !== 'completed' && isSameDay(event.date, now),
+      );
+      return today.length > 0 ? earliest(today) : null;
+    });
+
+    return {
+      allEvents,
+      activeEvent,
+      activeEventId: computed(() => activeEvent()?.id ?? null),
+    };
+  }),
   withMethods((store, eventService = inject(EventsService), menu = inject(LogistiqueService)) => {
     /** Remplace le menu d'une soirée sans toucher au reste du dictionnaire. */
     function patchMenu(eventId: string, lines: readonly MenuItem[]): void {

@@ -78,7 +78,19 @@ export const CaisseStore = signalStore(
 
       return {
         loading: computed<LoadingStatus>(() => eventsStore.loading()),
-        todayEvent: computed<EventDetail | null>(() => eventsService.currentActiveEvent()),
+        /**
+         * La soirée sur laquelle la caisse peut ouvrir : celle `ongoing`, ou à
+         * défaut celle **datée d'aujourd'hui** — jamais une soirée future.
+         *
+         * Dérivée d'`EventsStore.activeEvent`, la même que pilote la vue live :
+         * dès qu'une soirée est suivie en live, la caisse est ouvrable, et les
+         * deux écrans ne peuvent pas désigner deux soirées différentes.
+         *
+         * ⚠️ Elle dérivait auparavant d'`EventsService.currentActiveEvent`, un
+         * `computed(() => null)` inconditionnel — la caisse affichait donc
+         * toujours « aucune soirée programmée » et ne pouvait pas s'ouvrir.
+         */
+        todayEvent: eventsStore.activeEvent,
         sessionEvent,
         sessionActive: computed(() => sessionEventId() !== null),
         menu,
@@ -90,9 +102,17 @@ export const CaisseStore = signalStore(
       };
     },
   ),
-  withMethods((store) => ({
+  withMethods((store, eventsStore = inject(EventsStore)) => ({
+    /**
+     * Ouvre la caisse sur une soirée.
+     *
+     * Charge le menu au passage : `sessionEvent()?.menu` est ce que la grille
+     * d'articles affiche, et rien d'autre ne le remplit — ouvrir sans lui
+     * donnait une caisse vide, sans erreur nulle part.
+     */
     startSession(eventId: string): void {
       patchState(store, { sessionEventId: eventId, cart: [], activeCategory: null });
+      void eventsStore.loadEventMenu(eventId);
     },
     endSession(): void {
       patchState(store, { sessionEventId: null, cart: [], activeCategory: null });

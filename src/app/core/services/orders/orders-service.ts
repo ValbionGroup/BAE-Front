@@ -2,7 +2,7 @@ import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { Order, OrderItem, OrderStatus, nextStatus } from '#core/models/order.model';
 import { WsMessage } from '#core/models/ws-message.model';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
-import { EventsService } from '#core/services/events/events-service';
+import { EventsStore } from '#core/store/events.store';
 
 function buildSeedOrders(eventId: string): Order[] {
   const now = Date.now();
@@ -84,12 +84,20 @@ function buildSeedOrders(eventId: string): Order[] {
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
   private readonly wsService = inject(WebsocketService);
-  private readonly eventsService = inject(EventsService);
+  private readonly eventsStore = inject(EventsStore);
 
   private readonly _allOrders = signal<Order[]>([]);
 
+  /**
+   * Les commandes de la soirée en cours.
+   *
+   * ⚠️ Filtrait auparavant sur `EventsService.currentActiveEvent`, un
+   * `computed(() => null)` inconditionnel : cette liste était donc **toujours
+   * vide**, et les compteurs qui en dérivent toujours à zéro. La soirée vient
+   * désormais d'`EventsStore.activeEvent`, la même que la caisse et la vue live.
+   */
   readonly orders: Signal<Order[]> = computed(() => {
-    const activeId = this.eventsService.currentActiveEvent()?.id;
+    const activeId = this.eventsStore.activeEventId();
     if (!activeId) return [];
     return this._allOrders().filter((o) => o.eventId === activeId);
   });

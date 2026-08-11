@@ -162,6 +162,22 @@ export class Stocks implements OnInit {
     () => this.store.products().find((p) => p.id === this.selectedId()) ?? null,
   );
 
+  /**
+   * Le lot à prendre en premier : le plus proche de la DLC parmi les lots **non
+   * périmés** et non vides. `selectedBatches()` arrive déjà trié par DLC
+   * croissante depuis l'API — le premier qui passe le filtre est le bon.
+   *
+   * Un lot périmé n'est jamais celui qu'on propose de prendre : le FEFO sert à
+   * ne pas gâcher, pas à faire manger du périmé. Il garde son propre badge et
+   * son bouton de mise au rebut.
+   */
+  protected readonly firstToTakeId = computed<number | null>(() => {
+    const batch = this.selectedBatches().find(
+      (b) => b.dlcStatus !== 'expired' && b.remainingQty > 0,
+    );
+    return batch?.id ?? null;
+  });
+
   protected readonly kpis = computed(() => {
     const products = this.store.products();
     const expired = products.reduce((s, p) => s + p.expiredBatchCount, 0);
