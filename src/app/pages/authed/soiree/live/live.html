@@ -1,7 +1,31 @@
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icBell">Push équipe</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icScan">Scanner ticket</bfd-btn>
-  <bfd-btn kind="danger" size="md" [icon]="icLock" (clicked)="closeNight()"
+  <!-- Désactivés et non masqués : ils n'appellent rien de réel. Un bouton grisé
+       qui explique pourquoi vaut mieux qu'un bouton qui ne réagit pas au clic. -->
+  <bfd-btn
+    kind="ghost"
+    size="md"
+    [icon]="icBell"
+    [disabled]="true"
+    title="Aucun système de notification — voir §21 du handoff"
+    >Push équipe</bfd-btn
+  >
+  <bfd-btn
+    kind="secondary"
+    size="md"
+    [icon]="icScan"
+    [disabled]="true"
+    title="Aucun endpoint de scan de ticket"
+    >Scanner ticket</bfd-btn
+  >
+  <bfd-btn
+    kind="danger"
+    size="md"
+    [icon]="icLock"
+    [disabled]="currentEvent() === null"
+    [title]="
+      currentEvent() === null ? 'Aucune soirée à clôturer' : 'Déclarer ce qui n\'a pas servi'
+    "
+    (clicked)="closeNight()"
     >Clôturer la soirée</bfd-btn
   >
 </ng-template>
@@ -15,7 +39,11 @@
       <span class="w-1.5 h-1.5 rounded-full bg-danger bae-pulse"></span>
       LIVE · Soirée en cours
     </div>
-    <div class="text-[13px] text-text-2">Soirée Hivernale</div>
+    @if (currentEvent(); as event) {
+      <div class="text-[13px] text-text-2">{{ event.name }}</div>
+    } @else {
+      <div class="text-[13px] text-muted">Aucune soirée en cours ni à venir</div>
+    }
     <span class="mono tnum text-[11.5px] text-muted ml-auto">
       Service depuis {{ serviceStart }} · {{ wallClock() }}
     </span>
@@ -319,6 +347,70 @@
 
     <!-- Right rail -->
     <aside class="overflow-y-auto bg-sidebar border-l border-border-s">
+      <!-- Production — le seul panneau branché sur de vraies données -->
+      <div class="p-4 border-b border-border-s">
+        <div class="flex items-baseline mb-2.5">
+          <div class="flex-1">
+            <div class="text-xs font-semibold text-text">Production</div>
+            <div class="text-[10.5px] text-muted mt-px">Prélève le stock en FEFO</div>
+          </div>
+        </div>
+
+        @if (currentEvent() === null) {
+          <div class="text-[11.5px] text-muted">Aucune soirée sélectionnée.</div>
+        } @else if (productionStatus() === 'loading') {
+          <div class="text-[11.5px] text-muted">Chargement…</div>
+        } @else if (productionStatus() === 'error') {
+          <div class="rounded-md border border-border-s bg-surface p-2.5">
+            <div class="text-[11.5px] text-text-2">Accès restreint</div>
+            <div class="text-[10.5px] text-muted mt-0.5">
+              Lancer une production demande la permission <span class="mono">stock:update</span>.
+            </div>
+          </div>
+        } @else if (productionLines().length === 0) {
+          <div class="text-[11.5px] text-muted">Aucune recette au menu de cette soirée.</div>
+        } @else {
+          <div class="flex flex-col gap-1.5">
+            @for (line of productionLines(); track line.productId) {
+              <div class="rounded-md border border-border-s bg-surface p-2.5">
+                <div class="flex items-baseline gap-2">
+                  <span class="flex-1 min-w-0 text-xs font-medium text-text truncate">
+                    {{ line.productName }}
+                  </span>
+                  <span class="mono tnum text-[11.5px] text-text-2">
+                    {{ line.producedQty }} / {{ line.plannedQty }}
+                  </span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-2">
+                  <div class="flex-1 h-1 rounded-full bg-surface-2 overflow-hidden">
+                    <div
+                      class="h-full bg-blue"
+                      [style.width.%]="
+                        line.plannedQty > 0
+                          ? (line.producedQty / line.plannedQty > 1
+                              ? 1
+                              : line.producedQty / line.plannedQty) * 100
+                          : 0
+                      "
+                    ></div>
+                  </div>
+                  <bfd-btn kind="ghost" size="sm" (clicked)="openRun(line)">Lancer</bfd-btn>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ⚠️ Tout ce qui suit est en données factices : tickets, cadence,
+           transactions, alertes et stock critique n'ont aucun endpoint
+           derrière. Voir §32 de HANDOFF2.md. -->
+      <div class="px-4 py-2 bg-warn-soft/30 border-b border-border-s">
+        <span class="text-[10.5px] text-warn font-semibold">
+          Données de démonstration ci-dessous — non branchées
+        </span>
+      </div>
+
       <!-- Cadence chart -->
       <div class="p-4 border-b border-border-s">
         <div class="flex items-baseline mb-2.5">

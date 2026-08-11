@@ -2,13 +2,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  OnInit,
   TemplateRef,
   computed,
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
+import { lastValueFrom } from 'rxjs';
 import {
   LucideBell,
   LucideCheck,
@@ -23,6 +26,14 @@ import {
 } from '@lucide/angular';
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { EventsStore } from '#core/store/events.store';
+import {
+  ProductionService,
+  type ProductionLine,
+} from '#core/services/production/production-service';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { ProductionRunModal } from '#shared/components/modal/production-run-modal/production-run-modal';
+import { ProductionReturnModal } from '#shared/components/modal/production-return-modal/production-return-modal';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 
@@ -104,26 +115,137 @@ function mkTicket(
   templateUrl: './live.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SoireeLive {
+export class SoireeLive implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly events = inject(EventsStore);
+  private readonly production = inject(ProductionService);
+  private readonly modal = inject(ModalService);
+
+  /**
+   * La soirée que cette page pilote.
+   *
+   * Dérivée plutôt que passée par la route : `/soiree/live` est un chemin fixe,
+   * et la page annonce déjà « LIVE · Soirée en cours » en haut à gauche. On
+   * retient donc la première soirée non clôturée par ordre de date — celle qui
+   * est en cours, ou à défaut la prochaine.
+   *
+   * ⚠️ Quand il n'y en a aucune, l'écran doit **le dire** plutôt qu'afficher une
+   * soirée inventée. C'est ce que faisait la version précédente, avec « Soirée
+   * Hivernale » écrit en dur dans le gabarit.
+   */
+  protected readonly currentEvent = computed(() => {
+    const all = Object.values(this.events.events()).filter((e) => e.status !== 'completed');
+    if (all.length === 0) return null;
+    return [...all].sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+  });
+
+  /**
+   * ⚠️ **L'effect dépend de cet identifiant, jamais de `currentEvent()`.**
+   *
+   * `loadEventMenu()` fait un `patchState` sur le dictionnaire dont
+   * `currentEvent` dérive : un effect qui lirait l'objet se réveillerait à
+   * chaque chargement de menu et le relancerait — rétroaction sans fin, qui a
+   * réellement épuisé le worker de test avant cette correction.
+   *
+   * Une chaîne reste égale à elle-même quand le dictionnaire est remplacé, donc
+   * l'effect ne réagit qu'à un vrai changement de soirée.
+   */
+  protected readonly currentEventId = computed(() => this.currentEvent()?.id ?? null);
+
+  protected readonly productionLines = signal<readonly ProductionLine[]>([]);
+  protected readonly productionStatus = signal<'init' | 'loading' | 'loaded' | 'error'>('init');
+
+  ngOnInit(): void {
+    void this.events.load();
+  }
+
+  /**
+   * Recharge les compteurs après un lancement ou une clôture.
+   *
+   * L'identifiant est passé explicitement depuis l'effect : le relire ici
+   * ajouterait la dépendance que l'on vient précisément d'éviter.
+   */
+  protected async refreshProduction(eventId?: string): Promise<void> {
+    const id = eventId ?? this.currentEventId();
+    if (!id) return;
+    this.productionStatus.set('loading');
+    try {
+      this.productionLines.set(await lastValueFrom(this.production.getRuns(id)));
+      this.productionStatus.set('loaded');
+    } catch {
+      // Un 403 est le cas courant : la lecture exige `stock:read`. Le panneau le
+      // dit, il ne vide pas la page.
+      this.productionLines.set([]);
+      this.productionStatus.set('error');
+    }
+  }
+
+  protected openRun(line: ProductionLine): void {
+    const event = this.currentEvent();
+    if (!event) return;
+    this.modal.open({
+      type: 'component',
+      component: ProductionRunModal,
+      inputs: {
+        eventId: event.id,
+        productId: line.productId,
+        productName: line.productName,
+        plannedQty: line.plannedQty,
+        producedQty: line.producedQty,
+        onDone: () => void this.refreshProduction(),
+      },
+    });
+  }
+
   protected closeNight(): void {
-    this.router.navigate(['/soiree/bilan']);
+    const event = this.currentEvent();
+    if (!event) return;
+    this.modal.open({
+      type: 'component',
+      component: ProductionReturnModal,
+      inputs: {
+        eventId: event.id,
+        eventName: event.name,
+        onDone: () => {
+          void this.refreshProduction();
+          this.router.navigate(['/soiree/bilan']);
+        },
+      },
+    });
   }
 
   constructor() {
     this.pageHeader.set({
       title: 'Soirée · vue live',
-      subtitle: 'Soirée Hivernale · pilotage temps réel',
+      subtitle: 'Pilotage temps réel',
       breadcrumb: ['Soirée', 'Pilotage live'],
       activeNavId: 'soir',
     });
     effect(() => {
       const tpl = this.actionsTpl();
       if (tpl) this.pageHeader.setActions(tpl);
+    });
+
+    // Le menu et les compteurs de production suivent la soirée retenue — par son
+    // identifiant seul, et les appels sont `untracked`.
+    //
+    // ⚠️ Les DEUX précautions sont nécessaires. Un effect suit aussi le
+    // préambule SYNCHRONE des fonctions `async` qu'il appelle :
+    // `loadEventMenu()` commence par lire `store.events()` avant son premier
+    // `await`, donc dans le contexte réactif de l'effect. Sans `untracked`, le
+    // dictionnaire redevient une dépendance, le `patchState` du chargement
+    // réveille l'effect, et la boucle épuise le tas (mesuré : 4 Go).
+    effect(() => {
+      const id = this.currentEventId();
+      if (!id) return;
+      untracked(() => {
+        void this.events.loadEventMenu(id);
+        void this.refreshProduction(id);
+      });
     });
 
     const interval = setInterval(() => this.now.set(Date.now()), 1000);
