@@ -61,9 +61,37 @@ function toEventsDict(eventsList: readonly EventDetail[]): Record<string, EventD
 export const EventsStore = signalStore(
   { providedIn: 'root' },
   withState<EventsState>(initialState),
-  withComputed(({ events }) => ({
-    allEvents: computed(() => Object.values(events())),
-  })),
+  withComputed(({ events }) => {
+    const allEvents = computed(() => Object.values(events()));
+
+    /**
+     * **La** soirée en cours — source unique pour tous les écrans de service.
+     *
+     * La plus proche parmi celles qui ne sont pas clôturées : celle qui se
+     * déroule, ou à défaut la prochaine. `null` quand il n'y en a aucune, et les
+     * écrans doivent alors le **dire** plutôt que d'en inventer une.
+     *
+     * ⚠️ Cette dérivation vit ici et nulle part ailleurs. La vue live et la
+     * caisse doivent désigner la même soirée : deux calculs séparés finiraient
+     * par diverger, et on encaisserait sur une soirée pendant qu'on produirait
+     * pour une autre.
+     *
+     * Elle remplace `EventsService.currentActiveEvent`, qui était un
+     * `computed(() => null)` inconditionnel — et rendait la caisse
+     * **inatteignable depuis toujours**, quel que soit l'état des soirées.
+     */
+    const activeEvent = computed<EventDetail | null>(() => {
+      const open = allEvents().filter((event) => event.status !== 'completed');
+      if (open.length === 0) return null;
+      return [...open].sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+    });
+
+    return {
+      allEvents,
+      activeEvent,
+      activeEventId: computed(() => activeEvent()?.id ?? null),
+    };
+  }),
   withMethods((store, eventService = inject(EventsService), menu = inject(LogistiqueService)) => {
     /** Remplace le menu d'une soirée sans toucher au reste du dictionnaire. */
     function patchMenu(eventId: string, lines: readonly MenuItem[]): void {

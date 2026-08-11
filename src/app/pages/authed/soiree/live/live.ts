@@ -126,35 +126,28 @@ export class SoireeLive implements OnInit {
   private readonly modal = inject(ModalService);
 
   /**
-   * La soirée que cette page pilote.
+   * La soirée que cette page pilote — `EventsStore.activeEvent`, la **même**
+   * que celle sur laquelle la caisse s'ouvre. Deux dérivations séparées
+   * finiraient par diverger, et on encaisserait sur une soirée pendant qu'on
+   * produirait pour une autre.
    *
    * Dérivée plutôt que passée par la route : `/soiree/live` est un chemin fixe,
-   * et la page annonce déjà « LIVE · Soirée en cours » en haut à gauche. On
-   * retient donc la première soirée non clôturée par ordre de date — celle qui
-   * est en cours, ou à défaut la prochaine.
-   *
-   * ⚠️ Quand il n'y en a aucune, l'écran doit **le dire** plutôt qu'afficher une
-   * soirée inventée. C'est ce que faisait la version précédente, avec « Soirée
-   * Hivernale » écrit en dur dans le gabarit.
+   * et la page annonce déjà « LIVE · Soirée en cours » en haut à gauche.
    */
-  protected readonly currentEvent = computed(() => {
-    const all = Object.values(this.events.events()).filter((e) => e.status !== 'completed');
-    if (all.length === 0) return null;
-    return [...all].sort((a, b) => a.date.getTime() - b.date.getTime())[0];
-  });
+  protected readonly currentEvent = this.events.activeEvent;
 
   /**
    * ⚠️ **L'effect dépend de cet identifiant, jamais de `currentEvent()`.**
    *
    * `loadEventMenu()` fait un `patchState` sur le dictionnaire dont
-   * `currentEvent` dérive : un effect qui lirait l'objet se réveillerait à
+   * `activeEvent` dérive : un effect qui lirait l'objet se réveillerait à
    * chaque chargement de menu et le relancerait — rétroaction sans fin, qui a
    * réellement épuisé le worker de test avant cette correction.
    *
    * Une chaîne reste égale à elle-même quand le dictionnaire est remplacé, donc
    * l'effect ne réagit qu'à un vrai changement de soirée.
    */
-  protected readonly currentEventId = computed(() => this.currentEvent()?.id ?? null);
+  protected readonly currentEventId = this.events.activeEventId;
 
   protected readonly productionLines = signal<readonly ProductionLine[]>([]);
   protected readonly productionStatus = signal<'init' | 'loading' | 'loaded' | 'error'>('init');
