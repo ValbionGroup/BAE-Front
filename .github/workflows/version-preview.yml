@@ -34,6 +34,13 @@ jobs:
           default_bump: patch
           release_branches: main
 
+      - name: Set up NodeJS and pnpm
+        uses: pnpm/setup@v2
+        with:
+          install: false
+          cache: true
+          runtime: node@lts
+
       - name: Bump package.json on the pull request branch
         if: github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -48,20 +55,13 @@ jobs:
             exit 1
           fi
 
-          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add package.json
-          # Re-running on every synchronize would otherwise loop: this is what
-          # makes the bump converge instead of stacking commits.
-          if git diff --cached --quiet; then
-            echo "package.json already at $NEW_VERSION."
-            exit 0
-          fi
+          pnpm version "$NEW_VERSION"
+          --message "chore(release): $NEW_VERSION"
+          --no-git-tag-version --allow-same-version
 
-          git commit -m "chore(release): $NEW_TAG"
           git push origin "HEAD:refs/heads/$HEAD_REF"
 
       - name: Comment PR with next version
