@@ -49,13 +49,6 @@ jobs:
           cache: true
           runtime: node@lts
 
-      - name: Install Chromium
-        uses: daaku/gh-action-apt-install@v4
-        with:
-          packages: chromium-browser
-        env:
-          CHROME_BIN: '/usr/bin/chromium-browser'
-
       - name: Create environment
         run: cp src/environment/environment.example.ts src/environment/environment.ts
 
@@ -72,7 +65,7 @@ jobs:
           sudo update-locale LANG=fr_FR.UTF-8
 
       - name: run angular tests
-        run: pnpm test --watch=false --browsers=ChromeHeadless
+        run: pnpm test --watch=false
         env:
           LANG: fr_FR.UTF-8
           LANGUAGE: fr_FR:fr
