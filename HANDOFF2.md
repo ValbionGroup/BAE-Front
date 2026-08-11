@@ -29,9 +29,9 @@ Les **six exigences à 5** — le sommet de la demande, à connaître par cœur 
 | Exigence                                               | Domaine      | Couvert par le HANDOFF ?                        |
 | ------------------------------------------------------ | ------------ | ----------------------------------------------- |
 | Liste des produits en stock                            | Stocks       | ✅ livré (« En cours » au CDC, en réalité fait) |
-| Prendre en priorité les aliments proches de péremption | Stocks       | ❌ **absent** — §18                             |
-| Affecter un numéro de lot pour le stockage             | Logistique   | ❌ **absent** — §18                             |
-| Génération de la liste de courses                      | Logistique   | ❌ **absent** — §17                             |
+| Prendre en priorité les aliments proches de péremption | Stocks       | 🟡 back livré (§0 octies), écran au §32         |
+| Affecter un numéro de lot pour le stockage             | Logistique   | ✅ livré (§0 octies)                            |
+| Génération de la liste de courses                      | Logistique   | ✅ livré (§0 septies)                           |
 | Définir la commande à l'entrée                         | Commandes    | ⚠️ §3.4, mais sans le lien au stock — §24       |
 | Générer un QR à jeton variable pour le retrait         | Précommandes | ✅ §11 (`JwtService` déjà écrit, à brancher)    |
 
