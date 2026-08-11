@@ -42,7 +42,7 @@
     @if (currentEvent(); as event) {
       <div class="text-[13px] text-text-2">{{ event.name }}</div>
     } @else {
-      <div class="text-[13px] text-muted">Aucune soirée en cours ni à venir</div>
+      <div class="text-[13px] text-muted">Aucune soirée en cours aujourd'hui</div>
     }
     <span class="mono tnum text-[11.5px] text-muted ml-auto">
       Service depuis {{ serviceStart }} · {{ wallClock() }}

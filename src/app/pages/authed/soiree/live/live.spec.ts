@@ -8,6 +8,14 @@ import { SoireeLive } from './live';
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+/** Dates relatives à l'exécution : la règle porte sur le jour courant. */
+const atHour = (offsetDays: number, hour = 19) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  d.setHours(hour, 0, 0, 0);
+  return d.toISOString();
+};
+
 describe(SoireeLive.name, () => {
   let component: SoireeLive;
   let fixture: ComponentFixture<SoireeLive>;
@@ -33,22 +41,21 @@ describe(SoireeLive.name, () => {
    * La page annonçait « Soirée Hivernale » écrit en dur dans le gabarit, sans
    * savoir quelle soirée elle affichait.
    */
-  it('names the soonest event that is not completed', async () => {
+  it('names the soirée that is open, not a future one', async () => {
     http
       .expectOne((r) => r.url.endsWith('/events'))
       .flush([
-        { id: '1', name: 'Gala de fin', date: '2026-12-01T19:00:00.000Z', status: 'scheduled' },
-        { id: '2', name: 'Soirée BBQ', date: '2026-08-20T19:00:00.000Z', status: 'ongoing' },
-        { id: '3', name: 'Vieille soirée', date: '2026-01-01T19:00:00.000Z', status: 'completed' },
+        { id: '1', name: 'Gala de fin', date: atHour(400), status: 'scheduled' },
+        { id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' },
+        { id: '3', name: 'Vieille soirée', date: atHour(-30), status: 'completed' },
       ]);
     await settle();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    // La plus proche parmi les non clôturées — pas la plus ancienne, qui est
-    // justement celle qu'il ne faut pas piloter.
     expect(text).toContain('Soirée BBQ');
     expect(text).not.toContain('Vieille soirée');
+    expect(text).not.toContain('Gala de fin');
     expect(text).not.toContain('Soirée Hivernale');
   });
 
@@ -58,7 +65,21 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Aucune soirée en cours ni à venir');
+    expect(text).toContain("Aucune soirée en cours aujourd'hui");
+  });
+
+  /** Le bug rapporté : la vue live et la caisse ne doivent jamais désigner une
+   *  soirée future, si proche soit-elle. */
+  it('does not pilot a soirée scheduled for another day', async () => {
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '5', name: 'Demain soir', date: atHour(1), status: 'scheduled' }]);
+    await settle();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain("Aucune soirée en cours aujourd'hui");
+    expect(text).not.toContain('Demain soir');
   });
 
   /**
@@ -78,9 +99,7 @@ describe(SoireeLive.name, () => {
   it('shows produced against planned once the runs land', async () => {
     http
       .expectOne((r) => r.url.endsWith('/events'))
-      .flush([
-        { id: '4', name: 'Soirée BBQ', date: '2026-08-20T19:00:00.000Z', status: 'ongoing' },
-      ]);
+      .flush([{ id: '4', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
     await settle();
     // L'effect qui déclenche les deux chargements ne tourne qu'à la détection
     // de changements — sans ce passage, aucune requête n'est encore partie.
@@ -109,9 +128,7 @@ describe(SoireeLive.name, () => {
   it('shows a restricted panel instead of emptying the page on 403', async () => {
     http
       .expectOne((r) => r.url.endsWith('/events'))
-      .flush([
-        { id: '4', name: 'Soirée BBQ', date: '2026-08-20T19:00:00.000Z', status: 'ongoing' },
-      ]);
+      .flush([{ id: '4', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
     await settle();
     fixture.detectChanges();
     await settle();

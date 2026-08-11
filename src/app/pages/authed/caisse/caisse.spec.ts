@@ -9,6 +9,14 @@ import { CaisseStore } from '#core/store/caisse.store';
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+/** Dates relatives à l'exécution : la règle porte sur le jour courant. */
+const atHour = (offsetDays: number, hour = 19) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  d.setHours(hour, 0, 0, 0);
+  return d.toISOString();
+};
+
 describe(Caisse.name, () => {
   let component: Caisse;
   let fixture: ComponentFixture<Caisse>;
@@ -45,9 +53,7 @@ describe(Caisse.name, () => {
   it('offers to open on the soirée that is live', async () => {
     http
       .expectOne((r) => r.url.endsWith('/events'))
-      .flush([
-        { id: '7', name: 'Soirée BBQ', date: '2026-08-20T19:00:00.000Z', status: 'ongoing' },
-      ]);
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
     await settle();
     fixture.detectChanges();
 
@@ -66,6 +72,58 @@ describe(Caisse.name, () => {
   });
 
   /**
+   * ⚠️ Le bug rapporté : la caisse proposait d'encaisser sur une soirée de
+   * 2027. « La plus proche à venir » n'est pas la règle — le champ s'appelle
+   * `todayEvent` et son état vide parle d'aujourd'hui.
+   */
+  it('never offers a future soirée, however near', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([
+        { id: '20', name: 'Demain', date: atHour(1), status: 'scheduled' },
+        { id: '21', name: 'Dans un an', date: atHour(365), status: 'scheduled' },
+      ]);
+    await settle();
+    fixture.detectChanges();
+
+    expect(store.todayEvent()).toBeNull();
+    expect(fixture.nativeElement.textContent as string).toContain("Aucune soirée n'est programmée");
+  });
+
+  /** Une soirée explicitement ouverte prime, même si une autre est datée du jour. */
+  it('prefers an ongoing soirée over one merely dated today', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([
+        { id: '30', name: 'Prévue ce soir', date: atHour(0, 23), status: 'scheduled' },
+        { id: '31', name: 'Ouverte', date: atHour(0, 18), status: 'ongoing' },
+      ]);
+    await settle();
+
+    expect(store.todayEvent()?.name).toBe('Ouverte');
+  });
+
+  /**
+   * `new Date()` sur une date absente donne `Invalid Date`, dont `getTime()`
+   * vaut `NaN` : un comparateur qui rend `NaN` laisse le tri ne rien
+   * réordonner, et n'importe quelle soirée peut sortir en tête.
+   */
+  it('does not let an unparseable date decide which soirée wins', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([
+        { id: '40', name: 'Sans date', date: null, status: 'scheduled' },
+        { id: '41', name: 'Ce soir', date: atHour(0), status: 'scheduled' },
+      ]);
+    await settle();
+
+    expect(store.todayEvent()?.name).toBe('Ce soir');
+  });
+
+  /**
    * La grille d'articles lit `sessionEvent()?.menu`, et rien d'autre ne le
    * remplit : ouvrir sans charger le menu donnait une caisse vide, sans erreur.
    */
@@ -73,9 +131,7 @@ describe(Caisse.name, () => {
     const store = TestBed.inject(CaisseStore);
     http
       .expectOne((r) => r.url.endsWith('/events'))
-      .flush([
-        { id: '7', name: 'Soirée BBQ', date: '2026-08-20T19:00:00.000Z', status: 'ongoing' },
-      ]);
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
     await settle();
 
     store.startSession('7');
@@ -105,17 +161,18 @@ describe(Caisse.name, () => {
    * dérivations séparées finiraient par diverger, et on encaisserait sur une
    * soirée pendant qu'on produirait pour une autre.
    */
-  it('picks the soonest event that is not completed', async () => {
+  it('ignores past and completed soirées', async () => {
     const store = TestBed.inject(CaisseStore);
     http
       .expectOne((r) => r.url.endsWith('/events'))
       .flush([
-        { id: '8', name: 'Gala', date: '2026-12-01T19:00:00.000Z', status: 'scheduled' },
-        { id: '9', name: 'BBQ', date: '2026-08-20T19:00:00.000Z', status: 'ongoing' },
-        { id: '10', name: 'Passée', date: '2026-01-01T19:00:00.000Z', status: 'completed' },
+        { id: '8', name: 'Gala lointain', date: atHour(400), status: 'scheduled' },
+        { id: '9', name: 'Hier', date: atHour(-1), status: 'scheduled' },
+        { id: '10', name: 'Clôturée ce soir', date: atHour(0), status: 'completed' },
+        { id: '11', name: 'Ce soir', date: atHour(0), status: 'scheduled' },
       ]);
     await settle();
 
-    expect(store.todayEvent()?.name).toBe('BBQ');
+    expect(store.todayEvent()?.name).toBe('Ce soir');
   });
 });

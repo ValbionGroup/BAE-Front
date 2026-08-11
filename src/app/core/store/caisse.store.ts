@@ -79,10 +79,12 @@ export const CaisseStore = signalStore(
       return {
         loading: computed<LoadingStatus>(() => eventsStore.loading()),
         /**
-         * La soirée sur laquelle la caisse peut ouvrir.
+         * La soirée sur laquelle la caisse peut ouvrir : celle `ongoing`, ou à
+         * défaut celle **datée d'aujourd'hui** — jamais une soirée future.
          *
          * Dérivée d'`EventsStore.activeEvent`, la même que pilote la vue live :
-         * dès qu'une soirée est suivie en live, la caisse est ouvrable.
+         * dès qu'une soirée est suivie en live, la caisse est ouvrable, et les
+         * deux écrans ne peuvent pas désigner deux soirées différentes.
          *
          * ⚠️ Elle dérivait auparavant d'`EventsService.currentActiveEvent`, un
          * `computed(() => null)` inconditionnel — la caisse affichait donc
