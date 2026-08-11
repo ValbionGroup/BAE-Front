@@ -799,38 +799,82 @@ se conçoit comme **un écran à trois états**, pas comme trois écrans :
 | `ongoing`   | le service                                                                 |
 | `completed` | à clôturer — on **déclare les restes** : réserve (mouvement `in`) ou rebut |
 
-### ⚠️ Le préalable : la page est entièrement factice
+### La page est factice — mais ce n'est **pas** un préalable bloquant
 
-`pages/authed/soiree/live/` n'a **rien de réel**. Tickets, KPIs, transactions, alertes, et jusqu'au
-nom « Soirée Hivernale » écrit en dur dans le gabarit. Surtout : **la page ne sait pas quelle soirée
-elle affiche** — aucun paramètre de route (`/soiree/live` est un chemin fixe), aucun store injecté,
-et `closeNight()` se contente d'un `router.navigate(['/soiree/bilan'])`.
+`pages/authed/soiree/live/` n'a rien de réel : tickets, KPIs, transactions, alertes, et jusqu'au nom
+« Soirée Hivernale » écrit en dur dans le gabarit. **La page ne sait pas quelle soirée elle affiche**
+— aucun paramètre de route (`/soiree/live` est un chemin fixe), aucun store injecté, et
+`closeNight()` se contente d'un `router.navigate(['/soiree/bilan'])`.
 
-Y brancher un flux réel sans la refaire reproduirait mot pour mot le piège que le §1 du `HANDOFF.md`
-liste comme ayant **mordu deux fois** : « une maquette convertie laisse des modales factices derrière
-des boutons d'apparence normale ». C'est pourquoi le front a été **délibérément sorti** du lot
-production.
+> ⚠️ **Correction du 2026-08-11**, à la question « le front est-il faisable maintenant ? ». La
+> première rédaction de ce §32 présentait « rendre `soiree/live` réelle » comme **un lot à part
+> entière et un préalable**. C'était surestimé, et la vérification dans le code le montre :
+>
+> - **`EventDetail.status` est déjà dans le modèle front**, et son propre commentaire dit
+>   « `GET /events` le renvoie déjà ». `EventsStore` porte `load()`, `getEventById()` et le
+>   chargement du menu avec son `menuStatus`. Donner une identité à la page, c'est **quelques
+>   lignes**, pas un lot.
+> - Le panneau de production n'oblige **pas** à toucher aux ~400 lignes factices (tickets, KPIs,
+>   alertes, transactions). Elles peuvent rester fausses pendant qu'un panneau réel existe à côté —
+>   à condition de ne pas laisser croire l'inverse à l'écran.
+>
+> Le piège du §1 de `HANDOFF.md` (« des modales factices derrière des boutons d'apparence normale »)
+> reste à éviter, mais il se traite en **désactivant ou en marquant** ce qui est faux, pas en
+> refaisant toute la page avant de commencer.
 
-### Ce que le lot `soiree/live` devra faire, dans l'ordre
+### ⚠️ Le vrai manque : aucun endpoint ne dit ce qui a été prélevé, par denrée
+
+C'est **le seul blocage réel**, et il est côté back. La modale de clôture doit demander « tu as sorti
+24 saucisses, combien reviennent ? » — or rien ne le lui dit :
+
+- `GET /events/:id/production-runs` répond **par recette** (`plannedQty`, `producedQty`, `runs[]`),
+  jamais par denrée.
+- `POST /events/:id/production-returns` **calcule** le retournable en interne (`Σ out − Σ in` par
+  lot, agrégé sur la soirée) mais ne l'expose nulle part. Il ne le mentionne que dans le message du
+  400 `E_RETURN_EXCEEDS_PICKED` — et on ne construit pas un formulaire à partir d'un message
+  d'erreur.
+
+**Ce qu'il manque, précisément :** un `GET /events/:id/production-returns` rendant, par denrée,
+`goodId`, `goodName`, `unit`, `takenQty`, `returnedQty`, `returnableQty`. Tout le calcul existe déjà
+dans `commitReturns` (`app/services/production_service.ts`) — il s'agit d'en extraire la partie
+lecture, gardée par `stock:read`. Quelques dizaines de lignes, aucun changement de modèle.
+
+### Ce qui est faisable **maintenant**, et dans quel ordre
+
+Tout ce qui suit ne dépend d'aucun travail préalable — les endpoints existent depuis le §0 octies de
+`HANDOFF.md`.
 
 1. **Donner une identité à la page.** Soit une route `/soiree/:id/live`, soit la dérivation depuis
    `EventsStore` de la soirée dont le `status` n'est pas `completed` — c'est la promesse que la page
    affiche déjà en haut à gauche (« LIVE · Soirée en cours »). S'il n'y en a aucune, **le dire**,
-   plutôt que d'afficher une soirée inventée.
-2. **Remplacer les données factices** par `EventsStore` et le menu (`GET /events/:id/products`),
-   tous deux réels depuis le §0 septies.
-3. **Poser les deux gestes** sur les endpoints livrés par le lot production :
-   `POST /events/:id/production-runs` (avec `dryRun` pour afficher le plan FEFO **avant** le geste),
-   `GET /events/:id/production-runs` (le « 120 / 200 produits »),
-   `POST /events/:id/production-returns` (réserve ou rebut).
-4. **Se souvenir que le rebut n'écrit rien** : la sortie a eu lieu au lancement, jeter c'est ne pas
+   plutôt que d'afficher une soirée inventée. `EventDetail.status` et `EventsStore.load()` existent.
+2. **Le panneau de production**, entièrement faisable : le menu de la soirée
+   (`EventsStore`, réel depuis le §0 septies), le « 120 / 200 produits »
+   (`GET /events/:id/production-runs`), et le lancement en deux temps —
+   `POST /events/:id/production-runs` avec `dryRun` pour afficher le plan FEFO **avant** le geste,
+   puis le même appel sans le drapeau pour confirmer.
+3. **Marquer ce qui reste faux.** Les tickets, KPIs, alertes et transactions en dur peuvent
+   subsister à côté d'un panneau réel, mais l'écran doit le dire — un bandeau, ou des boutons
+   désactivés avec un `title`, comme la convention déjà en place sur « Preuve d'achat » et
+   « Fiche logistique ».
+
+### Ce qui attend le petit endpoint manquant
+
+4. **La modale de clôture** (« ce qui reste : réserve ou rebut »). L'écriture existe
+   (`POST /events/:id/production-returns`), mais pas la lecture qui alimente le formulaire — voir
+   l'encadré ci-dessus. **À faire côté back d'abord**, sinon la modale devra inventer sa liste de
+   denrées.
+
+### Deux règles à ne pas perdre en route, quel que soit l'ordre
+
+5. **Se souvenir que le rebut n'écrit rien** : la sortie a eu lieu au lancement, jeter c'est ne pas
    recréditer. Les deux boutons de la modale se distinguent par leur effet sur le stock, pas par une
    trace. Le gaspillage n'est donc pas **chiffré**, mais il n'est pas perdu : `Σ out − Σ in` sur les
    mouvements d'un lancement donne ce qui n'est pas revenu, et
    `production_runs.quantity − Σ order_products` donnera le produit non vendu — le vrai chiffre —
    **le jour où `orders` aura un contrôleur** (§3.4). Seul reste indistinguable le rebut qui n'est
    pas un écart : un paquet tombé, une denrée jetée avant l'assemblage.
-5. **Dire à l'écran que le non-alimentaire n'est pas prélevé.** Produire 200 hot-dogs décrémente les
+6. **Dire à l'écran que le non-alimentaire n'est pas prélevé.** Produire 200 hot-dogs décrémente les
    saucisses et les pains, **pas** les barquettes : `furnitures` porte un compteur plat, sans lots ni
    grand livre de mouvements (§8.2 du spec).
 
