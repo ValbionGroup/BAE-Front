@@ -190,14 +190,6 @@ export class SoireeLive implements OnInit {
       if (tpl) this.pageHeader.setActions(tpl);
     });
 
-    // Le menu et les compteurs de production suivent la soirée retenue — par son
-    // identifiant seul, et les appels sont `untracked`.
-    //
-    // ⚠️ Les DEUX précautions sont nécessaires. Un effect suit aussi le
-    // préambule SYNCHRONE des fonctions `async` qu'il appelle :
-    // `loadEventMenu()` lit `store.events()` avant son premier `await`, donc
-    // dans le contexte réactif. Sans `untracked`, la boucle épuise le tas
-    // (mesuré : 4 Go et worker Vitest tué).
     effect(() => {
       const id = this.currentEventId();
       if (!id) return;
