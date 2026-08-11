@@ -83,17 +83,39 @@ describe(SoireeLive.name, () => {
   });
 
   /**
-   * Le §32 du handoff : les tickets, la cadence, les transactions et le stock
-   * critique n'ont aucun endpoint. L'écran doit le dire plutôt que de laisser
-   * croire à des chiffres réels.
+   * La page portait plus de 400 lignes de maquette en données inventées : file
+   * de tickets, KPIs d'encaissement, cadence, flux de transactions, alertes et
+   * stock critique — aucune ne consommait d'endpoint. Tout a été supprimé.
+   *
+   * Cette garde existe pour que le décor ne revienne pas : des chiffres faux
+   * sur un écran de service sont pires qu'un écran vide, parce qu'on les croit.
    */
-  it('marks the demonstration data as not wired', async () => {
-    http.expectOne((r) => r.url.endsWith('/events')).flush([]);
+  it('shows none of the invented service data', async () => {
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '6', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    await settle();
+
+    http.expectOne((r) => r.url.includes('/events/6/products')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/6/production-runs')).flush([]);
     await settle();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Données de démonstration ci-dessous');
+    for (const invented of [
+      'Encaissé live',
+      'Cadence',
+      'Flux transactions',
+      'Stock critique',
+      'En préparation',
+      'Marge live',
+      'C. Renard',
+      '1 736,50',
+    ]) {
+      expect(text).not.toContain(invented);
+    }
   });
 
   it('shows produced against planned once the runs land', async () => {
