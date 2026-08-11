@@ -736,6 +736,93 @@ sur la soirée 4. Données de développement, sans conséquence, mais elles exis
 
 ---
 
+## 0 nonies. Écrans de production, clôture de soirée, et la caisse enfin ouvrable — 2026-08-11
+
+Suite immédiate du §0 octies, même branche `feat/production-fefo`.
+Back : 1 commit (`4600644`). Front : 2 commits (`252fac4`, `b15f9a0`), **546 tests**, typecheck vert.
+
+| Sujet                                                         | État             | Où                                              |
+| ------------------------------------------------------------- | ---------------- | ----------------------------------------------- |
+| `GET /events/:id/production-returns`                          | ⚠️ **non testé** | `loadReturnState()` — voir l'encadré ci-dessous |
+| `soiree/live` sait quelle soirée elle pilote                  | ✅ **fait**      | `EventsStore.activeEvent`                       |
+| Panneau de production (prévu / produit, lancement en 2 temps) | ✅ **fait**      | `ProductionRunModal`                            |
+| Clôture : réserve ou rebut, par denrée                        | ✅ **fait**      | `ProductionReturnModal`                         |
+| Les panneaux factices sont **annoncés** comme tels            | ✅ **fait**      | bandeau + boutons désactivés avec `title`       |
+| La caisse s'ouvre sur la soirée en cours                      | ✅ **fait**      | `CaisseStore.todayEvent`                        |
+
+### ⚠️ Le back de ce lot n'a pas pu être testé — la base de dev s'est arrêtée
+
+`bae-postgres-dev` s'est arrêté (code 0) pendant la session, et le port 5432 est tenu par
+`gbe-postgres-1`, le postgres d'un autre projet, qui n'a **pas de rôle `bae_back`**. Toute la suite
+back échoue donc sur `password authentication failed for user "bae_back"`.
+
+Conséquence exacte, à ne pas arrondir : les **trois tests** de `GET /events/:id/production-returns`
+sont écrits et **n'ont jamais tourné**. Seul `npx --no-install tsc --noEmit` est passé, proprement.
+Les 257 tests du §0 octies, eux, étaient verts avant l'arrêt. **Relancer `node ace test` dès que le
+conteneur est relancé** — ce qui suppose de libérer le port 5432.
+
+### La caisse était inatteignable depuis toujours, et ce n'était pas un oubli de câblage
+
+`EventsService.currentActiveEvent` était un **`computed(() => { return null })` inconditionnel**.
+`CaisseStore.todayEvent` en dérivait entièrement : l'écran affichait donc en permanence « Aucune
+soirée n'est programmée pour aujourd'hui. La caisse ne peut pas être ouverte », **quel que soit
+l'état réel des soirées**, et `startSession()` sortait immédiatement.
+
+Le même mensonge touchait `OrdersService.orders`, filtré sur cette valeur nulle : la liste était
+toujours vide, et `pendingCount` / `inProgressCount` toujours à zéro.
+
+**La dérivation vit désormais dans `EventsStore.activeEvent`, à un seul endroit** — la plus proche
+des soirées non clôturées. La vue live et la caisse doivent désigner **la même** soirée : deux
+calculs séparés finiraient par diverger, et on encaisserait sur une soirée pendant qu'on produirait
+pour une autre. Le stub a été **supprimé**, pas contourné : un calcul qui rend toujours `null` est un
+piège pour le prochain appelant.
+
+⚠️ Second manque trouvé au passage : **`startSession()` n'a jamais chargé le menu.** La grille
+d'articles lit `sessionEvent()?.menu` et rien d'autre ne le remplissait — la caisse se serait ouverte
+vide, sans erreur nulle part. `startSession` appelle désormais `loadEventMenu`.
+
+### ⚠️ Deux pièges de signaux, qui ont coûté deux passes et un worker de test
+
+Ils valent pour **tout** effect de ce dépôt qui déclenche un chargement.
+
+1. **Un effect ne doit pas dépendre de l'objet dont son propre chargement fait un `patchState`.**
+   Dépendre de `activeEvent()` alors qu'on appelle `loadEventMenu()` — qui `patchState` le
+   dictionnaire dont `activeEvent` dérive — crée une rétroaction. Dépendre de
+   l'**identifiant** (`activeEventId`, une chaîne) suffit à casser le cycle : la valeur reste égale
+   quand le dictionnaire est remplacé.
+2. **Ça ne suffit pas.** Un effect suit aussi le **préambule synchrone des fonctions `async` qu'il
+   appelle** : `loadEventMenu()` commence par `const current = store.events()[eventId]`, exécuté
+   avant le premier `await`, donc **dans** le contexte réactif — le dictionnaire redevient une
+   dépendance par la porte de derrière. Il faut `untracked()` autour des appels.
+
+Sans les deux, la boucle épuise le tas : **4 Go et worker Vitest tué**, mesuré. Le symptôme n'est pas
+un test rouge mais un `FATAL ERROR: Ineffective mark-compacts near heap limit`, ce qui n'oriente
+vers rien.
+
+### Un piège de test, propre au mode zoneless
+
+`fixture.whenStable()` **n'attend pas une promesse nue**. Les pages chargent par
+`lastValueFrom(...).then(...)` ; sans Zone.js, Angular n'en a aucune connaissance et rend la main
+avant que la chaîne n'aboutisse. Il faut céder la main à la file de microtâches
+(`await new Promise((r) => setTimeout(r, 0))`) — et, quand c'est un `effect` qui déclenche la
+requête, appeler `fixture.detectChanges()` **avant** de l'attendre : un effect ne tourne qu'à la
+détection de changements.
+
+### Ce qui reste ouvert
+
+- **Les trois tests du nouvel endpoint n'ont pas tourné** (voir plus haut). C'est le premier geste à
+  refaire.
+- **`soiree/live` reste factice pour tout le reste** : tickets, cadence, transactions, alertes et
+  stock critique n'ont aucun endpoint. C'est désormais **annoncé à l'écran** par un bandeau et deux
+  boutons désactivés, mais ce n'est pas branché. Le §32 de `HANDOFF2.md` décrit le lot.
+- **La caisse n'encaisse toujours pas.** Elle s'ouvre, affiche le menu réel et remplit un panier —
+  mais `orders` n'a aucun contrôleur côté back (§3.4), donc rien n'est enregistré.
+- **`soiree/bilan` n'a pas été touchée** et reste entièrement factice.
+- Aucune vérification à l'œil de ces écrans : pas d'outil de navigateur dans la session. Les 546
+  tests Vitest assertent sur le DOM rendu, ce qui n'est pas un regard.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.
