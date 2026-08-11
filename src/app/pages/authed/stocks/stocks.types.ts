@@ -5,6 +5,8 @@ export type SortDir = 'asc' | 'desc';
 export interface StockBatchRow {
   readonly id: number;
   readonly restockId: number | null;
+  /** Le numéro lisible du lot (`L26-4`) — `id` est une clé technique. */
+  readonly label: string;
   readonly initialQty: number;
   readonly remainingQty: number;
   readonly dlcLabel: string | null;

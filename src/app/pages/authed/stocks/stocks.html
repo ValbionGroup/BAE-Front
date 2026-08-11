@@ -292,11 +292,14 @@
                 "
               >
                 <div class="flex items-center gap-2">
-                  <span class="mono text-[12px] font-semibold text-text">#{{ b.id }}</span>
+                  <span class="mono text-[12px] font-semibold text-text">#{{ b.label }}</span>
                   @if (b.dlcStatus === 'expired') {
                     <bfd-badge kind="danger" [dot]="true">périmé</bfd-badge>
                   } @else if (b.dlcStatus === 'soon') {
                     <bfd-badge kind="warn" [dot]="true">bientôt</bfd-badge>
+                  }
+                  @if (b.id === firstToTakeId()) {
+                    <bfd-badge kind="warn" [dot]="true">prendre en 1er</bfd-badge>
                   }
                   <span class="flex-1"></span>
                   <span class="tnum text-[13px] font-semibold text-text">

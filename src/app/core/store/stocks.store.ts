@@ -167,6 +167,7 @@ export const StocksStore = signalStore(
       return raw.map((b) => ({
         id: b.id,
         restockId: b.restockId,
+        label: b.label,
         initialQty: b.initialQty,
         remainingQty: b.remainingQty,
         dlcLabel: b.expirationDate

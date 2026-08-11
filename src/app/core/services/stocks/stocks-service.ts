@@ -24,6 +24,8 @@ export interface ApiStockBatch {
   id: number;
   goodsId: number;
   restockId: number | null;
+  /** Le numéro lisible du lot (`L26-4`), celui qu'on lit sur l'étagère. */
+  label: string;
   initialQty: number;
   remainingQty: number;
   expirationDate: string | null;
