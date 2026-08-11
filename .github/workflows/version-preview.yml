@@ -58,9 +58,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          pnpm version "$NEW_VERSION"
-          --message "chore(release): $NEW_VERSION"
-          --no-git-tag-version --allow-same-version
+          pnpm version "$NEW_VERSION" --message "chore(release): v%s" --no-git-tag-version --allow-same-version
 
           git push origin "HEAD:refs/heads/$HEAD_REF"
 
