@@ -17,10 +17,6 @@ export class EventsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
 
-  readonly currentActiveEvent = computed<EventDetail | null>(() => {
-    return null;
-  });
-
   fetchAll(): Observable<EventDetail[]> {
     const url = this.buildUrl(ApiEndPointV1.EVENTS);
     return this.http
