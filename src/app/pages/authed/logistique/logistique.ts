@@ -275,6 +275,18 @@ export class Logistique implements OnInit {
       : `${this.formatPrice(this.shoppingList()!.optimumTotal)} €`,
   );
 
+  protected readonly optimumGoodsTotalLabel = computed(() =>
+    this.shoppingListUnavailable()
+      ? '—'
+      : `${this.formatPrice(this.shoppingList()!.totals.optimumGoodsTotal)} €`,
+  );
+
+  protected readonly furnitureTotalLabel = computed(() =>
+    this.shoppingListUnavailable()
+      ? '—'
+      : `${this.formatPrice(this.shoppingList()!.totals.furnitureTotal)} €`,
+  );
+
   protected readonly savingsKpiLabel = computed(() =>
     this.shoppingListUnavailable() ? '—' : this.savingsLabel(this.shoppingList()!.savings),
   );

@@ -113,7 +113,7 @@
   } @else if (shoppingListLoading() === 'init' || shoppingListLoading() === 'loading') {
     <div class="overflow-hidden rounded-md border border-border-s bg-surface">
       @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
-        <div class="flex items-center gap-3 border-b border-border-s px-3.5 py-3 last:border-b-0">
+        <div class="flex items-center gap-3 border-b border-border-s px-3.5 py-3">
           <bfd-skeleton width="30%" height="12px" />
           <bfd-skeleton width="60px" height="12px" />
           <bfd-skeleton width="70px" height="12px" />
@@ -208,7 +208,7 @@
                   </td>
                 }
                 <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
-                  {{ optimumTotalLabel() }}
+                  {{ optimumGoodsTotalLabel() }}
                 </td>
               </tr>
             </tfoot>
@@ -242,7 +242,7 @@
           </caption>
           <thead>
             <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
-              <th scope="col" class="min-w-[220px] px-3.5 py-2.5 text-left font-semibold">
+              <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">
                 Produit
               </th>
               <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
@@ -271,6 +271,17 @@
               </tr>
             }
           </tbody>
+          <tfoot>
+          <tr class="border-t-2 border-border bg-surface-2">
+            <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
+              Total
+            </th>
+            <td class="px-3.5 py-3"></td>
+            <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
+              {{ furnitureTotalLabel() }}
+            </td>
+          </tr>
+          </tfoot>
         </table>
       </div>
     }

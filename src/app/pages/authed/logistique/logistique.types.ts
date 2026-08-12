@@ -180,6 +180,11 @@ export interface ApiShoppingLine {
   readonly bestPrice: number | null;
 }
 
+export interface ApiShoppingListTotals {
+  readonly optimumGoodsTotal: number;
+  readonly furnitureTotal: number;
+}
+
 /** Ce que coûterait la liste entière chez une seule enseigne. */
 export interface ApiShoppingSupplierTotal {
   readonly id: number;
@@ -200,6 +205,7 @@ export interface ApiShoppingList {
   readonly lines: readonly ApiShoppingLine[];
   readonly lineCount: number;
   readonly optimumTotal: number;
+  readonly totals: ApiShoppingListTotals;
   readonly supplierTotals: readonly ApiShoppingSupplierTotal[];
   /** `null` quand aucune enseigne ne couvre toute la liste. */
   readonly savings: number | null;

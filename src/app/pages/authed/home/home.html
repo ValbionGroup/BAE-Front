@@ -98,6 +98,10 @@
           <div class="mb-2 flex items-center gap-2.5">
             <bfd-badge kind="red" [dot]="true">PROCHAINE SOIRÉE</bfd-badge>
             <bfd-badge kind="ghost">DANS {{ n.days }} JOURS</bfd-badge>
+            @let me = responseEvent()?.memberPresence;
+            @if (me === Presence.PENDING || me === undefined) {
+              <bfd-badge kind="warn" [dot]="true">Non répondu</bfd-badge>
+            }
           </div>
 
           <div class="flex items-end justify-between gap-6">
@@ -150,9 +154,6 @@
               } @else {
                 @let me = responseEvent()?.memberPresence;
                 @let locked = presenceLocked();
-                @if (me === Presence.PENDING || me === undefined) {
-                  <bfd-badge kind="warn" [dot]="true">Non répondu</bfd-badge>
-                }
                 <div class="flex gap-1.5">
                   <bfd-btn
                     id="presence-present"
