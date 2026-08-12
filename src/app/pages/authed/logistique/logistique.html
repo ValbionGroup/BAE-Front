@@ -7,12 +7,7 @@
     title="Aucun stockage de justificatifs côté API"
     >Preuve d'achat</bfd-btn
   >
-  <bfd-btn
-    kind="secondary"
-    size="md"
-    [icon]="icDownload"
-    [disabled]="true"
-    title="Génération de PDF non implémentée"
+  <bfd-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printFicheLogistique()"
     >Fiche logistique</bfd-btn
   >
   @if (!vouchersForbidden()) {

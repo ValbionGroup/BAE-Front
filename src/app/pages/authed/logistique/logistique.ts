@@ -28,6 +28,7 @@ import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
+import { PrintService } from '#core/services/print/print-service';
 import type {
   ApiShoppingLine,
   ApiShoppingSupplierTotal,
@@ -114,6 +115,7 @@ export class Logistique implements OnInit {
   private readonly modalService = inject(ModalService);
   private readonly toast = inject(ToastService);
   private readonly pageHeader = inject(PageHeaderService);
+  private readonly printService = inject(PrintService);
 
   /** Actions poussées dans la topbar, comme sur la page Équipe. */
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
@@ -297,6 +299,14 @@ export class Logistique implements OnInit {
 
   protected retryShoppingList(): void {
     void this.store.loadShoppingList(this.eventId);
+  }
+
+  protected printFicheLogistique(): void {
+    const eventName = this.store.shoppingList()?.eventName ?? 'soiree';
+    this.printService.download(
+      `/events/${this.eventId}/shopping-list/pdf`,
+      `fiche-logistique-${eventName}.pdf`,
+    );
   }
 
   protected retry(): void {

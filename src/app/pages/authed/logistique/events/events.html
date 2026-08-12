@@ -184,7 +184,13 @@
             class="flex items-center gap-2 border-t border-border-s bg-surface-2 px-4 py-3 text-[12px] text-text-2"
           >
             <div class="flex-1"></div>
-            <bfd-btn kind="ghost" size="sm" [icon]="icDownload">Fiche logistique</bfd-btn>
+            <bfd-btn
+              kind="ghost"
+              size="sm"
+              [icon]="icDownload"
+              (clicked)="printFicheLogistique(event.id, event.name)"
+              >Fiche logistique</bfd-btn
+            >
             @if (state !== 'past') {
               <bfd-btn
                 kind="primary"

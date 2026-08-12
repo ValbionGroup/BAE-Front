@@ -12,6 +12,7 @@ import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
+import { PrintService } from '#core/services/print/print-service';
 import type { ApiShoppingList, ApiShoppingLine, ApiVoucher } from './logistique.types';
 
 /** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 €. */
@@ -95,6 +96,7 @@ describe(Logistique.name, () => {
   afterEach(() => {
     for (const host of hosts.splice(0)) host.remove();
     http.verify();
+    vi.restoreAllMocks();
   });
 
   /** Répond aux quatre appels que fait `ngOnInit` (catalogue/bons/enseignes + liste de courses). */
@@ -494,23 +496,35 @@ describe(Logistique.name, () => {
   /**
    * « Fiche logistique » remplace l'ancien raccourci « Bons d'achat (n) » —
    * le panneau des bons reste atteignable en défilant.
-   *
-   * Le bouton est **désactivé**, pas simplement sans gestionnaire : aucune
-   * génération de PDF n'existe côté API (§31 de `HANDOFF2.md`), et un bouton
-   * qui ne réagit pas au clic est plus déroutant qu'un bouton grisé. C'est la
-   * convention que « Preuve d'achat » suit déjà dans la même topbar.
    */
-  it('offre une fiche logistique désactivée tant que le PDF n’existe pas', async () => {
+  it('offre une fiche logistique, active depuis que le PDF existe côté API', async () => {
     await renderLoaded();
 
     const actions = renderTopbarActions();
     expect(actions.textContent).toContain('Fiche logistique');
     expect(actions.textContent).not.toContain("Bons d'achat (");
 
+    // Une seule action reste désactivée : « Preuve d'achat » (aucun stockage
+    // de fichiers). « Fiche logistique » est maintenant branchée (doc 1, §17).
     const disabled = actions.querySelectorAll('button[disabled]');
-    // Deux actions désactivées : « Preuve d'achat » (aucun stockage de
-    // fichiers) et « Fiche logistique » (aucune génération de PDF).
-    expect(disabled.length).toBe(2);
+    expect(disabled.length).toBe(1);
+  });
+
+  it('calls PrintService.download when "Fiche logistique" is clicked', async () => {
+    const printService = TestBed.inject(PrintService);
+    const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
+    await renderLoaded(shoppingList({ eventName: 'Soirée Hivernale' }));
+
+    const button = Array.from(
+      renderTopbarActions().querySelectorAll('button'),
+    ).find((b) => b.textContent?.includes('Fiche logistique')) as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+
+    expect(downloadSpy).toHaveBeenCalledWith(
+      '/events/7/shopping-list/pdf',
+      expect.any(String),
+    );
   });
 
   it('names the toggle button after the voucher it acts on', async () => {

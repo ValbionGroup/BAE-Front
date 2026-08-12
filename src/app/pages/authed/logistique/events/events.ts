@@ -41,6 +41,7 @@ import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
 import { DropdownService } from '#shared/components/dropdown/dropdown.service';
 import { DropdownItem } from '#shared/components/dropdown/dropdown.models';
+import { PrintService } from '#core/services/print/print-service';
 
 type TabKey = 'upcoming' | 'preparing' | 'past' | 'all';
 
@@ -87,6 +88,7 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly modals = inject(ModalService);
+  private readonly printService = inject(PrintService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   ngOnInit(): void {
@@ -249,6 +251,13 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
    */
   protected openCourses(eventId: string): void {
     void this.router.navigate(['/logistique', eventId]);
+  }
+
+  protected printFicheLogistique(eventId: string, eventName: string): void {
+    this.printService.download(
+      `/events/${eventId}/shopping-list/pdf`,
+      `fiche-logistique-${eventName}.pdf`,
+    );
   }
 
   /**

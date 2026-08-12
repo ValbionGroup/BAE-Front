@@ -8,6 +8,7 @@ import { LogistiqueEvents } from './events';
 import { EventsStore } from '#core/store/events.store';
 import { MenuItem } from '#core/models/event.model';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { PrintService } from '#core/services/print/print-service';
 
 const baseUrl = 'http://api.test/v1';
 
@@ -45,7 +46,10 @@ describe(LogistiqueEvents.name, () => {
     store = TestBed.inject(EventsStore);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
 
   it('dérive l’état d’une soirée de sa date et de son menu', () => {
     // Trois états, aucune colonne derrière : « passée » vient de la date,
@@ -76,6 +80,18 @@ describe(LogistiqueEvents.name, () => {
       [{ productId: 3 }] as never,
     );
     expect(available.map((recipe: { id: number }) => recipe.id)).toEqual([4]);
+  });
+
+  it('calls PrintService.download for the event card\'s "Fiche logistique" button', () => {
+    const printService = TestBed.inject(PrintService);
+    const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
+
+    component['printFicheLogistique']('42', 'Soirée Hivernale');
+
+    expect(downloadSpy).toHaveBeenCalledWith(
+      '/events/42/shopping-list/pdf',
+      expect.any(String),
+    );
   });
 
   describe('pas-à-pas de quantité, débouncé par ligne', () => {
