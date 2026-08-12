@@ -296,6 +296,64 @@ describe(LogistiqueStore.name, () => {
     expect(store.vouchers()[0].used).toBe(true);
   });
 
+  it('edits a voucher and reflects the server-computed fields', async () => {
+    await loadWith([voucher({ id: 1, value: 50 })]);
+
+    const updated = store.updateVoucher(1, { value: 80 });
+    expect(store.savingVoucherIds()).toEqual([1]);
+
+    http.expectOne(`${baseUrl}/vouchers/1`).flush(voucher({ id: 1, value: 80, warn: true }));
+    const ok = await updated;
+
+    expect(ok).toBe(true);
+    expect(store.vouchers()[0].value).toBe(80);
+    expect(store.vouchers()[0].warn).toBe(true);
+    expect(store.savingVoucherIds()).toEqual([]);
+  });
+
+  it('reports the API message and keeps the old row when an edit is refused', async () => {
+    await loadWith([voucher({ id: 1, value: 50 })]);
+
+    const updated = store.updateVoucher(1, { value: -5 });
+    http
+      .expectOne(`${baseUrl}/vouchers/1`)
+      .flush({ message: 'Valeur invalide.' }, { status: 422, statusText: 'x' });
+    const ok = await updated;
+
+    expect(ok).toBe(false);
+    expect(store.vouchers()[0].value).toBe(50);
+    expect(store.voucherError()).toBe('Valeur invalide.');
+    expect(store.voucherErrorId()).toBe(1);
+  });
+
+  it('deletes a voucher and removes it from the list', async () => {
+    await loadWith([voucher({ id: 1 }), voucher({ id: 2 })]);
+
+    const deleted = store.deleteVoucher(1);
+    expect(store.savingVoucherIds()).toEqual([1]);
+
+    http.expectOne(`${baseUrl}/vouchers/1`).flush(null, { status: 204, statusText: 'No Content' });
+    const ok = await deleted;
+
+    expect(ok).toBe(true);
+    expect(store.vouchers().map((v) => v.id)).toEqual([2]);
+  });
+
+  it('keeps the voucher in the list when a delete is refused', async () => {
+    await loadWith([voucher({ id: 1 })]);
+
+    const deleted = store.deleteVoucher(1);
+    http
+      .expectOne(`${baseUrl}/vouchers/1`)
+      .flush({ message: 'Bon introuvable.' }, { status: 404, statusText: 'x' });
+    const ok = await deleted;
+
+    expect(ok).toBe(false);
+    expect(store.vouchers().map((v) => v.id)).toEqual([1]);
+    expect(store.voucherError()).toBe('Bon introuvable.');
+    expect(store.voucherErrorId()).toBe(1);
+  });
+
   it('keeps the creation error out of the card error', async () => {
     await loadWith([voucher({ id: 1 })]);
 

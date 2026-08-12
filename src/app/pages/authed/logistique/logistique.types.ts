@@ -132,6 +132,8 @@ export interface SupplierTotal {
 /** A voucher ready for display. */
 export interface VoucherCard {
   readonly id: number;
+  /** Nécessaire pour préremplir le `<select>` de `VoucherEditModal`. */
+  readonly supplierId: number | null;
   readonly supplierName: string;
   readonly value: number;
   /** `DD/MM/YYYY`, pour l'affichage seul. */

@@ -10,6 +10,7 @@ import type {
   ApiSupplier,
   ApiVoucher,
   CreateVoucherPayload,
+  UpdateVoucherPayload,
   VoucherCard,
 } from '#pages/authed/logistique/logistique.types';
 
@@ -28,6 +29,7 @@ function formatIsoDate(value: string): string {
 function toVoucherCard(voucher: ApiVoucher): VoucherCard {
   return {
     id: voucher.id,
+    supplierId: voucher.supplierId,
     supplierName: voucher.supplier?.name ?? 'Enseigne non précisée',
     value: voucher.value,
     expiresLabel: formatIsoDate(voucher.expiresAt),
@@ -261,6 +263,71 @@ export const LogistiqueStore = signalStore(
             voucherError: messageOf(error, "Impossible de mettre à jour ce bon d'achat."),
             voucherErrorId: id,
           });
+        } finally {
+          patchState(store, {
+            savingVoucherIds: store.savingVoucherIds().filter((entry) => entry !== id),
+          });
+        }
+      },
+
+      /**
+       * Édition complète, non optimiste : contrairement à `toggleVoucherUsed`
+       * (un clic, un booléen), c'est un geste délibéré derrière une modale qui
+       * change plusieurs colonnes à la fois — attendre la réponse évite
+       * d'avoir à savoir restaurer un instantané à plusieurs champs.
+       */
+      async updateVoucher(id: number, payload: UpdateVoucherPayload): Promise<boolean> {
+        if (store.savingVoucherIds().includes(id)) return false;
+
+        if (store.voucherErrorId() === id) {
+          patchState(store, { voucherError: null, voucherErrorId: null });
+        }
+
+        patchState(store, { savingVoucherIds: [...store.savingVoucherIds(), id] });
+
+        try {
+          const saved = await lastValueFrom(svc.updateVoucher(id, payload));
+          patchState(store, {
+            vouchers: store.vouchers().map((v) => (v.id === id ? toVoucherCard(saved) : v)),
+          });
+          return true;
+        } catch (error) {
+          patchState(store, {
+            voucherError: messageOf(error, "Impossible de modifier ce bon d'achat."),
+            voucherErrorId: id,
+          });
+          return false;
+        } finally {
+          patchState(store, {
+            savingVoucherIds: store.savingVoucherIds().filter((entry) => entry !== id),
+          });
+        }
+      },
+
+      /**
+       * Non optimiste, comme `updateVoucher` : retirer une ligne puis la
+       * remettre en cas de refus déplacerait la carte sous les yeux de
+       * l'utilisateur pour rien.
+       */
+      async deleteVoucher(id: number): Promise<boolean> {
+        if (store.savingVoucherIds().includes(id)) return false;
+
+        if (store.voucherErrorId() === id) {
+          patchState(store, { voucherError: null, voucherErrorId: null });
+        }
+
+        patchState(store, { savingVoucherIds: [...store.savingVoucherIds(), id] });
+
+        try {
+          await lastValueFrom(svc.deleteVoucher(id));
+          patchState(store, { vouchers: store.vouchers().filter((v) => v.id !== id) });
+          return true;
+        } catch (error) {
+          patchState(store, {
+            voucherError: messageOf(error, "Impossible de supprimer ce bon d'achat."),
+            voucherErrorId: id,
+          });
+          return false;
         } finally {
           patchState(store, {
             savingVoucherIds: store.savingVoucherIds().filter((entry) => entry !== id),
