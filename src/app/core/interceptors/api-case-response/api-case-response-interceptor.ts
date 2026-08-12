@@ -34,6 +34,9 @@ export const apiResponseCaseInterceptor: HttpInterceptorFn = (req, next) => {
     }),
     map((event) => {
       if (event instanceof HttpResponse) {
+        if (event.body instanceof Blob) {
+          return event;
+        }
         const ignoredKeys = ignoredKeysPerUrl.get(req.url) ?? [];
         return event.clone({
           body: convertKeysToCamelCase(event.body as object, ignoredKeys),
