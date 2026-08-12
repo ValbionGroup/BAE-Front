@@ -75,6 +75,21 @@ export interface CreateVoucherPayload {
 }
 
 /**
+ * Corps de `PATCH /vouchers/:id` pour une édition complète (hors bascule
+ * used/unused, qui reste `setVoucherUsed`).
+ *
+ * Tous les champs sont optionnels : une clé absente signifie « ne touche pas
+ * à cette colonne » côté `VouchersController.update`, exactement comme pour
+ * `usedAt` sur `setVoucherUsed`.
+ */
+export interface UpdateVoucherPayload {
+  readonly supplierId?: number | null;
+  readonly value?: number;
+  readonly expiresAt?: string;
+  readonly condition?: string | null;
+}
+
+/**
  * One dynamically-derived retailer column. The set is built from the suppliers
  * that actually appear in the loaded goods — there are no hardcoded retailers.
  */

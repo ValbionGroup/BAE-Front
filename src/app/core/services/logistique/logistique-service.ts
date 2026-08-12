@@ -9,9 +9,17 @@ import type {
   ApiSupplier,
   ApiVoucher,
   CreateVoucherPayload,
+  UpdateVoucherPayload,
 } from '#pages/authed/logistique/logistique.types';
 
-export type { ApiGood, ApiShoppingList, ApiSupplier, ApiVoucher, CreateVoucherPayload };
+export type {
+  ApiGood,
+  ApiShoppingList,
+  ApiSupplier,
+  ApiVoucher,
+  CreateVoucherPayload,
+  UpdateVoucherPayload,
+};
 
 @Injectable({ providedIn: 'root' })
 export class LogistiqueService {
@@ -48,6 +56,19 @@ export class LogistiqueService {
    */
   setVoucherUsed(id: number, usedAt: string | null): Observable<ApiVoucher> {
     return this.http.patch<ApiVoucher>(`${this.baseUrl}/vouchers/${id}`, { usedAt });
+  }
+
+  /**
+   * Édition complète (enseigne, valeur, expiration, condition) — distincte de
+   * `setVoucherUsed`, qui ne touche jamais que `usedAt`. `PATCH` pour la même
+   * raison : une clé absente ne doit pas écraser une colonne non éditée.
+   */
+  updateVoucher(id: number, payload: UpdateVoucherPayload): Observable<ApiVoucher> {
+    return this.http.patch<ApiVoucher>(`${this.baseUrl}/vouchers/${id}`, payload);
+  }
+
+  deleteVoucher(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/vouchers/${id}`);
   }
 
   /** Le menu d'une soirée, recettes par ordre alphabétique. */

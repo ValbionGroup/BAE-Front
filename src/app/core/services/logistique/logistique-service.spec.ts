@@ -75,4 +75,38 @@ describe(LogistiqueService.name, () => {
     expect(req.request.body).toEqual({ usedAt: null });
     req.flush({});
   });
+
+  it('patches only the given fields when updating a voucher', () => {
+    service.updateVoucher(7, { value: 30 }).subscribe();
+
+    const req = http.expectOne(`${baseUrl}/vouchers/7`);
+    expect(req.request.method).toBe('PATCH');
+    // Aucune autre clé : une valeur absente ne doit pas écraser les colonnes
+    // que l'appelant n'a pas touchées, même clé par clé.
+    expect(req.request.body).toEqual({ value: 30 });
+    req.flush({});
+  });
+
+  it('sends every field together on a full edit', () => {
+    service
+      .updateVoucher(7, { supplierId: 4, value: 30, expiresAt: '2026-11-30', condition: null })
+      .subscribe();
+
+    const req = http.expectOne(`${baseUrl}/vouchers/7`);
+    expect(req.request.body).toEqual({
+      supplierId: 4,
+      value: 30,
+      expiresAt: '2026-11-30',
+      condition: null,
+    });
+    req.flush({});
+  });
+
+  it('deletes a voucher', () => {
+    service.deleteVoucher(7).subscribe();
+
+    const req = http.expectOne(`${baseUrl}/vouchers/7`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
 });
