@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { LucidePackageOpen } from '@lucide/angular';
+import { LucideDownload, LucidePackageOpen } from '@lucide/angular';
 import { lastValueFrom } from 'rxjs';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Input } from '#shared/components/ui/input/input';
@@ -8,6 +8,7 @@ import {
   ProductionService,
   type ReturnableGood,
 } from '#core/services/production/production-service';
+import { PrintService } from '#core/services/print/print-service';
 import { messageOf } from '#shared/utils/api-error';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
@@ -50,8 +51,10 @@ export class ProductionReturnModal {
   private readonly modalService = inject(ModalService);
   private readonly production = inject(ProductionService);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
 
   protected readonly icPackage = LucidePackageOpen;
+  protected readonly icDownload = LucideDownload;
 
   protected readonly lines = signal<readonly ReturnLine[]>([]);
   protected readonly loading = signal(true);
@@ -150,5 +153,12 @@ export class ProductionReturnModal {
 
   protected cancel(): void {
     this.modalService.close(this.id());
+  }
+
+  protected printClosing(): void {
+    this.printService.download(
+      `/events/${this.eventId()}/production-returns/pdf`,
+      `cloture-production-${this.eventId()}.pdf`,
+    );
   }
 }
