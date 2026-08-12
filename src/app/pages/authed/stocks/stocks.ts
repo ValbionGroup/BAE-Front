@@ -33,6 +33,7 @@ import { Toggle } from '#shared/components/ui/toggle/toggle';
 import { Input } from '#shared/components/ui/input/input';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { PrintService } from '#core/services/print/print-service';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
@@ -49,6 +50,7 @@ export class Stocks implements OnInit {
   private readonly router = inject(Router);
   private readonly store = inject(StocksStore);
   private readonly modal = inject(ModalService);
+  private readonly printService = inject(PrintService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
@@ -218,6 +220,10 @@ export class Stocks implements OnInit {
 
   protected openCreateGood(): void {
     this.modal.open({ type: 'component', component: GoodCreateModal, inputs: {} });
+  }
+
+  protected printInventory(): void {
+    this.printService.download('/stock-batches/inventory/pdf', 'inventaire-stock.pdf');
   }
 
   protected toggleSelect(id: number): void {

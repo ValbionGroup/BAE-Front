@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { Stocks } from './stocks';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
+import { PrintService } from '#core/services/print/print-service';
 
 describe(Stocks.name, () => {
   let component: Stocks;
@@ -128,5 +129,18 @@ describe(Stocks.name, () => {
     // à ne pas gâcher, pas à faire manger du périmé.
     expect((component as unknown as { firstToTakeId(): number | null }).firstToTakeId()).toBe(42);
     expect(text.match(/prendre en 1er/g)).toHaveLength(1);
+  });
+
+  it('calls PrintService.download when "Inventaire" is clicked', () => {
+    const printService = TestBed.inject(PrintService);
+    const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
+
+    component['printInventory']();
+
+    expect(downloadSpy).toHaveBeenCalledWith(
+      '/stock-batches/inventory/pdf',
+      expect.any(String),
+    );
+    vi.restoreAllMocks();
   });
 });

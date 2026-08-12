@@ -1,13 +1,7 @@
 <!-- Topbar actions -->
 <ng-template #actions>
   <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
-  <!-- Aucun endpoint d'export : le bouton reste, désactivé et motivé. -->
-  <bfd-btn
-    kind="secondary"
-    size="md"
-    [icon]="icDownload"
-    [disabled]="true"
-    title="Export d'inventaire non disponible côté API"
+  <bfd-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printInventory()"
     >Inventaire</bfd-btn
   >
   <span data-testid="add-good">
