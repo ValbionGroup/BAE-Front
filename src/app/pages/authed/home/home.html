@@ -150,6 +150,9 @@
               } @else {
                 @let me = responseEvent()?.memberPresence;
                 @let locked = presenceLocked();
+                @if (me === Presence.PENDING || me === undefined) {
+                  <bfd-badge kind="warn" [dot]="true">Non répondu</bfd-badge>
+                }
                 <div class="flex gap-1.5">
                   <bfd-btn
                     id="presence-present"

@@ -332,6 +332,30 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     });
   });
 
+  describe('pending state', () => {
+    /**
+     * `setup()`'s default `fetchPresenceForEvent: () => of(Presence.PENDING)`
+     * (line ~192) already models "no response recorded yet" — this is the
+     * exact case D19 was written for: two outline buttons alone give no
+     * visual cue that neither has been chosen.
+     */
+    it('shows a « Non répondu » indicator before any response is recorded', async () => {
+      await setup();
+
+      expect(fixture.nativeElement.textContent).toContain('Non répondu');
+    });
+
+    it('drops the indicator once a response is recorded', async () => {
+      await setup();
+
+      await internals(component).respondPresent();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Non répondu');
+    });
+  });
+
   describe('server-side refusal', () => {
     function lockedResponse() {
       return () =>
