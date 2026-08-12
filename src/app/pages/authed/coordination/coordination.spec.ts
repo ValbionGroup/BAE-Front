@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
@@ -17,6 +18,7 @@ import {
 import type { JobPeriod } from '#core/models/job-period.model';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
+import { PrintService } from '#core/services/print/print-service';
 import type { ModalAction, MessageModalConfig } from '#shared/components/modal/modal.models';
 
 /** The page exposes its behaviour as `protected` members; the specs drive them
@@ -26,6 +28,7 @@ interface CoordinationInternals {
   toggleLock(memberId: number, jobId: number): void;
   assignMember(memberId: number, roleId: number): void;
   validateAssignments(): void;
+  printAssignments(): void;
   lockedCount(): number;
   replaceableCount(): number;
   isSettled(): boolean;
@@ -346,6 +349,8 @@ describe(Coordination.name, () => {
       imports: [Coordination],
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: '1' })) } },
         { provide: CoordinationService, useValue: mockService },
       ],
@@ -368,6 +373,17 @@ describe(Coordination.name, () => {
   it('should create', async () => {
     await setup();
     expect(component).toBeTruthy();
+  });
+
+  it('prints the assignment sheet for the selected event', async () => {
+    await setup();
+    const printService = TestBed.inject(PrintService);
+    const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
+
+    internals(component).printAssignments();
+
+    expect(downloadSpy).toHaveBeenCalledWith('/events/1/assignments/pdf', expect.any(String));
+    vi.restoreAllMocks();
   });
 
   describe('grouping by period', () => {

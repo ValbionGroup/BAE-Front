@@ -32,6 +32,7 @@ import {
   LucideLock,
   LucideLockOpen,
   LucideEllipsisVertical,
+  LucideDownload,
 } from '@lucide/angular';
 import {
   CoordinationService,
@@ -59,6 +60,7 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
 import { ToastService } from '#shared/components/toast/toast.service';
+import { PrintService } from '#core/services/print/print-service';
 import { formatPointsDelta as sharedFormatPointsDelta } from '#shared/utils/points-delta';
 
 interface Member {
@@ -443,10 +445,12 @@ export class Coordination implements OnInit {
   protected readonly icLockOpen = LucideLockOpen;
   protected readonly icPlus = LucidePlus;
   protected readonly icMore = LucideEllipsisVertical;
+  protected readonly icDownload = LucideDownload;
 
   protected readonly dropdown = inject(DropdownService);
   private readonly modal = inject(ModalService);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -937,6 +941,15 @@ export class Coordination implements OnInit {
       title: 'Validation indisponible',
       message: "Cette action n'est pas encore reliée au serveur.",
     });
+  }
+
+  protected printAssignments(): void {
+    const eventData = this.selectedEventData();
+    if (!eventData) return;
+    this.printService.download(
+      `/events/${eventData.event.id}/assignments/pdf`,
+      `affectation-${eventData.event.name}.pdf`,
+    );
   }
 
   protected isFull(p: PosteView): boolean {

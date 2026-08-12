@@ -3,6 +3,9 @@
   <bfd-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
     Postes
   </bfd-btn>
+  <bfd-btn kind="ghost" size="md" [icon]="icDownload" (clicked)="printAssignments()">
+    Imprimer l'affectation
+  </bfd-btn>
   <!-- Disabled, never hidden: a vanished action reads as a bug. The reason is
        spelled out in the banner below, which the live region announces. -->
   <bfd-btn
