@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import {
   LucideChefHat,
+  LucideDownload,
   LucideDynamicIcon,
   LucidePencil,
   LucidePlus,
@@ -19,6 +20,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RecipesStore } from '#core/store/recipes.store';
+import { PrintService } from '#core/services/print/print-service';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Input } from '#shared/components/ui/input/input';
@@ -66,6 +68,7 @@ export class Recettes {
   protected readonly store = inject(RecipesStore);
   private readonly modal = inject(ModalService);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   protected readonly icChef = LucideChefHat;
@@ -74,6 +77,7 @@ export class Recettes {
   protected readonly icPlus = LucidePlus;
   protected readonly icTrash = LucideTrash2;
   protected readonly icStar = LucideStar;
+  protected readonly icDownload = LucideDownload;
 
   protected readonly r5 = Array(5).fill(null);
   protected readonly r3 = Array(3).fill(null);
@@ -197,6 +201,10 @@ export class Recettes {
 
   protected openEdit(recipeId: number): void {
     this.openEditor(recipeId);
+  }
+
+  protected printRecipe(recipeId: number, nom: string): void {
+    this.printService.download(`/products/${recipeId}/recipe/pdf`, `fiche-recette-${nom}.pdf`);
   }
 
   private openEditor(recipeId: number | null): void {

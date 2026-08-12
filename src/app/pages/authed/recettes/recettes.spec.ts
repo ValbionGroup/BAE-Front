@@ -5,12 +5,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { Recettes } from './recettes';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { PrintService } from '#core/services/print/print-service';
 
 const baseUrl = 'http://api.test/v1';
 
 interface PageApi {
   select(id: number): void;
   onSaved(recipeId: number): void;
+  printRecipe(recipeId: number, nom: string): void;
 }
 
 describe(Recettes.name, () => {
@@ -29,7 +31,10 @@ describe(Recettes.name, () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
 
   /**
    * Le panneau de détail tient ses ingrédients d'un second endpoint, que
@@ -65,5 +70,18 @@ describe(Recettes.name, () => {
 
     http.expectOne(`${baseUrl}/products/1/ingredients`).flush([]);
     await fixture.whenStable();
+  });
+
+  it('prints the selected recipe', () => {
+    const fixture = TestBed.createComponent(Recettes);
+    const printService = TestBed.inject(PrintService);
+    const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
+    fixture.detectChanges();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+
+    const page = fixture.componentInstance as unknown as PageApi;
+    page.printRecipe(5, 'Hot-dog');
+
+    expect(downloadSpy).toHaveBeenCalledWith('/products/5/recipe/pdf', expect.any(String));
   });
 });

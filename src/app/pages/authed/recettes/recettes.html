@@ -206,6 +206,13 @@
               {{ recipe.usage }} · {{ recipe.ing }} ingrédient{{ recipe.ing !== 1 ? 's' : '' }}
             </div>
           </div>
+          <bfd-btn
+            kind="ghost"
+            size="sm"
+            [icon]="icDownload"
+            (clicked)="printRecipe(recipe.id, recipe.nom)"
+            >Imprimer</bfd-btn
+          >
           <bfd-btn kind="ghost" size="sm" [icon]="icEdit" (clicked)="openEdit(recipe.id)"
             >Éditer</bfd-btn
           >
