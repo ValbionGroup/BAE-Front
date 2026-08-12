@@ -96,6 +96,9 @@
   </div>
 
   <div class="flex flex-1 justify-end gap-2" modal-footer>
+    @if (plan() !== null) {
+      <bfd-btn kind="ghost" [icon]="icDownload" (clicked)="printPlan()">Imprimer le plan</bfd-btn>
+    }
     <bfd-btn kind="ghost" (clicked)="cancel()">Annuler</bfd-btn>
     <bfd-btn
       kind="secondary"

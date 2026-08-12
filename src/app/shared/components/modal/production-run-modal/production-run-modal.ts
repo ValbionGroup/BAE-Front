@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { LucideChefHat } from '@lucide/angular';
+import { LucideChefHat, LucideDownload } from '@lucide/angular';
 import { lastValueFrom } from 'rxjs';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
@@ -11,6 +11,7 @@ import {
   type ProductionNeed,
   type ProductionShortfall,
 } from '#core/services/production/production-service';
+import { PrintService } from '#core/services/print/print-service';
 import { messageOf } from '#shared/utils/api-error';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
@@ -46,8 +47,10 @@ export class ProductionRunModal {
   private readonly modalService = inject(ModalService);
   private readonly production = inject(ProductionService);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
 
   protected readonly icChef = LucideChefHat;
+  protected readonly icDownload = LucideDownload;
 
   protected readonly quantity = signal<string>('');
   protected readonly busy = signal(false);
@@ -128,5 +131,12 @@ export class ProductionRunModal {
 
   protected cancel(): void {
     this.modalService.close(this.id());
+  }
+
+  protected printPlan(): void {
+    this.printService.download(
+      `/events/${this.eventId()}/production-plan/pdf`,
+      `plan-fefo-${this.productName()}.pdf`,
+    );
   }
 }
