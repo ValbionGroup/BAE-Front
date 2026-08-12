@@ -13,8 +13,10 @@ import {
   LucideDownload,
   LucideDynamicIcon,
   LucideLock,
+  LucidePencil,
   LucidePlus,
   LucideTicket,
+  LucideTrash2,
   LucideUpload,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
@@ -25,6 +27,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
+import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
 import type {
   ApiShoppingLine,
   ApiShoppingSupplierTotal,
@@ -151,6 +154,8 @@ export class Logistique implements OnInit {
   protected readonly icUpload = LucideUpload;
   protected readonly icPlus = LucidePlus;
   protected readonly icLock = LucideLock;
+  protected readonly icEdit = LucidePencil;
+  protected readonly icTrash = LucideTrash2;
 
   protected readonly vouchers = this.store.vouchers;
   protected readonly savingVoucherIds = this.store.savingVoucherIds;
@@ -316,6 +321,41 @@ export class Logistique implements OnInit {
 
   protected openCreateVoucher(): void {
     this.modalService.open({ type: 'component', component: VoucherCreateModal, inputs: {} });
+  }
+
+  protected openEditVoucher(voucher: VoucherCard): void {
+    this.modalService.open({
+      type: 'component',
+      component: VoucherEditModal,
+      inputs: { voucherId: voucher.id },
+    });
+  }
+
+  protected confirmDeleteVoucher(voucher: VoucherCard): void {
+    this.modalService.open({
+      type: 'delete',
+      title: "Supprimer le bon d'achat",
+      message: `Le bon ${voucher.supplierName} de ${this.formatPrice(voucher.value)} € sera définitivement supprimé.`,
+      onConfirm: () => void this.deleteVoucher(voucher),
+    });
+  }
+
+  private async deleteVoucher(voucher: VoucherCard): Promise<void> {
+    const ok = await this.store.deleteVoucher(voucher.id);
+    if (!ok) {
+      const error = this.voucherErrorId() === voucher.id ? this.voucherError() : null;
+      this.toast.show({
+        type: 'error',
+        title: 'Suppression refusée',
+        message: error ?? "Impossible de supprimer ce bon d'achat.",
+      });
+      return;
+    }
+    this.toast.show({
+      type: 'success',
+      title: "Bon d'achat supprimé",
+      message: `${voucher.supplierName} · ${this.formatPrice(voucher.value)} €`,
+    });
   }
 
   protected isSaving(id: number): boolean {

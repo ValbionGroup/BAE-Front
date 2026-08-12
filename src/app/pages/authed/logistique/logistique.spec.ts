@@ -11,6 +11,7 @@ import { Logistique } from './logistique';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
+import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
 import type { ApiShoppingList, ApiShoppingLine, ApiVoucher } from './logistique.types';
 
 /** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 €. */
@@ -442,6 +443,51 @@ describe(Logistique.name, () => {
     expect(opened).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'component', component: VoucherCreateModal }),
     );
+  });
+
+  it('opens the edit modal for the clicked voucher', async () => {
+    const opened = vi.spyOn(TestBed.inject(ModalService), 'open');
+    await renderLoaded();
+
+    const editButton = fixture.nativeElement.querySelector(
+      '[data-testid="edit-voucher-1"]',
+    ) as HTMLButtonElement;
+    expect(editButton).not.toBeNull();
+    editButton.click();
+
+    expect(opened).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'component',
+        component: VoucherEditModal,
+        inputs: { voucherId: 1 },
+      }),
+    );
+  });
+
+  it('deletes the voucher after confirmation', async () => {
+    await renderLoaded();
+
+    const deleteButton = fixture.nativeElement.querySelector(
+      '[data-testid="delete-voucher-1"]',
+    ) as HTMLButtonElement;
+    deleteButton.click();
+    fixture.detectChanges();
+
+    // `type: 'delete'` rend une modale générique de confirmation — on
+    // déclenche `onConfirm` directement, comme `recettes.spec.ts` le fait
+    // pour `confirmDelete`, plutôt que de traverser tout `ModalService`.
+    const opened = TestBed.inject(ModalService).modals()[0];
+    expect(opened.type).toBe('delete');
+    (opened as { onConfirm: () => void }).onConfirm();
+
+    // Cette page cible ses requêtes par suffixe d'URL (`endsWith`), jamais par
+    // `baseUrl` littéral : elle n'a pas de constante `baseUrl`, contrairement à
+    // `logistique.store.spec.ts`.
+    http.expectOne((r) => r.url.endsWith('/vouchers/1')).flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="toggle-voucher-1"]')).toBeNull();
   });
 
   /**

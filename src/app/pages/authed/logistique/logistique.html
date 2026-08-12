@@ -371,6 +371,29 @@
             >
               {{ voucher.used ? 'Annuler' : 'Marquer consommé' }}
             </button>
+
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                [attr.data-testid]="'edit-voucher-' + voucher.id"
+                [attr.aria-label]="'Modifier le bon ' + voucher.supplierName"
+                [disabled]="isSaving(voucher.id)"
+                (click)="openEditVoucher(voucher)"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface-2 text-muted transition-colors hover:bg-surface-3 hover:text-text focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <svg [lucideIcon]="icEdit" [size]="13" aria-hidden="true"></svg>
+              </button>
+              <button
+                type="button"
+                [attr.data-testid]="'delete-voucher-' + voucher.id"
+                [attr.aria-label]="'Supprimer le bon ' + voucher.supplierName"
+                [disabled]="isSaving(voucher.id)"
+                (click)="confirmDeleteVoucher(voucher)"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface-2 text-muted transition-colors hover:bg-surface-3 hover:text-danger focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <svg [lucideIcon]="icTrash" [size]="13" aria-hidden="true"></svg>
+              </button>
+            </div>
           </div>
 
           @if (voucherErrorId() === voucher.id && voucherError(); as message) {
