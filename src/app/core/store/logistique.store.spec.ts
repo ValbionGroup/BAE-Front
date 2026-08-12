@@ -17,6 +17,7 @@ function shoppingList(overrides: Partial<ApiShoppingList> = {}): ApiShoppingList
   return {
     eventId: 7,
     eventName: 'Soirée Hivernale',
+    totals: { optimumGoodsTotal: 0, furnitureTotal: 0 },
     lines: [
       {
         kind: 'good',
