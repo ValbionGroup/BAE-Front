@@ -226,6 +226,10 @@ export class Stocks implements OnInit {
     this.printService.download('/stock-batches/inventory/pdf', 'inventaire-stock.pdf');
   }
 
+  protected printLabels(batchId: number): void {
+    this.printService.download(`/stock-batches/labels/pdf?ids=${batchId}`, 'etiquettes-lot.pdf');
+  }
+
   protected toggleSelect(id: number): void {
     this.selectedIds.update((set) => {
       const next = new Set(set);

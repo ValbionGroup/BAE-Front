@@ -143,4 +143,17 @@ describe(Stocks.name, () => {
     );
     vi.restoreAllMocks();
   });
+
+  it('prints a label for the given batch id', () => {
+    const printService = TestBed.inject(PrintService);
+    const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
+
+    component['printLabels'](7);
+
+    expect(downloadSpy).toHaveBeenCalledWith(
+      '/stock-batches/labels/pdf?ids=7',
+      expect.any(String),
+    );
+    vi.restoreAllMocks();
+  });
 });

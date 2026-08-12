@@ -318,6 +318,11 @@
                     <span class="mono text-text-2">{{ b.openedAt ?? '—' }}</span>
                   </span>
                 </div>
+                <div class="mt-2.5 flex gap-1.5">
+                  <bfd-btn kind="ghost" size="sm" [icon]="icDownload" (clicked)="printLabels(b.id)"
+                    >Étiquette</bfd-btn
+                  >
+                </div>
                 @if (b.dlcStatus === 'expired') {
                   <div class="mt-2.5 flex gap-1.5">
                     <bfd-btn
