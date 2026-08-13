@@ -88,10 +88,7 @@ describe(LogistiqueEvents.name, () => {
 
     component['printFicheLogistique']('42', 'Soirée Hivernale');
 
-    expect(downloadSpy).toHaveBeenCalledWith(
-      '/events/42/shopping-list/pdf',
-      expect.any(String),
-    );
+    expect(downloadSpy).toHaveBeenCalledWith('/events/42/shopping-list/pdf', expect.any(String));
   });
 
   describe('pas-à-pas de quantité, débouncé par ligne', () => {

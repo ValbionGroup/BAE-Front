@@ -486,7 +486,9 @@ describe(Logistique.name, () => {
     // Cette page cible ses requêtes par suffixe d'URL (`endsWith`), jamais par
     // `baseUrl` littéral : elle n'a pas de constante `baseUrl`, contrairement à
     // `logistique.store.spec.ts`.
-    http.expectOne((r) => r.url.endsWith('/vouchers/1')).flush(null, { status: 204, statusText: 'No Content' });
+    http
+      .expectOne((r) => r.url.endsWith('/vouchers/1'))
+      .flush(null, { status: 204, statusText: 'No Content' });
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -515,16 +517,13 @@ describe(Logistique.name, () => {
     const downloadSpy = vi.spyOn(printService, 'download').mockImplementation(() => {});
     await renderLoaded(shoppingList({ eventName: 'Soirée Hivernale' }));
 
-    const button = Array.from(
-      renderTopbarActions().querySelectorAll('button'),
-    ).find((b) => b.textContent?.includes('Fiche logistique')) as HTMLButtonElement;
+    const button = Array.from(renderTopbarActions().querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Fiche logistique'),
+    ) as HTMLButtonElement;
     expect(button).not.toBeNull();
     button.click();
 
-    expect(downloadSpy).toHaveBeenCalledWith(
-      '/events/7/shopping-list/pdf',
-      expect.any(String),
-    );
+    expect(downloadSpy).toHaveBeenCalledWith('/events/7/shopping-list/pdf', expect.any(String));
   });
 
   it('names the toggle button after the voucher it acts on', async () => {

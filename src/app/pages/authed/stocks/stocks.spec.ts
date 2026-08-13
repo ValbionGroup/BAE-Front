@@ -137,10 +137,7 @@ describe(Stocks.name, () => {
 
     component['printInventory']();
 
-    expect(downloadSpy).toHaveBeenCalledWith(
-      '/stock-batches/inventory/pdf',
-      expect.any(String),
-    );
+    expect(downloadSpy).toHaveBeenCalledWith('/stock-batches/inventory/pdf', expect.any(String));
     vi.restoreAllMocks();
   });
 
@@ -150,10 +147,7 @@ describe(Stocks.name, () => {
 
     component['printLabels'](7);
 
-    expect(downloadSpy).toHaveBeenCalledWith(
-      '/stock-batches/labels/pdf?ids=7',
-      expect.any(String),
-    );
+    expect(downloadSpy).toHaveBeenCalledWith('/stock-batches/labels/pdf?ids=7', expect.any(String));
     vi.restoreAllMocks();
   });
 });

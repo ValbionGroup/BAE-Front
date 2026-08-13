@@ -39,9 +39,6 @@ describe(ProductionRunModal.name, () => {
 
     component['printPlan']();
 
-    expect(downloadSpy).toHaveBeenCalledWith(
-      '/events/7/production-plan/pdf',
-      expect.any(String),
-    );
+    expect(downloadSpy).toHaveBeenCalledWith('/events/7/production-plan/pdf', expect.any(String));
   });
 });
