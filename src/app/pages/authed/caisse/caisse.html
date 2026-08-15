@@ -78,7 +78,7 @@
               </div>
               <div class="flex items-end justify-between">
                 <span class="tnum text-[22px] font-semibold -tracking-[0.5px] text-text">
-                  {{ formatPrice(it.price) }}
+                  {{ formatCents(it.price) }}
                   <span class="text-[13px] font-medium text-muted">€</span>
                 </span>
                 <bfd-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bfd-badge>
@@ -151,11 +151,11 @@
                   {{ it.name }}
                 </div>
                 <div class="tnum text-[11px] text-muted">
-                  {{ formatPrice(it.price) }} € × {{ it.quantity }}
+                  {{ formatCents(it.price) }} € × {{ it.quantity }}
                 </div>
               </div>
               <span class="tnum text-[13px] font-semibold text-text"
-                >{{ formatPrice(it.price * it.quantity) }} €</span
+                >{{ formatCents(it.price * it.quantity) }} €</span
               >
               <bfd-btn
                 kind="ghost"
@@ -173,13 +173,13 @@
         <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
           <div class="flex justify-between text-text-2">
             <span>Sous-total</span>
-            <span class="tnum">{{ formatPrice(store.subtotal()) }} €</span>
+            <span class="tnum">{{ formatCents(store.subtotal()) }} €</span>
           </div>
         </div>
         <div class="flex items-baseline justify-between border-t border-dashed border-border py-3">
           <span class="text-sm text-text-2">À encaisser</span>
           <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
-            >{{ formatPrice(store.subtotal()) }} €</span
+            >{{ formatCents(store.subtotal()) }} €</span
           >
         </div>
 
@@ -200,7 +200,7 @@
             [disabled]="store.itemCount() === 0"
             (clicked)="store.clearCart()"
           >
-            Encaisser · {{ formatPrice(store.subtotal()) }} €
+            Encaisser · {{ formatCents(store.subtotal()) }} €
           </bfd-btn>
         </div>
       </div>

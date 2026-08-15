@@ -27,6 +27,7 @@ import { MenuItem } from '#core/models/event.model';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Kbd } from '#shared/components/ui/kbd/kbd';
+import { formatCents } from '#shared/utils/money';
 
 @Component({
   selector: 'bfd-caisse',
@@ -80,9 +81,7 @@ export class Caisse implements OnInit {
     this.store.addToCart(item);
   }
 
-  protected formatPrice(n: number): string {
-    return n.toFixed(2).replace('.', ',');
-  }
+  protected readonly formatCents = formatCents;
 
   protected readonly icScan = LucideScanLine;
   protected readonly icSearch = LucideSearch;
