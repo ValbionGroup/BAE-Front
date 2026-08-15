@@ -22,6 +22,7 @@ export interface ApiOrder {
   readonly lines: readonly ApiOrderLine[];
   readonly totalCents: number;
   readonly createdAt: string | null;
+  readonly updatedAt: string | null;
 }
 
 /** Ce qu'il reste à vendre, par recette. */
@@ -54,6 +55,7 @@ export function toOrder(dto: ApiOrder): Order {
     })),
     totalCents: dto.totalCents,
     createdAt: dto.createdAt ?? new Date().toISOString(),
+    updatedAt: dto.updatedAt ?? dto.createdAt ?? new Date().toISOString(),
   };
 }
 
@@ -74,9 +76,11 @@ export class OrdersService {
     eventId: string,
     lines: readonly CheckoutLine[],
     clientId?: number | null,
+    paymentMethod: 'cash' | 'lydia' = 'cash',
   ): Observable<ApiOrder> {
     return this.http.post<ApiOrder>(`${this.baseUrl}/events/${eventId}/orders`, {
       lines,
+      paymentMethod,
       ...(clientId ? { clientId } : {}),
     });
   }

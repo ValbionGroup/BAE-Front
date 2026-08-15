@@ -105,18 +105,11 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    // « En préparation » a quitté cette liste : c'est désormais une vraie colonne
-    // de la file cuisine, alimentée par `orders`. Le reste n'a toujours aucun
-    // endpoint et doit rester absent plutôt que d'être simulé.
-    for (const invented of [
-      'Encaissé live',
-      'Cadence',
-      'Flux transactions',
-      'Stock critique',
-      'Marge live',
-      'C. Renard',
-      '1 736,50',
-    ]) {
+    // Les colonnes, la cadence, le flux et les marges ont quitté cette liste :
+    // ils sont désormais dérivés d'`orders`. Ce qui reste ci-dessous n'a
+    // toujours aucune source — noms de clients et montants de la maquette, et
+    // le stock critique, qui supposerait un seuil par denrée.
+    for (const invented of ['Stock critique', 'Alertes', 'C. Renard', '1 736,50', '4,2 / min']) {
       expect(text).not.toContain(invented);
     }
   });

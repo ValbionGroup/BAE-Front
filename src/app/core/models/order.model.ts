@@ -20,6 +20,8 @@ export interface Order {
   readonly totalCents: number;
   /** ISO 8601 — alimente le minuteur de la file cuisine. */
   readonly createdAt: string;
+  /** ISO 8601, dernière transition — alimente le temps moyen de préparation. */
+  readonly updatedAt: string;
 }
 
 /**

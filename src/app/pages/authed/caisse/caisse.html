@@ -139,6 +139,13 @@
           </div>
           <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
         </div>
+      } @else if (pickingBuyer()) {
+        <div class="m-4">
+          <bfd-buyer-picker
+            (picked)="onBuyerPicked($event)"
+            (dismissed)="pickingBuyer.set(false)"
+          />
+        </div>
       } @else {
         <div
           class="m-4 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3"
@@ -152,7 +159,7 @@
             <div class="text-[12.5px] font-medium text-text">Client anonyme</div>
             <div class="text-[10.5px] text-muted">Facultatif — QR ou recherche par nom.</div>
           </div>
-          <bfd-btn kind="ghost" size="sm" (clicked)="pickBuyer()">Identifier</bfd-btn>
+          <bfd-btn kind="ghost" size="sm" (clicked)="pickingBuyer.set(true)">Identifier</bfd-btn>
         </div>
       }
 
@@ -216,24 +223,6 @@
           >
         </div>
 
-        <div class="mt-2.5 grid grid-cols-2 gap-2">
-          <bfd-btn
-            kind="secondary"
-            size="lg"
-            [icon]="icEuro"
-            [disabled]="store.itemCount() === 0 || store.checkingOut()"
-            (clicked)="checkout()"
-            >Espèces</bfd-btn
-          >
-          <bfd-btn
-            kind="secondary"
-            size="lg"
-            [icon]="icQr"
-            [disabled]="true"
-            title="L'encaissement Lydia attend l'accès à leur API."
-            >Lydia</bfd-btn
-          >
-        </div>
         <div class="mt-2">
           <bfd-btn
             kind="primary"
@@ -241,7 +230,7 @@
             [full]="true"
             [iconRight]="icArrowRight"
             [disabled]="store.itemCount() === 0 || store.checkingOut()"
-            (clicked)="checkout()"
+            (clicked)="openPayment()"
           >
             @if (store.checkingOut()) {
               Encaissement…

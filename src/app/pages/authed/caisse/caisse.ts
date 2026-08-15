@@ -5,6 +5,7 @@ import {
   TemplateRef,
   effect,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -32,12 +33,13 @@ import { Kbd } from '#shared/components/ui/kbd/kbd';
 import { formatCents } from '#shared/utils/money';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '#shared/components/toast/toast.service';
-import { BuyerPickerModal } from '#shared/components/modal/buyer-picker-modal/buyer-picker-modal';
+import { PaymentModal, type PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
+import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import type { Buyer } from '#core/services/buyers/buyers-service';
 
 @Component({
   selector: 'bfd-caisse',
-  imports: [Btn, Badge, Kbd, LucideDynamicIcon],
+  imports: [Btn, Badge, Kbd, LucideDynamicIcon, BuyerPicker],
   templateUrl: './caisse.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -87,16 +89,30 @@ export class Caisse implements OnInit {
     return `${buyer.fastPass.label} · valide jusqu'au ${until}`;
   }
 
-  protected pickBuyer(): void {
+  protected readonly pickingBuyer = signal(false);
+
+  protected onBuyerPicked(buyer: Buyer): void {
+    this.store.setBuyer(buyer);
+    this.pickingBuyer.set(false);
+  }
+
+  /** Le choix du moyen de paiement précède l'encaissement, il ne le suit pas. */
+  protected openPayment(): void {
+    if (this.store.itemCount() === 0) return;
+
     this.modalService.open({
       type: 'component',
-      component: BuyerPickerModal,
-      inputs: { onPick: (buyer: Buyer) => this.store.setBuyer(buyer) },
+      component: PaymentModal,
+      inputs: {
+        totalCents: this.store.subtotal(),
+        clientName: this.store.selectedBuyer()?.name ?? 'Anonyme',
+        onConfirm: (method: PaymentMethod) => this.checkout(method),
+      },
     });
   }
 
-  protected async checkout(): Promise<void> {
-    const order = await this.store.checkout();
+  private async checkout(method: PaymentMethod): Promise<void> {
+    const order = await this.store.checkout(method);
     if (!order) return;
 
     this.toast.show({

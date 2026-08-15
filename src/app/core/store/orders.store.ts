@@ -120,9 +120,12 @@ export const OrdersStore = signalStore(
         eventId: string,
         lines: readonly CheckoutLine[],
         clientId?: number | null,
+        paymentMethod: 'cash' | 'lydia' = 'cash',
       ): Promise<Order | null> {
         try {
-          const order = toOrder(await lastValueFrom(svc.checkout(eventId, lines, clientId)));
+          const order = toOrder(
+            await lastValueFrom(svc.checkout(eventId, lines, clientId, paymentMethod)),
+          );
           upsert(order);
           return order;
         } catch (error: unknown) {

@@ -217,7 +217,7 @@ describe(Caisse.name, () => {
     it('vide le panier une fois la commande enregistree', async () => {
       const store = await withCart();
 
-      const done = component['checkout']();
+      const done = component["checkout"]("cash");
       http.expectOne((r) => r.url.includes('/events/7/orders')).flush({
         id: 42,
         number: 1,
@@ -240,7 +240,7 @@ describe(Caisse.name, () => {
     it('preserve le panier quand le serveur refuse', async () => {
       const store = await withCart();
 
-      const done = component['checkout']();
+      const done = component["checkout"]("cash");
       http
         .expectOne((r) => r.url.includes('/events/7/orders'))
         .flush(

@@ -36,8 +36,8 @@ export class WebsocketService {
     // passe, et c'est là que le back filtre.
     this.transmit = new Transmit({
       baseUrl: this.baseUrl.replace(/\/v1$/, ''),
-      beforeSubscribe: (request) => void this.authorize(request),
-      beforeUnsubscribe: (request) => void this.authorize(request),
+      beforeSubscribe: (request) => this.authorize(request),
+      beforeUnsubscribe: (request) => this.authorize(request),
     });
   }
 
@@ -79,8 +79,13 @@ export class WebsocketService {
     this._messages$.next(msg);
   }
 
-  private async authorize(request: Request): Promise<void> {
-    const token = await this.tokens.getValidAccessToken();
+  /**
+   * ⚠️ Le hook de Transmit est **synchrone** : la requête part dès qu'il rend la
+   * main. Une version `async` posait l'en-tête après l'envoi, d'où un 401 sur
+   * `__transmit/subscribe`. `getAccessToken()` lit le localStorage sans promesse.
+   */
+  private authorize(request: Request): void {
+    const token = this.tokens.getAccessToken();
     if (token) request.headers.set('Authorization', `Bearer ${token}`);
   }
 }

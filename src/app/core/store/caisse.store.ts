@@ -7,6 +7,7 @@ import { LoadingStatus } from '#core/models/global.model';
 import { OrdersStore } from '#core/store/orders.store';
 import type { Buyer } from '#core/services/buyers/buyers-service';
 import type { Order } from '#core/models/order.model';
+import type { PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
 
 export interface CaisseCartItem {
   readonly productId: number;
@@ -193,7 +194,7 @@ export const CaisseStore = signalStore(
      * de façon inconditionnelle, si bien qu'une coupure réseau faisait perdre
      * la commande sans laisser de trace à l'écran.
      */
-    async checkout(): Promise<Order | null> {
+    async checkout(method: PaymentMethod = 'cash'): Promise<Order | null> {
       const eventId = store.sessionEventId();
       const lines = store.cart();
       if (!eventId || lines.length === 0) return null;
@@ -204,6 +205,7 @@ export const CaisseStore = signalStore(
         eventId,
         lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
         store.selectedBuyer()?.userId ?? null,
+        method,
       );
 
       if (order) {

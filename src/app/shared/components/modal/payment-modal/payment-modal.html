@@ -1,0 +1,44 @@
+<bfd-modal-shell
+  [icon]="icCash"
+  tone="blue"
+  eyebrow="Caisse"
+  title="Moyen de paiement"
+  [width]="420"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    <div
+      class="flex items-baseline justify-between rounded-md border border-border-s bg-surface-2 px-3 py-2.5"
+    >
+      <span class="text-[12.5px] text-text-2">À encaisser</span>
+      <span class="tnum text-[24px] font-semibold -tracking-[0.5px] text-text">
+        {{ formatCents(totalCents()) }} €
+      </span>
+    </div>
+
+    <p class="text-[11.5px] text-muted">Client : {{ clientName() }}</p>
+
+    <div class="grid grid-cols-2 gap-2">
+      <bfd-btn
+        kind="primary"
+        size="lg"
+        [icon]="icCash"
+        [disabled]="submitting()"
+        (clicked)="pay('cash')"
+        >Espèces</bfd-btn
+      >
+      <bfd-btn
+        kind="secondary"
+        size="lg"
+        [icon]="icLydia"
+        [disabled]="true"
+        title="L'encaissement Lydia attend l'accès à leur API."
+        >Lydia</bfd-btn
+      >
+    </div>
+  </div>
+
+  <div class="flex flex-1 justify-end gap-2" modal-footer>
+    <bfd-btn kind="ghost" [disabled]="submitting()" (clicked)="cancel()">Annuler</bfd-btn>
+  </div>
+</bfd-modal-shell>
