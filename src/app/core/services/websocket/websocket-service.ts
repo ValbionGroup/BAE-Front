@@ -1,73 +1,81 @@
-import { Injectable } from '@angular/core';
-import { Observable, Subject, Subscription, timer } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
+import { Transmit, type Subscription } from '@adonisjs/transmit-client';
 import { WsMessage } from '#core/models/ws-message.model';
-import { Order, OrderStatus } from '#core/models/order.model';
-import { environment } from '../../../../environment/environment';
+import { toOrder, type ApiOrder } from '#core/services/orders/orders-service';
+import { TokensService } from '#core/services/tokens/tokens-service';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
 
-@Injectable({
-  providedIn: 'root',
-})
+/** Forme diffusée par le back (`orders_realtime.ts`). */
+interface OrdersBroadcast {
+  readonly event: WsMessage['type'];
+  readonly order: ApiOrder;
+}
+
+@Injectable({ providedIn: 'root' })
 export class WebsocketService {
+  private readonly tokens = inject(TokensService);
+  private readonly baseUrl = inject(API_BASE_URL);
+
   private readonly _messages$ = new Subject<WsMessage>();
   readonly messages$: Observable<WsMessage> = this._messages$.asObservable();
 
-  private simulator?: Subscription;
-  private simulatorOrderCounter = 100;
+  private transmit?: Transmit;
+  private readonly subscriptions = new Map<string, Subscription>();
 
-  initialize(userId: number): void {
-    if (environment.production) return;
+  initialize(): void {
+    if (this.transmit) return;
 
-    // Emit a new pending order every 6–15 seconds
-    const scheduleNext = (): void => {
-      const delayMs = 6_000 + Math.random() * 9_000;
-      this.simulator = timer(delayMs).subscribe(() => {
-        this.emitSimulatedOrder(userId);
-        scheduleNext();
-      });
-    };
-    scheduleNext();
+    // Le flux SSE lui-même ne peut pas porter d'en-tête (`EventSource`), mais
+    // `subscribe`/`unsubscribe` sont de vraies requêtes : c'est là que le jeton
+    // passe, et c'est là que le back filtre.
+    this.transmit = new Transmit({
+      baseUrl: this.baseUrl.replace(/\/v1$/, ''),
+      beforeSubscribe: (request) => void this.authorize(request),
+      beforeUnsubscribe: (request) => void this.authorize(request),
+    });
   }
 
   shutdown(): void {
-    this.simulator?.unsubscribe();
-    this.simulator = undefined;
+    for (const subscription of this.subscriptions.values()) {
+      void subscription.delete();
+    }
+    this.subscriptions.clear();
+    this.transmit?.close();
+    this.transmit = undefined;
+  }
+
+  async subscribeToEvent(eventId: string): Promise<void> {
+    this.initialize();
+    if (this.subscriptions.has(eventId)) return;
+
+    const channel = `events/${eventId}/orders`;
+    const subscription = this.transmit!.subscription(channel);
+    this.subscriptions.set(eventId, subscription);
+
+    await subscription.create();
+
+    subscription.onMessage<OrdersBroadcast>((message) => {
+      this._messages$.next({
+        type: message.event,
+        payload: toOrder(message.order),
+      } as WsMessage);
+    });
+  }
+
+  async unsubscribeFromEvent(eventId: string): Promise<void> {
+    const subscription = this.subscriptions.get(eventId);
+    if (!subscription) return;
+    this.subscriptions.delete(eventId);
+    await subscription.delete();
   }
 
   publish(msg: WsMessage): void {
     this._messages$.next(msg);
   }
 
-  private emitSimulatedOrder(userId: number): void {
-    const recipePool = [
-      { recipeId: 'r1', recipeName: 'Mojito' },
-      { recipeId: 'r2', recipeName: 'Panaché' },
-      { recipeId: 'r3', recipeName: 'Sangria' },
-      { recipeId: 'r4', recipeName: 'Plateau apéro' },
-      { recipeId: 'r5', recipeName: 'Vodka Orange' },
-      { recipeId: 'r6', recipeName: 'Merguez frites' },
-    ];
-
-    const itemCount = 1 + Math.floor(Math.random() * 3);
-    const items = Array.from({ length: itemCount }, () => {
-      const recipe = recipePool[Math.floor(Math.random() * recipePool.length)];
-      return {
-        recipeId: recipe.recipeId,
-        recipeName: recipe.recipeName,
-        quantity: 1 + Math.floor(Math.random() * 3),
-      };
-    });
-
-    const now = Date.now();
-    const order: Order = {
-      id: `sim-${userId}-${now}`,
-      number: ++this.simulatorOrderCounter,
-      eventId: 'e1', // matches the today-seeded active event
-      items,
-      status: 'pending' as OrderStatus,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this._messages$.next({ type: 'order.created', payload: order });
+  private async authorize(request: Request): Promise<void> {
+    const token = await this.tokens.getValidAccessToken();
+    if (token) request.headers.set('Authorization', `Bearer ${token}`);
   }
 }

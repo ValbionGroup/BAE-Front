@@ -97,10 +97,10 @@ export class AuthEffects {
     () =>
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess, AuthActions.rehydrationSuccess),
-        tap(({ user }) => {
-          if (!isNil(user.id)) {
-            this.websocketService.initialize(user.id);
-          }
+        tap(() => {
+          // Sans `user.id` : le serveur résout l'identité depuis le jeton et
+          // vérifie `order:read` avant d'accorder un canal.
+          this.websocketService.initialize();
         }),
       ),
     { dispatch: false },

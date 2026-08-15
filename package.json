@@ -26,6 +26,7 @@
     "#app/*": "./src/app/*"
   },
   "dependencies": {
+    "@adonisjs/transmit-client": "^1.1.0",
     "@angular/common": "^21.2.19",
     "@angular/compiler": "^21.2.19",
     "@angular/core": "^21.2.19",

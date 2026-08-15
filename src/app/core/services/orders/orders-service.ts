@@ -1,179 +1,91 @@
-import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Order, OrderItem, OrderStatus, nextStatus } from '#core/models/order.model';
-import { WsMessage } from '#core/models/ws-message.model';
-import { WebsocketService } from '#core/services/websocket/websocket-service';
-import { EventsStore } from '#core/store/events.store';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { Order, OrderStatus } from '#core/models/order.model';
 
-function buildSeedOrders(eventId: string): Order[] {
-  const now = Date.now();
-  const items = (
-    list: Array<{ recipeId: string; recipeName: string; quantity: number; notes?: string }>,
-  ): OrderItem[] => list;
+// Les clés arrivent en camelCase : l'apiResponseCaseInterceptor convertit.
 
-  return [
-    {
-      id: 'o1',
-      number: 1,
-      eventId,
-      items: items([{ recipeId: 'r1', recipeName: 'Mojito', quantity: 2 }]),
-      status: 'pending',
-      createdAt: now - 120_000,
-      updatedAt: now - 120_000,
-    },
-    {
-      id: 'o2',
-      number: 2,
-      eventId,
-      items: items([
-        { recipeId: 'r6', recipeName: 'Merguez frites', quantity: 1 },
-        { recipeId: 'r2', recipeName: 'Panaché', quantity: 1 },
-      ]),
-      status: 'in_progress',
-      createdAt: now - 240_000,
-      updatedAt: now - 60_000,
-    },
-    {
-      id: 'o3',
-      number: 3,
-      eventId,
-      items: items([
-        {
-          recipeId: 'r4',
-          recipeName: 'Plateau apéro',
-          quantity: 1,
-          notes: 'Sans gluten si possible',
-        },
-      ]),
-      status: 'ready',
-      createdAt: now - 360_000,
-      updatedAt: now - 30_000,
-    },
-    {
-      id: 'o4',
-      number: 4,
-      eventId,
-      items: items([{ recipeId: 'r3', recipeName: 'Sangria', quantity: 3 }]),
-      status: 'pending',
-      createdAt: now - 90_000,
-      updatedAt: now - 90_000,
-    },
-    {
-      id: 'o5',
-      number: 5,
-      eventId,
-      items: items([
-        { recipeId: 'r5', recipeName: 'Vodka Orange', quantity: 2 },
-        { recipeId: 'r1', recipeName: 'Mojito', quantity: 1 },
-      ]),
-      status: 'completed',
-      createdAt: now - 600_000,
-      updatedAt: now - 300_000,
-    },
-    {
-      id: 'o6',
-      number: 6,
-      eventId,
-      items: items([{ recipeId: 'r6', recipeName: 'Merguez frites', quantity: 2 }]),
-      status: 'pending',
-      createdAt: now - 45_000,
-      updatedAt: now - 45_000,
-    },
-  ];
+export interface ApiOrderLine {
+  readonly productId: number;
+  readonly productName: string;
+  readonly quantity: number;
+  readonly unitPrice: number;
+}
+
+export interface ApiOrder {
+  readonly id: number;
+  readonly number: number;
+  readonly eventId: number | null;
+  readonly status: OrderStatus;
+  readonly clientName: string;
+  readonly lines: readonly ApiOrderLine[];
+  readonly totalCents: number;
+  readonly createdAt: string | null;
+}
+
+/** Ce qu'il reste à vendre, par recette. */
+export interface ApiSellableLine {
+  readonly productId: number;
+  readonly productName: string;
+  readonly plannedQty: number;
+  readonly producedQty: number;
+  readonly soldQty: number;
+  readonly remainingQty: number;
+}
+
+export interface CheckoutLine {
+  readonly productId: number;
+  readonly quantity: number;
+}
+
+export function toOrder(dto: ApiOrder): Order {
+  return {
+    id: dto.id,
+    number: dto.number,
+    eventId: String(dto.eventId ?? ''),
+    status: dto.status,
+    clientName: dto.clientName,
+    lines: dto.lines.map((line) => ({
+      productId: line.productId,
+      productName: line.productName,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+    })),
+    totalCents: dto.totalCents,
+    createdAt: dto.createdAt ?? new Date().toISOString(),
+  };
 }
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
-  private readonly wsService = inject(WebsocketService);
-  private readonly eventsStore = inject(EventsStore);
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
 
-  private readonly _allOrders = signal<Order[]>([]);
+  list(eventId: string): Observable<ApiOrder[]> {
+    return this.http.get<ApiOrder[]>(`${this.baseUrl}/events/${eventId}/orders`);
+  }
 
-  /**
-   * Les commandes de la soirée en cours.
-   *
-   * ⚠️ Filtrait auparavant sur `EventsService.currentActiveEvent`, un
-   * `computed(() => null)` inconditionnel : cette liste était donc **toujours
-   * vide**, et les compteurs qui en dérivent toujours à zéro. La soirée vient
-   * désormais d'`EventsStore.activeEvent`, la même que la caisse et la vue live.
-   */
-  readonly orders: Signal<Order[]> = computed(() => {
-    const activeId = this.eventsStore.activeEventId();
-    if (!activeId) return [];
-    return this._allOrders().filter((o) => o.eventId === activeId);
-  });
+  sellable(eventId: string): Observable<ApiSellableLine[]> {
+    return this.http.get<ApiSellableLine[]>(`${this.baseUrl}/events/${eventId}/sellable`);
+  }
 
-  readonly pendingCount: Signal<number> = computed(
-    () => this.orders().filter((o) => o.status === 'pending').length,
-  );
-  readonly inProgressCount: Signal<number> = computed(
-    () => this.orders().filter((o) => o.status === 'in_progress').length,
-  );
-  readonly readyCount: Signal<number> = computed(
-    () => this.orders().filter((o) => o.status === 'ready').length,
-  );
-  readonly completedCount: Signal<number> = computed(
-    () => this.orders().filter((o) => o.status === 'completed').length,
-  );
-  readonly cancelledCount: Signal<number> = computed(
-    () => this.orders().filter((o) => o.status === 'cancelled').length,
-  );
-
-  constructor() {
-    // Seed initial orders for the active event (e1 = today)
-    this._allOrders.set(buildSeedOrders('e1'));
-
-    // Subscribe to incoming WS messages
-    this.wsService.messages$.subscribe((msg: WsMessage) => {
-      this.applyWsMessage(msg);
+  checkout(
+    eventId: string,
+    lines: readonly CheckoutLine[],
+    clientId?: number | null,
+  ): Observable<ApiOrder> {
+    return this.http.post<ApiOrder>(`${this.baseUrl}/events/${eventId}/orders`, {
+      lines,
+      ...(clientId ? { clientId } : {}),
     });
   }
 
-  advanceStatus(orderId: string): void {
-    this._allOrders.update((orders) =>
-      orders.map((o) => {
-        if (o.id !== orderId) return o;
-        const next = nextStatus(o.status);
-        if (!next) return o;
-        const updated: Order = { ...o, status: next, updatedAt: Date.now() };
-        this.wsService.publish({ type: 'order.updated', payload: updated });
-        return updated;
-      }),
-    );
+  setStatus(orderId: number, status: OrderStatus): Observable<ApiOrder> {
+    return this.http.patch<ApiOrder>(`${this.baseUrl}/orders/${orderId}/status`, { status });
   }
 
-  cancel(orderId: string): void {
-    this._allOrders.update((orders) =>
-      orders.map((o) => {
-        if (o.id !== orderId) return o;
-        const updated: Order = { ...o, status: 'cancelled' as OrderStatus, updatedAt: Date.now() };
-        this.wsService.publish({ type: 'order.cancelled', payload: { id: orderId } });
-        return updated;
-      }),
-    );
-  }
-
-  private applyWsMessage(msg: WsMessage): void {
-    switch (msg.type) {
-      case 'order.created':
-        // Only add if not already present (idempotent)
-        this._allOrders.update((orders) =>
-          orders.some((o) => o.id === msg.payload.id) ? orders : [...orders, msg.payload],
-        );
-        break;
-      case 'order.updated':
-        this._allOrders.update((orders) =>
-          orders.map((o) => (o.id === msg.payload.id ? msg.payload : o)),
-        );
-        break;
-      case 'order.cancelled':
-        this._allOrders.update((orders) =>
-          orders.map((o) =>
-            o.id === msg.payload.id
-              ? { ...o, status: 'cancelled' as OrderStatus, updatedAt: Date.now() }
-              : o,
-          ),
-        );
-        break;
-    }
+  cancel(orderId: number): Observable<ApiOrder> {
+    return this.http.delete<ApiOrder>(`${this.baseUrl}/orders/${orderId}`);
   }
 }
