@@ -85,7 +85,7 @@ export class Sidebar {
   protected readonly soiree: readonly NavItem[] = [
     { id: 'cmd', label: 'Caisse', icon: LucideShoppingCart, route: '/caisse' },
     { id: 'pre', label: 'Précommandes', icon: LucideQrCode, route: '/precommandes' },
-    { id: 'soir', label: 'Pilotage soirée', icon: LucidePartyPopper, route: '/soiree' },
+    { id: 'soir', label: 'Pilotage soirée', icon: LucidePartyPopper, route: '/soiree/live' },
     { id: 'pay', label: 'Paiements', icon: LucideEuro, route: '/paiements' },
     { id: 'ana', label: 'Analyse', icon: LucideChartLine, route: '/analyse' },
   ];
