@@ -21,6 +21,16 @@ interface OrdersState {
   eventId: string | null;
 }
 
+/** Les commandes d'un statut, la plus ancienne d'abord. */
+function byOldest(orders: readonly Order[], status: OrderStatus): Order[] {
+  return orders
+    .filter((order) => order.status === status)
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() || a.id - b.id,
+    );
+}
+
 const initial: OrdersState = {
   loading: 'init',
   loadError: null,
@@ -33,9 +43,11 @@ export const OrdersStore = signalStore(
   { providedIn: 'root' },
   withState(initial),
   withComputed((store) => ({
-    pending: computed(() => store.orders().filter((o) => o.status === 'pending')),
-    inProgress: computed(() => store.orders().filter((o) => o.status === 'in_progress')),
-    ready: computed(() => store.orders().filter((o) => o.status === 'ready')),
+    // Du plus ancien au plus récent : en cuisine, ce qui attend depuis le plus
+    // longtemps doit être en haut de colonne, sans avoir à faire défiler.
+    pending: computed(() => byOldest(store.orders(), 'pending')),
+    inProgress: computed(() => byOldest(store.orders(), 'in_progress')),
+    ready: computed(() => byOldest(store.orders(), 'ready')),
     /** Ce que la cuisine a en charge — les trois colonnes non terminales. */
     activeCount: computed(
       () =>
