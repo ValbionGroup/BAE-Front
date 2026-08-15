@@ -28,6 +28,10 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
 import { Kbd } from '#shared/components/ui/kbd/kbd';
 import { formatCents } from '#shared/utils/money';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { ToastService } from '#shared/components/toast/toast.service';
+import { BuyerPickerModal } from '#shared/components/modal/buyer-picker-modal/buyer-picker-modal';
+import type { Buyer } from '#core/services/buyers/buyers-service';
 
 @Component({
   selector: 'bfd-caisse',
@@ -40,6 +44,8 @@ export class Caisse implements OnInit {
   private readonly events = inject(EventsStore);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
+  private readonly modalService = inject(ModalService);
+  private readonly toast = inject(ToastService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
@@ -70,6 +76,25 @@ export class Caisse implements OnInit {
 
   protected openCloture(): void {
     void this.router.navigate(['/caisse/cloture']);
+  }
+
+  protected pickBuyer(): void {
+    this.modalService.open({
+      type: 'component',
+      component: BuyerPickerModal,
+      inputs: { onPick: (buyer: Buyer) => this.store.setBuyer(buyer) },
+    });
+  }
+
+  protected async checkout(): Promise<void> {
+    const order = await this.store.checkout();
+    if (!order) return;
+
+    this.toast.show({
+      type: 'success',
+      title: `Commande n°${order.number} encaissée`,
+      message: `${formatCents(order.totalCents)} € · ${order.clientName}`,
+    });
   }
 
   protected onCategoryClick(category: string): void {

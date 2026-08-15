@@ -183,11 +183,37 @@
           >
         </div>
 
+        <div class="mt-2.5 flex items-center justify-between gap-2">
+          <span class="text-[12px] text-muted">
+            Client :
+            <span class="font-medium text-text">{{
+              store.selectedBuyer()?.name ?? 'Anonyme'
+            }}</span>
+          </span>
+          @if (store.selectedBuyer()) {
+            <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
+          } @else {
+            <bfd-btn kind="ghost" size="sm" [icon]="icQr" (clicked)="pickBuyer()"
+              >Identifier</bfd-btn
+            >
+          }
+        </div>
+
         <div class="mt-2.5 grid grid-cols-2 gap-2">
-          <bfd-btn kind="secondary" size="lg" [icon]="icEuro" [disabled]="store.itemCount() === 0"
+          <bfd-btn
+            kind="secondary"
+            size="lg"
+            [icon]="icEuro"
+            [disabled]="store.itemCount() === 0 || store.checkingOut()"
+            (clicked)="checkout()"
             >Espèces</bfd-btn
           >
-          <bfd-btn kind="secondary" size="lg" [icon]="icQr" [disabled]="store.itemCount() === 0"
+          <bfd-btn
+            kind="secondary"
+            size="lg"
+            [icon]="icQr"
+            [disabled]="true"
+            title="L'encaissement Lydia attend l'accès à leur API."
             >Lydia</bfd-btn
           >
         </div>
@@ -197,12 +223,19 @@
             size="xl"
             [full]="true"
             [iconRight]="icArrowRight"
-            [disabled]="store.itemCount() === 0"
-            (clicked)="store.clearCart()"
+            [disabled]="store.itemCount() === 0 || store.checkingOut()"
+            (clicked)="checkout()"
           >
-            Encaisser · {{ formatCents(store.subtotal()) }} €
+            @if (store.checkingOut()) {
+              Encaissement…
+            } @else {
+              Encaisser · {{ formatCents(store.subtotal()) }} €
+            }
           </bfd-btn>
         </div>
+        @if (store.checkoutError(); as message) {
+          <p class="mt-2 text-[12px] text-danger">{{ message }}</p>
+        }
       </div>
     </aside>
   </div>

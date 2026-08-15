@@ -175,4 +175,82 @@ describe(Caisse.name, () => {
 
     expect(store.todayEvent()?.name).toBe('Ce soir');
   });
+
+  describe('encaissement', () => {
+    /** Ouvre une session avec un article au panier. */
+    async function withCart() {
+      const store = TestBed.inject(CaisseStore);
+      http
+        .expectOne((r) => r.url.endsWith('/events'))
+        .flush([{ id: '7', name: 'Ce soir', date: atHour(0), status: 'ongoing' }]);
+      await settle();
+
+      store.startSession('7');
+      http
+        .expectOne((r) => r.url.includes('/events/7/products'))
+        .flush([
+          {
+            productId: 1,
+            name: 'Hot-dog',
+            isVegetarian: false,
+            quantity: 200,
+            price: 250,
+            unitCost: null,
+            totalCost: null,
+            category: 'Chaud',
+          },
+        ]);
+      await settle();
+
+      store.addToCart(store.menu()[0]);
+      return store;
+    }
+
+    it('affiche le total en euros, pas en centimes', async () => {
+      const store = await withCart();
+      store.incrementItem(1);
+
+      // 2 x 250 centimes = 5,00 EUR, et surtout pas 500,00.
+      expect(component['formatCents'](store.subtotal())).toBe('5,00');
+    });
+
+    it('vide le panier une fois la commande enregistree', async () => {
+      const store = await withCart();
+
+      const done = component['checkout']();
+      http.expectOne((r) => r.url.includes('/events/7/orders')).flush({
+        id: 42,
+        number: 1,
+        eventId: 7,
+        status: 'pending',
+        clientName: 'Anonyme',
+        lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
+        totalCents: 250,
+        createdAt: new Date().toISOString(),
+      });
+      await done;
+
+      expect(store.itemCount()).toBe(0);
+    });
+
+    /**
+     * Le panier etait vide inconditionnellement : une coupure reseau faisait
+     * perdre la commande sans rien dire.
+     */
+    it('preserve le panier quand le serveur refuse', async () => {
+      const store = await withCart();
+
+      const done = component['checkout']();
+      http
+        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .flush(
+          { code: 'E_PRODUCT_NOT_ON_MENU', message: 'Hors menu.' },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      await done;
+
+      expect(store.itemCount()).toBe(1);
+      expect(store.checkoutError()).toBe('Hors menu.');
+    });
+  });
 });

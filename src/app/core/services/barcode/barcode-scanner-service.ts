@@ -9,7 +9,11 @@ interface BarcodeDetectorCtor {
   new (options?: { formats?: string[] }): BarcodeDetectorLike;
 }
 
-const FORMATS = ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'];
+/** Codes-barres produits — le cas des Stocks. */
+export const BARCODE_FORMATS = ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'];
+
+/** QR d'identité — le cas du comptoir. */
+export const QR_FORMATS = ['qr_code'];
 
 /**
  * Fenêtre pendant laquelle un même code relu ne compte pas.
@@ -56,7 +60,11 @@ export class BarcodeScannerService {
   }
 
   /** Rend `false` si le navigateur ou l'utilisateur refuse la caméra. */
-  async start(video: HTMLVideoElement, onCode: (code: string) => void): Promise<boolean> {
+  async start(
+    video: HTMLVideoElement,
+    onCode: (code: string) => void,
+    formats: string[] = BARCODE_FORMATS,
+  ): Promise<boolean> {
     if (!this.isSupported()) return false;
 
     try {
@@ -69,7 +77,7 @@ export class BarcodeScannerService {
 
     const Ctor = (globalThis as unknown as { BarcodeDetector: BarcodeDetectorCtor })
       .BarcodeDetector;
-    this.detector = new Ctor({ formats: FORMATS });
+    this.detector = new Ctor({ formats });
     this.stopped = false;
 
     video.srcObject = this.stream;

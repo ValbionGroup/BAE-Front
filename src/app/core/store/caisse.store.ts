@@ -4,6 +4,9 @@ import { EventsStore } from '#core/store/events.store';
 import { EventsService } from '#core/services/events/events-service';
 import { EventDetail, MenuItem } from '#core/models/event.model';
 import { LoadingStatus } from '#core/models/global.model';
+import { OrdersStore } from '#core/store/orders.store';
+import type { Buyer } from '#core/services/buyers/buyers-service';
+import type { Order } from '#core/models/order.model';
 
 export interface CaisseCartItem {
   readonly productId: number;
@@ -25,12 +28,19 @@ interface CaisseState {
   readonly sessionEventId: string | null;
   readonly cart: readonly CaisseCartItem[];
   readonly activeCategory: string | null;
+  /** Acheteur désigné pour la prochaine commande ; `null` = anonyme. */
+  readonly selectedBuyer: Buyer | null;
+  readonly checkingOut: boolean;
+  readonly checkoutError: string | null;
 }
 
 const initialState: CaisseState = {
   sessionEventId: null,
   cart: [],
   activeCategory: null,
+  selectedBuyer: null,
+  checkingOut: false,
+  checkoutError: null,
 };
 
 export const CaisseStore = signalStore(
@@ -102,7 +112,7 @@ export const CaisseStore = signalStore(
       };
     },
   ),
-  withMethods((store, eventsStore = inject(EventsStore)) => ({
+  withMethods((store, eventsStore = inject(EventsStore), ordersStore = inject(OrdersStore)) => ({
     /**
      * Ouvre la caisse sur une soirée.
      *
@@ -115,7 +125,16 @@ export const CaisseStore = signalStore(
       void eventsStore.loadEventMenu(eventId);
     },
     endSession(): void {
-      patchState(store, { sessionEventId: null, cart: [], activeCategory: null });
+      patchState(store, {
+        sessionEventId: null,
+        cart: [],
+        activeCategory: null,
+        selectedBuyer: null,
+        checkoutError: null,
+      });
+    },
+    setBuyer(buyer: Buyer | null): void {
+      patchState(store, { selectedBuyer: buyer });
     },
     setActiveCategory(category: string | null): void {
       patchState(store, { activeCategory: category });
@@ -165,6 +184,38 @@ export const CaisseStore = signalStore(
     },
     clearCart(): void {
       patchState(store, { cart: [] });
+    },
+
+    /**
+     * Encaisse le panier.
+     *
+     * ⚠️ Le panier n'est vidé **qu'en cas de succès** : il l'était auparavant
+     * de façon inconditionnelle, si bien qu'une coupure réseau faisait perdre
+     * la commande sans laisser de trace à l'écran.
+     */
+    async checkout(): Promise<Order | null> {
+      const eventId = store.sessionEventId();
+      const lines = store.cart();
+      if (!eventId || lines.length === 0) return null;
+
+      patchState(store, { checkingOut: true, checkoutError: null });
+
+      const order = await ordersStore.checkout(
+        eventId,
+        lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+        store.selectedBuyer()?.userId ?? null,
+      );
+
+      if (order) {
+        patchState(store, { cart: [], selectedBuyer: null, checkingOut: false });
+      } else {
+        patchState(store, {
+          checkingOut: false,
+          checkoutError: ordersStore.loadError() ?? 'L’encaissement a échoué.',
+        });
+      }
+
+      return order;
     },
   })),
 );
