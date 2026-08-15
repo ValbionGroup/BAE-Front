@@ -111,7 +111,8 @@
       <bfd-checkout-feedback
         [order]="store.lastOrder()"
         [error]="store.checkoutError()"
-        (dismissed)="store.dismissFeedback()"
+        [pickup]="pickup()"
+        (dismissed)="dismissFeedback()"
       />
 
       <!-- Header -->
@@ -151,6 +152,7 @@
         <div class="m-4">
           <bfd-buyer-picker
             (picked)="onBuyerPicked($event)"
+            (pickedUp)="onPickedUp($event)"
             (dismissed)="pickingBuyer.set(false)"
           />
         </div>

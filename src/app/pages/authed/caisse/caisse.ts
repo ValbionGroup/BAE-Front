@@ -34,7 +34,7 @@ import { formatCents } from '#shared/utils/money';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { PaymentModal, type PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
-import { CheckoutFeedback } from './checkout-feedback/checkout-feedback';
+import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
 import type { Buyer } from '#core/services/buyers/buyers-service';
 
 @Component({
@@ -91,6 +91,19 @@ export class Caisse implements OnInit {
   }
 
   protected readonly pickingBuyer = signal(false);
+
+  /** Retrait de précommande lu au scanner, affiché comme une confirmation. */
+  protected readonly pickup = signal<Pickup | null>(null);
+
+  protected onPickedUp(scan: Pickup): void {
+    this.pickup.set(scan);
+    this.pickingBuyer.set(false);
+  }
+
+  protected dismissFeedback(): void {
+    this.pickup.set(null);
+    this.store.dismissFeedback();
+  }
 
   protected onBuyerPicked(buyer: Buyer): void {
     this.store.setBuyer(buyer);

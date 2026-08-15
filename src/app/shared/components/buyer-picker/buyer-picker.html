@@ -1,60 +1,3 @@
-@if (pickup(); as scan) {
-  <!-- RETRAIT DE PRÉCOMMANDE — ce n'est pas un client à ajouter au ticket, c'est
-       une commande à remettre. -->
-  <div
-    [class]="
-      'rounded-md border p-3 ' +
-      (scan.preOrder.paid ? 'border-ok bg-ok/10' : 'border-warn bg-warn-soft/30')
-    "
-  >
-    <div class="flex items-start gap-2">
-      <div class="min-w-0 flex-1">
-        <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">
-          Précommande · {{ scan.preOrder.eventName }}
-        </div>
-        <div class="mt-0.5 truncate text-[14px] font-semibold text-text">{{ scan.buyer.name }}</div>
-      </div>
-      <bfd-btn kind="ghost" size="sm" [icon]="icClose" (clicked)="closePickup()"></bfd-btn>
-    </div>
-
-    <ul class="mt-2 flex flex-col gap-0.5">
-      @for (line of scan.preOrder.lines; track line.productId) {
-        <li class="flex items-center gap-2 py-1 text-[12.5px] text-text">
-          <span
-            class="tnum inline-flex h-4.5 min-w-6 items-center justify-center rounded-[3px] bg-surface-2 px-1.5 text-[11px] font-semibold text-text-2"
-            >×{{ line.quantity }}</span
-          >
-          <span class="min-w-0 flex-1 truncate">{{ line.productName }}</span>
-          @if (line.receivedQuantity > 0) {
-            <span class="text-[11px] text-muted">{{ line.receivedQuantity }} déjà remis</span>
-          }
-        </li>
-      }
-    </ul>
-
-    @if (scan.preOrder.fullyCollected) {
-      <p class="mt-2 text-[12px] font-medium text-warn">
-        Déjà entièrement retirée — ne pas remettre une seconde fois.
-      </p>
-    } @else if (scan.preOrder.paid) {
-      <p class="mt-2 text-[13px] font-semibold text-ok">
-        Déjà payée — laisser passer, ne rien encaisser.
-      </p>
-    } @else {
-      <p class="mt-2 text-[13px] font-semibold text-warn">
-        Aucun paiement rattaché — ne pas remettre sans vérifier.
-      </p>
-    }
-
-    <div class="mt-2.5 flex gap-1.5">
-      <bfd-btn kind="ghost" size="sm" (clicked)="closePickup()">Fermer</bfd-btn>
-      <bfd-btn kind="secondary" size="sm" [full]="true" (clicked)="keepBuyerFromPickup()">
-        Rattacher au ticket
-      </bfd-btn>
-    </div>
-  </div>
-} @else {
-
 <div class="rounded-md border border-border-s bg-surface-2 p-3">
   <div class="flex items-center gap-2">
     <span class="flex-1 text-[12.5px] font-medium text-text">Identifier le client</span>
@@ -149,4 +92,3 @@
     <p class="mt-2 text-[11.5px] text-danger">{{ message }}</p>
   }
 </div>
-}

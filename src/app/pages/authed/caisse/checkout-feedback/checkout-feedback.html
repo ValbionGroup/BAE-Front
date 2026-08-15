@@ -1,4 +1,86 @@
-@if (order(); as done) {
+@if (pickup(); as scan) {
+  @let ok = scan.preOrder.paid && !scan.preOrder.fullyCollected;
+
+  <!-- MOBILE — retrait de précommande, pleine page. -->
+  <div
+    [class]="
+      'fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 p-8 text-center md:hidden ' +
+      (ok ? 'bg-ok' : 'bg-warn')
+    "
+    role="status"
+    (click)="close()"
+  >
+    <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+      <svg [lucideIcon]="ok ? icCheck : icError" [size]="44" class="text-white" aria-hidden="true"></svg>
+    </span>
+    <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
+      Précommande
+    </div>
+    <div class="text-[30px] font-bold leading-tight text-white">{{ scan.buyer.name }}</div>
+
+    <ul class="flex flex-col gap-1">
+      @for (line of scan.preOrder.lines; track line.productId) {
+        <li class="text-[17px] font-medium text-white">
+          ×{{ line.quantity }} {{ line.productName }}
+        </li>
+      }
+    </ul>
+
+    <p class="text-[19px] font-bold text-white">
+      @if (scan.preOrder.fullyCollected) {
+        Déjà retirée — ne pas remettre
+      } @else if (scan.preOrder.paid) {
+        Déjà payée — laisser passer
+      } @else {
+        Aucun paiement rattaché — vérifier
+      }
+    </p>
+    <p class="text-[13px] text-white/80">Touchez pour continuer.</p>
+  </div>
+
+  <!-- BUREAU — bandeau. -->
+  <div
+    [class]="'hidden border-b p-4 md:block ' + (ok ? 'border-ok bg-ok/12' : 'border-warn bg-warn/12')"
+    role="status"
+  >
+    <div class="flex items-start gap-3">
+      <span
+        [class]="
+          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ' +
+          (ok ? 'bg-ok' : 'bg-warn')
+        "
+      >
+        <svg [lucideIcon]="ok ? icCheck : icError" [size]="22" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div [class]="'text-[11px] font-semibold uppercase tracking-[0.8px] ' + (ok ? 'text-ok' : 'text-warn')">
+          Précommande · {{ scan.preOrder.eventName }}
+        </div>
+        <div class="text-[19px] font-bold leading-tight text-text">{{ scan.buyer.name }}</div>
+        <ul class="mt-1 flex flex-col gap-0.5">
+          @for (line of scan.preOrder.lines; track line.productId) {
+            <li class="text-[12.5px] text-text-2">
+              ×{{ line.quantity }} {{ line.productName }}
+              @if (line.receivedQuantity > 0) {
+                <span class="text-muted">· {{ line.receivedQuantity }} déjà remis</span>
+              }
+            </li>
+          }
+        </ul>
+        <div [class]="'mt-1 text-[13px] font-semibold ' + (ok ? 'text-ok' : 'text-warn')">
+          @if (scan.preOrder.fullyCollected) {
+            Déjà entièrement retirée — ne pas remettre une seconde fois.
+          } @else if (scan.preOrder.paid) {
+            Déjà payée — laisser passer, ne rien encaisser.
+          } @else {
+            Aucun paiement rattaché — ne pas remettre sans vérifier.
+          }
+        </div>
+      </div>
+      <bfd-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bfd-btn>
+    </div>
+  </div>
+} @else if (order(); as done) {
   <!-- MOBILE — la vue entière confirme, comme un contrôle de billet. -->
   <div
     class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-ok p-8 text-center md:hidden"

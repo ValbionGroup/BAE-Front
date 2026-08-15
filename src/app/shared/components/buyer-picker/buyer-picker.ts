@@ -38,6 +38,9 @@ import { messageOf } from '#shared/utils/api-error';
 })
 export class BuyerPicker implements OnDestroy {
   readonly picked = output<Buyer>();
+  /** Un QR de précommande : ce n'est pas un client à rattacher, c'est une
+   *  commande à remettre — la caisse l'affiche en pleine page. */
+  readonly pickedUp = output<{ buyer: Buyer; preOrder: PreOrderPickup }>();
   readonly dismissed = output<void>();
 
   private readonly buyers = inject(BuyersService);
@@ -53,12 +56,6 @@ export class BuyerPicker implements OnDestroy {
   /** `idle` → `starting` → `scanning`. L'état intermédiaire évite l'écran noir muet. */
   protected readonly camera = signal<'idle' | 'starting' | 'scanning'>('idle');
 
-  /**
-   * Une précommande lue au scanner. Elle ne se « choisit » pas comme un client :
-   * elle est déjà payée le plus souvent, donc l'écran l'affiche pour la remettre
-   * plutôt que de l'ajouter au panier.
-   */
-  protected readonly pickup = signal<{ buyer: Buyer; preOrder: PreOrderPickup } | null>(null);
   protected readonly scanSupported = this.scanner.isSupported();
 
   protected readonly icSearch = LucideSearch;
@@ -124,7 +121,7 @@ export class BuyerPicker implements OnDestroy {
 
       if (scan.kind === 'pre_order') {
         this.stopCamera();
-        this.pickup.set({ buyer: scan.buyer, preOrder: scan.preOrder });
+        this.pickedUp.emit({ buyer: scan.buyer, preOrder: scan.preOrder });
         return;
       }
 
@@ -132,19 +129,6 @@ export class BuyerPicker implements OnDestroy {
     } catch (error: unknown) {
       this.error.set(messageOf(error, 'Ce QR n’a pas pu être lu.'));
     }
-  }
-
-  /** Referme la fiche de retrait sans toucher au panier. */
-  protected closePickup(): void {
-    this.pickup.set(null);
-  }
-
-  /** Rattache tout de même la personne au ticket, si elle achète autre chose. */
-  protected keepBuyerFromPickup(): void {
-    const current = this.pickup();
-    if (!current) return;
-    this.pickup.set(null);
-    this.choose(current.buyer);
   }
 
   protected choose(buyer: Buyer): void {
