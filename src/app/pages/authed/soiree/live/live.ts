@@ -120,12 +120,12 @@ export class SoireeLive implements OnInit {
     () => this.orders.orders().filter((order) => order.status !== 'cancelled').length,
   );
 
-  /** Les commandes servies, plus récentes d'abord — le « flux transactions ». */
+  /** Les dix dernières transactions, plus récentes d'abord. */
   protected readonly recentOrders = computed(() =>
     [...this.orders.orders()]
       .filter((order) => order.status !== 'cancelled')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 12),
+      .slice(0, 10),
   );
 
   /**

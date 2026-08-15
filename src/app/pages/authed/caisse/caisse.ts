@@ -52,17 +52,19 @@ export class Caisse implements OnInit {
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
+    // ⚠️ `set()` remet les actions à `null` : les deux appels doivent vivre dans
+    // le **même** effect, dans cet ordre. Séparés, ouvrir une session rejouait
+    // `set()` seul et vidait la topbar sans erreur nulle part.
     effect(() => {
       const session = this.store.sessionEvent();
+      const tpl = this.actionsTpl();
+
       this.pageHeader.set({
         title: 'Caisse',
         subtitle: session ? `${session.name} · Service en cours` : 'Aucune session en cours',
         breadcrumb: ['Soirée', 'Caisse'],
         activeNavId: 'cmd',
       });
-    });
-    effect(() => {
-      const tpl = this.actionsTpl();
       if (tpl) this.pageHeader.setActions(tpl);
     });
   }

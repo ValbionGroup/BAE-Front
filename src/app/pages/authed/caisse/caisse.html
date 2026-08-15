@@ -36,9 +36,9 @@
     </div>
   </div>
 } @else {
-  <div class="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[1fr_360px]">
+  <div class="h-full overflow-y-auto md:grid md:grid-cols-[1fr_360px] md:overflow-hidden">
     <!-- LEFT: products -->
-    <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-4 pb-28 md:p-5 md:pb-5">
+    <div class="flex min-w-0 flex-col gap-3.5 p-4 md:overflow-hidden md:p-5">
       <!-- Category tabs -->
       <div class="flex items-center gap-2 overflow-x-auto md:flex-wrap">
         @for (c of store.categories(); track c) {
@@ -106,7 +106,7 @@
 
     <!-- RIGHT: cart -->
     <aside
-      class="contents md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-l md:border-border-s md:bg-surface"
+      class="flex flex-col border-t border-border-s bg-surface pb-28 md:min-h-0 md:overflow-hidden md:border-l md:border-t-0 md:pb-0"
     >
       <bfd-checkout-feedback
         [order]="store.lastOrder()"
@@ -115,7 +115,7 @@
       />
 
       <!-- Header -->
-      <div class="hidden items-center gap-2.5 border-b border-border-s p-4 md:flex">
+      <div class="flex items-center gap-2.5 border-b border-border-s p-4">
         <div
           class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
         >
@@ -172,7 +172,7 @@
       }
 
       <!-- Items -->
-      <div class="hidden flex-1 overflow-y-auto px-4 md:block">
+      <div class="flex-1 px-4 md:overflow-y-auto">
         @if (store.itemCount() === 0) {
           <div class="py-10 text-center text-[12px] text-muted">
             Sélectionnez un produit pour commencer le ticket.
