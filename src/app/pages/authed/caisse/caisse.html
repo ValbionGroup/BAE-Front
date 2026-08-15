@@ -123,6 +123,39 @@
         <bfd-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bfd-btn>
       </div>
 
+      <!-- Client -->
+      @if (store.selectedBuyer(); as buyer) {
+        <div
+          class="m-4 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3"
+        >
+          <span
+            class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ok-soft text-ok"
+          >
+            <svg [lucideIcon]="icCheck" [size]="16" aria-hidden="true"></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-[12.5px] font-medium text-text">{{ buyer.name }}</div>
+            <div class="text-[10.5px] text-muted">{{ fastPassLabel(buyer) ?? 'Sans fast pass' }}</div>
+          </div>
+          <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
+        </div>
+      } @else {
+        <div
+          class="m-4 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3"
+        >
+          <span
+            class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-surface-3 text-muted"
+          >
+            <svg [lucideIcon]="icUser" [size]="16" aria-hidden="true"></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[12.5px] font-medium text-text">Client anonyme</div>
+            <div class="text-[10.5px] text-muted">Facultatif — QR ou recherche par nom.</div>
+          </div>
+          <bfd-btn kind="ghost" size="sm" (clicked)="pickBuyer()">Identifier</bfd-btn>
+        </div>
+      }
+
       <!-- Items -->
       <div class="flex-1 overflow-y-auto px-4">
         @if (store.itemCount() === 0) {
@@ -181,22 +214,6 @@
           <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
             >{{ formatCents(store.subtotal()) }} €</span
           >
-        </div>
-
-        <div class="mt-2.5 flex items-center justify-between gap-2">
-          <span class="text-[12px] text-muted">
-            Client :
-            <span class="font-medium text-text">{{
-              store.selectedBuyer()?.name ?? 'Anonyme'
-            }}</span>
-          </span>
-          @if (store.selectedBuyer()) {
-            <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
-          } @else {
-            <bfd-btn kind="ghost" size="sm" [icon]="icQr" (clicked)="pickBuyer()"
-              >Identifier</bfd-btn
-            >
-          }
         </div>
 
         <div class="mt-2.5 grid grid-cols-2 gap-2">

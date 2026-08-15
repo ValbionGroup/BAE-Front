@@ -23,8 +23,13 @@ export class WebsocketService {
   private transmit?: Transmit;
   private readonly subscriptions = new Map<string, Subscription>();
 
+  /** `EventSource` n'existe ni sous jsdom ni en rendu serveur. */
+  isSupported(): boolean {
+    return typeof globalThis !== 'undefined' && 'EventSource' in globalThis;
+  }
+
   initialize(): void {
-    if (this.transmit) return;
+    if (this.transmit || !this.isSupported()) return;
 
     // Le flux SSE lui-même ne peut pas porter d'en-tête (`EventSource`), mais
     // `subscribe`/`unsubscribe` sont de vraies requêtes : c'est là que le jeton
@@ -47,7 +52,7 @@ export class WebsocketService {
 
   async subscribeToEvent(eventId: string): Promise<void> {
     this.initialize();
-    if (this.subscriptions.has(eventId)) return;
+    if (!this.transmit || this.subscriptions.has(eventId)) return;
 
     const channel = `events/${eventId}/orders`;
     const subscription = this.transmit!.subscription(channel);

@@ -11,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { lastValueFrom } from 'rxjs';
 import { LucideBell, LucideLock, LucideScanLine } from '@lucide/angular';
 import { Router } from '@angular/router';
@@ -25,26 +26,24 @@ import { ProductionRunModal } from '#shared/components/modal/production-run-moda
 import { ProductionReturnModal } from '#shared/components/modal/production-return-modal/production-return-modal';
 import { Btn } from '#shared/components/ui/btn/btn';
 import { Badge } from '#shared/components/ui/badge/badge';
+import { OrdersStore } from '#core/store/orders.store';
+import { WebsocketService } from '#core/services/websocket/websocket-service';
+import { nextStatus, type Order } from '#core/models/order.model';
+import { formatCents } from '#shared/utils/money';
 
 /**
  * Pilotage d'une soirée en service.
  *
- * ⚠️ **Cette page portait une maquette entière en données inventées** : file de
- * tickets à trois colonnes, KPIs d'encaissement, cadence, flux de transactions,
- * alertes et stock critique — plus de 400 lignes qui ne consommaient aucun
- * endpoint. Tout a été supprimé le 2026-08-11. Ce qui reste est branché.
- *
- * Ce qu'il faudra rebrancher, quand le back existera : la file de commandes et
- * les KPIs supposent `orders`, qui n'a **aucun contrôleur** (§3.4 du HANDOFF) ;
- * le stock critique supposerait un seuil par denrée, qui n'existe pas non plus.
- * La maquette Claude Design (`screen-soiree-live.jsx`) reste la spécification
- * d'interface à reprendre le moment venu.
+ * La file de commandes reprend la disposition de `screen-soiree-live.jsx` — trois
+ * colonnes, minuteurs colorés par seuil — mais pilotée par les données plutôt
+ * que triplée en gabarit. Ce que la maquette montre et que rien n'alimente
+ * (nom de client sur la carte, badge précommande, cases par ingrédient,
+ * allergies) n'est pas rendu.
  *
  * Sur le défilement : `host: { class: 'block h-full' }` n'est pas décoratif. Un
  * composant Angular est un élément inline sans dimension propre — sans lui, le
  * `h-full` du gabarit ne résout rien et c'est le conteneur de l'app-shell qui
- * défile en écrasant le contenu. Piège documenté au §1 du HANDOFF, qui a mordu
- * deux fois.
+ * défile en écrasant le contenu.
  */
 @Component({
   selector: 'bfd-soiree-live',
@@ -62,6 +61,7 @@ export class SoireeLive implements OnInit {
   private readonly events = inject(EventsStore);
   private readonly production = inject(ProductionService);
   private readonly modal = inject(ModalService);
+  private readonly realtime = inject(WebsocketService);
 
   protected readonly icBell = LucideBell;
   protected readonly icScan = LucideScanLine;
@@ -109,6 +109,69 @@ export class SoireeLive implements OnInit {
   protected readonly totalProduced = computed(() =>
     this.productionLines().reduce((sum, line) => sum + line.producedQty, 0),
   );
+
+  protected readonly orders = inject(OrdersStore);
+
+  /**
+   * Les trois colonnes du *kitchen display*, dans l'ordre du service. Une seule
+   * définition : elles ne diffèrent que par leur libellé, leur teinte et le
+   * geste qu'elles offrent.
+   */
+  protected readonly columns = computed(() => [
+    {
+      key: 'pending' as const,
+      title: 'En attente',
+      subtitle: 'à démarrer',
+      accent: 'bg-muted',
+      border: 'border-muted',
+      action: 'Démarrer',
+      orders: this.orders.pending(),
+    },
+    {
+      key: 'in_progress' as const,
+      title: 'En préparation',
+      subtitle: 'en cuisine',
+      accent: 'bg-warn',
+      border: 'border-warn',
+      action: 'Marquer prête',
+      orders: this.orders.inProgress(),
+    },
+    {
+      key: 'ready' as const,
+      title: 'Prêtes · à servir',
+      subtitle: 'appeler le client',
+      accent: 'bg-ok',
+      border: 'border-ok',
+      action: 'Remise au client',
+      orders: this.orders.ready(),
+    },
+  ]);
+
+  /** Temps écoulé depuis la prise de commande, `m:ss`. */
+  protected elapsed(order: Order): string {
+    const seconds = Math.max(0, Math.floor((this.now() - new Date(order.createdAt).getTime()) / 1000));
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
+  /** Seuils de la maquette : à surveiller à 3 minutes, urgent à 5. */
+  protected timerColor(order: Order): string {
+    if (order.status === 'ready') return 'text-ok';
+    const seconds = (this.now() - new Date(order.createdAt).getTime()) / 1000;
+    if (seconds >= 300) return 'text-danger';
+    if (seconds >= 180) return 'text-warn';
+    return 'text-text';
+  }
+
+  protected async advance(order: Order): Promise<void> {
+    const next = nextStatus(order.status);
+    if (next) await this.orders.advance(order.id, next);
+  }
+
+  protected async cancelOrder(order: Order): Promise<void> {
+    await this.orders.cancel(order.id);
+  }
+
+  protected readonly formatCents = formatCents;
 
   ngOnInit(): void {
     void this.events.load();
@@ -196,10 +259,22 @@ export class SoireeLive implements OnInit {
       untracked(() => {
         void this.events.loadEventMenu(id);
         void this.refreshProduction(id);
+        void this.orders.load(id);
+        void this.realtime.subscribeToEvent(id);
       });
     });
 
+    // Une commande poussée par le serveur entre par le même chemin qu'un retour
+    // d'appel : `upsert` ne peut donc pas produire deux états différents.
+    this.realtime.messages$.pipe(takeUntilDestroyed()).subscribe((message) => {
+      this.orders.upsert(message.payload);
+    });
+
     const interval = setInterval(() => this.now.set(Date.now()), 1000);
-    this.destroyRef.onDestroy(() => clearInterval(interval));
+    this.destroyRef.onDestroy(() => {
+      clearInterval(interval);
+      const id = this.currentEventId();
+      if (id) void this.realtime.unsubscribeFromEvent(id);
+    });
   }
 }

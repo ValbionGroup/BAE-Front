@@ -19,6 +19,8 @@ import {
   LucideSearch,
   LucideShoppingCart,
   LucideX,
+  LucideCheck,
+  LucideUser,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { CaisseStore } from '#core/store/caisse.store';
@@ -78,6 +80,13 @@ export class Caisse implements OnInit {
     void this.router.navigate(['/caisse/cloture']);
   }
 
+  /** « cotisation valide jusqu'au … » de la maquette, alimenté par le fast pass. */
+  protected fastPassLabel(buyer: Buyer): string | null {
+    if (!buyer.fastPass) return null;
+    const until = new Date(buyer.fastPass.validUntil).toLocaleDateString('fr-FR');
+    return `${buyer.fastPass.label} · valide jusqu'au ${until}`;
+  }
+
   protected pickBuyer(): void {
     this.modalService.open({
       type: 'component',
@@ -112,6 +121,8 @@ export class Caisse implements OnInit {
   protected readonly icSearch = LucideSearch;
   protected readonly icCart = LucideShoppingCart;
   protected readonly icX = LucideX;
+  protected readonly icCheck = LucideCheck;
+  protected readonly icUser = LucideUser;
   protected readonly icEuro = LucideEuro;
   protected readonly icQr = LucideQrCode;
   protected readonly icArrowRight = LucideArrowRight;

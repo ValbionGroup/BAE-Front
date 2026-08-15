@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { SoireeLive } from './live';
+import { OrdersStore } from '#core/store/orders.store';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -104,12 +105,14 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
+    // « En préparation » a quitté cette liste : c'est désormais une vraie colonne
+    // de la file cuisine, alimentée par `orders`. Le reste n'a toujours aucun
+    // endpoint et doit rester absent plutôt que d'être simulé.
     for (const invented of [
       'Encaissé live',
       'Cadence',
       'Flux transactions',
       'Stock critique',
-      'En préparation',
       'Marge live',
       'C. Renard',
       '1 736,50',
@@ -169,5 +172,58 @@ describe(SoireeLive.name, () => {
     expect(text).toContain('Accès restreint');
     // La page vit toujours.
     expect(text).toContain('Soirée BBQ');
+  });
+
+  it('affiche les commandes reelles dans leur colonne et les fait avancer', async () => {
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '4', name: 'Soiree BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    await settle();
+
+    http.expectOne((r) => r.url.includes('/events/4/products')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/4/production-runs')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/4/orders')).flush([
+      {
+        id: 11,
+        number: 3,
+        eventId: 4,
+        status: 'in_progress',
+        clientName: 'Camille Renard',
+        lines: [{ productId: 1, productName: 'Hot-dog', quantity: 2, unitPrice: 250 }],
+        totalCents: 500,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    http.expectOne((r) => r.url.includes('/events/4/sellable')).flush([]);
+    await settle();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Camille Renard');
+    expect(text).toContain('Hot-dog');
+    // Le montant est en centimes sur le fil, en euros a l ecran.
+    expect(text).toContain('5,00');
+
+    // Depuis `in_progress`, le geste suivant est « Marquer prete » (-> ready).
+    const store = TestBed.inject(OrdersStore);
+    const done = store.advance(11, 'ready');
+    const patch = http.expectOne((r) => r.url.includes('/orders/11/status'));
+    expect(patch.request.body).toEqual({ status: 'ready' });
+    patch.flush({
+      id: 11,
+      number: 3,
+      eventId: 4,
+      status: 'ready',
+      clientName: 'Camille Renard',
+      lines: [{ productId: 1, productName: 'Hot-dog', quantity: 2, unitPrice: 250 }],
+      totalCents: 500,
+      createdAt: new Date().toISOString(),
+    });
+    await done;
+
+    expect(store.ready().length).toBe(1);
+    expect(store.inProgress().length).toBe(0);
   });
 });

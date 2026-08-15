@@ -129,19 +129,102 @@
           </div>
         }
 
-        <!-- Ce que cette page ne fait pas, dit franchement plutôt que simulé. -->
-        <div class="rounded-lg border border-border-s bg-surface-2 p-4">
-          <div class="text-[12.5px] font-semibold text-text">Ce qui n'est pas encore ici</div>
-          <p class="mt-1 text-[11.5px] text-muted">
-            Le suivi des commandes en cuisine, les encaissements en direct et le stock critique
-            supposent la table <span class="mono">orders</span>, qui n'a pas encore de contrôleur.
-            Ces panneaux existaient en données inventées ; ils ont été retirés plutôt que laissés à
-            ressembler à des chiffres réels.
-          </p>
-          <div class="mt-2.5">
+        <!-- FILE CUISINE -->
+        <section class="rounded-lg border border-border-s bg-surface">
+          <header class="flex items-center gap-2.5 border-b border-border-s px-4 py-3">
+            <div class="flex-1">
+              <h2 class="text-[13px] font-semibold -tracking-[0.2px] text-text">File cuisine</h2>
+              <p class="mt-px text-[10.5px] text-muted">
+                {{ orders.activeCount() }} en cours · {{ orders.completedCount() }} servie{{
+                  orders.completedCount() > 1 ? 's' : ''
+                }}
+              </p>
+            </div>
             <bfd-btn kind="ghost" size="sm" (clicked)="openCaisse()">Ouvrir la caisse</bfd-btn>
+          </header>
+
+          @if (orders.loadError(); as message) {
+            <p class="px-4 py-3 text-[12px] text-danger">{{ message }}</p>
+          }
+
+          <div class="grid grid-cols-1 md:grid-cols-3">
+            @for (column of columns(); track column.key) {
+              <div class="flex flex-col border-border-s md:border-r md:last:border-r-0">
+                <div
+                  [class]="'flex items-center gap-2.5 border-b-2 px-4 py-3 ' + column.border"
+                >
+                  <span [class]="'h-2 w-2 rounded-full ' + column.accent"></span>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[13px] font-semibold -tracking-[0.2px] text-text">
+                      {{ column.title }}
+                    </div>
+                    <div class="mt-px text-[10.5px] text-muted">{{ column.subtitle }}</div>
+                  </div>
+                  <span
+                    [class]="
+                      'tnum inline-flex h-6 min-w-7 items-center justify-center rounded-sm px-2 text-xs font-bold text-white ' +
+                      column.accent
+                    "
+                    >{{ column.orders.length }}</span
+                  >
+                </div>
+
+                <div class="flex flex-col gap-2.5 p-2.5">
+                  @for (order of column.orders; track order.id) {
+                    <article class="rounded-md border border-border-s bg-bg p-2.5">
+                      <div class="flex items-start gap-2.5">
+                        <div
+                          class="min-w-12 rounded-sm border border-border bg-surface px-2 py-1 text-center"
+                        >
+                          <div class="text-[9px] tracking-wide text-muted">N°</div>
+                          <div class="tnum text-lg font-bold leading-none text-text">
+                            {{ order.number }}
+                          </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="truncate text-[13px] font-semibold text-text">
+                            {{ order.clientName }}
+                          </div>
+                          <div class="mt-1 text-[11px] text-muted">
+                            {{ formatCents(order.totalCents) }} €
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <div [class]="'tnum text-base font-bold leading-none ' + timerColor(order)">
+                            {{ elapsed(order) }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <ul class="mt-2 flex flex-col gap-0.5">
+                        @for (line of order.lines; track line.productId) {
+                          <li class="flex items-center gap-2 py-1 text-[12.5px] text-text">
+                            <span
+                              class="tnum inline-flex h-4.5 min-w-6 items-center justify-center rounded-[3px] bg-surface-2 px-1.5 text-[11px] font-semibold text-text-2"
+                              >×{{ line.quantity }}</span
+                            >
+                            <span class="flex-1 truncate">{{ line.productName }}</span>
+                          </li>
+                        }
+                      </ul>
+
+                      <div class="mt-2.5 flex gap-1.5">
+                        <bfd-btn kind="ghost" size="sm" (clicked)="cancelOrder(order)"
+                          >Annuler</bfd-btn
+                        >
+                        <bfd-btn kind="primary" size="sm" [full]="true" (clicked)="advance(order)">
+                          {{ column.action }}
+                        </bfd-btn>
+                      </div>
+                    </article>
+                  } @empty {
+                    <p class="px-1 py-4 text-center text-[11.5px] text-muted">Rien ici.</p>
+                  }
+                </div>
+              </div>
+            }
           </div>
-        </div>
+        </section>
       }
     </div>
   </div>
