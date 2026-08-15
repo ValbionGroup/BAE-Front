@@ -32,14 +32,14 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Kbd } from '#shared/components/ui/kbd/kbd';
 import { formatCents } from '#shared/utils/money';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { ToastService } from '#shared/components/toast/toast.service';
 import { PaymentModal, type PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
+import { CheckoutFeedback } from './checkout-feedback/checkout-feedback';
 import type { Buyer } from '#core/services/buyers/buyers-service';
 
 @Component({
   selector: 'bfd-caisse',
-  imports: [Btn, Badge, Kbd, LucideDynamicIcon, BuyerPicker],
+  imports: [Btn, Badge, Kbd, LucideDynamicIcon, BuyerPicker, CheckoutFeedback],
   templateUrl: './caisse.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -49,7 +49,6 @@ export class Caisse implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly modalService = inject(ModalService);
-  private readonly toast = inject(ToastService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
@@ -111,15 +110,9 @@ export class Caisse implements OnInit {
     });
   }
 
+  /** Le bandeau de confirmation porte le retour : pas de toast en doublon. */
   private async checkout(method: PaymentMethod): Promise<void> {
-    const order = await this.store.checkout(method);
-    if (!order) return;
-
-    this.toast.show({
-      type: 'success',
-      title: `Commande n°${order.number} encaissée`,
-      message: `${formatCents(order.totalCents)} € · ${order.clientName}`,
-    });
+    await this.store.checkout(method);
   }
 
   protected onCategoryClick(category: string): void {

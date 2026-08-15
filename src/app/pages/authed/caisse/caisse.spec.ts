@@ -252,5 +252,46 @@ describe(Caisse.name, () => {
       expect(store.itemCount()).toBe(1);
       expect(store.checkoutError()).toBe('Hors menu.');
     });
+
+    it('annonce le numero de commande apres encaissement', async () => {
+      const store = await withCart();
+
+      const done = component["checkout"]("cash");
+      http.expectOne((r) => r.url.includes('/events/7/orders')).flush({
+        id: 42,
+        number: 7,
+        eventId: 7,
+        status: 'pending',
+        clientName: 'Anonyme',
+        lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
+        totalCents: 250,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      await done;
+      fixture.detectChanges();
+
+      // Le numero est ce que le caissier annonce au client — il doit etre a
+      // l ecran, pas seulement dans un toast fugace.
+      expect(store.lastOrder()?.number).toBe(7);
+      expect(fixture.nativeElement.textContent).toContain('n°7');
+    });
+
+    it('affiche le refus sans vider le panier', async () => {
+      const store = await withCart();
+
+      const done = component["checkout"]("cash");
+      http
+        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .flush(
+          { code: 'E_PRODUCT_NOT_ON_MENU', message: 'Hors menu.' },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      await done;
+      fixture.detectChanges();
+
+      expect(store.itemCount()).toBe(1);
+      expect(fixture.nativeElement.textContent).toContain('Encaissement refusé');
+    });
   });
 });

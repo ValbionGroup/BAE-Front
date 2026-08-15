@@ -33,6 +33,8 @@ interface CaisseState {
   readonly selectedBuyer: Buyer | null;
   readonly checkingOut: boolean;
   readonly checkoutError: string | null;
+  /** Dernière commande encaissée — alimente la confirmation à l'écran. */
+  readonly lastOrder: Order | null;
 }
 
 const initialState: CaisseState = {
@@ -42,6 +44,7 @@ const initialState: CaisseState = {
   selectedBuyer: null,
   checkingOut: false,
   checkoutError: null,
+  lastOrder: null,
 };
 
 export const CaisseStore = signalStore(
@@ -134,6 +137,10 @@ export const CaisseStore = signalStore(
         checkoutError: null,
       });
     },
+    /** Referme la confirmation (ou le refus) affichée après un encaissement. */
+    dismissFeedback(): void {
+      patchState(store, { lastOrder: null, checkoutError: null });
+    },
     setBuyer(buyer: Buyer | null): void {
       patchState(store, { selectedBuyer: buyer });
     },
@@ -209,7 +216,12 @@ export const CaisseStore = signalStore(
       );
 
       if (order) {
-        patchState(store, { cart: [], selectedBuyer: null, checkingOut: false });
+        patchState(store, {
+          cart: [],
+          selectedBuyer: null,
+          checkingOut: false,
+          lastOrder: order,
+        });
       } else {
         patchState(store, {
           checkingOut: false,

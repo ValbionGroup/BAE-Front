@@ -1,0 +1,76 @@
+@if (order(); as done) {
+  <!-- MOBILE — la vue entière confirme, comme un contrôle de billet. -->
+  <div
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-ok p-8 text-center md:hidden"
+    role="status"
+    (click)="close()"
+  >
+    <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+      <svg [lucideIcon]="icCheck" [size]="44" class="text-white" aria-hidden="true"></svg>
+    </span>
+    <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
+      Commande encaissée
+    </div>
+    <div class="tnum text-[96px] font-bold leading-none text-white">n°{{ done.number }}</div>
+    <div class="text-[17px] font-medium text-white">
+      {{ formatCents(done.totalCents) }} € · {{ done.clientName }}
+    </div>
+    <p class="text-[13px] text-white/80">Annoncez ce numéro au client. Touchez pour continuer.</p>
+  </div>
+
+  <!-- BUREAU — bandeau au-dessus du ticket. -->
+  <div class="hidden border-b border-ok bg-ok/12 p-4 md:block" role="status">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-ok text-white">
+        <svg [lucideIcon]="icCheck" [size]="22" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-ok">
+          Commande encaissée
+        </div>
+        <div class="tnum text-[30px] font-bold leading-tight text-text">n°{{ done.number }}</div>
+        <div class="text-[12px] text-muted">
+          {{ formatCents(done.totalCents) }} € · {{ done.clientName }} — à annoncer au client
+        </div>
+      </div>
+      <bfd-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bfd-btn>
+    </div>
+  </div>
+} @else if (error(); as message) {
+  <!-- MOBILE — refus, plein écran. -->
+  <div
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-danger p-8 text-center md:hidden"
+    role="alert"
+    (click)="close()"
+  >
+    <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+      <svg [lucideIcon]="icError" [size]="44" class="text-white" aria-hidden="true"></svg>
+    </span>
+    <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
+      Encaissement refusé
+    </div>
+    <p class="text-[17px] font-medium text-white">{{ message }}</p>
+    <p class="text-[13px] text-white/80">
+      Le panier est conservé. Touchez pour revenir et réessayer.
+    </p>
+  </div>
+
+  <!-- BUREAU — refus, bandeau. -->
+  <div class="hidden border-b border-danger bg-danger/12 p-4 md:block" role="alert">
+    <div class="flex items-center gap-3">
+      <span
+        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-danger text-white"
+      >
+        <svg [lucideIcon]="icError" [size]="22" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-danger">
+          Encaissement refusé
+        </div>
+        <div class="mt-0.5 text-[13px] font-medium text-text">{{ message }}</div>
+        <div class="text-[12px] text-muted">Le panier est conservé.</div>
+      </div>
+      <bfd-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bfd-btn>
+    </div>
+  </div>
+}

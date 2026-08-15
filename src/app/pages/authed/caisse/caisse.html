@@ -36,18 +36,18 @@
     </div>
   </div>
 } @else {
-  <div class="grid h-full grid-cols-[1fr_360px]">
+  <div class="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[1fr_360px]">
     <!-- LEFT: products -->
     <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-5">
       <!-- Category tabs -->
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center gap-2 overflow-x-auto md:flex-wrap">
         @for (c of store.categories(); track c) {
           @let active = c === store.activeCategory();
           <button
             type="button"
             (click)="onCategoryClick(c)"
             [class]="
-              'inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold ' +
+              'inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold md:rounded-md ' +
               (active ? 'border-blue bg-blue text-white' : 'border-border bg-surface text-text-2')
             "
           >
@@ -66,7 +66,7 @@
           Aucun produit dans le menu de cette soirée.
         </div>
       } @else {
-        <div class="grid flex-1 grid-cols-4 content-start gap-3">
+        <div class="grid flex-1 grid-cols-2 content-start gap-3 lg:grid-cols-4">
           @for (it of store.visibleItems(); track it.productId) {
             <button
               type="button"
@@ -90,7 +90,7 @@
 
       <!-- Hints -->
       <div
-        class="flex items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted"
+        class="hidden items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted lg:flex"
       >
         <span><bfd-kbd>F1</bfd-kbd> · catégorie suivante</span>
         <span><bfd-kbd>+</bfd-kbd> / <bfd-kbd>−</bfd-kbd> · quantité</span>
@@ -105,9 +105,17 @@
     </div>
 
     <!-- RIGHT: cart -->
-    <aside class="flex flex-col border-l border-border-s bg-surface">
+    <aside
+      class="flex min-h-0 flex-col overflow-hidden border-border-s bg-surface md:border-l"
+    >
+      <bfd-checkout-feedback
+        [order]="store.lastOrder()"
+        [error]="store.checkoutError()"
+        (dismissed)="store.dismissFeedback()"
+      />
+
       <!-- Header -->
-      <div class="flex items-center gap-2.5 border-b border-border-s p-4">
+      <div class="hidden items-center gap-2.5 border-b border-border-s p-4 md:flex">
         <div
           class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
         >
@@ -164,7 +172,7 @@
       }
 
       <!-- Items -->
-      <div class="flex-1 overflow-y-auto px-4">
+      <div class="max-h-52 flex-1 overflow-y-auto px-4 md:max-h-none">
         @if (store.itemCount() === 0) {
           <div class="py-10 text-center text-[12px] text-muted">
             Sélectionnez un produit pour commencer le ticket.
@@ -208,22 +216,46 @@
         }
       </div>
 
-      <!-- Totals + payment -->
+      <!-- Totals + payment. Sur mobile, une barre ancrée : le panier n'a pas de
+           colonne à lui, c'est le geste d'encaissement qui doit rester sous le
+           pouce. -->
       <div class="border-t border-border-s bg-bg p-4">
-        <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
-          <div class="flex justify-between text-text-2">
-            <span>Sous-total</span>
-            <span class="tnum">{{ formatCents(store.subtotal()) }} €</span>
+        <div class="hidden md:block">
+          <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
+            <div class="flex justify-between text-text-2">
+              <span>Sous-total</span>
+              <span class="tnum">{{ formatCents(store.subtotal()) }} €</span>
+            </div>
+          </div>
+          <div
+            class="flex items-baseline justify-between border-t border-dashed border-border py-3"
+          >
+            <span class="text-sm text-text-2">À encaisser</span>
+            <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
+              >{{ formatCents(store.subtotal()) }} €</span
+            >
           </div>
         </div>
-        <div class="flex items-baseline justify-between border-t border-dashed border-border py-3">
-          <span class="text-sm text-text-2">À encaisser</span>
-          <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
-            >{{ formatCents(store.subtotal()) }} €</span
-          >
-        </div>
 
-        <div class="mt-2">
+        <div class="flex items-center gap-3">
+          <div
+            class="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-blue-soft text-blue md:hidden"
+          >
+            <svg [lucideIcon]="icCart" [size]="19" aria-hidden="true"></svg>
+            @if (store.totalQuantity() > 0) {
+              <span
+                class="tnum absolute -right-1.5 -top-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white"
+                >{{ store.totalQuantity() }}</span
+              >
+            }
+          </div>
+          <div class="min-w-0 flex-1 md:hidden">
+            <div class="text-[11px] text-muted">À encaisser</div>
+            <div class="tnum text-[19px] font-semibold -tracking-[0.3px] text-text">
+              {{ formatCents(store.subtotal()) }} €
+            </div>
+          </div>
+
           <bfd-btn
             kind="primary"
             size="xl"
@@ -235,13 +267,14 @@
             @if (store.checkingOut()) {
               Encaissement…
             } @else {
-              Encaisser · {{ formatCents(store.subtotal()) }} €
+              <span class="md:hidden">Encaisser</span>
+              <span class="hidden md:inline"
+                >Encaisser · {{ formatCents(store.subtotal()) }} €</span
+              >
             }
           </bfd-btn>
         </div>
-        @if (store.checkoutError(); as message) {
-          <p class="mt-2 text-[12px] text-danger">{{ message }}</p>
-        }
+
       </div>
     </aside>
   </div>
