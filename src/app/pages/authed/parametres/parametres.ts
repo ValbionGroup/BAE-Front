@@ -13,6 +13,7 @@ import { Btn } from '#shared/components/ui/btn/btn';
 import { Field } from '#shared/components/ui/field/field';
 import { Input } from '#shared/components/ui/input/input';
 import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { MyQrCard } from '#shared/components/my-qr-card/my-qr-card';
 import { ParametresSideNav } from './side-nav/side-nav';
 
 interface Module {
@@ -24,7 +25,7 @@ interface Module {
 
 @Component({
   selector: 'bfd-parametres',
-  imports: [Btn, Field, Input, Avatar, ParametresSideNav, LucideDynamicIcon],
+  imports: [Btn, Field, Input, Avatar, ParametresSideNav, LucideDynamicIcon, MyQrCard],
   templateUrl: './parametres.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
