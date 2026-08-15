@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Store } from '@ngrx/store';
 import {
@@ -53,6 +53,13 @@ interface NavItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Sidebar {
+  /** Émis quand un lien est suivi : le tiroir mobile doit se refermer. */
+  readonly navigated = output<void>();
+
+  protected onSidebarClick(event: Event): void {
+    if ((event.target as HTMLElement).closest('a')) this.navigated.emit();
+  }
+
   private readonly store = inject(Store);
   private readonly member = this.store.selectSignal(selectMember);
   private readonly permissions = this.store.selectSignal(selectPermissions);

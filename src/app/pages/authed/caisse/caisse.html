@@ -38,7 +38,7 @@
 } @else {
   <div class="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[1fr_360px]">
     <!-- LEFT: products -->
-    <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-5">
+    <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-4 pb-28 md:p-5 md:pb-5">
       <!-- Category tabs -->
       <div class="flex items-center gap-2 overflow-x-auto md:flex-wrap">
         @for (c of store.categories(); track c) {
@@ -106,7 +106,7 @@
 
     <!-- RIGHT: cart -->
     <aside
-      class="flex min-h-0 flex-col overflow-hidden border-border-s bg-surface md:border-l"
+      class="contents md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-l md:border-border-s md:bg-surface"
     >
       <bfd-checkout-feedback
         [order]="store.lastOrder()"
@@ -134,7 +134,7 @@
       <!-- Client -->
       @if (store.selectedBuyer(); as buyer) {
         <div
-          class="m-4 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3"
+          class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3 md:mt-4"
         >
           <span
             class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ok-soft text-ok"
@@ -156,7 +156,7 @@
         </div>
       } @else {
         <div
-          class="m-4 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3"
+          class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3 md:mt-4"
         >
           <span
             class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-surface-3 text-muted"
@@ -172,7 +172,7 @@
       }
 
       <!-- Items -->
-      <div class="max-h-52 flex-1 overflow-y-auto px-4 md:max-h-none">
+      <div class="hidden flex-1 overflow-y-auto px-4 md:block">
         @if (store.itemCount() === 0) {
           <div class="py-10 text-center text-[12px] text-muted">
             Sélectionnez un produit pour commencer le ticket.
@@ -219,7 +219,9 @@
       <!-- Totals + payment. Sur mobile, une barre ancrée : le panier n'a pas de
            colonne à lui, c'est le geste d'encaissement qui doit rester sous le
            pouce. -->
-      <div class="border-t border-border-s bg-bg p-4">
+      <div
+        class="fixed inset-x-0 bottom-0 z-30 border-t border-border-s bg-bg p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.18)] md:static md:z-auto md:shadow-none"
+      >
         <div class="hidden md:block">
           <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
             <div class="flex justify-between text-text-2">

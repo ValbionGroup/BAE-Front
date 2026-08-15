@@ -1,4 +1,14 @@
-<header class="flex items-center gap-4 px-6 py-3.5 border-b border-border-s bg-bg shrink-0">
+<header
+  class="flex items-center gap-3 px-4 py-3.5 border-b border-border-s bg-bg shrink-0 md:gap-4 md:px-6"
+>
+  <button
+    type="button"
+    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-text-2 hover:bg-surface-2 md:hidden"
+    aria-label="Ouvrir la navigation"
+    (click)="menuClick.emit()"
+  >
+    <svg lucideMenu [size]="20" aria-hidden="true"></svg>
+  </button>
   <div class="flex-1 min-w-0">
     @if (header(); as h) {
       @if (h.breadcrumb && h.breadcrumb.length) {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ModalContainer } from '#shared/components/modal/modal-container/modal-container';
 import { ToastContainer } from '#shared/components/toast/toast-container/toast-container';
@@ -21,4 +21,11 @@ import { Topbar } from './components/topbar/topbar';
   templateUrl: './app-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppShell {}
+export class AppShell {
+  /**
+   * La sidebar est un tiroir sous `md` : à 402 px de large elle mangeait plus de
+   * la moitié de l'écran. Au-delà, elle reste en colonne fixe et cet état est
+   * sans effet.
+   */
+  protected readonly navOpen = signal(false);
+}
