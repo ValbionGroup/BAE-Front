@@ -109,7 +109,24 @@ Deux remarques d'exploitation :
 
 ---
 
-## 15. Emails et tâches planifiées — la brique absente, et cinq exigences derrière
+## 15. Emails et tâches planifiées — ✅ RÉALISÉ le 2026-08-16
+
+> **Cette section est faite** — voir le §0 quindecies de `HANDOFF.md` et
+> `BAE-Back/NOTIFICATIONS.md`. Conservée comme trace du raisonnement.
+>
+> Livré : les deux tables (`activity_events`, `notifications`), le helper `presenceStates` du §19,
+> l'émetteur `emit`, `@adonisjs/mail` avec un transport configurable, et les trois commandes
+> `notify:presence-pending`, `notify:presence-upcoming`, `notify:dispatch`.
+>
+> **L'avertissement d'idempotence ci-dessous était juste, et la parade n'est pas applicative :**
+> deux contraintes `UNIQUE` en base, plus un `SAVEPOINT` par insertion — sur Postgres une violation
+> de contrainte avorte la transaction entière, ce qui aurait fait perdre les destinataires suivants.
+>
+> **Non livré, et pour deux raisons distinctes :** les deux déclencheurs de tickets attendent une
+> table `tickets` qui n'existe pas, et **aucun mail ne part réellement** faute de SMTP — la demande
+> externe du §30.1 n'est toujours pas partie.
+
+## 15 bis. L'analyse d'origine
 
 ⚠️ **`BAE-Back/package.json` ne contient ni `@adonisjs/mail`, ni scheduler, ni cron** (vérifié par
 grep sur `package.json` et `config/`). Aucun mail n'est envoyable, aucune tâche récurrente n'est
@@ -938,10 +955,10 @@ et les adhérents.
    tâche du dossier qui répare une casse existante.**
 3. **Les quatre demandes externes du §30.1** — inchangées, et toujours non parties. EirbWare,
    Scan'Eirb puis Lydia, le SMTP, les questions du §28. Seul lot dont le délai ne dépend pas de nous.
-4. **§15 — mailer et tâches planifiées.** Vérifié le 2026-08-16 : `@adonisjs/mail` n'est **pas**
-   dans les dépendances du back, alors que l'alias `#mails/*` est déjà déclaré dans `package.json`.
-   Aucun ordonnanceur non plus. Cinq exigences derrière, plus l'expiration des transactions (§10.3),
-   plus le §19 et le §26.
+4. ~~**§15 — mailer et tâches planifiées.**~~ — ✅ **fait le 2026-08-16** (§0 quindecies).
+   Restent derrière : le §26 (tickets), le rappel de péremption des stocks, l'expiration des
+   transactions (§10.3) et le câblage du fil d'activité de `home`. ⚠️ **Aucun mail ne part encore** :
+   il manque le SMTP, soit le point 3 ci-dessus.
 5. **§9 — SSO Keycloak.** `@adonisjs/ally` **est** installé, mais aucun fichier du dépôt ne
    mentionne `keycloak` ni `oidc` : la brique est disponible, la configuration reste à écrire.
    Conditionne toute la zone publique (§4.4).

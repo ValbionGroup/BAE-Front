@@ -1159,6 +1159,78 @@ une exigence.
 
 ---
 
+## 0 quindecies. Notifications, événements métier et mailer — ✅ livré le 2026-08-16
+
+Branche back `feat/adherents`, 7 commits. Back **391 tests** (contre 371 avant), typecheck et lint
+verts. **Ferme le §15 de `HANDOFF2.md`** et le §19 (helper de présence). Spec :
+`docs/superpowers/specs/2026-08-16-notifications-mailer-design.md` · Plan :
+`docs/superpowers/plans/2026-08-16-notifications-mailer.md` · Exploitation :
+**`BAE-Back/NOTIFICATIONS.md`**.
+
+| Sujet                                                | État        | Où                                             |
+| ---------------------------------------------------- | ----------- | ---------------------------------------------- |
+| Table `activity_events` (le fait, global)            | ✅ **fait** | migration `1787100000000` + `dedupe_key`       |
+| Table `notifications` (la livraison, par canal)      | ✅ **fait** | migration `1787100000001`                      |
+| Helper `presenceStates` à trois états (§19)          | ✅ **fait** | `app/services/presence_service.ts`             |
+| Émetteur générique `emit`                            | ✅ **fait** | `app/services/notification_service.ts`         |
+| `@adonisjs/mail` + transport configurable            | ✅ **fait** | `config/mail.ts`, défaut `log`                 |
+| `notify:presence-pending` / `-upcoming` / `:dispatch`| ✅ **fait** | `commands/notify_*.ts`                         |
+| Vérification à l'écran de la chaîne complète         | ✅ **faite**| soirée temporaire, puis base restaurée         |
+
+### L'idempotence est en base, pas dans le code — et c'est le cœur du lot
+
+Deux contraintes, chacune indispensable : `UNIQUE (event_id, user_id, channel)` empêche de
+**livrer** deux fois le même fait à la même personne ; `UNIQUE (dedupe_key)` empêche d'en
+**émettre** deux. Sans la seconde, deux passages d'une commande créeraient deux faits distincts,
+que la première ne verrait pas.
+
+⚠️ **Piège Postgres qui aurait coûté cher en production** : une violation de contrainte **avorte la
+transaction entière**, pas seulement l'instruction. Un `try/catch` nu autour de l'`INSERT` aurait
+donc laissé la transaction en état `aborted`, et **tous les destinataires suivant un doublon
+auraient été silencieusement perdus**. Chaque insertion vit dans son propre `SAVEPOINT`
+(`trx.transaction()` de Lucid).
+
+⚠️ **`activity_events` n'a aucune clé étrangère vers `events`**, volontairement : une soirée
+annulée ne doit pas effacer la trace qu'un rappel est parti, sinon il repartirait. Conséquence :
+supprimer une soirée **ne nettoie pas** ses faits ni ses notifications.
+
+### Le transport `log` n'existe pas chez Adonis — il a fallu l'écrire
+
+`@adonisjs/mail` (**v10.4.0**, pas v9) n'expose que des transports réseau (`smtp`, `ses`,
+`resend`…). Nodemailer sait pourtant ne rien envoyer via `jsonTransport: true`, mais l'option n'est
+pas dans le type `SMTPConfig` : la passer imposait un cast qui aurait masqué l'intention. D'où
+`app/mails/log_transport.ts`, vingt lignes typées.
+
+⚠️ **`MAIL_MAILER=log` avale les messages sans rien signaler.** C'est le défaut parce qu'aucun SMTP
+n'est fourni et que l'application doit démarrer sans — mais c'est un piège en production. Les
+variables SMTP sont **optionnelles** dans `start/env.ts` pour la même raison ; `ace configure` les
+avait rendues requises, ce qui empêchait le démarrage en développement.
+
+### Trois pièges de test découverts, dont deux qui rendaient un test vert menteur
+
+- ⚠️ **`EventFactory` tire `status` au hasard** parmi `scheduled | ongoing | completed`. Mes tests
+  ne fixaient que la date : ils passaient isolément et échouaient en suite complète, deux fois sur
+  trois. Pire, les tests d'**absence** (« ignore une soirée hors fenêtre ») réussissaient pour la
+  **mauvaise raison** — le statut, pas la fenêtre. Tout test dépendant du statut doit le fixer.
+- ⚠️ **Le faux mailer range dans deux collections distinctes** : `fake.mails` quand on envoie une
+  instance de `BaseMail`, `fake.messages` quand on envoie un callback. Chercher un envoi d'instance
+  dans `messages` rend une liste vide **sans lever d'erreur**.
+- Un test qui passe isolément et échoue en suite n'est pas forcément victime de la base partagée —
+  ici c'était du hasard dans une factory.
+
+### Ce qui reste
+
+- **Aucun mail ne part réellement** : il manque le SMTP, qui est l'une des quatre demandes externes
+  du §30.1 toujours non envoyées. Le jour où les identifiants arrivent : `MAIL_MAILER=smtp`.
+- **Les deux déclencheurs de tickets** (§15) attendent la table `tickets`, qui n'existe pas — le
+  mécanisme les accueille sans code nouveau (`emit({ verb: 'ticket.opened', … })`).
+- **Le rappel de péremption des stocks** (P1) n'a pas été demandé dans ce lot ; il est presque
+  gratuit désormais (`verb: 'stock.expiring'`, sujet `stock_batch`).
+- **Le fil d'activité de `home`** a enfin sa source (`activity_events`) ; l'écran reste à câbler.
+- **L'expiration des transactions** (§10.3) est le cinquième client de la même brique.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.
