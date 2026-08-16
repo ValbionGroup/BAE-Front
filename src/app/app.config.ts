@@ -11,6 +11,7 @@ import { provideLucideConfig } from '@lucide/angular';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { apiCaseRequestInterceptor } from '#core/interceptors/api-case-request/api-case-request-interceptor';
 import { authInterceptor } from '#core/interceptors/auth/auth-interceptor';
+import { csrfInterceptor } from '#core/interceptors/csrf/csrf-interceptor';
 import { errorInterceptor } from '#core/interceptors/error/error-interceptor';
 import { apiResponseCaseInterceptor } from '#core/interceptors/api-case-response/api-case-response-interceptor';
 import { apiEnvelopeInterceptor } from '#core/interceptors/api-envelope/api-envelope-interceptor';
@@ -35,6 +36,9 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([
         apiCaseRequestInterceptor,
         authInterceptor,
+        // Après `authInterceptor` : il faut que `withCredentials` soit déjà posé,
+        // sinon le cookie CSRF ne partirait pas avec l'en-tête qui le recopie.
+        csrfInterceptor,
         errorInterceptor,
         apiResponseCaseInterceptor,
         apiEnvelopeInterceptor,

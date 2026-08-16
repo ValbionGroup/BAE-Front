@@ -4,7 +4,6 @@ import { Transmit, type Subscription } from '@adonisjs/transmit-client';
 import { WsMessage } from '#core/models/ws-message.model';
 import { toOrder, type ApiOrder } from '#core/services/orders/orders-service';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
-import { TokensService } from '#core/services/tokens/tokens-service';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
 /**
@@ -23,7 +22,6 @@ type OrdersBroadcast =
 
 @Injectable({ providedIn: 'root' })
 export class WebsocketService {
-  private readonly tokens = inject(TokensService);
   private readonly baseUrl = inject(API_BASE_URL);
 
   private readonly _messages$ = new Subject<WsMessage>();
@@ -40,13 +38,13 @@ export class WebsocketService {
   initialize(): void {
     if (this.transmit || !this.isSupported()) return;
 
-    // Le flux SSE lui-même ne peut pas porter d'en-tête (`EventSource`), mais
-    // `subscribe`/`unsubscribe` sont de vraies requêtes : c'est là que le jeton
-    // passe, et c'est là que le back filtre.
+    // ⚠️ Plus aucun en-tête à poser : le jeton vit dans un cookie `httpOnly`.
+    // Transmit crée déjà ses requêtes avec `credentials: 'include'` et son
+    // `EventSource` avec `withCredentials: true` — le cookie part donc seul, y
+    // compris vers une autre origine. Les hooks `beforeSubscribe` /
+    // `beforeUnsubscribe` n'ont plus d'objet et ont été retirés.
     this.transmit = new Transmit({
       baseUrl: this.baseUrl.replace(/\/v1$/, ''),
-      beforeSubscribe: (request) => this.authorize(request),
-      beforeUnsubscribe: (request) => this.authorize(request),
     });
   }
 
@@ -87,15 +85,5 @@ export class WebsocketService {
 
   publish(msg: WsMessage): void {
     this._messages$.next(msg);
-  }
-
-  /**
-   * ⚠️ Le hook de Transmit est **synchrone** : la requête part dès qu'il rend la
-   * main. Une version `async` posait l'en-tête après l'envoi, d'où un 401 sur
-   * `__transmit/subscribe`. `getAccessToken()` lit le localStorage sans promesse.
-   */
-  private authorize(request: Request): void {
-    const token = this.tokens.getAccessToken();
-    if (token) request.headers.set('Authorization', `Bearer ${token}`);
   }
 }

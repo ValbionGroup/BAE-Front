@@ -1,32 +1,27 @@
 import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { from, switchMap } from 'rxjs';
-import { ApiEndPointV1 } from '#core/models/endpoint.model';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
-import { TokensService } from '#core/services/tokens/tokens-service';
 
-const IGNORE_PATHS = [ApiEndPointV1.LOGIN];
-
+/**
+ * Le jeton n'est plus lu ni posé ici : il vit dans un cookie `httpOnly` que le
+ * navigateur envoie tout seul, et que ce code **ne peut pas lire** — c'est
+ * exactement ce qui le protège d'une XSS.
+ *
+ * Il ne reste donc qu'à autoriser l'envoi des cookies vers l'API, qui est sur une
+ * autre origine. `IGNORE_PATHS` a disparu avec le jeton : `/auth/login` doit
+ * justement recevoir le cookie **en réponse**, il n'a plus rien à éviter.
+ *
+ * ⚠️ Le back doit accepter cette origine dans son allowlist CORS **et** renvoyer
+ * `Access-Control-Allow-Credentials` : `withCredentials` sans cela fait échouer
+ * la requête au preflight, pas au 401.
+ */
 export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn,
 ) => {
   const apiBaseUrl = inject(API_BASE_URL);
-  const tokenService = inject(TokensService);
 
-  const isTargeted = req.url.startsWith(apiBaseUrl);
-  if (!isTargeted) return next(req);
+  if (!req.url.startsWith(apiBaseUrl)) return next(req);
 
-  if (IGNORE_PATHS.some((path) => req.url.includes(path))) {
-    return next(req);
-  }
-
-  return from(tokenService.getValidAccessToken()).pipe(
-    switchMap((accessToken) => {
-      const authReq = accessToken
-        ? req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })
-        : req;
-      return next(authReq);
-    }),
-  );
+  return next(req.clone({ withCredentials: true }));
 };
