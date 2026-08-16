@@ -45,6 +45,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.adherents,
+        canActivate: [permissionGuard('client:read')],
         loadComponent: () => import('#pages/authed/adherents/adherents').then((m) => m.Adherents),
       },
       {

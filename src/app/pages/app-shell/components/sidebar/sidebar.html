@@ -31,7 +31,7 @@
     <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
       Espace
     </div>
-    @for (item of espace; track item.id) {
+    @for (item of espace(); track item.id) {
       <a
         [routerLink]="item.route"
         routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"

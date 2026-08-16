@@ -69,11 +69,15 @@ export class Sidebar {
     return m.role || 'Aucun rôle';
   });
 
-  protected readonly espace: readonly NavItem[] = [
+  protected readonly espace = computed<readonly NavItem[]>(() => [
     { id: 'home', label: 'Accueil', icon: LucideHouse, route: '/' },
     { id: 'pres', label: 'Présences', icon: LucideCalendar, route: '/presences' },
-    { id: 'adh', label: 'Adhérents', icon: LucideContact, route: '/adherents' },
-  ];
+    // Masquée sans la permission, comme l'est déjà « Équipe BAE » : la route
+    // porte le même garde, cacher l'entrée seule ne protégerait rien.
+    ...(this.permissions().includes('client:read')
+      ? [{ id: 'adh', label: 'Adhérents', icon: LucideContact, route: '/adherents' }]
+      : []),
+  ]);
 
   protected readonly preparation: readonly NavItem[] = [
     { id: 'stocks', label: 'Stocks', icon: LucidePackage, route: '/stocks' },
