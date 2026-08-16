@@ -200,6 +200,12 @@ describe(Caisse.name, () => {
             category: 'Chaud',
           },
         ]);
+      // Ouvrir une session charge aussi le vendable : sans lui, la grille ne
+      // saurait pas ce qui est en rupture.
+      http.expectOne((r) => r.method === 'GET' && r.url.includes('/events/7/orders')).flush([]);
+      http.expectOne((r) => r.url.includes('/events/7/sellable')).flush([]);
+      await settle();
+      http.expectOne((r) => r.url.includes('/events/7/pre-orders')).flush([]);
       await settle();
 
       store.addToCart(store.menu()[0]);
@@ -219,7 +225,7 @@ describe(Caisse.name, () => {
 
       const done = component['checkout']('cash');
       http
-        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .expectOne((r) => r.method === 'POST' && r.url.includes('/events/7/orders'))
         .flush({
           id: 42,
           number: 1,
@@ -244,7 +250,7 @@ describe(Caisse.name, () => {
 
       const done = component['checkout']('cash');
       http
-        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .expectOne((r) => r.method === 'POST' && r.url.includes('/events/7/orders'))
         .flush(
           { code: 'E_PRODUCT_NOT_ON_MENU', message: 'Hors menu.' },
           { status: 422, statusText: 'Unprocessable Entity' },
@@ -260,7 +266,7 @@ describe(Caisse.name, () => {
 
       const done = component['checkout']('cash');
       http
-        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .expectOne((r) => r.method === 'POST' && r.url.includes('/events/7/orders'))
         .flush({
           id: 42,
           number: 7,
@@ -286,7 +292,7 @@ describe(Caisse.name, () => {
 
       const done = component['checkout']('cash');
       http
-        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .expectOne((r) => r.method === 'POST' && r.url.includes('/events/7/orders'))
         .flush(
           { code: 'E_PRODUCT_NOT_ON_MENU', message: 'Hors menu.' },
           { status: 422, statusText: 'Unprocessable Entity' },

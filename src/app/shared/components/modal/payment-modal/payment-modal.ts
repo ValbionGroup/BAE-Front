@@ -1,20 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideEuro, LucideQrCode } from '@lucide/angular';
 import { Btn } from '#shared/components/ui/btn/btn';
-import { formatCents } from '#shared/utils/money';
+import { formatCents, parseEuros } from '#shared/utils/money';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
 export type PaymentMethod = 'cash' | 'lydia';
 
-/**
- * Choix du moyen de paiement, avant d'engager l'encaissement.
- *
- * Encaisser sans dire comment laisserait une ligne `transactions` dont le
- * `type` serait supposé plutôt que constaté. Lydia est présent mais désactivé :
- * l'accès à leur API n'est pas obtenu, et masquer le bouton laisserait croire
- * que le moyen n'existe pas.
- */
+const DENOMINATIONS = [5000, 2000, 1000, 500, 200, 100, 50, 20, 10];
+
 @Component({
   selector: 'bfd-payment-modal',
   imports: [Btn, ModalShell],
@@ -34,11 +28,64 @@ export class PaymentModal {
   protected readonly icCash = LucideEuro;
   protected readonly icLydia = LucideQrCode;
 
+  protected readonly step = signal<'method' | 'cash'>('method');
+  protected readonly given = signal('');
+  protected readonly givenCents = computed(() => parseEuros(this.given()));
+
+  protected readonly changeCents = computed(() => {
+    const given = this.givenCents();
+    return given === null ? null : given - this.totalCents();
+  });
+
+  protected readonly canConfirmCash = computed(() => {
+    const change = this.changeCents();
+    return change !== null && change >= 0 && !this.submitting();
+  });
+
+  protected readonly denominations = DENOMINATIONS;
+
+  protected addDenomination(cents: number): void {
+    this.setGiven((this.givenCents() ?? 0) + cents);
+  }
+
+  protected setExact(): void {
+    this.setGiven(this.totalCents());
+  }
+
+  protected clearGiven(): void {
+    this.given.set('');
+  }
+
+  private setGiven(cents: number): void {
+    this.given.set(formatCents(cents));
+  }
+
+  protected onGivenInput(value: string): void {
+    this.given.set(value);
+  }
+
+  protected choose(method: PaymentMethod): void {
+    // ⚠️ Le montant remis n'est **pas** enregistré : `transactions.amount` porte
+    // le total de la commande, pas ce qui a transité par la caisse. Ce second
+    // écran est une aide au comptage, pas une donnée métier — le jour où le
+    // fond de caisse devra être rapproché, il faudra une colonne pour ça.
+    if (method === 'cash') {
+      this.step.set('cash');
+      this.given.set('');
+      return;
+    }
+    void this.pay(method);
+  }
+
   protected async pay(method: PaymentMethod): Promise<void> {
     if (this.submitting()) return;
     this.submitting.set(true);
     await this.onConfirm()(method);
     this.modalService.close(this.id());
+  }
+
+  protected back(): void {
+    this.step.set('method');
   }
 
   protected cancel(): void {

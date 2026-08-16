@@ -55,9 +55,6 @@ export class Caisse implements OnInit {
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
-    // ⚠️ `set()` remet les actions à `null` : les deux appels doivent vivre dans
-    // le **même** effect, dans cet ordre. Séparés, ouvrir une session rejouait
-    // `set()` seul et vidait la topbar sans erreur nulle part.
     effect(() => {
       const session = this.store.sessionEvent();
       const tpl = this.actionsTpl();
@@ -140,6 +137,25 @@ export class Caisse implements OnInit {
 
   protected addItem(item: MenuItem): void {
     this.store.addToCart(item);
+  }
+
+  /** Le stock est bas mais pas épuisé — la carte porte alors le compte restant. */
+  protected isLow(productId: number): boolean {
+    return this.store.stockByProduct().get(productId)?.level === 'low';
+  }
+
+  /**
+   * ⚠️ Un bouton désactivé n'explique rien de lui-même, et au comptoir on
+   * cliquera dessus plusieurs fois avant de comprendre. L'infobulle distingue
+   * les deux causes : plus rien n'a été produit, ou le panier détient déjà tout
+   * ce qui restait.
+   */
+  protected soldOutHint(productId: number): string | null {
+    if (this.store.canAdd(productId)) return null;
+    return this.store.remainingFor(productId) === 0 &&
+      this.store.stockByProduct().get(productId)?.remainingQty !== 0
+      ? 'Tout le restant est déjà dans le panier.'
+      : 'Plus rien à vendre : relancez une production depuis la vue live.';
   }
 
   protected readonly formatCents = formatCents;

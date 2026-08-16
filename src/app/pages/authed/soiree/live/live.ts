@@ -11,7 +11,16 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { lastValueFrom } from 'rxjs';
-import { LucideBell, LucideLock, LucideScanLine } from '@lucide/angular';
+import {
+  LucideBell,
+  LucideCheck,
+  LucideClock,
+  LucideDynamicIcon,
+  LucideLock,
+  LucideScanLine,
+  LucideTriangleAlert,
+  LucideZap,
+} from '@lucide/angular';
 import { Router } from '@angular/router';
 import { EventsStore } from '#core/store/events.store';
 import {
@@ -29,23 +38,38 @@ import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { nextStatus, type Order, type OrderStatus } from '#core/models/order.model';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
 import { formatCents } from '#shared/utils/money';
+import { stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
 
-/**
- * Ce qu'une carte de la file cuisine a besoin de savoir, quelle que soit son
- * origine.
- *
- * Commandes et précommandes se rendent dans les **mêmes** colonnes : pour la
- * cuisine, il n'y a qu'une file. Plutôt que de brancher le gabarit sur le type à
- * chaque champ, les deux sources sont ramenées ici — la différence tient dans
- * deux fonctions d'adaptation, et la carte reste écrite une fois.
- *
- * Les champs qui n'existent que d'un côté sont **explicitement nuls** de l'autre
- * (`totalCents` pour une précommande, déjà payée ailleurs ; `since` pour une
- * précommande, dont le délai ne se mesure pas au service) plutôt que remplis
- * d'une valeur plausible : un zéro se serait retrouvé dans un total.
- */
+const WATCH_ORDER_SECONDS = 180;
+const LATE_ORDER_SECONDS = 300;
+const RANK: Record<StockLevel, number> = { out: 0, low: 1, unknown: 2, ok: 3 };
+const AUTONOMY_MIN_MINUTES = 10;
+const AUTONOMY_MIN_SALES = 5;
+
+function autonomyOf(remainingQty: number, soldQty: number, minutes: number): string | null {
+  if (remainingQty <= 0) return null;
+  if (minutes < AUTONOMY_MIN_MINUTES || soldQty < AUTONOMY_MIN_SALES) return null;
+
+  const perMinute = soldQty / minutes;
+  if (perMinute <= 0) return null;
+  return formatAutonomy(remainingQty / perMinute);
+}
+
+function formatAutonomy(minutes: number): string {
+  // Au-delà, la soirée finira avant le stock : le chiffre exact n'apprend rien.
+  if (minutes > 180) return '> 3 h';
+  if (minutes < 90) return `~${Math.round(minutes / 5) * 5 || 5} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = Math.round((minutes % 60) / 15) * 15;
+  return rest === 0 || rest === 60 ? `~${hours + (rest === 60 ? 1 : 0)} h` : `~${hours} h ${rest}`;
+}
+
+function formatElapsed(seconds: number): string {
+  const whole = Math.floor(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
 interface KitchenTicket {
-  /** Unique **toutes sources confondues** : l'id seul se télescoperait. */
   readonly key: string;
   readonly kind: 'order' | 'pre_order';
   readonly id: number;
@@ -53,21 +77,9 @@ interface KitchenTicket {
   readonly clientName: string;
   readonly lines: readonly { productId: number; productName: string; quantity: number }[];
   readonly status: OrderStatus;
-  /**
-   * L'état du règlement, **déjà résolu**.
-   *
-   * ⚠️ Un libellé plutôt qu'un montant et un booléen : la première version
-   * déduisait « payée » de l'absence de montant, ce qui ne dit que « ce n'est
-   * pas une commande de comptoir ». Une précommande impayée s'affichait donc
-   * « Payée à la commande » juste au-dessus de l'alerte disant le contraire.
-   * `null` quand il n'y a rien à en dire — l'alerte s'en charge.
-   */
   readonly payment: string | null;
-  /** Début du chronomètre, `null` quand le ticket n'en a pas. */
   readonly since: string | null;
-  /** Heure de retrait convenue, `null` hors précommande ou si non choisie. */
   readonly pickupAt: string | null;
-  /** Ce qui doit arrêter la main du service avant qu'il ne remette la commande. */
   readonly warning: string | null;
 }
 
@@ -99,41 +111,17 @@ function ticketOfPreOrder(preOrder: PreOrderTicket): KitchenTicket {
     payment: preOrder.paid ? 'Payée à la commande' : null,
     since: null,
     pickupAt: preOrder.pickupAt,
-    // Une précommande est censée être payée à la commande. Quand elle ne l'est
-    // pas, le serveur refusera la remise — autant que le comptoir le voie avant
-    // d'avoir emballé.
     warning: preOrder.paid ? null : 'Aucun paiement rattaché',
   };
 }
 
-/**
- * Une colonne : les précommandes **en tête**, les commandes du service ensuite.
- *
- * L'épinglage est délibéré et non trié : une précommande est attendue à une
- * heure convenue, alors qu'une commande du comptoir est servie au fil de l'eau.
- * Les intercaler par ancienneté enterrerait la précommande sous le service dès
- * le premier coup de feu — c'est-à-dire exactement quand il ne faut pas
- * l'oublier.
- */
 function merge(preOrders: readonly PreOrderTicket[], orders: readonly Order[]): KitchenTicket[] {
   return [...preOrders.map(ticketOfPreOrder), ...orders.map(ticketOfOrder)];
 }
 
-/**
- * Pilotage d'une soirée en service.
- *
- * La file de commandes reprend la disposition de `screen-soiree-live.jsx` — trois
- * colonnes, minuteurs colorés par seuil — mais pilotée par les données plutôt
- * que triplée en gabarit. Ce que la maquette montre et que rien n'alimente
- * (nom de client sur la carte, badge précommande, cases par ingrédient,
- * allergies) n'est pas rendu.
- *
- * La page vit **hors app-shell** (route dédiée) : c'est un poste de service en
- * plein écran, pas une page de navigation. Elle porte donc sa propre topbar.
- */
 @Component({
   selector: 'bfd-soiree-live',
-  imports: [Btn, Badge, Logo],
+  imports: [Btn, Badge, Logo, LucideDynamicIcon],
   templateUrl: './live.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -149,23 +137,10 @@ export class SoireeLive implements OnInit {
   protected readonly icBell = LucideBell;
   protected readonly icScan = LucideScanLine;
   protected readonly icLock = LucideLock;
+  protected readonly icAlert = LucideTriangleAlert;
+  protected readonly icClock = LucideClock;
 
-  /**
-   * La soirée que cette page pilote — `EventsStore.activeEvent`, la **même** que
-   * celle sur laquelle la caisse s'ouvre. Deux dérivations séparées finiraient
-   * par diverger, et on encaisserait sur une soirée pendant qu'on produirait
-   * pour une autre.
-   */
   protected readonly currentEvent = this.events.activeEvent;
-
-  /**
-   * ⚠️ **L'effect dépend de cet identifiant, jamais de `currentEvent()`.**
-   *
-   * `loadEventMenu()` fait un `patchState` sur le dictionnaire dont
-   * `activeEvent` dérive : un effect qui lirait l'objet se réveillerait à chaque
-   * chargement de menu et le relancerait. Une chaîne, elle, reste égale à
-   * elle-même quand le dictionnaire est remplacé.
-   */
   protected readonly currentEventId = this.events.activeEventId;
 
   protected readonly productionLines = signal<readonly ProductionLine[]>([]);
@@ -185,6 +160,12 @@ export class SoireeLive implements OnInit {
     return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   });
 
+  protected readonly serviceMinutes = computed(() => {
+    const date = this.currentEvent()?.date;
+    if (!date || Number.isNaN(date.getTime())) return 0;
+    return Math.max(0, (this.now() - date.getTime()) / 60_000);
+  });
+
   protected readonly totalPlanned = computed(() =>
     this.productionLines().reduce((sum, line) => sum + line.plannedQty, 0),
   );
@@ -196,8 +177,7 @@ export class SoireeLive implements OnInit {
   protected readonly orders = inject(OrdersStore);
 
   /**
-   * Encaissé du service. Les commandes annulées en sont exclues — elles n'ont
-   * rien rapporté, et un compteur qui les inclurait mentirait à la caisse.
+   * Encaissé du service. Les commandes annulées en sont exclues.
    */
   protected readonly cashedCents = computed(() =>
     this.orders
@@ -218,11 +198,6 @@ export class SoireeLive implements OnInit {
       .slice(0, 10),
   );
 
-  /**
-   * Temps moyen entre la prise de commande et sa remise, sur les commandes
-   * servies. `null` tant qu'aucune n'a abouti : afficher un zéro laisserait
-   * croire à un service instantané.
-   */
   protected readonly averagePrepSeconds = computed<number | null>(() => {
     const served = this.orders.orders().filter((order) => order.status === 'completed');
     if (served.length === 0) return null;
@@ -243,18 +218,6 @@ export class SoireeLive implements OnInit {
     return `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
   });
 
-  /**
-   * Marge du service : recette encaissée moins le coût des denrées vendues.
-   *
-   * ⚠️ **Deux unités différentes.** `unitPrice` est en centimes
-   * (`event_products.price`, un entier) ; `unitCost` vient des prix fournisseurs,
-   * un `decimal(10,2)` **en euros** — d'où le ×100. Les additionner tels quels
-   * donnerait une marge absurde.
-   *
-   * ⚠️ `null` dès qu'une recette vendue n'a pas de coût connu (`unitCost` l'est
-   * quand un ingrédient n'a aucun fournisseur). Une marge calculée sur un coût
-   * partiel serait flatteuse et fausse — mieux vaut ne rien afficher.
-   */
   protected readonly marginPercent = computed<number | null>(() => {
     const costs = new Map(
       (this.currentEvent()?.menu ?? []).map((item) => [item.productId, item.unitCost]),
@@ -321,6 +284,7 @@ export class SoireeLive implements OnInit {
       accent: 'bg-muted',
       tint: 'bg-bg',
       headerBg: 'border-muted bg-surface',
+      actionIcon: LucideZap,
       action: 'Démarrer',
       tickets: merge(this.orders.pendingPreOrders(), this.orders.pending()),
     },
@@ -332,6 +296,7 @@ export class SoireeLive implements OnInit {
       accent: 'bg-warn',
       tint: 'bg-warn-soft/10',
       headerBg: 'border-warn bg-warn-soft/30',
+      actionIcon: LucideCheck,
       action: 'Marquer prête',
       tickets: merge(this.orders.inProgressPreOrders(), this.orders.inProgress()),
     },
@@ -343,19 +308,73 @@ export class SoireeLive implements OnInit {
       accent: 'bg-ok',
       tint: 'bg-ok-soft/10',
       headerBg: 'border-ok bg-ok-soft/30',
+      actionIcon: LucideCheck,
       action: 'Remise au client',
       tickets: merge(this.orders.readyPreOrders(), this.orders.ready()),
     },
   ]);
 
-  /**
-   * Les précommandes que la cuisine a effectivement sur les bras.
-   *
-   * Elles comptent ici — c'est une charge de travail, pas une métrique de
-   * service. Les compteurs d'argent et de temps (`cashedCents`, `ordersCount`,
-   * `averagePrepSeconds`, `marginPercent`) lisent `orders` et les ignorent donc
-   * par construction, ce qui est la seule chose que leur exclusion protégeait.
-   */
+  protected readonly productionRows = computed(() => {
+    const sellable = new Map(this.orders.sellable().map((line) => [line.productId, line]));
+    const minutes = this.serviceMinutes();
+
+    return this.productionLines()
+      .map((line) => {
+        const stock = sellable.get(line.productId);
+        const level = stock
+          ? stockLevelOf(stock.remainingQty, stock.producedQty)
+          : ('unknown' as StockLevel);
+
+        return {
+          ...line,
+          level,
+          remainingQty: level === 'unknown' ? null : (stock?.remainingQty ?? null),
+          autonomy: autonomyOf(stock?.remainingQty ?? 0, stock?.soldQty ?? 0, minutes),
+          percent: Math.round(this.progressPercent(line)),
+          beyondPlan: line.plannedQty > 0 && line.producedQty >= line.plannedQty,
+        };
+      })
+      .sort((a, b) => RANK[a.level] - RANK[b.level] || a.productName.localeCompare(b.productName));
+  });
+
+  protected readonly alerts = computed(() => {
+    const stock = this.productionRows()
+      .filter((row) => row.level === 'out' || row.level === 'low')
+      .map((row) =>
+        row.level === 'out'
+          ? {
+              key: `stock-${row.productId}`,
+              kind: 'danger' as const,
+              title: `${row.productName} — rupture`,
+              detail: 'Plus rien à vendre au comptoir. Relancer une production.',
+            }
+          : {
+              key: `stock-${row.productId}`,
+              kind: 'warn' as const,
+              title: `${row.productName} — stock critique`,
+              detail: row.autonomy
+                ? `Autonomie ${row.autonomy} · ${row.remainingQty} restants, à reprendre.`
+                : `${row.remainingQty} restants, à reprendre.`,
+            },
+      );
+
+    const late = this.orders
+      .orders()
+      .filter(
+        (order) =>
+          (order.status === 'pending' || order.status === 'in_progress') &&
+          this.secondsSinceIso(order.createdAt) >= LATE_ORDER_SECONDS,
+      )
+      .map((order) => ({
+        key: `late-${order.id}`,
+        kind: 'warn' as const,
+        title: `N°${order.number} · ${formatElapsed(this.secondsSinceIso(order.createdAt))} sans remise`,
+        detail: 'Au-delà du seuil cuisine de 5 min.',
+      }));
+
+    return [...stock, ...late];
+  });
+
   protected readonly activePreOrderCount = computed(
     () =>
       this.orders.pendingPreOrders().length +
@@ -378,9 +397,6 @@ export class SoireeLive implements OnInit {
       return;
     }
 
-    // ⚠️ Une précommande se clôt par `collect`, jamais par un passage à
-    // `completed` : seul `collect` écrit `received_quantity`. Passer par le
-    // statut marquerait le ticket fini sans que rien n'ait changé de mains.
     if (next === 'completed') {
       await this.orders.collectPreOrder(ticket.id);
       return;
@@ -393,38 +409,33 @@ export class SoireeLive implements OnInit {
     await this.orders.cancel(ticket.id);
   }
 
-  /**
-   * Le liseré gauche vire au rouge dès qu'une commande traîne.
-   *
-   * Une précommande garde le sien, bleu : elle n'est pas en retard tant que
-   * l'heure de retrait n'est pas passée, et la teinte la distingue au premier
-   * coup d'œil du service courant.
-   */
   protected ticketBorder(ticket: KitchenTicket): string {
     if (ticket.kind === 'pre_order') return 'border-blue/40 border-l-blue';
     if (ticket.status === 'ready') return 'border-ok/40 border-l-ok';
-    if (this.secondsSince(ticket) >= 300) return 'border-danger/50 border-l-danger';
+    if (this.secondsSince(ticket) >= LATE_ORDER_SECONDS) return 'border-danger/50 border-l-danger';
     if (ticket.status === 'in_progress') return 'border-border-s border-l-warn';
     return 'border-border-s border-l-muted';
   }
 
   private secondsSince(ticket: KitchenTicket): number {
-    if (ticket.since === null) return 0;
-    return Math.max(0, (this.now() - new Date(ticket.since).getTime()) / 1000);
+    return ticket.since === null ? 0 : this.secondsSinceIso(ticket.since);
+  }
+
+  private secondsSinceIso(iso: string): number {
+    return Math.max(0, (this.now() - new Date(iso).getTime()) / 1000);
   }
 
   /** Temps écoulé depuis la prise de commande, `m:ss`. */
   protected elapsed(ticket: KitchenTicket): string {
-    const seconds = Math.floor(this.secondsSince(ticket));
-    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    return formatElapsed(this.secondsSince(ticket));
   }
 
   /** Seuils de la maquette : à surveiller à 3 minutes, urgent à 5. */
   protected timerColor(ticket: KitchenTicket): string {
     if (ticket.status === 'ready') return 'text-ok';
     const seconds = this.secondsSince(ticket);
-    if (seconds >= 300) return 'text-danger';
-    if (seconds >= 180) return 'text-warn';
+    if (seconds >= LATE_ORDER_SECONDS) return 'text-danger';
+    if (seconds >= WATCH_ORDER_SECONDS) return 'text-warn';
     return 'text-text';
   }
 
@@ -448,8 +459,6 @@ export class SoireeLive implements OnInit {
       this.productionLines.set(await lastValueFrom(this.production.getRuns(id)));
       this.productionStatus.set('loaded');
     } catch {
-      // Un 403 est le cas courant : la lecture exige `stock:read`. Le panneau le
-      // dit, il ne vide pas la page.
       this.productionLines.set([]);
       this.productionStatus.set('error');
     }
@@ -467,7 +476,10 @@ export class SoireeLive implements OnInit {
         productName: line.productName,
         plannedQty: line.plannedQty,
         producedQty: line.producedQty,
-        onDone: () => void this.refreshProduction(),
+        onDone: () => {
+          void this.refreshProduction();
+          void this.orders.refreshSellable(event.id);
+        },
       },
     });
   }
@@ -515,8 +527,6 @@ export class SoireeLive implements OnInit {
       });
     });
 
-    // Une commande poussée par le serveur entre par le même chemin qu'un retour
-    // d'appel : `upsert` ne peut donc pas produire deux états différents.
     this.realtime.messages$.pipe(takeUntilDestroyed()).subscribe((message) => {
       if (message.type === 'pre_order.updated') {
         this.orders.upsertPreOrder(message.payload);

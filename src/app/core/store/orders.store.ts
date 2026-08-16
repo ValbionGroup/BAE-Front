@@ -170,6 +170,21 @@ export const OrdersStore = signalStore(
       upsert,
       upsertPreOrder,
 
+      /**
+       * Relit le vendable seul, après une vente ou une production.
+       *
+       * Silencieux à dessein : un échec ici laisse la grille sur des chiffres
+       * légèrement anciens, ce qui est sans gravité. Poser `loadError`
+       * afficherait un refus rouge sur une caisse qui vient de réussir sa vente.
+       */
+      async refreshSellable(eventId: string): Promise<void> {
+        try {
+          patchState(store, { sellable: await lastValueFrom(svc.sellable(eventId)) });
+        } catch {
+          /* on garde les derniers chiffres connus */
+        }
+      },
+
       async advancePreOrder(preOrderId: number, next: OrderStatus): Promise<boolean> {
         try {
           upsertPreOrder(await lastValueFrom(preOrdersSvc.setStatus(preOrderId, next)));

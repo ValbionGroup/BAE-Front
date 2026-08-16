@@ -5,6 +5,7 @@ import { EventsService } from '#core/services/events/events-service';
 import { EventDetail, MenuItem } from '#core/models/event.model';
 import { LoadingStatus } from '#core/models/global.model';
 import { OrdersStore } from '#core/store/orders.store';
+import { blocksSale, stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
 import type { Buyer } from '#core/services/buyers/buyers-service';
 import type { Order } from '#core/models/order.model';
 import type { PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
@@ -55,6 +56,7 @@ export const CaisseStore = signalStore(
       { sessionEventId, cart, activeCategory },
       eventsStore = inject(EventsStore),
       eventsService = inject(EventsService),
+      ordersStore = inject(OrdersStore),
     ) => {
       const sessionEvent = computed<EventDetail | null>(() => {
         const id = sessionEventId();
@@ -84,6 +86,24 @@ export const CaisseStore = signalStore(
         return items.filter((it) => categoryLabel(it) === cat);
       });
 
+      /**
+       * Le vendable restant, par recette, tel que la grille l'affiche.
+       *
+       * Vient d'`OrdersStore.sellable` : la caisse ne refait pas le calcul, elle
+       * lit celui du serveur. Une recette absente de la carte n'a pas d'entrée —
+       * `stockOf` rend alors `unknown`, qui ne bloque rien.
+       */
+      const stockByProduct = computed(() => {
+        const byId = new Map<number, { level: StockLevel; remainingQty: number }>();
+        for (const line of ordersStore.sellable()) {
+          byId.set(line.productId, {
+            level: stockLevelOf(line.remainingQty, line.producedQty),
+            remainingQty: line.remainingQty,
+          });
+        }
+        return byId;
+      });
+
       const subtotal = computed(() =>
         cart().reduce((sum, line) => sum + line.price * line.quantity, 0),
       );
@@ -110,126 +130,166 @@ export const CaisseStore = signalStore(
         menu,
         categories,
         visibleItems,
+        stockByProduct,
         subtotal,
         totalQuantity,
         itemCount: computed(() => cart().length),
       };
     },
   ),
-  withMethods((store, eventsStore = inject(EventsStore), ordersStore = inject(OrdersStore)) => ({
-    /**
-     * Ouvre la caisse sur une soirée.
-     *
-     * Charge le menu au passage : `sessionEvent()?.menu` est ce que la grille
-     * d'articles affiche, et rien d'autre ne le remplit — ouvrir sans lui
-     * donnait une caisse vide, sans erreur nulle part.
-     */
-    startSession(eventId: string): void {
-      patchState(store, { sessionEventId: eventId, cart: [], activeCategory: null });
-      void eventsStore.loadEventMenu(eventId);
-    },
-    endSession(): void {
-      patchState(store, {
-        sessionEventId: null,
-        cart: [],
-        activeCategory: null,
-        selectedBuyer: null,
-        checkoutError: null,
-      });
-    },
-    /** Referme la confirmation (ou le refus) affichée après un encaissement. */
-    dismissFeedback(): void {
-      patchState(store, { lastOrder: null, checkoutError: null });
-    },
-    setBuyer(buyer: Buyer | null): void {
-      patchState(store, { selectedBuyer: buyer });
-    },
-    setActiveCategory(category: string | null): void {
-      patchState(store, { activeCategory: category });
-    },
-    addToCart(item: MenuItem): void {
-      const existing = store.cart().find((line) => line.productId === item.productId);
-      if (existing) {
+  withMethods((store, eventsStore = inject(EventsStore), ordersStore = inject(OrdersStore)) => {
+    const inCart = (productId: number) =>
+      store.cart().find((line) => line.productId === productId)?.quantity ?? 0;
+
+    /** La grille grise le bouton, mais le store refuse aussi : le clavier existe. */
+    function canAdd(productId: number): boolean {
+      const stock = store.stockByProduct().get(productId);
+      if (!stock) return true;
+      if (blocksSale(stock.level)) return false;
+      if (stock.level === 'unknown') return true;
+      return inCart(productId) < stock.remainingQty;
+    }
+
+    return {
+      canAdd,
+
+      /**
+       * Ouvre la caisse sur une soirée.
+       *
+       * Charge le menu au passage : `sessionEvent()?.menu` est ce que la grille
+       * d'articles affiche, et rien d'autre ne le remplit — ouvrir sans lui
+       * donnait une caisse vide, sans erreur nulle part.
+       */
+      startSession(eventId: string): void {
+        patchState(store, { sessionEventId: eventId, cart: [], activeCategory: null });
+        void eventsStore.loadEventMenu(eventId);
+        // Le vendable vient d'ici : sans ce chargement, la grille ne saurait pas
+        // ce qui est en rupture et laisserait vendre du vide.
+        void ordersStore.load(eventId);
+      },
+      endSession(): void {
+        patchState(store, {
+          sessionEventId: null,
+          cart: [],
+          activeCategory: null,
+          selectedBuyer: null,
+          checkoutError: null,
+        });
+      },
+      /** Referme la confirmation (ou le refus) affichée après un encaissement. */
+      dismissFeedback(): void {
+        patchState(store, { lastOrder: null, checkoutError: null });
+      },
+      setBuyer(buyer: Buyer | null): void {
+        patchState(store, { selectedBuyer: buyer });
+      },
+      setActiveCategory(category: string | null): void {
+        patchState(store, { activeCategory: category });
+      },
+      /**
+       * Ce que le panier peut encore prendre de cette recette.
+       *
+       * `null` quand rien ne le limite — soit la production n'est pas suivie, soit
+       * il reste de la marge. Ne jamais rendre `0` dans ce cas : ce serait
+       * confondre « on ne sait pas » avec « il n'y en a plus ».
+       */
+      remainingFor(productId: number): number | null {
+        const stock = store.stockByProduct().get(productId);
+        if (!stock || stock.level === 'unknown') return null;
+        return Math.max(0, stock.remainingQty - inCart(productId));
+      },
+
+      addToCart(item: MenuItem): void {
+        if (!canAdd(item.productId)) return;
+
+        const existing = store.cart().find((line) => line.productId === item.productId);
+        if (existing) {
+          patchState(store, {
+            cart: store
+              .cart()
+              .map((line) =>
+                line.productId === item.productId ? { ...line, quantity: line.quantity + 1 } : line,
+              ),
+          });
+          return;
+        }
+        patchState(store, {
+          cart: [
+            ...store.cart(),
+            { productId: item.productId, name: item.name, price: item.price, quantity: 1 },
+          ],
+        });
+      },
+      incrementItem(productId: number): void {
+        if (!canAdd(productId)) return;
         patchState(store, {
           cart: store
             .cart()
             .map((line) =>
-              line.productId === item.productId ? { ...line, quantity: line.quantity + 1 } : line,
+              line.productId === productId ? { ...line, quantity: line.quantity + 1 } : line,
             ),
         });
-        return;
-      }
-      patchState(store, {
-        cart: [
-          ...store.cart(),
-          { productId: item.productId, name: item.name, price: item.price, quantity: 1 },
-        ],
-      });
-    },
-    incrementItem(productId: number): void {
-      patchState(store, {
-        cart: store
-          .cart()
-          .map((line) =>
-            line.productId === productId ? { ...line, quantity: line.quantity + 1 } : line,
-          ),
-      });
-    },
-    decrementItem(productId: number): void {
-      patchState(store, {
-        cart: store
-          .cart()
-          .map((line) =>
-            line.productId === productId ? { ...line, quantity: line.quantity - 1 } : line,
-          )
-          .filter((line) => line.quantity > 0),
-      });
-    },
-    removeFromCart(productId: number): void {
-      patchState(store, {
-        cart: store.cart().filter((line) => line.productId !== productId),
-      });
-    },
-    clearCart(): void {
-      patchState(store, { cart: [] });
-    },
-
-    /**
-     * Encaisse le panier.
-     *
-     * ⚠️ Le panier n'est vidé **qu'en cas de succès** : il l'était auparavant
-     * de façon inconditionnelle, si bien qu'une coupure réseau faisait perdre
-     * la commande sans laisser de trace à l'écran.
-     */
-    async checkout(method: PaymentMethod = 'cash'): Promise<Order | null> {
-      const eventId = store.sessionEventId();
-      const lines = store.cart();
-      if (!eventId || lines.length === 0) return null;
-
-      patchState(store, { checkingOut: true, checkoutError: null });
-
-      const order = await ordersStore.checkout(
-        eventId,
-        lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
-        store.selectedBuyer()?.userId ?? null,
-        method,
-      );
-
-      if (order) {
+      },
+      decrementItem(productId: number): void {
         patchState(store, {
-          cart: [],
-          selectedBuyer: null,
-          checkingOut: false,
-          lastOrder: order,
+          cart: store
+            .cart()
+            .map((line) =>
+              line.productId === productId ? { ...line, quantity: line.quantity - 1 } : line,
+            )
+            .filter((line) => line.quantity > 0),
         });
-      } else {
+      },
+      removeFromCart(productId: number): void {
         patchState(store, {
-          checkingOut: false,
-          checkoutError: ordersStore.loadError() ?? 'L’encaissement a échoué.',
+          cart: store.cart().filter((line) => line.productId !== productId),
         });
-      }
+      },
+      clearCart(): void {
+        patchState(store, { cart: [] });
+      },
 
-      return order;
-    },
-  })),
+      /**
+       * Encaisse le panier.
+       *
+       * ⚠️ Le panier n'est vidé **qu'en cas de succès** : il l'était auparavant
+       * de façon inconditionnelle, si bien qu'une coupure réseau faisait perdre
+       * la commande sans laisser de trace à l'écran.
+       */
+      async checkout(method: PaymentMethod = 'cash'): Promise<Order | null> {
+        const eventId = store.sessionEventId();
+        const lines = store.cart();
+        if (!eventId || lines.length === 0) return null;
+
+        patchState(store, { checkingOut: true, checkoutError: null });
+
+        const order = await ordersStore.checkout(
+          eventId,
+          lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+          store.selectedBuyer()?.userId ?? null,
+          method,
+        );
+
+        if (order) {
+          patchState(store, {
+            cart: [],
+            selectedBuyer: null,
+            checkingOut: false,
+            lastOrder: order,
+          });
+          // Le vendable vient de bouger. Relu, pas décrémenté ici : le serveur
+          // exclut les commandes annulées et reste seul juge de ce qui reste.
+          // Volontairement non attendu — la confirmation ne doit pas patienter.
+          void ordersStore.refreshSellable(eventId);
+        } else {
+          patchState(store, {
+            checkingOut: false,
+            checkoutError: ordersStore.loadError() ?? 'L’encaissement a échoué.',
+          });
+        }
+
+        return order;
+      },
+    };
+  }),
 );

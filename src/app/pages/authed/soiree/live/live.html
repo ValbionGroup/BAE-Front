@@ -26,14 +26,6 @@
         title="Aucun système de notification"
         >Push équipe</bfd-btn
       >
-      <bfd-btn
-        kind="secondary"
-        size="md"
-        [icon]="icScan"
-        [disabled]="true"
-        title="Aucun endpoint de scan de ticket"
-        >Scanner ticket</bfd-btn
-      >
       <bfd-btn kind="ghost" size="md" (clicked)="leave()">Quitter</bfd-btn>
       <bfd-btn
         kind="danger"
@@ -266,7 +258,7 @@
                     }
 
                     <div class="mt-2.5 flex gap-1.5">
-                      @if (!isPreOrder) {
+                      @if (!isPreOrder && column.key === 'in_progress') {
                         <bfd-btn kind="ghost" size="sm" (clicked)="cancelTicket(ticket)"
                           >Annuler</bfd-btn
                         >
@@ -274,6 +266,7 @@
                       <bfd-btn
                         kind="primary"
                         size="sm"
+                        [icon]="column.actionIcon"
                         [full]="true"
                         (clicked)="advanceTicket(ticket)"
                       >
@@ -340,11 +333,46 @@
           }
         }
 
-        <!-- Production -->
+        <!-- Alertes -->
+        @if (alerts().length > 0) {
+          <div class="px-4 pb-1.5 pt-3.5">
+            <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">
+              Alertes
+            </div>
+          </div>
+          <div class="px-3">
+            @for (alert of alerts(); track alert.key) {
+              <div
+                [class]="
+                  'mb-1.5 rounded-md border border-border-s border-l-[3px] bg-surface p-2.5 ' +
+                  (alert.kind === 'danger' ? 'border-l-danger' : 'border-l-warn')
+                "
+                role="status"
+              >
+                <div class="flex items-start gap-2">
+                  <svg
+                    [lucideIcon]="alert.kind === 'danger' ? icAlert : icClock"
+                    [size]="13"
+                    [class]="'mt-0.5 ' + (alert.kind === 'danger' ? 'text-danger' : 'text-warn')"
+                    aria-hidden="true"
+                  ></svg>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[12px] font-medium text-text">{{ alert.title }}</div>
+                    <div class="mt-0.5 text-[10.5px] leading-relaxed text-muted">
+                      {{ alert.detail }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Production & stock -->
         <div class="flex items-baseline px-4 pb-1.5 pt-3.5">
           <div class="flex-1">
             <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">
-              Production
+              Production &amp; stock
             </div>
           </div>
           @if (productionStatus() === 'loaded' && productionLines().length > 0) {
@@ -372,21 +400,81 @@
             </div>
           } @else {
             <div class="flex flex-col gap-1.5">
-              @for (line of productionLines(); track line.productId) {
-                <div class="rounded-md border border-border-s bg-surface p-2.5">
+              @for (row of productionRows(); track row.productId) {
+                <div
+                  [class]="
+                    'rounded-md border bg-surface p-2.5 ' +
+                    (row.level === 'out'
+                      ? 'border-danger'
+                      : row.level === 'low'
+                        ? 'border-warn'
+                        : 'border-border-s')
+                  "
+                >
                   <div class="flex items-baseline gap-2">
                     <span class="min-w-0 flex-1 truncate text-[12px] font-medium text-text">
-                      {{ line.productName }}
+                      {{ row.productName }}
                     </span>
-                    <span class="mono tnum text-[11.5px] text-text-2">
-                      {{ line.producedQty }} / {{ line.plannedQty }}
-                    </span>
+                    @if (row.level === 'out') {
+                      <span class="mono tnum text-[13px] font-semibold text-danger">rupture</span>
+                    } @else if (row.remainingQty !== null) {
+                      <span
+                        [class]="
+                          'mono tnum text-[15px] font-semibold ' +
+                          (row.level === 'low' ? 'text-warn' : 'text-text')
+                        "
+                        >{{ row.remainingQty }}</span
+                      >
+                    }
                   </div>
+
+                  <div class="mt-1 flex items-baseline justify-between gap-2">
+                    <span class="mono tnum text-[10.5px] text-muted">
+                      {{ row.producedQty }} / {{ row.plannedQty }} préparés · {{ row.percent }}%
+                    </span>
+                    @if (row.autonomy; as autonomy) {
+                      <span
+                        [class]="
+                          'text-[10.5px] font-medium ' +
+                          (row.level === 'low' ? 'text-warn' : 'text-muted')
+                        "
+                        >autonomie {{ autonomy }}</span
+                      >
+                    } @else if (row.level === 'out') {
+                      <span class="text-[10.5px] text-danger">à relancer</span>
+                    } @else if (row.remainingQty === null) {
+                      <span class="text-[10.5px] text-muted">restant inconnu</span>
+                    } @else {
+                      <span class="text-[10.5px] text-muted">rythme non mesurable</span>
+                    }
+                  </div>
+
                   <div class="mt-2 flex items-center gap-2">
                     <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-                      <div class="h-full bg-blue" [style.width.%]="progressPercent(line)"></div>
+                      <div
+                        [class]="
+                          'h-full ' +
+                          (row.level === 'out'
+                            ? 'bg-danger'
+                            : row.level === 'low'
+                              ? 'bg-warn'
+                              : 'bg-blue')
+                        "
+                        [style.width.%]="row.percent"
+                      ></div>
                     </div>
-                    <bfd-btn kind="secondary" size="sm" (clicked)="openRun(line)">Lancer</bfd-btn>
+                    @let urgent = row.level === 'out' || row.level === 'low';
+                    <bfd-btn
+                      [kind]="urgent ? 'primary' : row.beyondPlan ? 'ghost' : 'secondary'"
+                      size="sm"
+                      [title]="
+                        row.beyondPlan
+                          ? 'Plan atteint — produire au-delà consommera du stock non prévu.'
+                          : 'Lancer une fournée : prélève les lots et met à jour le vendable.'
+                      "
+                      (clicked)="openRun(row)"
+                      >{{ !urgent && row.beyondPlan ? 'Au-delà du plan' : 'Relancer' }}</bfd-btn
+                    >
                   </div>
                 </div>
               }

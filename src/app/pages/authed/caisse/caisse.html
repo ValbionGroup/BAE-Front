@@ -1,6 +1,5 @@
 <ng-template #actions>
   @if (store.sessionActive()) {
-    <bfd-btn kind="ghost" size="md" [icon]="icScan">Scanner</bfd-btn>
     <bfd-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bfd-btn>
   } @else if (store.todayEvent()) {
     <bfd-btn kind="primary" size="md" [icon]="icCalendarPlus" (clicked)="startSession()">
@@ -68,20 +67,36 @@
       } @else {
         <div class="grid flex-1 grid-cols-2 content-start gap-3 lg:grid-cols-4">
           @for (it of store.visibleItems(); track it.productId) {
+            @let sellable = store.canAdd(it.productId);
+            @let left = store.remainingFor(it.productId);
             <button
               type="button"
+              [disabled]="!sellable"
               (click)="addItem(it)"
-              class="relative flex min-h-[110px] cursor-pointer flex-col gap-3 rounded-lg border border-border bg-surface p-3.5 text-left transition-transform"
+              [attr.title]="soldOutHint(it.productId)"
+              [class]="
+                'relative flex min-h-[110px] flex-col gap-3 rounded-lg border p-3.5 text-left transition-transform ' +
+                (sellable
+                  ? 'cursor-pointer border-border bg-surface'
+                  : 'cursor-not-allowed border-border-s bg-transparent opacity-50')
+              "
             >
               <div class="flex-1 text-[15px] font-semibold leading-tight text-text">
                 {{ it.name }}
               </div>
-              <div class="flex items-end justify-between">
+              <div class="flex items-end justify-between gap-2">
                 <span class="tnum text-[22px] font-semibold -tracking-[0.5px] text-text">
                   {{ formatCents(it.price) }}
                   <span class="text-[13px] font-medium text-muted">€</span>
                 </span>
-                <bfd-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bfd-badge>
+                @if (!sellable) {
+                  <bfd-badge kind="ghost">Rupture</bfd-badge>
+                } @else if (isLow(it.productId)) {
+                  <!-- `left` n'est jamais nul ici : « bas » suppose un restant connu. -->
+                  <bfd-badge kind="warn" [dot]="true">{{ left }} rest.</bfd-badge>
+                } @else {
+                  <bfd-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bfd-badge>
+                }
               </div>
             </button>
           }
@@ -257,7 +272,7 @@
           </div>
           <div class="min-w-0 flex-1 md:hidden">
             <div class="text-[11px] text-muted">À encaisser</div>
-            <div class="tnum text-[19px] font-semibold -tracking-[0.3px] text-text">
+            <div class="tnum text-[19px] font-semibold tracking-[-0.3px] text-text">
               {{ formatCents(store.subtotal()) }} €
             </div>
           </div>

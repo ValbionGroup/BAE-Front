@@ -105,13 +105,17 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    // Les colonnes, la cadence, le flux et les marges ont quitté cette liste :
-    // ils sont désormais dérivés d'`orders`. Ce qui reste ci-dessous n'a
-    // toujours aucune source — noms de clients et montants de la maquette, et
-    // le stock critique, qui supposerait un seuil par denrée.
-    for (const invented of ['Stock critique', 'Alertes', 'C. Renard', '1 736,50', '4,2 / min']) {
+    // Les colonnes, la cadence, le flux, les marges puis les alertes et le
+    // stock ont quitté cette liste au fur et à mesure qu'un endpoint les a
+    // alimentés. Ce qui reste n'a toujours aucune source : les noms de clients
+    // et les montants de la maquette.
+    for (const invented of ['C. Renard', '1 736,50', '4,2 / min']) {
       expect(text).not.toContain(invented);
     }
+
+    // ⚠️ Les alertes sont désormais réelles — donc silencieuses quand il n'y a
+    // rien à signaler. Un décor réapparu se trahirait ici.
+    expect(text).not.toContain('Alertes');
   });
 
   it('shows produced against planned once the runs land', async () => {
