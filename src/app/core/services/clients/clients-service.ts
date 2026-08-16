@@ -39,12 +39,14 @@ export class ClientsService {
     return this.http.get<ClientDetail>(`${this.baseUrl}/clients/${id}`);
   }
 
-  create(payload: ClientWritePayload): Observable<ClientRow> {
-    return this.http.post<ClientRow>(`${this.baseUrl}/clients`, payload);
-  }
-
-  /** `PATCH` : le corps est un delta, un champ absent n'est pas effacé. */
-  update(id: number, payload: Partial<ClientWritePayload & { note: string | null }>) {
+  /**
+   * Pas de `create` : un compte client naît d'une connexion EirbConnect sur
+   * l'interface publique, et d'elle seule. Le geste du bureau, c'est
+   * `subscribe()` — enregistrer une cotisation, qui est autre chose.
+   *
+   * `PATCH` : le corps est un delta, un champ absent n'est pas effacé.
+   */
+  update(id: number, payload: ClientWritePayload): Observable<ClientRow> {
     return this.http.patch<ClientRow>(`${this.baseUrl}/clients/${id}`, payload);
   }
 

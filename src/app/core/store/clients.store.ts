@@ -82,27 +82,7 @@ export const ClientsStore = signalStore(
         }
       },
 
-      async createClient(payload: ClientWritePayload): Promise<number | null> {
-        if (store.saving()) return null;
-        patchState(store, { saving: true, saveError: null });
-        try {
-          const created = await lastValueFrom(svc.create(payload));
-          await reload();
-          return created.id;
-        } catch (error) {
-          patchState(store, {
-            saveError: messageOf(error, 'Impossible d’enregistrer cet adhérent.'),
-          });
-          return null;
-        } finally {
-          patchState(store, { saving: false });
-        }
-      },
-
-      async updateClient(
-        id: number,
-        payload: Partial<ClientWritePayload & { note: string | null }>,
-      ): Promise<boolean> {
+      async updateClient(id: number, payload: ClientWritePayload): Promise<boolean> {
         if (store.saving()) return false;
         patchState(store, { saving: true, saveError: null });
         try {

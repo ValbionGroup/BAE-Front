@@ -50,7 +50,13 @@ const CLIENTS: ClientRow[] = [
   },
 ];
 
-const SUMMARY: ClientsSummary = { total: 3, upToDate: 1, expired: 1, external: 1, expiringSoon: 0 };
+const SUMMARY: ClientsSummary = {
+  total: 3,
+  upToDate: 1,
+  expired: 1,
+  withoutSubscription: 1,
+  expiringSoon: 0,
+};
 
 const DETAIL: ClientDetail = {
   ...CLIENTS[0],
@@ -152,7 +158,12 @@ describe(Adherents.name, () => {
   it('the counters come from the summary, never recomputed here', async () => {
     const fixture = await render();
     const page = fixture.componentInstance as unknown as PageApi;
-    expect(page.filterTabs()).toEqual(['Tous · 3', 'À jour · 1', 'Expirés · 1', 'Externes · 1']);
+    expect(page.filterTabs()).toEqual([
+      'Tous · 3',
+      'À jour · 1',
+      'Expirés · 1',
+      'Non-adhérents · 1',
+    ]);
   });
 
   it('marks the tiles it cannot compute instead of inventing a number', async () => {

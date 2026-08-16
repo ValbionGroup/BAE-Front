@@ -147,7 +147,10 @@ export class Adherents implements OnInit {
       `Tous · ${summary?.total ?? 0}`,
       `À jour · ${summary?.upToDate ?? 0}`,
       `Expirés · ${summary?.expired ?? 0}`,
-      `Externes · ${summary?.external ?? 0}`,
+      // La maquette disait « Externes », qui décrivait une provenance. Ce sont
+      // des comptes créés par EirbConnect qui n'ont simplement pas d'adhésion —
+      // le même mot que le badge de la ligne, « Non-adhérent ».
+      `Non-adhérents · ${summary?.withoutSubscription ?? 0}`,
     ];
   });
 
