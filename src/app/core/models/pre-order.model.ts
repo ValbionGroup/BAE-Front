@@ -31,7 +31,7 @@ export interface PreOrderTicket {
   readonly pickupAt: string | null;
   /**
    * L'heure de retrait approche : la cuisine doit s'y mettre. **Calculé côté
-   * serveur** (`pickup_at − 30 min`), jamais ici — le front n'a pas à connaître
+   * serveur** (`pickup_at − 15 min`), jamais ici — le front n'a pas à connaître
    * le délai de préparation, et deux horloges donneraient deux réponses.
    */
   readonly due: boolean;
