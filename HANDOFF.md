@@ -960,6 +960,56 @@ payer. Script ad hoc, non commité, contre les deux serveurs de dev réels et le
 
 ---
 
+## 0 undecies. Adhérents et cotisations — 2026-08-16
+
+Branche `feat/adherents` **dans les deux dépôts**, non poussée. Back **307 tests**, front
+**584 tests** (134 fichiers), typecheck et lint verts des deux côtés. Ferme le §4.1 et une partie
+du §4.4. ⚠️ **Ne pas rejouer** : `feat/orders` n'était pas mergée au moment de ce lot.
+
+| Sujet                                                            | État                | Où                                                                 |
+| ---------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
+| Identité remontée de `members` vers `users`                      | ✅ **fait**         | migration `1787000000000`, nullables                                |
+| Table `clients` (téléphone, promotion, inscription, note)        | ✅ **fait**         | migration `1787000000001`, PK partagée avec `users` comme `members` |
+| `subscriptions.transaction_id`                                   | ✅ **fait**         | migration `1787000000002`, montant historique fidèle                |
+| `ClientsController` + `SubscriptionsController`                  | ✅ **fait**         | gardés par `client:*` et `subscription:*`                           |
+| Page `adherents` branchée, garde de route et entrée de menu      | ✅ **fait**         | `permissionGuard('client:read')`                                    |
+| Seeder de 8 adhérents couvrant les quatre états                  | ✅ **fait**         | `client_seeder.ts`                                                  |
+
+### Les trois règles qui ont façonné ce lot
+
+1. **Un compte client naît d'une connexion EirbConnect sur l'interface publique, et de rien
+   d'autre.** Il n'existe donc **aucune** route de création côté dashboard — `POST /clients` a été
+   écrit puis retiré. Le geste du bureau, c'est `POST /subscriptions`.
+2. **Client ≠ adhérent.** Le compte permet déjà de se présenter à la caisse ; la personne peut
+   ensuite cotiser, précommander, les deux, ou rien. D'où le troisième état `none` sur la fiche,
+   et le compteur `withoutSubscription` (et non « externes », qui décrivait une provenance).
+3. **`users.cas_id` est la preuve de provenance CAS** disponible aujourd'hui — c'est le claim `uid`
+   (§9.2). Le seeder le renseigne pour simuler ce que fera le callback.
+
+### Points ouverts laissés par ce lot
+
+- **Le claim de promotion reste une question ouverte à EirbWare** (§9.2, point 4) : la colonne est
+  saisie à la main en attendant, et **changera de nature** si le claim existe.
+- Non branchés côté front, boutons désactivés avec un `title` explicite : enregistrer une
+  cotisation, modifier une fiche, renouveler, export CSV, import, « Contacter », tri.
+- Les tuiles Précommandes / Dépensé / Solde affichent `—` : `transactions` n'a aucun lien vers une
+  personne, le chiffre est **incalculable** avant le lot caisse (`orders.client_id`).
+- ⚠️ **Le merge avec `feat/orders` demandera plus que les conflits de listes** sur
+  `rbac_catalog.ts` et `start/routes/billing.ts` : `buyer_service.ts` lit `member.firstName`, qui a
+  changé de table.
+
+### Deux pièges de vérification découverts ici
+
+- **`database/schema.ts` est généré depuis la base connectée**, pas depuis les migrations de la
+  branche : sur la base de dev partagée, il aspire les colonnes des autres branches (vu avec
+  `OrderSchema.clientId`, venu de `feat/orders`). Régénérer depuis une base jetable construite avec
+  les seules migrations de la branche.
+- **`node ace test` tourne sur la base de dev** (pas de `.env.test`), donc un changement de branche
+  produit des échecs qui n'en sont pas. Utiliser une base dédiée.
+- ⚠️ **Le port Postgres est 5432**, contrairement à ce qui traînait dans les notes de reprise.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.
@@ -1215,14 +1265,11 @@ déjà rattachés au bon niveau, **aucune clé étrangère n'est à migrer**. À
 `orders.member_id` pointe sur `members` : la caisse reste bien un geste de staff, la distinction
 est déjà correctement tracée.
 
-**Décision à prendre — où vit l'identité ?** Si `clients` porte ses propres `first_name` /
-`last_name`, un utilisateur membre _et_ client a son nom stocké deux fois, avec deux valeurs qui
-peuvent diverger. L'alternative est de remonter prénom/nom sur `users` (Keycloak les fournit de
-toute façon à la connexion, via les claims `prenom` / `nom`) et de ne laisser dans
-`clients` que le spécifique public (téléphone,
-promotion). C'est la piste à privilégier : elle supprime la divergence par construction, au prix
-d'une migration qui déplace deux colonnes de `members` vers `users`. À trancher avant d'écrire la
-migration, pas après.
+~~**Décision à prendre — où vit l'identité ?**~~ — ✅ **tranchée le 2026-08-16, et livrée**
+(§0 undecies). `first_name` / `last_name` ont été **remontés de `members` vers `users`**, nullables ;
+`clients` ne porte que le spécifique public (téléphone, promotion, date d'inscription, note).
+Une personne membre _et_ cliente a donc un seul nom, par construction. Les claims `prenom` / `nom`
+alimenteront `users`, pas `clients`.
 
 **Conséquences côté back :**
 
@@ -1705,8 +1752,8 @@ Ce que la doc donne :
 | Claim EirbConnect | Colonne              | Rôle                                                                                                           |
 | ----------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `uid`             | **`users.cas_id`**   | Le login école. C'est **lui** la correspondance annuaire cherchée au §9.4, et la clé de réconciliation du §9.5 |
-| `prenom`          | `clients.first_name` | Pas `given_name`                                                                                               |
-| `nom`             | `clients.last_name`  | Pas `family_name`                                                                                              |
+| `prenom`          | **`users.first_name`** | Pas `given_name`. ⚠️ **Corrigé le 2026-08-16** : plus `clients.first_name`, la colonne a été remontée sur `users` (voir §0 undecies) |
+| `nom`             | **`users.last_name`**  | Pas `family_name`. Même correction                                                                             |
 | `sub`             | `users.keycloak_sub` | UUID interne du realm                                                                                          |
 
 Autrement dit, **la question du §9.4 est résolue** : `uid` alimente `cas_id`, la réconciliation des
@@ -1893,7 +1940,7 @@ maxAge: '10m', httpOnly: true, sameSite: 'lax' })`), génère `state` et `code_v
    | `app`       | Règle                                                                                                                                                                          |
    | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
    | `dashboard` | **Aucun provisionnement.** Pas de ligne `members` → redirection vers une page « accès non autorisé ». On n'ouvre pas le dashboard à quiconque possède un compte SSO de l'école |
-   | `public`    | `Client.firstOrCreate({ id: user.id }, { firstName, lastName })` à partir des claims — c'est le JIT provisioning, et il n'a de sens que de ce côté                             |
+   | `public`    | `Client.firstOrCreate({ id: user.id }, { registeredAt })`, le nom allant sur `users` (§0 undecies) — c'est le JIT provisioning, et il n'a de sens que de ce côté. **C'est l'unique chemin de création d'un compte client** : le dashboard n'en a aucun |
 
    C'est la différence de fond entre les deux portes : la zone publique s'auto-provisionne, le
    dashboard exige une ligne créée par le bureau.
