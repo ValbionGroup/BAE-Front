@@ -1,186 +1,168 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import {
-  LucideArrowUp,
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { lastValueFrom } from 'rxjs';
+import {
   LucideCheck,
-  LucideClock,
-  LucideDownload,
   LucideDynamicIcon,
   LucideFilter,
-  LucideIconInput,
-  LucideMoreHorizontal,
   LucideQrCode,
+  LucideTriangleAlert,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
+import {
+  TransactionsService,
+  type ApiTransaction,
+  type TransactionType,
+} from '#core/services/transactions/transactions-service';
+import { EventsStore } from '#core/store/events.store';
 import { Badge } from '#shared/components/ui/badge/badge';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
 
-interface Tx {
-  readonly id: string;
-  readonly d: string;
-  readonly l: string;
-  readonly m: string;
-  readonly a: number;
-  readonly k: 'ok' | 'pending' | 'refund';
-  readonly who: string;
+type LoadState = 'init' | 'loading' | 'loaded' | 'error';
+
+interface Row {
+  readonly id: number;
+  readonly reference: string;
+  readonly when: string;
+  readonly method: string;
+  readonly amount: number;
+  readonly orderCount: number;
 }
+
+const METHOD_LABEL: Record<TransactionType, string> = {
+  cash: 'Espèces',
+  lydia: 'Lydia',
+};
 
 @Component({
   selector: 'bfd-paiements',
-  imports: [Btn, Badge, Field, Input, LucideDynamicIcon],
+  imports: [Badge, LucideDynamicIcon],
   templateUrl: './paiements.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full' },
 })
-export class Paiements {
+export class Paiements implements OnInit {
+  private readonly transactionsService = inject(TransactionsService);
+  private readonly events = inject(EventsStore);
+
+  protected readonly icFilter = LucideFilter;
+  protected readonly icQr = LucideQrCode;
+  protected readonly icCheck = LucideCheck;
+  protected readonly icAlert = LucideTriangleAlert;
+
+  protected readonly loadState = signal<LoadState>('init');
+  protected readonly loadError = signal<string | null>(null);
+  private readonly transactions = signal<readonly ApiTransaction[]>([]);
+
+  /** `null` = toutes soirées confondues, ce qui est le repli hors service. */
+  protected readonly activeEvent = this.events.activeEvent;
+
   constructor() {
     inject(PageHeaderService).set({
       title: 'Paiements',
-      subtitle: 'Soirée en cours · encaissé en direct',
+      subtitle: 'Transactions encaissées',
       breadcrumb: ['Soirée', 'Paiements'],
       activeNavId: 'pay',
     });
+
+    // Dépendre de l'identifiant, pas de l'objet : `activeEvent` dérive du
+    // dictionnaire que `load()` remplace, et en dépendre créerait une boucle.
+    effect(() => {
+      const eventId = this.events.activeEventId();
+      untracked(() => void this.refresh(eventId));
+    });
   }
 
-  protected readonly icFilter = LucideFilter;
-  protected readonly icDownload = LucideDownload;
-  protected readonly icQr = LucideQrCode;
-  protected readonly icMore = LucideMoreHorizontal;
-  protected readonly icCheck = LucideCheck;
-
-  protected readonly kpis = [
-    {
-      label: 'Encaissé ce soir',
-      value: '628,50 €',
-      delta: "+ 12,00 € · à l'instant",
-      deltaClass: 'text-ok',
-    },
-    {
-      label: 'Lydia online',
-      value: '218,00 €',
-      delta: '34 transactions',
-      deltaClass: 'text-muted',
-    },
-    {
-      label: 'QR sur place',
-      value: '342,50 €',
-      delta: '57 transactions',
-      deltaClass: 'text-muted',
-    },
-    { label: 'Espèces', value: '68,00 €', delta: '12 transactions', deltaClass: 'text-muted' },
-  ];
-
-  protected readonly transactions: readonly Tx[] = [
-    {
-      id: 'BAE-2026-0218',
-      d: '12/02 · 21:14',
-      l: 'Précommande · Pack solo',
-      m: 'Lydia online',
-      a: 8.5,
-      k: 'ok',
-      who: 'Manon B.',
-    },
-    {
-      id: 'BAE-2026-0217',
-      d: '12/02 · 21:11',
-      l: 'Caisse · Soirée Hivernale',
-      m: 'QR Lydia',
-      a: 12.0,
-      k: 'ok',
-      who: 'anon.',
-    },
-    {
-      id: 'BAE-2026-0216',
-      d: '12/02 · 21:08',
-      l: 'Caisse · Soirée Hivernale',
-      m: 'Espèces',
-      a: 5.0,
-      k: 'ok',
-      who: 'anon.',
-    },
-    {
-      id: 'BAE-2026-0215',
-      d: '12/02 · 21:05',
-      l: 'Cotisation 2026',
-      m: 'CB',
-      a: 15.0,
-      k: 'ok',
-      who: 'Tom B.',
-    },
-    {
-      id: 'BAE-2026-0214',
-      d: '12/02 · 20:58',
-      l: 'Précommande · Hot-dog x2',
-      m: 'Lydia online',
-      a: 6.0,
-      k: 'pending',
-      who: 'Léo D.',
-    },
-    {
-      id: 'BAE-2026-0213',
-      d: '12/02 · 20:54',
-      l: 'Caisse · annulée',
-      m: 'QR Lydia',
-      a: 4.5,
-      k: 'refund',
-      who: 'anon.',
-    },
-    {
-      id: 'BAE-2026-0212',
-      d: '12/02 · 20:51',
-      l: 'Caisse · Soirée Hivernale',
-      m: 'QR Lydia',
-      a: 9.0,
-      k: 'ok',
-      who: 'anon.',
-    },
-  ];
-
-  protected formatPrice(n: number): string {
-    return n.toFixed(2).replace('.', ',');
+  ngOnInit(): void {
+    void this.events.load();
   }
 
-  protected txBgClass(k: Tx['k']): string {
-    return k === 'ok'
-      ? 'bg-ok-soft text-ok'
-      : k === 'pending'
-        ? 'bg-warn-soft text-warn'
-        : 'bg-danger-soft text-danger';
+  protected readonly rows = computed<readonly Row[]>(() =>
+    this.transactions().map((transaction) => ({
+      id: transaction.id,
+      reference: `T-${String(transaction.id).padStart(5, '0')}`,
+      when: formatWhen(transaction.createdAt),
+      method: METHOD_LABEL[transaction.type] ?? transaction.type,
+      amount: transaction.amount,
+      orderCount: transaction.orderIds.length,
+    })),
+  );
+
+  /**
+   * ⚠️ Deux KPI seulement, là où la maquette en montrait quatre.
+   * `transactions.type` est un enum `cash | lydia` : la distinction « Lydia
+   * online » / « QR sur place » **n'existe pas en base**. L'afficher demanderait
+   * d'inventer la répartition, et un chiffre faux sur un écran d'argent est pire
+   * qu'un chiffre absent.
+   */
+  protected readonly kpis = computed(() => {
+    const all = this.transactions();
+    const sum = (type: TransactionType) =>
+      all.filter((t) => t.type === type).reduce((total, t) => total + t.amount, 0);
+    const count = (type: TransactionType) => all.filter((t) => t.type === type).length;
+
+    return [
+      {
+        label: 'Total encaissé',
+        value: formatMoney(all.reduce((total, t) => total + t.amount, 0)),
+        detail: `${all.length} transactions`,
+      },
+      {
+        label: 'Espèces',
+        value: formatMoney(sum('cash')),
+        detail: `${count('cash')} transactions`,
+      },
+      {
+        label: 'Lydia',
+        value: formatMoney(sum('lydia')),
+        detail: `${count('lydia')} transactions`,
+      },
+    ];
+  });
+
+  protected formatMoney(value: number): string {
+    return formatMoney(value);
   }
 
-  protected txIcon(k: Tx['k']): LucideIconInput {
-    return k === 'ok' ? LucideCheck : k === 'pending' ? LucideClock : LucideArrowUp;
-  }
-
-  protected txAmountClass(k: Tx['k']): string {
-    return k === 'refund' ? 'text-danger' : 'text-text';
-  }
-
-  // Deterministic fake-QR pattern: 17×17 grid of booleans, with finder squares in 3 corners.
-  protected readonly qrPattern = (() => {
-    const blocks = 17;
-    const cells: boolean[] = [];
-    let seed = 1234;
-    const rnd = (): number => {
-      seed = (seed * 9301 + 49297) % 233280;
-      return seed / 233280;
-    };
-    for (let y = 0; y < blocks; y++) {
-      for (let x = 0; x < blocks; x++) {
-        const corner = (x < 7 && y < 7) || (x >= blocks - 7 && y < 7) || (x < 7 && y >= blocks - 7);
-        const inner =
-          (x >= 1 && x <= 5 && y >= 1 && y <= 5) ||
-          (x >= blocks - 6 && x <= blocks - 2 && y >= 1 && y <= 5) ||
-          (x >= 1 && x <= 5 && y >= blocks - 6 && y <= blocks - 2);
-        const center =
-          (x >= 2 && x <= 4 && y >= 2 && y <= 4) ||
-          (x >= blocks - 5 && x <= blocks - 3 && y >= 2 && y <= 4) ||
-          (x >= 2 && x <= 4 && y >= blocks - 5 && y <= blocks - 3);
-        let on = rnd() > 0.55;
-        if (corner) on = !inner || center;
-        cells.push(on);
-      }
+  private async refresh(eventId: string | null): Promise<void> {
+    this.loadState.set('loading');
+    this.loadError.set(null);
+    try {
+      const numeric = eventId === null ? undefined : Number(eventId);
+      const list = await lastValueFrom(
+        this.transactionsService.getAll(
+          numeric !== undefined && Number.isFinite(numeric) ? numeric : undefined,
+        ),
+      );
+      this.transactions.set(list);
+      this.loadState.set('loaded');
+    } catch {
+      this.transactions.set([]);
+      this.loadError.set('Impossible de charger les transactions.');
+      this.loadState.set('error');
     }
-    return () => cells;
-  })();
+  }
+}
+
+function formatMoney(value: number): string {
+  return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatWhen(iso: string | null): string {
+  if (iso === null) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

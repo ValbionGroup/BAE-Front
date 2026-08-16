@@ -54,9 +54,20 @@
           [icon]="icShield"
           (clicked)="loginWithEirbConnect()"
         >
-          Se connecter via ENT Bordeaux INP
+          Se connecter avec EirbConnect
         </bfd-btn>
       </div>
+
+      @if (ssoError(); as error) {
+        <div
+          class="mb-5 flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-sm text-danger"
+          role="alert"
+          aria-live="assertive"
+        >
+          <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>{{ error }}</span>
+        </div>
+      }
 
       <div class="my-5 flex items-center gap-3">
         <span class="h-px flex-1 bg-border-s"></span>

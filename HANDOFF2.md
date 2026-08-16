@@ -959,11 +959,13 @@ et les adhérents.
    Restent derrière : le §26 (tickets), le rappel de péremption des stocks, l'expiration des
    transactions (§10.3) et le câblage du fil d'activité de `home`. ⚠️ **Aucun mail ne part encore** :
    il manque le SMTP, soit le point 3 ci-dessus.
-5. **§9 — SSO Keycloak.** `@adonisjs/ally` **est** installé, mais aucun fichier du dépôt ne
-   mentionne `keycloak` ni `oidc` : la brique est disponible, la configuration reste à écrire.
-   Conditionne toute la zone publique (§4.4).
-6. **Les cinq pages factices restantes** (§4 du `HANDOFF.md`). `soiree/bilan` et
-   `precommandes-admin` d'abord : leur backend est **livré**, il ne manque que le câblage.
+5. ~~**§9 — SSO Keycloak.**~~ — ✅ **fait le 2026-08-16** (§0 sexdecies). Flux BFF complet avec
+   PKCE, résolution en trois temps et gardes d'audience, vérifié contre un Keycloak réel.
+   `@adonisjs/ally` reste **inutilisé** : il n'implémente pas PKCE (§9.3), c'est `openid-client`
+   qui porte le flux. Restent le CSRF (§9.7), le CORS (§9.8), la bascule du front sur le cookie
+   (§9.10) et le front public lui-même (§4.3).
+6. ~~**Les cinq pages factices restantes**~~ — ✅ **fait le 2026-08-16** (§0 septdecies). Les cinq
+   sont branchées, et le §26 (tickets) est tranché : le domaine a été construit, pas externalisé.
 
 ### 33.3 Ce que le §30 disait et qu'il faut cesser de croire
 

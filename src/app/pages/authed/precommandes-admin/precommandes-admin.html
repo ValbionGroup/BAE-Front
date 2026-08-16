@@ -1,259 +1,250 @@
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icFilter">Filtres</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icScan">Scanner retrait</bfd-btn>
   <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="markReady()">Marquer prête</bfd-btn>
 </ng-template>
 
-<div class="h-full grid grid-cols-[380px_1fr_360px] overflow-hidden">
-  <!-- COL 1: queue -->
-  <div class="flex flex-col overflow-hidden border-r border-border-s">
-    <div class="px-4 py-3.5 border-b border-border-s">
-      <div class="text-[13px] font-semibold text-text">File d'attente</div>
-      <div class="flex gap-1.5 mt-2.5">
-        @for (f of filters; track f; let i = $index) {
-          <button
-            type="button"
-            (click)="activeFilter.set(i)"
-            [class]="
-              'px-2 py-1 text-[10.5px] font-medium rounded-sm cursor-pointer border ' +
-              (i === activeFilter()
-                ? 'bg-surface-2 text-text border-border'
-                : 'bg-transparent text-muted border-transparent')
-            "
-          >
-            {{ f }}
-          </button>
+@if (activeEvent() === null) {
+  <div class="flex h-full items-center justify-center p-8">
+    <div class="max-w-md text-center">
+      <div class="text-sm font-medium text-text">Aucune soirée en cours</div>
+      <p class="mt-2 text-xs leading-relaxed text-muted">
+        Les précommandes s'affichent pour la soirée ouverte, ou celle du jour. Préparer une soirée
+        future se fait depuis la Logistique.
+      </p>
+    </div>
+  </div>
+} @else {
+  <div class="grid h-full grid-cols-[380px_1fr_360px] overflow-hidden">
+    <!-- COL 1 : file d'attente -->
+    <div class="flex min-h-0 flex-col overflow-hidden border-r border-border-s">
+      <div class="border-b border-border-s px-4 py-3.5">
+        <div class="text-[13px] font-semibold text-text">File d'attente</div>
+        <div class="mt-0.5 text-[11px] text-muted">
+          {{ counts().total }} précommandes · {{ counts().ready }} prêtes ·
+          {{ counts().inProgress }} en prépa
+        </div>
+        <div class="mt-2.5 flex gap-1.5">
+          @for (f of filters; track f) {
+            <button
+              type="button"
+              (click)="setFilter(f)"
+              [attr.aria-pressed]="f === activeFilter()"
+              [class]="
+                'cursor-pointer rounded-sm border px-2 py-1 text-[10.5px] font-medium ' +
+                (f === activeFilter()
+                  ? 'border-border bg-surface-2 text-text'
+                  : 'border-transparent bg-transparent text-muted')
+              "
+            >
+              {{ f }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        @if (loadState() === 'loading') {
+          <div class="p-4 text-xs text-muted">Chargement…</div>
+        } @else if (loadState() === 'error') {
+          <div class="p-4 text-xs text-danger">{{ loadError() }}</div>
+        } @else if (slotGroups().length === 0) {
+          <div class="p-4 text-xs text-muted">Aucune précommande pour ce filtre.</div>
+        }
+
+        @for (g of slotGroups(); track g.label) {
+          <div>
+            <div
+              [class]="
+                'border-b border-border-s bg-bg px-4 py-2 text-[10px] font-semibold uppercase tracking-wider ' +
+                (g.imminent ? 'text-red' : 'text-muted')
+              "
+            >
+              {{ g.label }}
+            </div>
+            @for (o of g.tickets; track o.id) {
+              <div
+                (click)="select(o.id)"
+                [class]="
+                  'grid cursor-pointer grid-cols-[48px_1fr_auto] gap-2.5 border-b border-l-2 border-border-s px-4 py-3 ' +
+                  (o.id === selectedId()
+                    ? 'border-l-blue bg-surface-2'
+                    : 'border-l-transparent hover:bg-surface-2/50')
+                "
+              >
+                <div
+                  class="mono tnum flex h-11 w-11 flex-col items-center justify-center rounded-md border border-border bg-surface"
+                  [class.text-ok]="o.status === 'ready'"
+                  [class.text-text-2]="o.status !== 'ready'"
+                >
+                  <span class="text-[9px] text-muted">N°</span>
+                  <span class="text-[13px] font-semibold">{{ o.reference }}</span>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[13px] font-medium text-text">{{ o.client }}</div>
+                  <div class="mt-0.5 text-[11px] text-muted">
+                    {{ o.itemCount }} articles · {{ o.paid ? 'Payée' : 'À encaisser' }}
+                  </div>
+                  <div class="mt-1.5">
+                    <bfd-badge
+                      [kind]="statusBadge(o.status).kind"
+                      [dot]="statusBadge(o.status).dot"
+                    >
+                      {{ statusBadge(o.status).label }}
+                    </bfd-badge>
+                  </div>
+                </div>
+                <svg
+                  [lucideIcon]="icChevRight"
+                  [size]="14"
+                  class="self-center text-muted"
+                  aria-hidden="true"
+                ></svg>
+              </div>
+            }
+          </div>
         }
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto">
-      @for (g of slotGroups(); track g.label) {
-        <div>
+    <!-- COL 2 : détail -->
+    <div class="min-h-0 overflow-y-auto p-[22px]">
+      @if (selected(); as s) {
+        <div class="mb-4 flex items-start gap-4">
           <div
-            [class]="
-              'px-4 py-2 text-[10px] font-semibold tracking-wider uppercase bg-bg border-b border-border-s ' +
-              (g.imminent ? 'text-red' : 'text-muted')
-            "
+            class="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-lg border border-border-s bg-surface"
           >
-            {{ g.label }}
+            <span class="mb-1 text-[11px] text-muted">N° retrait</span>
+            <span class="mono tnum text-[26px] font-semibold text-text">{{ s.reference }}</span>
           </div>
-          @for (o of g.orders; track o.id) {
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h2 class="m-0 -tracking-[0.3px] text-[22px] font-semibold text-text">
+                {{ s.client }}
+              </h2>
+              <bfd-badge [kind]="statusBadge(s.status).kind" [dot]="statusBadge(s.status).dot">
+                {{ statusBadge(s.status).label }}
+              </bfd-badge>
+            </div>
+            <div class="mt-3 flex gap-4 text-[12.5px] text-text-2">
+              <span class="inline-flex items-center gap-1.5">
+                <svg [lucideIcon]="icClock" [size]="12" class="text-muted"></svg>
+                Retrait {{ s.pickupLabel }}
+              </span>
+              <span class="inline-flex items-center gap-1.5">
+                <svg
+                  [lucideIcon]="s.paid ? icCheck : icAlert"
+                  [size]="12"
+                  [class]="s.paid ? 'text-ok' : 'text-warn'"
+                ></svg>
+                {{ s.paid ? 'Payée' : 'À encaisser au comptoir' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <bfd-card [padding]="0">
+          <div class="flex items-center border-b border-border-s px-4 py-3.5">
+            <div class="flex-1 text-[13px] font-semibold text-text">Liste de préparation</div>
+            <span class="text-[11px] text-muted">
+              {{ doneCount() }} / {{ s.picking.length }} remis
+            </span>
+          </div>
+          @for (it of s.picking; track $index; let last = $last) {
             <div
-              (click)="select(o.id)"
               [class]="
-                'grid grid-cols-[48px_1fr_auto] gap-2.5 px-4 py-3 border-b border-border-s cursor-pointer border-l-2 ' +
-                (o.id === selectedId()
-                  ? 'bg-surface-2 border-l-blue'
-                  : 'border-l-transparent hover:bg-surface-2/50')
+                'flex items-center gap-3.5 px-4 py-3.5 ' +
+                (last ? '' : 'border-b border-border-s') +
+                (it.done ? ' bg-ok-soft opacity-80' : '')
               "
             >
               <div
-                class="mono tnum w-11 h-11 rounded-md bg-surface border border-border flex flex-col items-center justify-center"
-                [class.text-ok]="o.status === 'pret'"
-                [class.text-text-2]="o.status !== 'pret'"
+                [class]="
+                  'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border-[1.5px] text-white ' +
+                  (it.done ? 'border-ok bg-ok' : 'border-border bg-transparent')
+                "
               >
-                <span class="text-[9px] text-muted">N°</span>
-                <span class="text-[13px] font-semibold">{{ o.q }}</span>
+                @if (it.done) {
+                  <svg [lucideIcon]="icCheck" [size]="14" aria-hidden="true"></svg>
+                }
               </div>
-              <div class="min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[13px] font-medium text-text">{{ o.client }}</span>
-                  <span class="mono text-[10px] text-muted">{{ o.id }}</span>
-                </div>
-                <div class="text-[11px] text-muted mt-0.5">
-                  {{ o.items }} articles · {{ formatMoney(o.prix) }} € · {{ o.paye }}
-                </div>
-                <div class="mt-1.5">
-                  <bfd-badge
-                    [kind]="statusBadge(o.status).kind"
-                    [dot]="statusBadge(o.status).dot"
-                    >{{ statusBadge(o.status).label }}</bfd-badge
-                  >
-                </div>
+              <div
+                class="mono tnum inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-sm bg-surface-2 px-2 text-[13px] font-semibold text-text-2"
+              >
+                ×{{ it.quantity }}
               </div>
-              <svg
-                [lucideIcon]="icChevRight"
-                [size]="14"
-                class="text-muted self-center"
-                aria-hidden="true"
-              ></svg>
+              <div [class]="'flex-1 text-sm text-text ' + (it.done ? 'line-through' : '')">
+                {{ it.name }}
+              </div>
             </div>
           }
+        </bfd-card>
+
+        <!--
+          La remise passe par « Remettre au client » et non par un statut : seul
+          ce geste écrit `received_quantity`. Marquer « prête » ne fait que dire
+          à la cuisine que c'est prêt — rien n'a encore changé de mains.
+        -->
+        <div class="mt-4 flex gap-2">
+          <bfd-btn kind="ghost" [full]="true" (clicked)="cancel()">Annuler</bfd-btn>
+          <bfd-btn kind="secondary" [icon]="icClock" [full]="true" (clicked)="hold()">
+            En préparation
+          </bfd-btn>
+          <bfd-btn kind="secondary" [icon]="icCheck" [full]="true" (clicked)="markReady()">
+            Marquer prête
+          </bfd-btn>
+          <bfd-btn
+            kind="primary"
+            [icon]="icCheck"
+            [full]="true"
+            [disabled]="s.status !== 'ready'"
+            (clicked)="collect()"
+          >
+            Remettre au client
+          </bfd-btn>
+        </div>
+      } @else {
+        <div class="py-16 text-center text-xs text-muted">
+          Sélectionne une commande dans la file pour la traiter.
         </div>
       }
     </div>
-  </div>
 
-  <!-- COL 2: detail -->
-  <div class="overflow-y-auto p-[22px]">
-    @if (selected(); as s) {
-      <div class="flex items-start gap-4 mb-4">
-        <div
-          class="w-[92px] h-[92px] rounded-lg bg-surface border border-border-s flex flex-col items-center justify-center"
-        >
-          <span class="text-[11px] text-muted mb-1">N° retrait</span>
-          <span class="mono tnum text-[26px] font-semibold text-text">{{ s.q }}</span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <h2 class="m-0 text-[22px] font-semibold text-text -tracking-[0.3px]">
-              {{ s.fullClient }}
-            </h2>
-            <bfd-badge [kind]="statusBadge(s.status).kind" [dot]="statusBadge(s.status).dot">{{
-              statusBadge(s.status).label
-            }}</bfd-badge>
-          </div>
-          <div class="mono text-[11px] text-muted mt-1">{{ s.id }} · {{ s.adh }}</div>
-          <div class="flex gap-4 mt-3 text-[12.5px] text-text-2">
-            <span class="inline-flex items-center gap-1.5">
-              <svg [lucideIcon]="icClock" [size]="12" class="text-muted"></svg>Retrait
-              {{ s.slotDetail }}
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <svg [lucideIcon]="icEuro" [size]="12" class="text-muted"></svg>Payée ·
-              {{ s.payeDetail }}
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <svg [lucideIcon]="icCheck" [size]="12" class="text-ok"></svg>Adhésion à jour
-            </span>
-          </div>
-        </div>
+    <!-- COL 3 : borne de retrait -->
+    <div class="min-h-0 overflow-y-auto border-l border-border-s bg-sidebar p-[22px]">
+      <div class="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+        Borne retrait
       </div>
 
-      <!-- Picking checklist -->
-      <bfd-card [padding]="0">
-        <div class="flex items-center px-4 py-3.5 border-b border-border-s">
-          <div class="flex-1 text-[13px] font-semibold text-text">
-            Liste de préparation · cocher pour valider
+      <bfd-card>
+        <div class="pb-1 pt-2 text-center">
+          <div
+            class="relative mx-auto flex h-40 w-40 items-center justify-center rounded-md border-2 border-dashed border-border bg-bg"
+          >
+            <svg [lucideIcon]="icScan" [size]="48" class="text-blue" aria-hidden="true"></svg>
           </div>
-          <span class="text-[11px] text-muted">{{ doneCount() }} / {{ totalCount() }} prêts</span>
+          <div class="mt-3 text-[13px] font-medium text-text">Scanner le QR du client</div>
+          <div class="mt-1 text-[11px] text-muted">ou saisir le N° de retrait</div>
         </div>
-        @for (it of s.picking; track $index; let i = $index; let last = $last) {
-          <button
-            type="button"
-            (click)="toggleItem(i)"
-            [class]="
-              'w-full text-left flex items-center gap-3.5 px-4 py-3.5 bg-transparent border-0 cursor-pointer hover:bg-surface-2/50 ' +
-              (last ? '' : 'border-b border-border-s') +
-              (it.done ? ' bg-ok-soft opacity-80' : '')
-            "
-          >
-            <div
-              [class]="
-                'w-6 h-6 rounded-sm inline-flex items-center justify-center text-white shrink-0 border-[1.5px] ' +
-                (it.done ? 'bg-ok border-ok' : 'bg-transparent border-border')
-              "
-            >
-              @if (it.done) {
-                <svg [lucideIcon]="icCheck" [size]="14" aria-hidden="true"></svg>
-              }
-            </div>
-            <div
-              class="mono tnum h-[30px] min-w-[30px] rounded-sm bg-surface-2 inline-flex items-center justify-center text-text-2 text-[13px] font-semibold px-2"
-            >
-              ×{{ it.q }}
-            </div>
-            <div [class]="'flex-1 text-sm text-text ' + (it.done ? 'line-through' : '')">
-              {{ it.n }}
-            </div>
-            <span class="mono tnum text-xs text-muted">{{ formatMoney(it.q * it.p) }} €</span>
-            <svg [lucideIcon]="icScan" [size]="14" class="text-muted" aria-hidden="true"></svg>
-          </button>
-        }
-        <div class="flex items-center px-4 py-3.5 border-t border-border-s">
-          <span class="flex-1 text-[13px] text-text-2">Total commande</span>
-          <span class="mono tnum text-lg font-semibold text-text"
-            >{{ formatMoney(orderTotal()) }} €</span
-          >
+        <div class="mt-3">
+          <bfd-input
+            [icon]="icQr"
+            [placeholder]="selected()?.reference ?? 'N° retrait'"
+            size="lg"
+          />
         </div>
       </bfd-card>
 
-      @if (s.allergy) {
-        <div class="mt-3.5 p-4 bg-warn-soft border border-warn rounded-lg flex gap-2.5 items-start">
-          <svg [lucideIcon]="icAlert" [size]="16" class="text-warn mt-0.5" aria-hidden="true"></svg>
-          <div class="flex-1">
-            <div class="text-xs font-semibold text-text">Allergie signalée</div>
-            <div class="text-[11.5px] text-text-2 mt-1 leading-relaxed">
-              {{ s.allergy }}
-              <span class="mono text-muted">(fiche adhérent)</span>
-            </div>
-          </div>
-        </div>
-      }
-
-      <div class="flex gap-2 mt-4">
-        <bfd-btn kind="ghost" [full]="true" (clicked)="cancel()">Annuler</bfd-btn>
-        <bfd-btn kind="secondary" [icon]="icClock" [full]="true" (clicked)="hold()"
-          >Mettre en attente</bfd-btn
-        >
-        <bfd-btn kind="primary" [icon]="icCheck" [full]="true" (clicked)="markReady()"
-          >Marquer prête · {{ s.q }}</bfd-btn
-        >
-      </div>
-    } @else {
-      <div class="text-center text-muted text-xs py-16">
-        Sélectionne une commande dans la file pour la traiter.
-      </div>
-    }
-  </div>
-
-  <!-- COL 3: retrait QR -->
-  <div class="overflow-y-auto p-[22px] bg-sidebar border-l border-border-s">
-    <div class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-2.5">
-      Borne retrait
-    </div>
-
-    <bfd-card>
-      <div class="text-center pt-2 pb-1">
-        <div
-          class="w-40 h-40 mx-auto rounded-md bg-bg border-2 border-dashed border-border flex items-center justify-center relative"
-        >
-          <svg [lucideIcon]="icScan" [size]="48" class="text-blue" aria-hidden="true"></svg>
-          <div class="absolute top-3 left-3 right-3 h-0.5 bg-blue/40"></div>
-        </div>
-        <div class="text-[13px] font-medium text-text mt-3">Scanner le QR du client</div>
-        <div class="text-[11px] text-muted mt-1">ou saisir le N° de retrait</div>
-      </div>
-      <div class="mt-3">
-        <bfd-input [icon]="icQr" [placeholder]="selected()?.q ?? 'A09'" size="lg" />
-      </div>
-    </bfd-card>
-
-    <!-- Recent pickups -->
-    <div class="text-[11px] font-semibold tracking-wider text-muted uppercase my-2.5 mt-5">
-      Derniers retraits
-    </div>
-    @for (p of pickups; track p.id) {
-      <div class="flex items-center gap-2.5 py-2.5 border-b border-border-s">
-        <div
-          [class]="
-            'mono tnum w-8 h-8 rounded-sm inline-flex items-center justify-center text-xs font-semibold ' +
-            (p.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger')
-          "
-        >
-          {{ p.id }}
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="text-[12.5px] text-text font-medium">{{ p.n }}</div>
-          <div class="text-[10.5px] text-muted mt-px">{{ p.t }}</div>
-        </div>
-        <svg
-          [lucideIcon]="p.ok ? icCheck : icAlert"
-          [size]="14"
-          [class]="p.ok ? 'text-ok' : 'text-danger'"
-        ></svg>
-      </div>
-    }
-
-    <div class="mt-4 p-3.5 bg-surface border border-border-s rounded-md">
-      <div class="flex justify-between text-[11px] text-muted mb-2">
-        <span>Slot en cours · 19:30</span>
-        <span class="mono">10 / 12</span>
-      </div>
-      <div class="h-1.5 bg-border rounded-sm overflow-hidden">
-        <div class="h-full bg-ok" style="width: 83%"></div>
+      <!--
+        Le scan de retrait passe par `POST /qr/verify`, déjà livré côté back et
+        déjà branché sur la caisse. Ce panneau attend d'être relié au composant
+        de scan partagé plutôt que d'en dupliquer un troisième.
+      -->
+      <div class="mt-4 rounded-md border border-border-s bg-surface p-3.5">
+        <div class="text-[11px] font-semibold text-text">Pas encore branché ici</div>
+        <p class="mt-1 text-[11px] leading-relaxed text-muted">
+          La saisie et le scan ne sont pas encore reliés. En attendant, sélectionne la commande dans
+          la file : le back vérifie déjà les QR de précommande depuis la caisse.
+        </p>
       </div>
     </div>
   </div>
-</div>
+}

@@ -1231,6 +1231,175 @@ avait rendues requises, ce qui empêchait le démarrage en développement.
 
 ---
 
+## 0 sexdecies. SSO OIDC en mode BFF — ✅ livré le 2026-08-16
+
+Branche **`feat/sso-keycloak`** dans les deux dépôts (back : 3 commits sur `feat/adherents` ;
+front : 1 commit sur `main`). Back **404 tests**, front **632 tests**, typecheck et lint verts.
+**Ferme l'essentiel du §9** et le bug de login du §9.4.
+
+| Sujet                                                | État        | Où                                          |
+| ---------------------------------------------------- | ----------- | ------------------------------------------- |
+| Migration `keycloak_sub` + `password` nullable       | ✅ **fait** | `1787200000000`                             |
+| Garde contre le 500 sur compte sans mot de passe     | ✅ **fait** | `User.verifyPasswordCredentials`            |
+| Service OIDC avec PKCE S256 et découverte            | ✅ **fait** | `oidc_service.ts`, `openid-client` **v6.8** |
+| Résolution utilisateur en trois temps                | ✅ **fait** | `sso_provisioning_service.ts`               |
+| `redirect()` / `callback()`                          | ✅ **fait** | `keycloak_auth_controller.ts`               |
+| Gardes d'audience `member` / `client`                | ✅ **fait** | `audience_middleware.ts`, **appliqués**     |
+| Realm de développement reproductible                 | ✅ **fait** | `scripts/setup-dev-keycloak.sh`             |
+| Bouton EirbConnect sur la page de login              | ✅ **fait** | `pages/guest/login/`                        |
+
+### La décision qui structure tout : où vit la séparation dashboard / public
+
+**Ni deux endpoints de login, ni le cookie `sso_app` que proposait le §9.5.** L'intention
+(`dashboard` | `public`) voyage **dans la session, à côté du `state`** :
+
+- Deux endpoints auraient exigé **deux URI de callback whitelistées** chez EirbWare, sur une
+  demande externe dont le délai ne dépend pas de nous.
+- Un cookie séparé crée **deux états désynchronisables** — un callback valide sans destination.
+  Rangés ensemble, si la session est perdue la validation du `state` échoue de toute façon : un
+  seul mode d'échec.
+
+⚠️ **Et surtout : refuser au login n'est pas une sécurité.** Les trois origines partagent
+`bae.eirb.fr` — c'est ce qui rend le cookie possible (§9.8), mais cela implique qu'un cookie posé
+pour `order.bae.eirb.fr` est **envoyé à `api.bae.eirb.fr`** par le dashboard. La séparation réelle
+est donc `AudienceMiddleware`, appliqué à **tous** les groupes de routes du dashboard
+(`billing`, `catalog`, `coordination`, `events`, `members`, `stocks`, `system`). Un test garde
+l'invariant : un client authentifié reçoit **403** sur `/v1/members`.
+
+`/v1/account` (profil, QR) est délibérément **hors garde** : un client a lui aussi un profil.
+
+### Le realm de développement, et pourquoi il existe
+
+EirbConnect est indisponible (identifiants toujours non demandés, §30.1). Un realm `bae` monté
+dans un Keycloak local en tient lieu — même logique que le transport `log` du §0 quindecies :
+passer en production ne demandera que de changer les variables `KEYCLOAK_*`.
+
+`scripts/setup-dev-keycloak.sh` le recrée, idempotent. Utilisateur `ttest` / `bae-dev-password`.
+
+⚠️ **Le piège qui a coûté trois itérations, et qui resservira face à EirbWare :** depuis
+Keycloak 24, le **profil utilisateur déclaratif supprime silencieusement tout attribut non
+déclaré**. `uid`, `prenom` et `nom` étaient écrits par l'API admin, acceptés avec un `204`, et
+jetés — aucune erreur nulle part, juste un claim absent en bout de chaîne. Comme EirbConnect repose
+entièrement sur ces trois claims **non standards**, c'est exactement la panne qu'on découvrirait en
+production. **Si `uid` n'arrive pas, interroger la politique de profil du realm avant de suspecter
+notre code.**
+
+⚠️ Deux autres pièges mesurés :
+
+- **`allowInsecureRequests` doit passer par l'option `execute` de `discovery()`**, et non être
+  appliqué à la configuration ensuite : la découverte est elle-même une requête HTTP, donc elle
+  échoue la première.
+- **Keycloak impose `VERIFY_PROFILE`** si `firstName`/`lastName` manquent, et la redirection
+  n'atteint alors jamais le callback.
+
+### Vérifié contre le vrai Keycloak, pas seulement par les tests
+
+Script de bout en bout (`redirect` → formulaire → soumission → `callback`), trois scénarios :
+
+| Scénario                          | Résultat                                          |
+| --------------------------------- | ------------------------------------------------- |
+| `dashboard`, sans ligne `members` | `?sso_error=not_a_member`, **aucun cookie**       |
+| `public`, sans ligne `clients`    | ligne `clients` créée (JIT), cookie posé, → `:4201` |
+| `dashboard`, avec ligne `members` | cookie posé, → `:4200`                            |
+
+PKCE `S256` et `state` vérifiés présents dans l'URL d'autorisation.
+
+### Ce qui reste du §9
+
+- **Le port 3333 était tenu par le conteneur `bae-api-dev`** : l'arrêter pour le développement
+  local, sinon `node ace serve` prend un port aléatoire et le callback whitelisté ne colle plus.
+- **CSRF (§9.7)** — `config/shield.ts` a toujours `csrf.enabled: false`. À basculer en dernier.
+- **CORS (§9.8)** — l'allowlist de production reste à corriger.
+- **Le front public n'existe pas encore** (§4.3) : `app=public` est implémenté et testé côté back,
+  mais aucun projet Angular ne l'appelle.
+- **Le front ne consomme pas encore le cookie** (§9.10) : il stocke toujours le jeton lui-même. Le
+  bouton EirbConnect fonctionne, mais la bascule complète sur le cookie `httpOnly` reste à faire.
+- **Logout global** (`id_token_hint`) non implémenté.
+
+---
+
+## 0 septdecies. Les cinq pages factices — ✅ livré le 2026-08-16
+
+Branche **`feat/sso-keycloak`** des deux côtés. Back **421 tests**, front **638 tests**, typecheck
+et lint verts. **Ferme le §4 du présent document** et le §26 de `HANDOFF2.md`.
+
+| Page                 | Ce qui l'alimente désormais                                    |
+| -------------------- | -------------------------------------------------------------- |
+| `precommandes-admin` | `GET /events/:id/pre-orders` + `setStatus` + `collect`         |
+| `paiements`          | `GET /transactions?eventId=`                                   |
+| `notifications`      | **nouveau** `GET/PATCH /account/notifications`                 |
+| `soiree/bilan`       | **nouveau** `GET /events/:id/summary`                          |
+| `tickets`            | **nouveau domaine** : `tickets`, `ticket_messages`, 5 routes   |
+
+### La règle qui a gouverné les cinq : ne pas inventer ce qui n'existe pas
+
+Le §0 nonies l'avait établi (« des chiffres faux sur un écran de service sont pires qu'un écran
+vide ») ; ce lot l'applique systématiquement. **Ce qui a été retiré des maquettes, et pourquoi :**
+
+| Retiré                                  | Parce que                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------ |
+| Montants sur `precommandes-admin`       | `PreOrderTicket` n'en porte **aucun**, délibérément : payée un autre jour      |
+| Allergies, n° d'adhérent, « derniers retraits » | Aucune colonne, aucun endpoint                                          |
+| KPI « Lydia online » / « QR sur place »  | `transactions.type` est `cash \| lydia` — la distinction n'existe pas en base  |
+| KPI « CB » sur le bilan                  | Idem : absent de l'enum                                                        |
+| Marge nette, scores d'équipe             | Demanderaient le coût des denrées consommées, que rien ne calcule              |
+
+Chaque retrait est **expliqué à l'écran ou en commentaire**, jamais silencieux.
+
+### Le bilan expose deux montants, et c'est voulu
+
+`revenueCents` (ce que les commandes valaient) et `cashedByMethod` (ce qui a été encaissé) ne sont
+**pas censés être égaux**. L'écart est affiché comme une information — remise, précommande payée un
+autre jour, annulation après paiement — et non masqué en n'affichant qu'un seul des deux.
+
+⚠️ **Unités mélangées, à ne pas confondre** : `event_products.price` et donc `revenueCents` sont en
+**centimes** ; `transactions.amount` est en **euros**. Le front convertit, une seule fois.
+
+### Tickets — la propriété n'est pas une permission
+
+Ouvrir un ticket et suivre les siens n'exige **aucune permission** : c'est une question de
+propriété, exactement comme les notifications. `ticket:read` élargit la vue à tous les tickets (le
+« pôle web » du cahier des charges), `ticket:write` autorise le changement de statut.
+
+⚠️ **Le périmètre de `GET /tickets` est décidé par le serveur, jamais par un paramètre.** Offrir un
+`?scope=all` ouvrirait la boîte de réception de tout le monde à qui pense à l'essayer. Consulter le
+ticket d'un autre rend **404 et non 403** : distinguer les deux confirmerait son existence.
+
+**Les deux notifications du §15 sont enfin câblées** : `ticket.opened` vers les porteurs de
+`ticket:read` (dérivé des permissions, pas d'une liste d'adresses — un changement de rôle suffit à
+changer qui reçoit), `ticket.updated` vers l'auteur.
+
+⚠️ **`ticket.updated` n'a délibérément aucun `dedupeKey`.** Le dédoublonnage protège d'une
+*détection* répétée — un cron qui repasse. Un changement de statut est une *action humaine*, et un
+aller-retour `en cours → clos → en cours` doit notifier trois fois. Un test le garde. Y mettre une
+clé horodatée aurait été pire que rien : l'apparence du dédoublonnage sans l'effet.
+
+### Trois pièges rencontrés
+
+- ⚠️ **`tsc --build` ne typecheck pas les gabarits Angular.** Un `BadgeKind` invalide
+  (`'info'`, qui n'existe pas) passe le typecheck et n'échoue qu'au build du bundle, pendant
+  `pnpm test`. Le typecheck vert ne vaut pas pour les templates.
+- **`roles_permissions.permission_id`**, pas `permission` — la colonne porte le nom de la
+  permission, mais s'appelle `_id`.
+- **Un `refresh()` qui remet `loadError` à `null` efface le message qu'on vient de poser.** Sur
+  `tickets`, le refus de changement de statut ne s'affichait jamais : le message doit être posé
+  **après** la resynchronisation. Trouvé par un test, invisible autrement.
+
+### Ce qui reste
+
+- **`precommandes-admin`** : la borne de retrait n'est pas reliée au composant de scan partagé
+  (`POST /qr/verify` existe et sert déjà la caisse).
+- **`paiements`** : le rapprochement attend la refonte de `transactions` (§10.2 — `status` et
+  référence fournisseur).
+- **`soiree/bilan`** : la marge attend le rapprochement avec les prix fournisseurs de la liste de
+  courses.
+- **`notifications`** : seul le canal `in_app` est affiché ; les rappels partis par mail sont le
+  même fait sur un autre canal.
+- **Le fil d'activité de `home`** a sa source (`activity_events`) depuis le §0 quindecies et reste
+  à câbler.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.
