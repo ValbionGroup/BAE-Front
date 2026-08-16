@@ -1,149 +1,195 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
-  LucideCheck,
-  LucideClock,
-  LucideDynamicIcon,
-  LucideIconInput,
-  LucideMail,
-  LucidePlus,
-  LucideTriangleAlert,
-  LucideUser,
-  LucideZap,
-} from '@lucide/angular';
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { lastValueFrom } from 'rxjs';
+import { LucideDynamicIcon, LucideTicket, LucideTriangleAlert } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
+import {
+  TicketsService,
+  type TicketDetail,
+  type TicketRow,
+  type TicketStatus,
+} from '#core/services/tickets/tickets-service';
 import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { Btn } from '#shared/components/ui/btn/btn';
+import { Card } from '#shared/components/ui/card/card';
 
-interface Ticket {
-  readonly id: string;
-  readonly s: 'Bug' | 'Amélioration' | 'Nouveauté';
-  readonly t: string;
-  readonly st: 'new' | 'inprog' | 'closed';
-  readonly by: string;
-  readonly when: string;
-  readonly cmt: number;
-  readonly p: 'high' | 'mid' | 'low';
-}
+type LoadState = 'init' | 'loading' | 'loaded' | 'error';
+type Tab = 'Tout' | 'Ouverts' | 'En cours' | 'Clos';
 
-interface HistoryEntry {
-  readonly c: string;
-  readonly who: string;
-  readonly when: string;
-  readonly icon: LucideIconInput;
-}
+const TABS: readonly Tab[] = ['Tout', 'Ouverts', 'En cours', 'Clos'];
+
+const STATUS_BADGE: Record<TicketStatus, { kind: BadgeKind; label: string }> = {
+  open: { kind: 'warn', label: 'Ouvert' },
+  in_progress: { kind: 'blue', label: 'En cours' },
+  closed: { kind: 'neutral', label: 'Clos' },
+};
 
 @Component({
   selector: 'bfd-tickets',
-  imports: [Btn, Badge, Avatar, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, ReactiveFormsModule, LucideDynamicIcon],
   templateUrl: './tickets.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full' },
 })
-export class Tickets {
+export class Tickets implements OnInit {
+  private readonly service = inject(TicketsService);
+  private readonly fb = inject(FormBuilder);
+
+  protected readonly icTicket = LucideTicket;
+  protected readonly icAlert = LucideTriangleAlert;
+
+  protected readonly tabs = TABS;
+  protected readonly activeTab = signal<Tab>('Tout');
+  protected readonly loadState = signal<LoadState>('init');
+  protected readonly loadError = signal<string | null>(null);
+  protected readonly rows = signal<readonly TicketRow[]>([]);
+  protected readonly selectedId = signal<number | null>(null);
+  protected readonly detail = signal<TicketDetail | null>(null);
+  protected readonly composing = signal(false);
+
+  protected readonly openForm = this.fb.group({
+    subject: ['', [Validators.required, Validators.minLength(3)]],
+    body: ['', Validators.required],
+  });
+
+  protected readonly replyForm = this.fb.group({
+    body: ['', Validators.required],
+  });
+
   constructor() {
     inject(PageHeaderService).set({
-      title: 'Tickets',
-      subtitle: '6 tickets · 2 nouveaux',
+      title: 'Support · Tickets',
+      subtitle: 'Vos demandes, et celles que vous traitez',
       breadcrumb: ['Support', 'Tickets'],
       activeNavId: 'tick',
     });
+
+    // Charge le détail à chaque changement de sélection. Dépendre de
+    // l'identifiant, pas de la ligne : la liste est remplacée après chaque
+    // mutation, et en dépendre relancerait le chargement en boucle.
+    effect(() => {
+      const id = this.selectedId();
+      if (id === null) {
+        untracked(() => this.detail.set(null));
+        return;
+      }
+      untracked(() => void this.loadDetail(id));
+    });
   }
 
-  protected readonly icPlus = LucidePlus;
-  protected readonly icUser = LucideUser;
-  protected readonly icClock = LucideClock;
-  protected readonly icCheck = LucideCheck;
-  protected readonly icAlert = LucideTriangleAlert;
-  protected readonly icZap = LucideZap;
-  protected readonly icMail = LucideMail;
-
-  protected readonly tabs = ['Tout (6)', 'Nouveau (2)', 'En cours (2)', 'Clos (2)', 'Mes tickets'];
-  protected readonly activeTab = signal(0);
-  protected readonly selectedIdx = signal(0);
-
-  protected readonly tickets: readonly Ticket[] = [
-    {
-      id: 'T-184',
-      s: 'Bug',
-      t: 'Lydia QR ne se ferme pas auto',
-      st: 'new',
-      by: 'Tom B.',
-      when: 'il y a 12 min',
-      cmt: 0,
-      p: 'high',
-    },
-    {
-      id: 'T-183',
-      s: 'Bug',
-      t: 'Stock négatif après annulation',
-      st: 'inprog',
-      by: 'Léa M.',
-      when: 'il y a 2h',
-      cmt: 3,
-      p: 'mid',
-    },
-    {
-      id: 'T-182',
-      s: 'Amélioration',
-      t: 'Pouvoir scanner plusieurs lots à la suite',
-      st: 'inprog',
-      by: 'Hugo L.',
-      when: 'hier',
-      cmt: 5,
-      p: 'mid',
-    },
-    {
-      id: 'T-181',
-      s: 'Nouveauté',
-      t: 'Module gestion des prêts de matériel',
-      st: 'new',
-      by: 'Camille R.',
-      when: 'hier',
-      cmt: 1,
-      p: 'low',
-    },
-    {
-      id: 'T-180',
-      s: 'Bug',
-      t: 'Email de relance envoyé en double',
-      st: 'closed',
-      by: 'Sarah M.',
-      when: '3 j.',
-      cmt: 4,
-      p: 'mid',
-    },
-    {
-      id: 'T-179',
-      s: 'Amélioration',
-      t: 'Filtre par promo dans Présences',
-      st: 'closed',
-      by: 'Antoine R.',
-      when: '5 j.',
-      cmt: 2,
-      p: 'low',
-    },
-  ];
-
-  protected readonly history: readonly HistoryEntry[] = [
-    { c: 'Ticket créé', who: 'Tom B.', when: 'il y a 12 min', icon: LucidePlus },
-    { c: 'Email envoyé au pôle web', who: 'auto', when: 'il y a 12 min', icon: LucideMail },
-  ];
-
-  protected statusLabel(st: Ticket['st']): { label: string; kind: BadgeKind } {
-    if (st === 'new') return { label: 'Nouveau', kind: 'blue' };
-    if (st === 'inprog') return { label: 'En cours', kind: 'warn' };
-    return { label: 'Clos', kind: 'ok' };
+  ngOnInit(): void {
+    void this.refresh();
   }
 
-  protected typeIcon(s: Ticket['s']): LucideIconInput {
-    if (s === 'Bug') return LucideTriangleAlert;
-    if (s === 'Amélioration') return LucideZap;
-    return LucidePlus;
+  protected readonly counts = computed(() => {
+    const all = this.rows();
+    return {
+      total: all.length,
+      open: all.filter((row) => row.status === 'open').length,
+      inProgress: all.filter((row) => row.status === 'in_progress').length,
+      closed: all.filter((row) => row.status === 'closed').length,
+    };
+  });
+
+  protected readonly visible = computed<readonly TicketRow[]>(() => {
+    const tab = this.activeTab();
+    return this.rows().filter((row) => {
+      if (tab === 'Ouverts') return row.status === 'open';
+      if (tab === 'En cours') return row.status === 'in_progress';
+      if (tab === 'Clos') return row.status === 'closed';
+      return true;
+    });
+  });
+
+  protected badge(status: TicketStatus): { kind: BadgeKind; label: string } {
+    return STATUS_BADGE[status];
   }
 
-  protected typeBgClass(s: Ticket['s']): string {
-    if (s === 'Bug') return 'bg-danger-soft text-danger';
-    if (s === 'Amélioration') return 'bg-warn-soft text-warn';
-    return 'bg-blue-soft text-blue';
+  protected select(id: number): void {
+    this.composing.set(false);
+    this.selectedId.set(id);
+  }
+
+  protected startComposing(): void {
+    this.selectedId.set(null);
+    this.openForm.reset({ subject: '', body: '' });
+    this.composing.set(true);
+  }
+
+  protected async submitTicket(): Promise<void> {
+    if (this.openForm.invalid) return;
+    const { subject, body } = this.openForm.value;
+
+    const created = await lastValueFrom(
+      this.service.open({ subject: subject!, body: body! }),
+    ).catch(() => null);
+
+    if (created === null) {
+      this.loadError.set("Impossible d'ouvrir le ticket.");
+      return;
+    }
+
+    this.composing.set(false);
+    await this.refresh();
+    this.selectedId.set(created.id);
+  }
+
+  protected async submitReply(): Promise<void> {
+    const id = this.selectedId();
+    if (id === null || this.replyForm.invalid) return;
+
+    await lastValueFrom(this.service.reply(id, this.replyForm.value.body!)).catch(() => null);
+    this.replyForm.reset({ body: '' });
+    await this.loadDetail(id);
+  }
+
+  protected async setStatus(status: TicketStatus): Promise<void> {
+    const id = this.selectedId();
+    if (id === null) return;
+
+    let refusal: string | null = null;
+    try {
+      await lastValueFrom(this.service.setStatus(id, status));
+    } catch {
+      // 403 sans `ticket:write` : réponse légitime du serveur, pas une panne.
+      refusal = "Vous n'avez pas le droit de changer ce statut.";
+    }
+
+    // ⚠️ Le message est posé **après** la resynchronisation, jamais avant :
+    // `refresh()` remet `loadError` à `null` en début de chargement, et l'ordre
+    // inverse effaçait donc silencieusement le refus qu'on venait d'afficher.
+    await this.refresh();
+    await this.loadDetail(id);
+    if (refusal !== null) this.loadError.set(refusal);
+  }
+
+  private async loadDetail(id: number): Promise<void> {
+    try {
+      this.detail.set(await lastValueFrom(this.service.get(id)));
+    } catch {
+      this.detail.set(null);
+    }
+  }
+
+  private async refresh(): Promise<void> {
+    this.loadState.set('loading');
+    this.loadError.set(null);
+    try {
+      this.rows.set(await lastValueFrom(this.service.list()));
+      this.loadState.set('loaded');
+    } catch {
+      this.rows.set([]);
+      this.loadError.set('Impossible de charger les tickets.');
+      this.loadState.set('error');
+    }
   }
 }
