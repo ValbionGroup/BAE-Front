@@ -105,7 +105,8 @@
     </div>
   }
 
-  <div class="mt-4 flex justify-end gap-2">
+  <div modal-footer class="contents">
+    <div class="flex-1"></div>
     <bfd-btn kind="ghost" [icon]="icDownload" (clicked)="printClosing()">Imprimer</bfd-btn>
     <bfd-btn kind="ghost" (clicked)="cancel()">Annuler</bfd-btn>
     <bfd-btn kind="primary" [disabled]="busy() || anyInvalid() || loading()" (clicked)="submit()">

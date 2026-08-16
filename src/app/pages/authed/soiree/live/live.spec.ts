@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { SoireeLive } from './live';
+import { OrdersStore } from '#core/store/orders.store';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -104,18 +105,17 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    for (const invented of [
-      'Encaissé live',
-      'Cadence',
-      'Flux transactions',
-      'Stock critique',
-      'En préparation',
-      'Marge live',
-      'C. Renard',
-      '1 736,50',
-    ]) {
+    // Les colonnes, la cadence, le flux, les marges puis les alertes et le
+    // stock ont quitté cette liste au fur et à mesure qu'un endpoint les a
+    // alimentés. Ce qui reste n'a toujours aucune source : les noms de clients
+    // et les montants de la maquette.
+    for (const invented of ['C. Renard', '1 736,50', '4,2 / min']) {
       expect(text).not.toContain(invented);
     }
+
+    // ⚠️ Les alertes sont désormais réelles — donc silencieuses quand il n'y a
+    // rien à signaler. Un décor réapparu se trahirait ici.
+    expect(text).not.toContain('Alertes');
   });
 
   it('shows produced against planned once the runs land', async () => {
@@ -169,5 +169,145 @@ describe(SoireeLive.name, () => {
     expect(text).toContain('Accès restreint');
     // La page vit toujours.
     expect(text).toContain('Soirée BBQ');
+  });
+
+  it('affiche les commandes reelles dans leur colonne et les fait avancer', async () => {
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '4', name: 'Soiree BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    await settle();
+
+    http.expectOne((r) => r.url.includes('/events/4/products')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/4/production-runs')).flush([]);
+    http
+      .expectOne((r) => r.url.includes('/events/4/orders'))
+      .flush([
+        {
+          id: 11,
+          number: 3,
+          eventId: 4,
+          status: 'in_progress',
+          clientName: 'Camille Renard',
+          lines: [{ productId: 1, productName: 'Hot-dog', quantity: 2, unitPrice: 250 }],
+          totalCents: 500,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    http.expectOne((r) => r.url.includes('/events/4/sellable')).flush([]);
+    await settle();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Camille Renard');
+    expect(text).toContain('Hot-dog');
+    // Le montant est en centimes sur le fil, en euros a l ecran.
+    expect(text).toContain('5,00');
+
+    // Depuis `in_progress`, le geste suivant est « Marquer prete » (-> ready).
+    const store = TestBed.inject(OrdersStore);
+    const done = store.advance(11, 'ready');
+    const patch = http.expectOne((r) => r.url.includes('/orders/11/status'));
+    expect(patch.request.body).toEqual({ status: 'ready' });
+    patch.flush({
+      id: 11,
+      number: 3,
+      eventId: 4,
+      status: 'ready',
+      clientName: 'Camille Renard',
+      lines: [{ productId: 1, productName: 'Hot-dog', quantity: 2, unitPrice: 250 }],
+      totalCents: 500,
+      createdAt: new Date().toISOString(),
+    });
+    await done;
+
+    expect(store.ready().length).toBe(1);
+    expect(store.inProgress().length).toBe(0);
+  });
+
+  /**
+   * Le contresens que ce test verrouille : la carte déduisait « payée » de
+   * l'absence de montant, ce qui ne dit que « ce n'est pas une commande de
+   * comptoir ». Une précommande impayée affichait donc « Payée à la commande »
+   * juste au-dessus de l'alerte disant l'inverse.
+   */
+  it('épingle les précommandes dues et ne prétend jamais qu’une impayée est réglée', async () => {
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '4', name: 'Soiree BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    await settle();
+
+    http.expectOne((r) => r.url.includes('/events/4/products')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/4/production-runs')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/4/orders')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/4/sellable')).flush([]);
+    await settle();
+
+    // Les précommandes partent après la résolution des commandes : elles ne
+    // peuvent pas être réclamées avant ce point.
+    http
+      .expectOne((r) => r.url.includes('/events/4/pre-orders'))
+      .flush([
+        {
+          id: 39,
+          reference: 'P1',
+          eventId: 4,
+          status: 'pending',
+          clientName: 'Gerda Mayer',
+          lines: [{ productId: 1, productName: 'Hot-dog', quantity: 2, receivedQuantity: 0 }],
+          paid: true,
+          fullyCollected: false,
+          pickupAt: atHour(0, 21),
+          due: true,
+          createdAt: atHour(-2),
+        },
+        {
+          id: 41,
+          reference: 'P3',
+          eventId: 4,
+          status: 'pending',
+          clientName: 'Rick McLaughlin',
+          lines: [{ productId: 2, productName: 'Crêpe', quantity: 1, receivedQuantity: 0 }],
+          paid: false,
+          fullyCollected: false,
+          pickupAt: null,
+          due: true,
+          createdAt: atHour(0, 12),
+        },
+        {
+          id: 40,
+          reference: 'P2',
+          eventId: 4,
+          status: 'pending',
+          clientName: 'Conrad Windler',
+          lines: [{ productId: 3, productName: 'Frites', quantity: 3, receivedQuantity: 0 }],
+          paid: true,
+          fullyCollected: false,
+          pickupAt: atHour(1),
+          due: false,
+          createdAt: atHour(-1),
+        },
+      ]);
+    await settle();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Gerda Mayer');
+    expect(text).toContain('Payée à la commande');
+
+    // L'impayée est là, signalée, et ne se dit pas réglée.
+    expect(text).toContain('Rick McLaughlin');
+    expect(text).toContain('Aucun paiement rattaché');
+    expect(text.match(/Payée à la commande/g)?.length).toBe(1);
+
+    // Celle qui n'est pas due n'a rien à faire sous les yeux de la cuisine.
+    expect(text).not.toContain('Conrad Windler');
+
+    // Sans heure de retrait, on prépare : elle passe devant celle de 21 h.
+    const store = TestBed.inject(OrdersStore);
+    expect(store.pendingPreOrders().map((t) => t.id)).toEqual([41, 39]);
   });
 });

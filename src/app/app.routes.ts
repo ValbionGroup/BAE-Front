@@ -18,6 +18,14 @@ export const routes: Routes = [
     canActivate: [guestGuard],
     loadComponent: () => import('#pages/guest/login/login').then((m) => m.Login),
   },
+  { path: AppRoutes.soiree, pathMatch: 'full', redirectTo: AppRoutes.soireeLive },
+  // Hors `AppShell` : le kitchen display occupe l'écran entier, sans menu
+  // latéral — c'est un poste de service, pas une page de navigation.
+  {
+    path: AppRoutes.soireeLive,
+    canActivate: [authGuard],
+    loadComponent: () => import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
+  },
   {
     path: '',
     component: AppShell,
@@ -124,11 +132,6 @@ export const routes: Routes = [
       {
         path: AppRoutes.soiree,
         children: [
-          { path: '', redirectTo: 'live', pathMatch: 'full' },
-          {
-            path: 'live',
-            loadComponent: () => import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
-          },
           {
             path: 'bilan',
             loadComponent: () =>

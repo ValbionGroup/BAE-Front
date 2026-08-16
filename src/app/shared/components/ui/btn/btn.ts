@@ -36,10 +36,7 @@ const BASE_CLASSES =
   templateUrl: './btn.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    // An attribute written on <bfd-btn> lands on this host element, which is an
-    // inert wrapper — so a description attached here is never announced for the
-    // control that actually takes focus. The template forwards them to the
-    // <button>; clearing `id` here keeps the document from holding it twice.
+    '[class.w-full]': 'full()',
     '[attr.id]': 'null',
   },
 })

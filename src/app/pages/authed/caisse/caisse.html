@@ -1,6 +1,5 @@
 <ng-template #actions>
   @if (store.sessionActive()) {
-    <bfd-btn kind="ghost" size="md" [icon]="icScan">Scanner</bfd-btn>
     <bfd-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bfd-btn>
   } @else if (store.todayEvent()) {
     <bfd-btn kind="primary" size="md" [icon]="icCalendarPlus" (clicked)="startSession()">
@@ -36,18 +35,18 @@
     </div>
   </div>
 } @else {
-  <div class="grid h-full grid-cols-[1fr_360px]">
+  <div class="h-full overflow-y-auto md:grid md:grid-cols-[1fr_360px] md:overflow-hidden">
     <!-- LEFT: products -->
-    <div class="flex min-w-0 flex-col gap-3.5 overflow-hidden p-5">
+    <div class="flex min-w-0 flex-col gap-3.5 p-4 md:overflow-hidden md:p-5">
       <!-- Category tabs -->
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center gap-2 overflow-x-auto md:flex-wrap">
         @for (c of store.categories(); track c) {
           @let active = c === store.activeCategory();
           <button
             type="button"
             (click)="onCategoryClick(c)"
             [class]="
-              'inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold ' +
+              'inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold md:rounded-md ' +
               (active ? 'border-blue bg-blue text-white' : 'border-border bg-surface text-text-2')
             "
           >
@@ -66,22 +65,38 @@
           Aucun produit dans le menu de cette soirée.
         </div>
       } @else {
-        <div class="grid flex-1 grid-cols-4 content-start gap-3">
+        <div class="grid flex-1 grid-cols-2 content-start gap-3 lg:grid-cols-4">
           @for (it of store.visibleItems(); track it.productId) {
+            @let sellable = store.canAdd(it.productId);
+            @let left = store.remainingFor(it.productId);
             <button
               type="button"
+              [disabled]="!sellable"
               (click)="addItem(it)"
-              class="relative flex min-h-[110px] cursor-pointer flex-col gap-3 rounded-lg border border-border bg-surface p-3.5 text-left transition-transform"
+              [attr.title]="soldOutHint(it.productId)"
+              [class]="
+                'relative flex min-h-[110px] flex-col gap-3 rounded-lg border p-3.5 text-left transition-transform ' +
+                (sellable
+                  ? 'cursor-pointer border-border bg-surface'
+                  : 'cursor-not-allowed border-border-s bg-transparent opacity-50')
+              "
             >
               <div class="flex-1 text-[15px] font-semibold leading-tight text-text">
                 {{ it.name }}
               </div>
-              <div class="flex items-end justify-between">
+              <div class="flex items-end justify-between gap-2">
                 <span class="tnum text-[22px] font-semibold -tracking-[0.5px] text-text">
-                  {{ formatPrice(it.price) }}
+                  {{ formatCents(it.price) }}
                   <span class="text-[13px] font-medium text-muted">€</span>
                 </span>
-                <bfd-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bfd-badge>
+                @if (!sellable) {
+                  <bfd-badge kind="ghost">Rupture</bfd-badge>
+                } @else if (isLow(it.productId)) {
+                  <!-- `left` n'est jamais nul ici : « bas » suppose un restant connu. -->
+                  <bfd-badge kind="warn" [dot]="true">{{ left }} rest.</bfd-badge>
+                } @else {
+                  <bfd-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bfd-badge>
+                }
               </div>
             </button>
           }
@@ -90,10 +105,17 @@
 
       <!-- Hints -->
       <div
-        class="flex items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted"
+        class="hidden items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted lg:flex"
       >
         <span><bfd-kbd>F1</bfd-kbd> · catégorie suivante</span>
-        <span><bfd-kbd>+</bfd-kbd> / <bfd-kbd>−</bfd-kbd> · quantité</span>
+        <span>
+          <bfd-kbd>+</bfd-kbd> / <bfd-kbd>−</bfd-kbd> ·
+          @if (store.activeLine(); as line) {
+            <span class="text-text">{{ line.name }}</span>
+          } @else {
+            quantité
+          }
+        </span>
         <span><bfd-kbd>Entrée</bfd-kbd> · encaisser</span>
         <span class="flex-1"></span>
         @if (store.sessionEvent(); as ev) {
@@ -105,7 +127,16 @@
     </div>
 
     <!-- RIGHT: cart -->
-    <aside class="flex flex-col border-l border-border-s bg-surface">
+    <aside
+      class="flex flex-col border-t border-border-s bg-surface pb-28 md:min-h-0 md:overflow-hidden md:border-l md:border-t-0 md:pb-0"
+    >
+      <bfd-checkout-feedback
+        [order]="store.lastOrder()"
+        [error]="store.checkoutError()"
+        [pickup]="pickup()"
+        (dismissed)="dismissFeedback()"
+      />
+
       <!-- Header -->
       <div class="flex items-center gap-2.5 border-b border-border-s p-4">
         <div
@@ -123,17 +154,63 @@
         <bfd-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bfd-btn>
       </div>
 
+      <!-- Client -->
+      @if (store.selectedBuyer(); as buyer) {
+        <div
+          class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3 md:mt-4"
+        >
+          <span
+            class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ok-soft text-ok"
+          >
+            <svg [lucideIcon]="icCheck" [size]="16" aria-hidden="true"></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-[12.5px] font-medium text-text">{{ buyer.name }}</div>
+            <div class="text-[10.5px] text-muted">
+              {{ fastPassLabel(buyer) ?? 'Sans fast pass' }}
+            </div>
+          </div>
+          <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
+        </div>
+      } @else if (pickingBuyer()) {
+        <div class="m-4">
+          <bfd-buyer-picker
+            (picked)="onBuyerPicked($event)"
+            (pickedUp)="onPickedUp($event)"
+            (dismissed)="pickingBuyer.set(false)"
+          />
+        </div>
+      } @else {
+        <div
+          class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3 md:mt-4"
+        >
+          <span
+            class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-surface-3 text-muted"
+          >
+            <svg [lucideIcon]="icUser" [size]="16" aria-hidden="true"></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[12.5px] font-medium text-text">Client anonyme</div>
+            <div class="text-[10.5px] text-muted">Facultatif — QR ou recherche par nom.</div>
+          </div>
+          <bfd-btn kind="ghost" size="sm" (clicked)="pickingBuyer.set(true)">Identifier</bfd-btn>
+        </div>
+      }
+
       <!-- Items -->
-      <div class="flex-1 overflow-y-auto px-4">
+      <div class="flex-1 px-4 md:overflow-y-auto">
         @if (store.itemCount() === 0) {
           <div class="py-10 text-center text-[12px] text-muted">
             Sélectionnez un produit pour commencer le ticket.
           </div>
         } @else {
           @for (it of store.cart(); track it.productId; let last = $last) {
+            @let active = store.activeLine()?.productId === it.productId;
             <div
               [class]="
-                'flex items-center gap-2.5 py-2.5 ' + (last ? '' : 'border-b border-border-s')
+                'flex items-center gap-2.5 py-2.5 ' +
+                (last ? '' : 'border-b border-border-s') +
+                (active ? ' -mx-2 rounded-sm bg-surface-2 px-2' : '')
               "
             >
               <button
@@ -144,18 +221,23 @@
               >
                 {{ it.quantity }}
               </button>
-              <div class="min-w-0 flex-1">
+              <button
+                type="button"
+                class="min-w-0 flex-1 cursor-pointer text-left"
+                [attr.aria-pressed]="active"
+                (click)="store.focusLine(it.productId)"
+              >
                 <div
                   class="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
                 >
                   {{ it.name }}
                 </div>
                 <div class="tnum text-[11px] text-muted">
-                  {{ formatPrice(it.price) }} € × {{ it.quantity }}
+                  {{ formatCents(it.price) }} € × {{ it.quantity }}
                 </div>
-              </div>
+              </button>
               <span class="tnum text-[13px] font-semibold text-text"
-                >{{ formatPrice(it.price * it.quantity) }} €</span
+                >{{ formatCents(it.price * it.quantity) }} €</span
               >
               <bfd-btn
                 kind="ghost"
@@ -168,39 +250,64 @@
         }
       </div>
 
-      <!-- Totals + payment -->
-      <div class="border-t border-border-s bg-bg p-4">
-        <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
-          <div class="flex justify-between text-text-2">
-            <span>Sous-total</span>
-            <span class="tnum">{{ formatPrice(store.subtotal()) }} €</span>
+      <!-- Totals + payment. Sur mobile, une barre ancrée : le panier n'a pas de
+           colonne à lui, c'est le geste d'encaissement qui doit rester sous le
+           pouce. -->
+      <div
+        class="fixed inset-x-0 bottom-0 z-30 border-t border-border-s bg-bg p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.18)] md:static md:z-auto md:shadow-none"
+      >
+        <div class="hidden md:block">
+          <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
+            <div class="flex justify-between text-text-2">
+              <span>Sous-total</span>
+              <span class="tnum">{{ formatCents(store.subtotal()) }} €</span>
+            </div>
+          </div>
+          <div
+            class="flex items-baseline justify-between border-t border-dashed border-border py-3"
+          >
+            <span class="text-sm text-text-2">À encaisser</span>
+            <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
+              >{{ formatCents(store.subtotal()) }} €</span
+            >
           </div>
         </div>
-        <div class="flex items-baseline justify-between border-t border-dashed border-border py-3">
-          <span class="text-sm text-text-2">À encaisser</span>
-          <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
-            >{{ formatPrice(store.subtotal()) }} €</span
-          >
-        </div>
 
-        <div class="mt-2.5 grid grid-cols-2 gap-2">
-          <bfd-btn kind="secondary" size="lg" [icon]="icEuro" [disabled]="store.itemCount() === 0"
-            >Espèces</bfd-btn
+        <div class="flex items-center gap-3">
+          <div
+            class="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-blue-soft text-blue md:hidden"
           >
-          <bfd-btn kind="secondary" size="lg" [icon]="icQr" [disabled]="store.itemCount() === 0"
-            >Lydia</bfd-btn
-          >
-        </div>
-        <div class="mt-2">
+            <svg [lucideIcon]="icCart" [size]="19" aria-hidden="true"></svg>
+            @if (store.totalQuantity() > 0) {
+              <span
+                class="tnum absolute -right-1.5 -top-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white"
+                >{{ store.totalQuantity() }}</span
+              >
+            }
+          </div>
+          <div class="min-w-0 flex-1 md:hidden">
+            <div class="text-[11px] text-muted">À encaisser</div>
+            <div class="tnum text-[19px] font-semibold tracking-[-0.3px] text-text">
+              {{ formatCents(store.subtotal()) }} €
+            </div>
+          </div>
+
           <bfd-btn
             kind="primary"
             size="xl"
             [full]="true"
             [iconRight]="icArrowRight"
-            [disabled]="store.itemCount() === 0"
-            (clicked)="store.clearCart()"
+            [disabled]="store.itemCount() === 0 || store.checkingOut()"
+            (clicked)="openPayment()"
           >
-            Encaisser · {{ formatPrice(store.subtotal()) }} €
+            @if (store.checkingOut()) {
+              Encaissement…
+            } @else {
+              <span class="md:hidden">Encaisser</span>
+              <span class="hidden md:inline"
+                >Encaisser · {{ formatCents(store.subtotal()) }} €</span
+              >
+            }
           </bfd-btn>
         </div>
       </div>

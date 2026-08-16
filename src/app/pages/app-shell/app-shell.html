@@ -1,9 +1,27 @@
 <!-- w-full et non w-screen : 100vw inclut la barre de défilement verticale, donc
      toute page assez haute pour en afficher une déborde horizontalement de sa largeur. -->
 <div class="flex h-screen w-full overflow-hidden bg-bg text-text font-sans">
-  <bfd-sidebar />
+  <!-- Tiroir sous `md`, colonne fixe au-delà. -->
+  <div
+    [class]="
+      'fixed inset-y-0 left-0 z-40 transition-transform md:static md:translate-x-0 ' +
+      (navOpen() ? 'translate-x-0' : '-translate-x-full')
+    "
+  >
+    <bfd-sidebar (navigated)="navOpen.set(false)" />
+  </div>
+
+  @if (navOpen()) {
+    <button
+      type="button"
+      class="fixed inset-0 z-30 bg-black/50 md:hidden"
+      aria-label="Fermer la navigation"
+      (click)="navOpen.set(false)"
+    ></button>
+  }
+
   <main class="flex flex-1 min-w-0 flex-col overflow-hidden">
-    <bfd-topbar />
+    <bfd-topbar (menuClick)="navOpen.set(true)" />
     <!-- min-h-0 : un item de flex colonne a min-height:auto, donc il s'étire à la
          hauteur de son contenu et son overflow-auto ne se déclenche jamais. -->
     <div class="min-h-0 flex-1 overflow-auto">
@@ -11,8 +29,3 @@
     </div>
   </main>
 </div>
-
-<bfd-modal-container />
-<bfd-toast-container />
-<bfd-dropdown-container />
-<bfd-tooltip-container />

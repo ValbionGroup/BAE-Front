@@ -1,9 +1,19 @@
-<header class="flex items-center gap-4 px-6 py-3.5 border-b border-border-s bg-bg shrink-0">
+<header
+  class="flex items-center gap-3 px-4 py-3.5 border-b border-border-s bg-bg shrink-0 md:gap-4 md:px-6"
+>
+  <button
+    type="button"
+    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-text-2 hover:bg-surface-2 md:hidden"
+    aria-label="Ouvrir la navigation"
+    (click)="menuClick.emit()"
+  >
+    <svg lucideMenu [size]="20" aria-hidden="true"></svg>
+  </button>
   <div class="flex-1 min-w-0">
     @if (header(); as h) {
       @if (h.breadcrumb && h.breadcrumb.length) {
         <nav
-          class="flex items-center gap-1.5 text-[11px] text-muted mb-0.5"
+          class="hidden items-center gap-1.5 text-[11px] text-muted mb-0.5 md:flex"
           aria-label="Fil d'Ariane"
         >
           @for (crumb of h.breadcrumb; track $index; let last = $last; let first = $first) {
@@ -14,24 +24,29 @@
           }
         </nav>
       }
-      <div class="flex items-baseline gap-3">
-        <h1 class="text-[19px] font-semibold text-text m-0 -tracking-[0.3px]">{{ h.title }}</h1>
+      <div class="flex min-w-0 items-baseline gap-3">
+        <h1
+          class="m-0 truncate text-[17px] font-semibold -tracking-[0.3px] text-text md:text-[19px]"
+        >
+          {{ h.title }}
+        </h1>
         @if (h.subtitle) {
-          <span class="text-xs text-muted">{{ h.subtitle }}</span>
+          <!-- Masqué sous `md` : il entrait en collision avec les actions. -->
+          <span class="hidden truncate text-xs text-muted md:inline">{{ h.subtitle }}</span>
         }
       </div>
     }
   </div>
   @if (actions(); as tpl) {
-    <div class="flex items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2">
       <ng-container [ngTemplateOutlet]="tpl" />
     </div>
   }
-  <span class="w-px h-[22px] bg-border" aria-hidden="true"></span>
+  <span class="hidden w-px h-[22px] bg-border sm:block" aria-hidden="true"></span>
   <button
     type="button"
     (click)="theme.toggle()"
-    class="w-8 h-8 rounded-md border border-border bg-surface text-text-2 inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
+    class="hidden w-8 h-8 rounded-md border border-border bg-surface text-text-2 sm:inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
     [attr.aria-label]="themeTooltip()"
     [bfdTooltip]="themeTooltip()"
     bfdTooltipPlacement="bottom"

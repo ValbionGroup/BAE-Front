@@ -1,148 +1,497 @@
-<ng-template #actions>
-  <!-- Désactivés et non masqués : ils n'appellent rien de réel. Un bouton grisé
-       qui explique pourquoi vaut mieux qu'un bouton qui ne réagit pas au clic. -->
-  <bfd-btn
-    kind="ghost"
-    size="md"
-    [icon]="icBell"
-    [disabled]="true"
-    title="Aucun système de notification — voir §21 du handoff"
-    >Push équipe</bfd-btn
-  >
-  <bfd-btn
-    kind="secondary"
-    size="md"
-    [icon]="icScan"
-    [disabled]="true"
-    title="Aucun endpoint de scan de ticket"
-    >Scanner ticket</bfd-btn
-  >
-  <bfd-btn
-    kind="danger"
-    size="md"
-    [icon]="icLock"
-    [disabled]="currentEvent() === null"
-    [title]="
-      currentEvent() === null ? 'Aucune soirée à clôturer' : 'Déclarer ce qui n\'a pas servi'
-    "
-    (clicked)="closeNight()"
-    >Clôturer la soirée</bfd-btn
-  >
-</ng-template>
+<div class="flex h-screen flex-col overflow-hidden bg-bg">
+  <!-- TOPBAR — la page est hors app-shell : elle porte sa propre barre. -->
+  <header class="flex items-center gap-4 border-b border-border-s bg-sidebar px-6 py-3.5">
+    <bfd-logo />
 
-<div class="flex h-full flex-col">
-  <!-- Bandeau de service -->
-  <div class="flex items-center gap-4 border-b border-border-s bg-sidebar px-6 py-3.5">
     @if (currentEvent(); as event) {
       <div
-        class="inline-flex items-center gap-2 rounded-full bg-danger-soft px-3 py-1 text-[11.5px] font-semibold text-danger"
+        class="ml-3.5 inline-flex items-center gap-2 rounded-full bg-danger-soft px-3 py-1.5 text-[11.5px] font-semibold text-danger"
       >
         <span class="bae-pulse h-1.5 w-1.5 rounded-full bg-danger"></span>
         LIVE · Soirée en cours
       </div>
-
       <div class="text-[13px] text-text-2">{{ event.name }}</div>
-      @if (event.status === 'ongoing') {
-        <bfd-badge kind="ok" [dot]="true">ouverte</bfd-badge>
-      }
     } @else {
-      <div class="text-[13px] text-muted">Aucune soirée en cours aujourd'hui</div>
+      <div class="ml-3.5 text-[13px] text-muted">Aucune soirée en cours aujourd'hui</div>
     }
-    <span class="mono tnum ml-auto text-[11.5px] text-muted">
-      @if (startsAt(); as start) {
-        Service depuis {{ start }} ·
-      }
-      {{ wallClock() }}
-    </span>
-  </div>
 
-  <!-- Production -->
-  <div class="min-h-0 flex-1 overflow-y-auto">
-    <div class="mx-auto flex max-w-4xl flex-col gap-4 p-6">
-      @if (currentEvent() === null) {
-        <div class="rounded-lg border border-border-s bg-surface p-8 text-center">
-          <div class="text-base font-semibold text-text">Aucune soirée à piloter</div>
-          <p class="mt-1 text-[12.5px] text-muted">
-            Cette page pilote la soirée du jour, ou celle que le bureau a ouverte. Préparer une
-            soirée à venir se fait depuis la Logistique.
-          </p>
+    <div class="flex-1"></div>
+
+    <div class="flex gap-1.5">
+      <bfd-btn
+        kind="ghost"
+        size="md"
+        [icon]="icBell"
+        [disabled]="true"
+        title="Aucun système de notification"
+        >Push équipe</bfd-btn
+      >
+      <bfd-btn kind="ghost" size="md" (clicked)="leave()">Quitter</bfd-btn>
+      <bfd-btn
+        kind="danger"
+        size="md"
+        [icon]="icLock"
+        [disabled]="currentEvent() === null"
+        (clicked)="closeNight()"
+        >Clôturer la soirée</bfd-btn
+      >
+    </div>
+  </header>
+
+  @if (currentEvent() === null) {
+    <div class="flex flex-1 items-center justify-center p-6">
+      <div class="max-w-md rounded-lg border border-border-s bg-surface p-8 text-center">
+        <div class="text-base font-semibold text-text">Aucune soirée à piloter</div>
+        <p class="mt-1 text-[12.5px] text-muted">
+          Cette page pilote la soirée du jour, ou celle que le bureau a ouverte. Préparer une soirée
+          à venir se fait depuis la Logistique.
+        </p>
+        <div class="mt-3">
+          <bfd-btn kind="secondary" size="sm" (clicked)="leave()"
+            >Retour au tableau de bord</bfd-btn
+          >
         </div>
-      } @else {
-        <div class="flex items-baseline gap-3">
-          <h2 class="text-[15px] font-semibold tracking-[-0.2px] text-text">Production</h2>
-          <span class="text-[11.5px] text-muted">Prélève le stock en FEFO</span>
-          <span class="flex-1"></span>
-          @if (productionStatus() === 'loaded' && productionLines().length > 0) {
-            <span class="mono tnum text-[12px] text-text-2">
-              {{ totalProduced() }} / {{ totalPlanned() }} au total
+      </div>
+    </div>
+  } @else {
+    <!-- BANDEAU DE CHIFFRES -->
+    <div class="grid grid-cols-3 gap-px bg-border-s lg:grid-cols-6">
+      <div class="bg-surface px-4.5 py-3.5">
+        <div class="text-[10.5px] font-semibold uppercase tracking-[0.8px] text-muted">Heure</div>
+        <div class="tnum mt-1 text-[22px] font-semibold -tracking-[0.4px] text-text">
+          {{ wallClock() }}
+        </div>
+        <div class="mt-0.5 text-[10.5px] text-muted">
+          @if (startsAt(); as start) {
+            depuis {{ start }}
+          } @else {
+            horaire inconnu
+          }
+        </div>
+      </div>
+
+      <div class="bg-surface px-4.5 py-3.5">
+        <div class="text-[10.5px] font-semibold uppercase tracking-[0.8px] text-muted">
+          Encaissé live
+        </div>
+        <div class="tnum mt-1 text-[26px] font-semibold -tracking-[0.4px] text-ok">
+          {{ formatCents(cashedCents()) }} €
+        </div>
+        <div class="mt-0.5 text-[10.5px] text-muted">annulations exclues</div>
+      </div>
+
+      <div class="bg-surface px-4.5 py-3.5">
+        <div class="text-[10.5px] font-semibold uppercase tracking-[0.8px] text-muted">
+          Commandes
+        </div>
+        <div class="tnum mt-1 text-[22px] font-semibold -tracking-[0.4px] text-text">
+          {{ ordersCount() }}
+        </div>
+        <div class="mt-0.5 text-[10.5px] text-muted">
+          {{ orders.completedCount() }} servie{{ orders.completedCount() > 1 ? 's' : '' }}
+        </div>
+      </div>
+
+      <div class="bg-warn-soft/40 px-4.5 py-3.5">
+        <div class="text-[10.5px] font-semibold uppercase tracking-[0.8px] text-muted">
+          En cuisine
+        </div>
+        <div class="tnum mt-1 text-[22px] font-semibold -tracking-[0.4px] text-warn">
+          {{ orders.activeCount() + activePreOrderCount() }}
+        </div>
+        <div class="mt-0.5 text-[10.5px] text-muted">
+          {{ orders.pending().length }} attente · {{ orders.inProgress().length }} prépa ·
+          {{ orders.ready().length }} prêtes
+          @if (activePreOrderCount() > 0) {
+            · <span class="text-blue">{{ activePreOrderCount() }} précomm.</span>
+          }
+        </div>
+      </div>
+
+      <div class="bg-surface px-4.5 py-3.5">
+        <div class="text-[10.5px] font-semibold uppercase tracking-[0.8px] text-muted">
+          Temps moy.
+        </div>
+        <div class="tnum mt-1 text-[22px] font-semibold -tracking-[0.4px] text-text">
+          {{ averagePrepLabel() }}
+        </div>
+        <div class="mt-0.5 text-[10.5px] text-muted">
+          @if (averagePrepSeconds() === null) {
+            aucune commande servie
+          } @else {
+            de la prise à la remise
+          }
+        </div>
+      </div>
+
+      <div class="bg-surface px-4.5 py-3.5">
+        <div class="text-[10.5px] font-semibold uppercase tracking-[0.8px] text-muted">
+          Marge live
+        </div>
+        <div class="tnum mt-1 text-[22px] font-semibold -tracking-[0.4px] text-ok">
+          @if (marginPercent(); as margin) {
+            {{ margin }}%
+          } @else {
+            —
+          }
+        </div>
+        <div class="mt-0.5 text-[10.5px] text-muted">
+          @if (marginPercent() === null) {
+            coût de denrées inconnu
+          } @else {
+            vente moins denrées
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[1fr_360px]">
+      <!-- KITCHEN DISPLAY -->
+      <div class="grid min-h-0 grid-cols-1 overflow-hidden md:grid-cols-3">
+        @for (column of columns(); track column.key) {
+          <div
+            [class]="
+              'flex min-h-0 flex-col overflow-hidden border-r border-border-s ' + column.tint
+            "
+          >
+            <div [class]="'flex items-center gap-2.5 border-b-2 px-4 py-3 ' + column.headerBg">
+              <span [class]="'h-2 w-2 rounded-full ' + column.accent"></span>
+              <div class="min-w-0 flex-1">
+                <div class="text-[13px] font-semibold -tracking-[0.2px] text-text">
+                  {{ column.title }}
+                </div>
+                <div class="mt-px text-[10.5px] text-muted">{{ column.subtitle }}</div>
+              </div>
+              <span
+                [class]="
+                  'tnum inline-flex h-6 min-w-7 items-center justify-center rounded-sm px-2 text-xs font-bold text-white ' +
+                  column.accent
+                "
+                >{{ column.tickets.length }}</span
+              >
+            </div>
+
+            <div class="min-h-0 flex-1 overflow-y-auto">
+              <div class="flex flex-col gap-2.5 p-2.5">
+                @for (ticket of column.tickets; track ticket.key) {
+                  @let isPreOrder = ticket.kind === 'pre_order';
+                  <article
+                    [class]="
+                      'rounded-md border border-l-[3px] p-2.5 ' +
+                      ticketBorder(ticket) +
+                      (isPreOrder ? ' bg-blue-soft/20' : ' bg-surface')
+                    "
+                  >
+                    @if (isPreOrder) {
+                      <div
+                        class="mb-2 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-wider text-blue"
+                      >
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue"></span>
+                        Précommande · à préparer en priorité
+                      </div>
+                    }
+
+                    <div class="flex items-start gap-2.5">
+                      <div
+                        [class]="
+                          'min-w-12.5 rounded-sm border px-2 py-1 text-center ' +
+                          (isPreOrder ? 'border-blue/40 bg-blue-soft/40' : 'border-border bg-bg')
+                        "
+                      >
+                        <div class="mono text-[9px] tracking-wide text-muted opacity-75">N°</div>
+                        <div class="mono tnum text-lg font-bold leading-none text-text">
+                          {{ ticket.reference }}
+                        </div>
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="truncate text-[13px] font-semibold text-text">
+                          {{ ticket.clientName }}
+                        </div>
+                        @if (ticket.payment; as payment) {
+                          <div class="mono tnum mt-1 text-[11px] text-muted">{{ payment }}</div>
+                        }
+                      </div>
+                      <div class="text-right">
+                        @if (isPreOrder) {
+                          <!-- L'horloge d'une précommande est son heure de retrait,
+                               pas le temps écoulé : elle ne se mesure pas au service. -->
+                          <div class="mono tnum text-base font-bold leading-none text-blue">
+                            {{ pickupLabel(ticket) }}
+                          </div>
+                          <div class="mt-1 text-[9.5px] uppercase tracking-wider text-muted">
+                            retrait
+                          </div>
+                        } @else {
+                          <div
+                            [class]="
+                              'mono tnum text-base font-bold leading-none ' + timerColor(ticket)
+                            "
+                          >
+                            {{ elapsed(ticket) }}
+                          </div>
+                          <div class="mt-1 text-[9.5px] uppercase tracking-wider text-muted">
+                            {{ column.short }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <ul class="mt-2 flex flex-col gap-0.5">
+                      @for (line of ticket.lines; track line.productId) {
+                        <li class="flex items-center gap-2 py-1 text-[12.5px] text-text">
+                          <span
+                            class="mono tnum inline-flex h-4.5 min-w-6 items-center justify-center rounded-[3px] bg-surface-2 px-1.5 text-[11px] font-semibold text-text-2"
+                            >×{{ line.quantity }}</span
+                          >
+                          <span class="min-w-0 flex-1 truncate">{{ line.productName }}</span>
+                        </li>
+                      }
+                    </ul>
+
+                    @if (ticket.warning; as warning) {
+                      <p
+                        class="mt-2 rounded-sm bg-danger-soft/40 px-2 py-1 text-[11px] font-semibold text-danger"
+                        role="alert"
+                      >
+                        {{ warning }}
+                      </p>
+                    }
+
+                    <div class="mt-2.5 flex gap-1.5">
+                      @if (!isPreOrder && column.key === 'in_progress') {
+                        <bfd-btn kind="ghost" size="sm" (clicked)="cancelTicket(ticket)"
+                          >Annuler</bfd-btn
+                        >
+                      }
+                      <bfd-btn
+                        kind="primary"
+                        size="sm"
+                        [icon]="column.actionIcon"
+                        [full]="true"
+                        (clicked)="advanceTicket(ticket)"
+                      >
+                        {{ column.action }}
+                      </bfd-btn>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="px-1 py-8 text-center text-[11.5px] text-muted">Rien ici.</p>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- RAIL -->
+      <aside
+        class="flex min-h-0 flex-col overflow-y-auto border-l border-border-s bg-sidebar xl:overflow-y-auto"
+      >
+        <!-- Cadence -->
+        <div class="border-b border-border-s p-4">
+          <div class="mb-2.5 flex items-baseline">
+            <div class="flex-1">
+              <div class="text-[12px] font-semibold text-text">Cadence d'encaissement</div>
+              <div class="mt-px text-[10.5px] text-muted">Par 5 min, sur 90 min</div>
+            </div>
+            <span class="mono tnum text-[11px] font-semibold text-danger">
+              {{ ordersCount() }} cmd
             </span>
+          </div>
+          @if (cadence().length === 0) {
+            <p class="py-4 text-center text-[11px] text-muted">Aucune commande encore.</p>
+          } @else {
+            <div class="flex h-16 items-end gap-[3px]">
+              @for (bar of cadence(); track $index; let last = $last) {
+                <div
+                  [class]="'flex-1 rounded-t-[2px] ' + (last ? 'bg-danger' : 'bg-blue/60')"
+                  [style.height.%]="barHeight(bar)"
+                ></div>
+              }
+            </div>
           }
         </div>
 
-        @if (productionStatus() === 'loading' || productionStatus() === 'init') {
-          <div
-            class="rounded-lg border border-border-s bg-surface p-6 text-center text-[12px] text-muted"
-          >
-            Chargement de la production…
-          </div>
-        } @else if (productionStatus() === 'error') {
-          <div class="rounded-lg border border-border-s bg-surface p-6">
-            <div class="text-[13px] font-semibold text-text">Accès restreint</div>
-            <p class="mt-1 text-[12px] text-muted">
-              Lire et lancer une production demande les permissions
-              <span class="mono">stock:read</span> et <span class="mono">stock:update</span>.
-            </p>
-          </div>
-        } @else if (productionLines().length === 0) {
-          <div class="rounded-lg border border-border-s bg-surface p-6">
-            <div class="text-[13px] font-semibold text-text">Aucune recette au menu</div>
-            <p class="mt-1 text-[12px] text-muted">
-              Le menu d'une soirée se compose depuis la Logistique. Sans recette, il n'y a rien à
-              produire.
-            </p>
-          </div>
+        <!-- Flux transactions -->
+        <div class="flex items-center px-4 pb-1.5 pt-3.5">
+          <div class="flex-1 text-[12px] font-semibold text-text">Flux transactions</div>
+          <bfd-badge kind="ok" [dot]="true">Live</bfd-badge>
+        </div>
+        @if (recentOrders().length === 0) {
+          <p class="px-4 pb-3 text-[11px] text-muted">Rien encore encaissé.</p>
         } @else {
-          <div class="flex flex-col gap-2">
-            @for (line of productionLines(); track line.productId) {
-              <div class="rounded-lg border border-border-s bg-surface p-4">
-                <div class="flex items-baseline gap-3">
-                  <span class="min-w-0 flex-1 truncate text-[13.5px] font-medium text-text">
-                    {{ line.productName }}
-                  </span>
-                  <span class="mono tnum text-[13px] text-text-2">
-                    {{ line.producedQty }} / {{ line.plannedQty }}
-                  </span>
-                  <bfd-btn kind="secondary" size="sm" (clicked)="openRun(line)">Lancer</bfd-btn>
-                </div>
-                <div class="mt-2.5 flex items-center gap-3">
-                  <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-                    <div class="h-full bg-blue" [style.width.%]="progressPercent(line)"></div>
+          @for (order of recentOrders(); track order.id) {
+            <div
+              class="grid grid-cols-[40px_1fr_64px] items-center gap-2 border-b border-border-s px-4 py-1.5 text-[11.5px]"
+            >
+              <span class="mono text-[10.5px] text-muted">{{ timeOf(order.createdAt) }}</span>
+              <span class="min-w-0 truncate text-text-2">{{ summarize(order) }}</span>
+              <span class="mono tnum text-right font-medium text-text">
+                {{ formatCents(order.totalCents) }} €
+              </span>
+            </div>
+          }
+        }
+
+        <!-- Alertes -->
+        @if (alerts().length > 0) {
+          <div class="px-4 pb-1.5 pt-3.5">
+            <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">
+              Alertes
+            </div>
+          </div>
+          <div class="px-3">
+            @for (alert of alerts(); track alert.key) {
+              <div
+                [class]="
+                  'mb-1.5 rounded-md border border-border-s border-l-[3px] bg-surface p-2.5 ' +
+                  (alert.kind === 'danger' ? 'border-l-danger' : 'border-l-warn')
+                "
+                role="status"
+              >
+                <div class="flex items-start gap-2">
+                  <svg
+                    [lucideIcon]="alert.kind === 'danger' ? icAlert : icClock"
+                    [size]="13"
+                    [class]="'mt-0.5 ' + (alert.kind === 'danger' ? 'text-danger' : 'text-warn')"
+                    aria-hidden="true"
+                  ></svg>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[12px] font-medium text-text">{{ alert.title }}</div>
+                    <div class="mt-0.5 text-[10.5px] leading-relaxed text-muted">
+                      {{ alert.detail }}
+                    </div>
                   </div>
-                  @if (line.runs.length > 0) {
-                    <span class="text-[11px] text-muted">
-                      {{ line.runs.length }} lancement{{ line.runs.length > 1 ? 's' : '' }}
-                    </span>
-                  }
                 </div>
               </div>
             }
           </div>
         }
 
-        <!-- Ce que cette page ne fait pas, dit franchement plutôt que simulé. -->
-        <div class="rounded-lg border border-border-s bg-surface-2 p-4">
-          <div class="text-[12.5px] font-semibold text-text">Ce qui n'est pas encore ici</div>
-          <p class="mt-1 text-[11.5px] text-muted">
-            Le suivi des commandes en cuisine, les encaissements en direct et le stock critique
-            supposent la table <span class="mono">orders</span>, qui n'a pas encore de contrôleur.
-            Ces panneaux existaient en données inventées ; ils ont été retirés plutôt que laissés à
-            ressembler à des chiffres réels.
-          </p>
+        <!-- Production & stock -->
+        <div class="flex items-baseline px-4 pb-1.5 pt-3.5">
+          <div class="flex-1">
+            <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">
+              Production &amp; stock
+            </div>
+          </div>
+          @if (productionStatus() === 'loaded' && productionLines().length > 0) {
+            <span class="mono tnum text-[11px] text-text-2">
+              {{ totalProduced() }} / {{ totalPlanned() }}
+            </span>
+          }
+        </div>
+
+        <div class="px-3 pb-4">
+          @if (productionStatus() === 'loading' || productionStatus() === 'init') {
+            <p class="py-3 text-center text-[11px] text-muted">Chargement…</p>
+          } @else if (productionStatus() === 'error') {
+            <div class="rounded-md border border-border-s bg-surface p-3">
+              <div class="text-[12px] font-semibold text-text">Accès restreint</div>
+              <p class="mt-1 text-[10.5px] text-muted">
+                Demande <span class="mono">stock:read</span> et
+                <span class="mono">stock:update</span>.
+              </p>
+            </div>
+          } @else if (productionLines().length === 0) {
+            <div class="rounded-md border border-border-s bg-surface p-3">
+              <div class="text-[12px] font-semibold text-text">Aucune recette au menu</div>
+              <p class="mt-1 text-[10.5px] text-muted">Le menu se compose depuis la Logistique.</p>
+            </div>
+          } @else {
+            <div class="flex flex-col gap-1.5">
+              @for (row of productionRows(); track row.productId) {
+                <div
+                  [class]="
+                    'rounded-md border bg-surface p-2.5 ' +
+                    (row.level === 'out'
+                      ? 'border-danger'
+                      : row.level === 'low'
+                        ? 'border-warn'
+                        : 'border-border-s')
+                  "
+                >
+                  <div class="flex items-baseline gap-2">
+                    <span class="min-w-0 flex-1 truncate text-[12px] font-medium text-text">
+                      {{ row.productName }}
+                    </span>
+                    @if (row.level === 'out') {
+                      <span class="mono tnum text-[13px] font-semibold text-danger">rupture</span>
+                    } @else if (row.remainingQty !== null) {
+                      <span
+                        [class]="
+                          'mono tnum text-[15px] font-semibold ' +
+                          (row.level === 'low' ? 'text-warn' : 'text-text')
+                        "
+                        >{{ row.remainingQty }}</span
+                      >
+                    }
+                  </div>
+
+                  <div class="mt-1 flex items-baseline justify-between gap-2">
+                    <span class="mono tnum text-[10.5px] text-muted">
+                      {{ row.producedQty }} / {{ row.plannedQty }} préparés · {{ row.percent }}%
+                    </span>
+                    @if (row.autonomy; as autonomy) {
+                      <span
+                        [class]="
+                          'text-[10.5px] font-medium ' +
+                          (row.level === 'low' ? 'text-warn' : 'text-muted')
+                        "
+                        >autonomie {{ autonomy }}</span
+                      >
+                    } @else if (row.level === 'out') {
+                      <span class="text-[10.5px] text-danger">à relancer</span>
+                    } @else if (row.remainingQty === null) {
+                      <span class="text-[10.5px] text-muted">restant inconnu</span>
+                    } @else {
+                      <span class="text-[10.5px] text-muted">rythme non mesurable</span>
+                    }
+                  </div>
+
+                  <div class="mt-2 flex items-center gap-2">
+                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <div
+                        [class]="
+                          'h-full ' +
+                          (row.level === 'out'
+                            ? 'bg-danger'
+                            : row.level === 'low'
+                              ? 'bg-warn'
+                              : 'bg-blue')
+                        "
+                        [style.width.%]="row.percent"
+                      ></div>
+                    </div>
+                    @let urgent = row.level === 'out' || row.level === 'low';
+                    <bfd-btn
+                      [kind]="urgent ? 'primary' : row.beyondPlan ? 'ghost' : 'secondary'"
+                      size="sm"
+                      [title]="
+                        row.beyondPlan
+                          ? 'Plan atteint — produire au-delà consommera du stock non prévu.'
+                          : 'Lancer une fournée : prélève les lots et met à jour le vendable.'
+                      "
+                      (clicked)="openRun(row)"
+                      >{{ !urgent && row.beyondPlan ? 'Au-delà du plan' : 'Relancer' }}</bfd-btn
+                    >
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          @if (orders.loadError(); as message) {
+            <p class="mt-2.5 text-[11px] text-danger">{{ message }}</p>
+          }
+
           <div class="mt-2.5">
-            <bfd-btn kind="ghost" size="sm" (clicked)="openCaisse()">Ouvrir la caisse</bfd-btn>
+            <bfd-btn kind="ghost" size="sm" [full]="true" (clicked)="openCaisse()"
+              >Ouvrir la caisse</bfd-btn
+            >
           </div>
         </div>
-      }
+      </aside>
     </div>
-  </div>
+  }
 </div>
