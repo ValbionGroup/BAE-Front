@@ -1318,6 +1318,88 @@ PKCE `S256` et `state` vérifiés présents dans l'URL d'autorisation.
 
 ---
 
+## 0 septdecies. Les cinq pages factices — ✅ livré le 2026-08-16
+
+Branche **`feat/sso-keycloak`** des deux côtés. Back **421 tests**, front **638 tests**, typecheck
+et lint verts. **Ferme le §4 du présent document** et le §26 de `HANDOFF2.md`.
+
+| Page                 | Ce qui l'alimente désormais                                    |
+| -------------------- | -------------------------------------------------------------- |
+| `precommandes-admin` | `GET /events/:id/pre-orders` + `setStatus` + `collect`         |
+| `paiements`          | `GET /transactions?eventId=`                                   |
+| `notifications`      | **nouveau** `GET/PATCH /account/notifications`                 |
+| `soiree/bilan`       | **nouveau** `GET /events/:id/summary`                          |
+| `tickets`            | **nouveau domaine** : `tickets`, `ticket_messages`, 5 routes   |
+
+### La règle qui a gouverné les cinq : ne pas inventer ce qui n'existe pas
+
+Le §0 nonies l'avait établi (« des chiffres faux sur un écran de service sont pires qu'un écran
+vide ») ; ce lot l'applique systématiquement. **Ce qui a été retiré des maquettes, et pourquoi :**
+
+| Retiré                                  | Parce que                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------ |
+| Montants sur `precommandes-admin`       | `PreOrderTicket` n'en porte **aucun**, délibérément : payée un autre jour      |
+| Allergies, n° d'adhérent, « derniers retraits » | Aucune colonne, aucun endpoint                                          |
+| KPI « Lydia online » / « QR sur place »  | `transactions.type` est `cash \| lydia` — la distinction n'existe pas en base  |
+| KPI « CB » sur le bilan                  | Idem : absent de l'enum                                                        |
+| Marge nette, scores d'équipe             | Demanderaient le coût des denrées consommées, que rien ne calcule              |
+
+Chaque retrait est **expliqué à l'écran ou en commentaire**, jamais silencieux.
+
+### Le bilan expose deux montants, et c'est voulu
+
+`revenueCents` (ce que les commandes valaient) et `cashedByMethod` (ce qui a été encaissé) ne sont
+**pas censés être égaux**. L'écart est affiché comme une information — remise, précommande payée un
+autre jour, annulation après paiement — et non masqué en n'affichant qu'un seul des deux.
+
+⚠️ **Unités mélangées, à ne pas confondre** : `event_products.price` et donc `revenueCents` sont en
+**centimes** ; `transactions.amount` est en **euros**. Le front convertit, une seule fois.
+
+### Tickets — la propriété n'est pas une permission
+
+Ouvrir un ticket et suivre les siens n'exige **aucune permission** : c'est une question de
+propriété, exactement comme les notifications. `ticket:read` élargit la vue à tous les tickets (le
+« pôle web » du cahier des charges), `ticket:write` autorise le changement de statut.
+
+⚠️ **Le périmètre de `GET /tickets` est décidé par le serveur, jamais par un paramètre.** Offrir un
+`?scope=all` ouvrirait la boîte de réception de tout le monde à qui pense à l'essayer. Consulter le
+ticket d'un autre rend **404 et non 403** : distinguer les deux confirmerait son existence.
+
+**Les deux notifications du §15 sont enfin câblées** : `ticket.opened` vers les porteurs de
+`ticket:read` (dérivé des permissions, pas d'une liste d'adresses — un changement de rôle suffit à
+changer qui reçoit), `ticket.updated` vers l'auteur.
+
+⚠️ **`ticket.updated` n'a délibérément aucun `dedupeKey`.** Le dédoublonnage protège d'une
+*détection* répétée — un cron qui repasse. Un changement de statut est une *action humaine*, et un
+aller-retour `en cours → clos → en cours` doit notifier trois fois. Un test le garde. Y mettre une
+clé horodatée aurait été pire que rien : l'apparence du dédoublonnage sans l'effet.
+
+### Trois pièges rencontrés
+
+- ⚠️ **`tsc --build` ne typecheck pas les gabarits Angular.** Un `BadgeKind` invalide
+  (`'info'`, qui n'existe pas) passe le typecheck et n'échoue qu'au build du bundle, pendant
+  `pnpm test`. Le typecheck vert ne vaut pas pour les templates.
+- **`roles_permissions.permission_id`**, pas `permission` — la colonne porte le nom de la
+  permission, mais s'appelle `_id`.
+- **Un `refresh()` qui remet `loadError` à `null` efface le message qu'on vient de poser.** Sur
+  `tickets`, le refus de changement de statut ne s'affichait jamais : le message doit être posé
+  **après** la resynchronisation. Trouvé par un test, invisible autrement.
+
+### Ce qui reste
+
+- **`precommandes-admin`** : la borne de retrait n'est pas reliée au composant de scan partagé
+  (`POST /qr/verify` existe et sert déjà la caisse).
+- **`paiements`** : le rapprochement attend la refonte de `transactions` (§10.2 — `status` et
+  référence fournisseur).
+- **`soiree/bilan`** : la marge attend le rapprochement avec les prix fournisseurs de la liste de
+  courses.
+- **`notifications`** : seul le canal `in_app` est affiché ; les rappels partis par mail sont le
+  même fait sur un autre canal.
+- **Le fil d'activité de `home`** a sa source (`activity_events`) depuis le §0 quindecies et reste
+  à câbler.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.

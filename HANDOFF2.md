@@ -964,8 +964,8 @@ et les adhérents.
    `@adonisjs/ally` reste **inutilisé** : il n'implémente pas PKCE (§9.3), c'est `openid-client`
    qui porte le flux. Restent le CSRF (§9.7), le CORS (§9.8), la bascule du front sur le cookie
    (§9.10) et le front public lui-même (§4.3).
-6. **Les cinq pages factices restantes** (§4 du `HANDOFF.md`). `soiree/bilan` et
-   `precommandes-admin` d'abord : leur backend est **livré**, il ne manque que le câblage.
+6. ~~**Les cinq pages factices restantes**~~ — ✅ **fait le 2026-08-16** (§0 septdecies). Les cinq
+   sont branchées, et le §26 (tickets) est tranché : le domaine a été construit, pas externalisé.
 
 ### 33.3 Ce que le §30 disait et qu'il faut cesser de croire
 
