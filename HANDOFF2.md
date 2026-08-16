@@ -962,8 +962,9 @@ et les adhérents.
 5. ~~**§9 — SSO Keycloak.**~~ — ✅ **fait le 2026-08-16** (§0 sexdecies). Flux BFF complet avec
    PKCE, résolution en trois temps et gardes d'audience, vérifié contre un Keycloak réel.
    `@adonisjs/ally` reste **inutilisé** : il n'implémente pas PKCE (§9.3), c'est `openid-client`
-   qui porte le flux. Restent le CSRF (§9.7), le CORS (§9.8), la bascule du front sur le cookie
-   (§9.10) et le front public lui-même (§4.3).
+   qui porte le flux. ~~Restent le CSRF (§9.7), le CORS (§9.8), la bascule du front sur le
+   cookie (§9.10)~~ — ✅ **faits le 2026-08-16** (§0 octodecies). Reste le **front public**
+   lui-même (§4.3) et le logout global SSO.
 6. ~~**Les cinq pages factices restantes**~~ — ✅ **fait le 2026-08-16** (§0 septdecies). Les cinq
    sont branchées, et le §26 (tickets) est tranché : le domaine a été construit, pas externalisé.
 
