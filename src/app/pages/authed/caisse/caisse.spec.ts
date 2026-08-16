@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { Caisse } from './caisse';
 import { CaisseStore } from '#core/store/caisse.store';
+import { ModalService } from '#shared/components/modal/modal.service';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -302,6 +303,144 @@ describe(Caisse.name, () => {
 
       expect(store.itemCount()).toBe(1);
       expect(fixture.nativeElement.textContent).toContain('Encaissement refusé');
+    });
+  });
+
+  describe('raccourcis clavier', () => {
+    /** Ouvre une session avec deux articles au menu et un au panier. */
+    async function withSession() {
+      const store = TestBed.inject(CaisseStore);
+      http
+        .expectOne((r) => r.url.endsWith('/events'))
+        .flush([{ id: '7', name: 'Ce soir', date: atHour(0), status: 'ongoing' }]);
+      await settle();
+
+      store.startSession('7');
+      http
+        .expectOne((r) => r.url.includes('/events/7/products'))
+        .flush([
+          {
+            productId: 1,
+            name: 'Hot-dog',
+            isVegetarian: false,
+            quantity: 200,
+            price: 250,
+            unitCost: null,
+            totalCost: null,
+            category: 'Chaud',
+          },
+          {
+            productId: 2,
+            name: 'Biere',
+            isVegetarian: true,
+            quantity: 100,
+            price: 300,
+            unitCost: null,
+            totalCost: null,
+            category: 'Boisson',
+          },
+        ]);
+      http.expectOne((r) => r.method === 'GET' && r.url.includes('/events/7/orders')).flush([]);
+      http.expectOne((r) => r.url.includes('/events/7/sellable')).flush([]);
+      await settle();
+      http.expectOne((r) => r.url.includes('/events/7/pre-orders')).flush([]);
+      await settle();
+      return store;
+    }
+
+    const press = (key: string, target?: HTMLElement) => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      (target ?? document.body).dispatchEvent(event);
+      return event;
+    };
+
+    it('F1 fait defiler les categories et revient a Tous', async () => {
+      const store = await withSession();
+      expect(store.activeCategory()).toBeNull();
+
+      press('F1');
+      expect(store.activeCategory()).toBe('Chaud');
+      press('F1');
+      expect(store.activeCategory()).toBe('Boisson');
+      press('F1');
+      expect(store.activeCategory()).toBeNull();
+    });
+
+    it('+ et - ajustent la ligne active', async () => {
+      const store = await withSession();
+      store.addToCart(store.menu()[0]);
+
+      press('+');
+      expect(store.cart()[0].quantity).toBe(2);
+      press('-');
+      expect(store.cart()[0].quantity).toBe(1);
+      press('-');
+      expect(store.itemCount()).toBe(0);
+    });
+
+    it('+ vise le dernier article ajoute, pas le premier', async () => {
+      const store = await withSession();
+      store.addToCart(store.menu()[0]);
+      store.addToCart(store.menu()[1]);
+
+      press('+');
+      expect(store.cart()[0].quantity).toBe(1);
+      expect(store.cart()[1].quantity).toBe(2);
+    });
+
+    it('Entree encaisse', async () => {
+      const store = await withSession();
+      store.addToCart(store.menu()[0]);
+
+      press('Enter');
+      // Le choix du moyen de paiement precede l'encaissement : c'est la modale
+      // qui s'ouvre, pas la requete.
+      expect(TestBed.inject(ModalService).modals().length).toBe(1);
+      http.expectNone((r) => r.method === 'POST');
+    });
+
+    /**
+     * Les raccourcis ecoutent `document` : sans ces gardes, taper « + » dans la
+     * recherche d'acheteur ajouterait un article au ticket.
+     */
+    it('se tait pendant une saisie', async () => {
+      const store = await withSession();
+      store.addToCart(store.menu()[0]);
+
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      press('+', input);
+      expect(store.cart()[0].quantity).toBe(1);
+      input.remove();
+    });
+
+    it('se tait quand une modale est ouverte', async () => {
+      const store = await withSession();
+      store.addToCart(store.menu()[0]);
+      TestBed.inject(ModalService).open({ type: 'info', title: 'x', message: 'y' });
+
+      press('+');
+      expect(store.cart()[0].quantity).toBe(1);
+    });
+
+    it('laisse Entree au bouton deja cible', async () => {
+      const store = await withSession();
+      store.addToCart(store.menu()[0]);
+
+      const button = document.createElement('button');
+      document.body.appendChild(button);
+      press('Enter', button);
+      expect(TestBed.inject(ModalService).modals().length).toBe(0);
+      button.remove();
+    });
+
+    it('ne fait rien sans session ouverte', () => {
+      const store = TestBed.inject(CaisseStore);
+      http.expectOne((r) => r.url.endsWith('/events')).flush([]);
+
+      const event = press('F1');
+      expect(event.defaultPrevented).toBe(false);
+      expect(store.activeCategory()).toBeNull();
     });
   });
 });

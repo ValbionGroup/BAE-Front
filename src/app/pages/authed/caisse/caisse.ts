@@ -45,6 +45,7 @@ import type { Buyer } from '#core/services/buyers/buyers-service';
   imports: [Btn, Badge, Kbd, LucideDynamicIcon, BuyerPicker, CheckoutFeedback],
   templateUrl: './caisse.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown)': 'onKey($event)' },
 })
 export class Caisse implements OnInit {
   protected readonly store = inject(CaisseStore);
@@ -137,6 +138,61 @@ export class Caisse implements OnInit {
 
   protected addItem(item: MenuItem): void {
     this.store.addToCart(item);
+  }
+
+  /**
+   * Les raccourcis annoncés en pied de page.
+   *
+   * ⚠️ Ils sont posés sur `document`, donc ils entendent tout. Ce que la garde
+   * écarte : la frappe dans un champ (la recherche d'acheteur), une modale
+   * ouverte (le paiement a ses propres touches), et `Entrée` sur un bouton
+   * déjà ciblé — sans quoi la validation native et ce gestionnaire ouvriraient
+   * deux modales de paiement.
+   */
+  protected onKey(event: KeyboardEvent): void {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (this.modalService.modals().length > 0 || this.pickingBuyer()) return;
+    if (!this.store.sessionActive()) return;
+
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+      return;
+    }
+
+    switch (event.key) {
+      case 'F1':
+        event.preventDefault();
+        this.store.nextCategory();
+        return;
+
+      case '+':
+      case '=': // même touche sans majuscule sur un clavier français
+        event.preventDefault();
+        this.adjustActive(1);
+        return;
+
+      case '-':
+        event.preventDefault();
+        this.adjustActive(-1);
+        return;
+
+      case 'Enter':
+        if (tag === 'BUTTON' || tag === 'A') return;
+        event.preventDefault();
+        this.openPayment();
+        return;
+
+      default:
+        return;
+    }
+  }
+
+  private adjustActive(delta: number): void {
+    const line = this.store.activeLine();
+    if (!line) return;
+    if (delta > 0) this.store.incrementItem(line.productId);
+    else this.store.decrementItem(line.productId);
   }
 
   /** Le stock est bas mais pas épuisé — la carte porte alors le compte restant. */

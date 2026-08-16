@@ -22,6 +22,14 @@ export interface CaisseCartItem {
  * que de disparaître de la grille : `products` n'a pas de catégorie propre, et
  * une recette sans ingrédient catégorisé est un cas normal, pas une anomalie.
  */
+function activeAfter(
+  cart: readonly CaisseCartItem[],
+  touched: number,
+): { activeProductId: number | null } {
+  if (cart.some((line) => line.productId === touched)) return { activeProductId: touched };
+  return { activeProductId: cart.at(-1)?.productId ?? null };
+}
+
 function categoryLabel(item: MenuItem): string {
   return item.category ?? 'Sans catégorie';
 }
@@ -36,6 +44,8 @@ interface CaisseState {
   readonly checkoutError: string | null;
   /** Dernière commande encaissée — alimente la confirmation à l'écran. */
   readonly lastOrder: Order | null;
+  /** Ligne du panier que `+` / `−` ajustent. */
+  readonly activeProductId: number | null;
 }
 
 const initialState: CaisseState = {
@@ -46,6 +56,7 @@ const initialState: CaisseState = {
   checkingOut: false,
   checkoutError: null,
   lastOrder: null,
+  activeProductId: null,
 };
 
 export const CaisseStore = signalStore(
@@ -53,7 +64,7 @@ export const CaisseStore = signalStore(
   withState<CaisseState>(initialState),
   withComputed(
     (
-      { sessionEventId, cart, activeCategory },
+      { sessionEventId, cart, activeCategory, activeProductId },
       eventsStore = inject(EventsStore),
       eventsService = inject(EventsService),
       ordersStore = inject(OrdersStore),
@@ -104,6 +115,17 @@ export const CaisseStore = signalStore(
         return byId;
       });
 
+      /**
+       * La ligne que `+` / `−` ajustent, repliée sur la dernière du panier :
+       * juste après un encaissement l'actif est nul, et le raccourci doit
+       * quand même mordre sur quelque chose.
+       */
+      const activeLine = computed<CaisseCartItem | null>(() => {
+        const lines = cart();
+        const id = activeProductId();
+        return lines.find((line) => line.productId === id) ?? lines.at(-1) ?? null;
+      });
+
       const subtotal = computed(() =>
         cart().reduce((sum, line) => sum + line.price * line.quantity, 0),
       );
@@ -130,6 +152,7 @@ export const CaisseStore = signalStore(
         menu,
         categories,
         visibleItems,
+        activeLine,
         stockByProduct,
         subtotal,
         totalQuantity,
@@ -174,6 +197,7 @@ export const CaisseStore = signalStore(
           activeCategory: null,
           selectedBuyer: null,
           checkoutError: null,
+          activeProductId: null,
         });
       },
       /** Referme la confirmation (ou le refus) affichée après un encaissement. */
@@ -185,6 +209,18 @@ export const CaisseStore = signalStore(
       },
       setActiveCategory(category: string | null): void {
         patchState(store, { activeCategory: category });
+      },
+      focusLine(productId: number): void {
+        patchState(store, { activeProductId: productId });
+      },
+
+      /** `F1` : fait défiler les onglets, « Tous » compris. */
+      nextCategory(): void {
+        const categories = store.categories();
+        if (categories.length === 0) return;
+
+        const index = categories.indexOf(store.activeCategory() ?? '');
+        patchState(store, { activeCategory: categories[index + 1] ?? null });
       },
       /**
        * Ce que le panier peut encore prendre de cette recette.
@@ -210,6 +246,7 @@ export const CaisseStore = signalStore(
               .map((line) =>
                 line.productId === item.productId ? { ...line, quantity: line.quantity + 1 } : line,
               ),
+            activeProductId: item.productId,
           });
           return;
         }
@@ -218,6 +255,7 @@ export const CaisseStore = signalStore(
             ...store.cart(),
             { productId: item.productId, name: item.name, price: item.price, quantity: 1 },
           ],
+          activeProductId: item.productId,
         });
       },
       incrementItem(productId: number): void {
@@ -228,25 +266,27 @@ export const CaisseStore = signalStore(
             .map((line) =>
               line.productId === productId ? { ...line, quantity: line.quantity + 1 } : line,
             ),
+          activeProductId: productId,
         });
       },
       decrementItem(productId: number): void {
-        patchState(store, {
-          cart: store
-            .cart()
-            .map((line) =>
-              line.productId === productId ? { ...line, quantity: line.quantity - 1 } : line,
-            )
-            .filter((line) => line.quantity > 0),
-        });
+        const cart = store
+          .cart()
+          .map((line) =>
+            line.productId === productId ? { ...line, quantity: line.quantity - 1 } : line,
+          )
+          .filter((line) => line.quantity > 0);
+
+        // Descendre à zéro retire la ligne : l'actif se reporte sur la
+        // dernière restante, sinon `−` viserait une ligne disparue.
+        patchState(store, { cart, ...activeAfter(cart, productId) });
       },
       removeFromCart(productId: number): void {
-        patchState(store, {
-          cart: store.cart().filter((line) => line.productId !== productId),
-        });
+        const cart = store.cart().filter((line) => line.productId !== productId);
+        patchState(store, { cart, ...activeAfter(cart, productId) });
       },
       clearCart(): void {
-        patchState(store, { cart: [] });
+        patchState(store, { cart: [], activeProductId: null });
       },
 
       /**
