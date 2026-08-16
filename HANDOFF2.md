@@ -732,7 +732,18 @@ déblocage/effort de tout le dossier.
 
 ---
 
-## 31. Génération de PDF — la brique absente derrière « Fiche logistique »
+## 31. Génération de PDF — ✅ RÉALISÉ le 2026-08-12
+
+> **Cette section est faite** — voir le §0 duodecies de `HANDOFF.md`. Conservée comme trace du
+> raisonnement, pas comme travail restant. Ne la réimplémentez pas.
+>
+> **La décision ouverte plus bas a été tranchée : côté serveur, avec Puppeteer.** Sept documents
+> sont livrés, pas trois — la liste de courses, la fiche recette, le plan de production, la feuille
+> de clôture, l'inventaire par lots, les étiquettes de lot et la feuille d'affectation.
+>
+> Deux contraintes découvertes à l'implémentation, absentes de l'analyse ci-dessous :
+> `CaseConverterMiddleware` corrompait les flux binaires en les traitant comme du JSON, et l'image
+> Docker doit installer un Chromium natif (celui que télécharge Puppeteer ne tourne pas sur Alpine).
 
 Ajouté le 2026-08-10. Trois boutons de l'interface promettent un document téléchargeable et **aucun
 n'a de quoi le produire** : rien dans le dépôt front ni dans `BAE-Back/package.json` ne génère de
@@ -779,7 +790,16 @@ ce qu'ils font.
 
 ---
 
-## 32. `soiree/live` doit devenir réelle — et elle portera la production
+## 32. `soiree/live` doit devenir réelle — ✅ RÉALISÉ le 2026-08-16
+
+> **Cette section est faite** — voir les §0 nonies (production, clôture) et §0 terdecies (file
+> cuisine, kitchen display) de `HANDOFF.md`. Conservée comme trace du raisonnement.
+>
+> Le « vrai manque » identifié plus bas — _aucun endpoint ne dit ce qui a été prélevé, par denrée_ —
+> a été comblé par le lot `orders` : `OrdersController` écrit les lignes, et la file cuisine est
+> diffusée en **SSE via `@adonisjs/transmit`**, et non par le websocket qu'anticipait le §4 du
+> `HANDOFF.md`. Les deux autres pages qui attendaient ce déblocage sont `soiree/bilan` et
+> `precommandes-admin` : elles l'ont désormais, et ne sont plus bloquées que par leur câblage front.
 
 Ajouté le 2026-08-11, pendant le lot **production / FEFO** (§18.1). Spec :
 `docs/superpowers/specs/2026-08-11-production-fefo-design.md`.
@@ -889,3 +909,52 @@ Tout ce qui suit ne dépend d'aucun travail préalable — les endpoints existen
 (assemblage)** » sur l'accueil) consomme les mêmes données. Le lot qui rend `soiree/live` réelle
 devrait les regarder ensemble plutôt que de refaire trois fois la dérivation « quelle soirée est en
 cours ».
+
+---
+
+## 33. Ordre au 2026-08-16 — amendement du §30, qui amendait le §12
+
+Écrit après le merge `orders` × `adhérents` (§0 quaterdecies de `HANDOFF.md`). **Les §12 et §30
+restent valables pour ce qu'ils expliquent ; c'est leur liste qui a bougé.** Trois lots majeurs ont
+été livrés depuis le §30 sans que celui-ci soit mis à jour : les documents imprimés, les commandes
+et les adhérents.
+
+### 33.1 Ce qui est clos depuis le §30
+
+| Point du §30                       | État                                                                    |
+| ---------------------------------- | ----------------------------------------------------------------------- |
+| §30.2 — lot « chaîne alimentaire » | ✅ intégralement livré (§0 septies, octies, nonies)                     |
+| §31 — génération de PDF            | ✅ livré, 7 documents (§0 duodecies)                                    |
+| §32 — `soiree/live` réelle         | ✅ livré (§0 nonies + §0 terdecies)                                     |
+| §3.4 — les 4 domaines sans route   | ✅ tous routés (§0 terdecies pour les deux derniers)                    |
+| §20.1 — affectation verrouillée    | ✅ livré (§0 decies)                                                    |
+| §26 — tickets : l'arbitrage        | toujours ouvert, mais **après le §15** — un helpdesk sans mail est muet |
+
+### 33.2 L'ordre en vigueur
+
+1. ~~**Réparer le merge `orders` × `adhérents`**~~ — ✅ fait (§0 quaterdecies), back à 371 tests.
+2. **Merger la PR back #27.** Elle est ouverte, et le front `main` appelle déjà `/clients` : tant
+   qu'elle ne l'est pas, la page `adhérents` est en 404 contre le back déployé. **C'est la seule
+   tâche du dossier qui répare une casse existante.**
+3. **Les quatre demandes externes du §30.1** — inchangées, et toujours non parties. EirbWare,
+   Scan'Eirb puis Lydia, le SMTP, les questions du §28. Seul lot dont le délai ne dépend pas de nous.
+4. **§15 — mailer et tâches planifiées.** Vérifié le 2026-08-16 : `@adonisjs/mail` n'est **pas**
+   dans les dépendances du back, alors que l'alias `#mails/*` est déjà déclaré dans `package.json`.
+   Aucun ordonnanceur non plus. Cinq exigences derrière, plus l'expiration des transactions (§10.3),
+   plus le §19 et le §26.
+5. **§9 — SSO Keycloak.** `@adonisjs/ally` **est** installé, mais aucun fichier du dépôt ne
+   mentionne `keycloak` ni `oidc` : la brique est disponible, la configuration reste à écrire.
+   Conditionne toute la zone publique (§4.4).
+6. **Les cinq pages factices restantes** (§4 du `HANDOFF.md`). `soiree/bilan` et
+   `precommandes-admin` d'abord : leur backend est **livré**, il ne manque que le câblage.
+
+### 33.3 Ce que le §30 disait et qu'il faut cesser de croire
+
+- ⚠️ **« `event_products` est le maillon dont dépendent le plus de choses »** (§30.4) — c'était
+  vrai, ça ne l'est plus : le contrôleur existe depuis le §0 septies. Le maillon d'aujourd'hui est
+  le **mailer** (§15), dont dépendent les notifications, les tickets, le §19 et l'expiration des
+  transactions.
+- ⚠️ **`soiree/live` attend `orders`** — non, elle l'a. Et la diffusion se fait en **SSE
+  (`@adonisjs/transmit`)**, pas par le websocket que le §4 du `HANDOFF.md` annonçait.
+- ⚠️ **Lydia** — `paymentMethod` accepte `'lydia'` depuis le §0 terdecies, mais **rien n'encaisse**.
+  C'est un libellé enregistré. Tout le §10 reste ouvert.

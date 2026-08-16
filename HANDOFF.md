@@ -28,6 +28,22 @@ Après les lots rôles × permissions et écritures Équipe (§0 bis, §0 ter) :
 > sur une affectation manuelle, thème préservé à la déconnexion, première vérification à l'écran
 > outillée (Puppeteer) depuis six lots. Voir le §0 decies.
 
+## 👉 Par où commencer, au 2026-08-16
+
+**L'ordre à jour est le §33 de `HANDOFF2.md`.** Les §12 (ici) et §30 (là-bas) restent utiles pour
+*pourquoi* les choses s'enchaînent, mais leurs listes sont dépassées : trois lots majeurs — documents
+imprimés, commandes/caisse, adhérents — ont été livrés depuis leur rédaction.
+
+**Le document a pris deux lots de retard sur le code, et ça s'est vu.** Les entrées §0 duodecies et
+§0 terdecies ont été écrites **rétroactivement** le 2026-08-16, hors ordre chronologique. Règle qui
+en découle : une section « ✅ RÉALISÉ » ne se croit pas sur parole, elle se vérifie contre le code —
+c'est comme ça qu'on a découvert que le §31 (PDF) décrivait comme « brique absente » sept routes
+livrées depuis quatre jours.
+
+⚠️ **État des branches, à vérifier avant tout geste :** front `main` porte `orders` **et**
+`adhérents` ; back `main` ne porte qu'`orders`, la **PR #27 (`feat/adherents`) est encore ouverte**.
+La page `adhérents` du front appelle donc des endpoints que le back déployé n'expose pas.
+
 ---
 
 ## 0. Déjà réalisé — ne pas refaire
@@ -1010,6 +1026,139 @@ du §4.4. ⚠️ **Ne pas rejouer** : `feat/orders` n'était pas mergée au mome
 
 ---
 
+## 0 duodecies. Documents imprimés — sept PDF — ✅ livré le 2026-08-12
+
+> ⚠️ **Entrée rétroactive, écrite le 2026-08-16.** Ce lot avait été livré et mergé
+> (back `feat: add pdfs (#25)`) sans qu'aucune section ne l'enregistre. Il est donc consigné ici,
+> **hors ordre chronologique** — le §0 undecies qui le précède est postérieur de quatre jours.
+> Renuméroter les sections casserait toutes les références croisées du document.
+
+Spec : `docs/superpowers/specs/2026-08-12-documents-imprimes-design.md` ·
+Plan : `docs/superpowers/plans/2026-08-12-documents-imprimes.md`.
+
+**Ce lot clôt le §31 de `HANDOFF2.md`**, qui décrivait la génération de PDF comme « la brique
+absente » et laissait ouverte la décision client/serveur. **La décision a été prise : côté
+serveur, Puppeteer.** Sept routes existent, toutes suffixées `/pdf` :
+
+| Document                     | Route                                     |
+| ---------------------------- | ----------------------------------------- |
+| Liste de courses             | `GET /events/:id/shopping-list/pdf`       |
+| Fiche recette                | `GET /products/:id/recipe/pdf`            |
+| Plan de production           | `GET /events/:id/production-plan/pdf`     |
+| Feuille de clôture           | `GET /events/:id/production-returns/pdf`  |
+| Inventaire de stock par lots | `GET /stock-batches/inventory/pdf`        |
+| Étiquettes de lot            | `GET /stock-batches/labels/pdf`           |
+| Feuille d'affectation        | `GET /events/:id/assignments/pdf`         |
+
+Côté front, le service partagé est `core/services/print/`.
+
+### Trois pièges que ce lot a coûtés, et qui resserviront
+
+- ⚠️ **`CaseConverterMiddleware` corrompait les PDF** (`fb96702`). Le middleware convertit la
+  **sortie** en `snake_case` et traitait le flux binaire comme du JSON. Toute route qui renverra
+  autre chose que du JSON (fichier, CSV, image) devra être exclue de la même manière — c'est le
+  premier endpoint non-JSON du dépôt, et ce ne sera pas le dernier.
+- **Docker : Chromium n'est pas fourni** (`76cb8fd`). Puppeteer télécharge un Chromium qui ne
+  tourne pas sur Alpine ; l'image installe désormais le Chromium natif et pointe Puppeteer dessus.
+  À ne pas défaire en touchant au `Dockerfile`.
+- **La CI a demandé trois correctifs** (`6f6ec72`, `da93bec`) : les tests Puppeteer sont plus
+  fragiles en CI qu'en local.
+
+---
+
+## 0 terdecies. Commandes, caisse, QR et précommandes — ✅ livré le 2026-08-16
+
+> ⚠️ **Entrée rétroactive, écrite le 2026-08-16**, après coup : le lot le plus gros du dossier a
+> été mergé des deux côtés sans qu'aucune section ne le décrive.
+
+Back : PR `feat: orders (#26)`, **16 commits**. Front : PR `feat: orders (#9)`, **20 commits**.
+Les deux sont sur `main`. **Ce lot ferme le §3.4 (« Commandes / caisse » et « Précommandes »), le
+§32 de `HANDOFF2.md`, et la majeure partie du §11 (QR émis par le BAE).**
+
+| Sujet                                                       | État        | Où                                                       |
+| ----------------------------------------------------------- | ----------- | -------------------------------------------------------- |
+| `OrdersController` + `PreOrdersController`                  | ✅ **fait** | `/events/:id/orders`, `/events/:id/pre-orders`           |
+| Cinq statuts de cuisine (`pending → in_progress → ready →`) | ✅ **fait** | migration `1786818947391`, transitions gardées serveur   |
+| `orders.client_id` — l'acheteur, distinct de `member_id`    | ✅ **fait** | FK vers **`users`**, pas `members`                       |
+| Encaissement espèces et rendu de monnaie                    | ✅ **fait** | `order_service.ts`, prix relus serveur                   |
+| Permissions `order:read` / `order:write` / `order:delete`   | ✅ **fait** | annuler porte sur de l'argent → permission distincte     |
+| Diffusion SSE de la file cuisine                            | ✅ **fait** | `@adonisjs/transmit`, `start/routes/realtime.ts`         |
+| QR d'identité, fast pass et précommande — les trois scannés | ✅ **fait** | `QrsController`, `POST /qr/verify`                       |
+| Recherche d'acheteur au comptoir (chemin dégradé)           | ✅ **fait** | `GET /buyers`                                            |
+| Précommandes : suivi cuisine, heure de retrait, remise      | ✅ **fait** | `POST /pre-orders/:id/collect`                           |
+| Refus de vendre au-delà du produit disponible               | ✅ **fait** | `e8eff39`                                                |
+| Caisse, `soiree/live`, kitchen display, vue mobile          | ✅ **fait** | front, y compris raccourcis clavier F1 / +/− / Entrée    |
+
+### Trois règles de conception à ne pas perdre
+
+1. **Le panier n'envoie que des identifiants et des quantités — aucun prix, aucun total.** Le
+   montant est relu de `event_products.price` côté serveur. Un total envoyé par le client serait
+   falsifiable, et il s'agit d'argent (`app/validators/order.ts`).
+2. **`client_id` et `member_id` répondent à deux questions distinctes** et coexistent :
+   *qui achète* (un `user`, membre ou client) et *quel membre a pris la commande*.
+3. **`__transmit/events` reste non gardé, délibérément** : `EventSource` ne peut pas porter
+   d'en-tête, donc pas de `Bearer`. Le flux nu ne transporte rien sans abonnement, et ce sont
+   `subscribe` / `unsubscribe` — de vraies requêtes HTTP — qui filtrent.
+
+### Ce que ce lot n'a **pas** fait, malgré les apparences
+
+- ⚠️ **Lydia n'encaisse toujours rien.** `paymentMethod` accepte `'lydia'` parce que l'enum de
+  `transactions.type` le permet — mais c'est un **libellé enregistré**, pas un encaissement. Tout
+  le §10 reste ouvert, et il dépend toujours de la réponse au message §30.1.
+- La récupération de la maquette supprimée de `soiree/live` (décrite au §0 nonies) a bien eu lieu,
+  mais avec les vrais types de l'API, comme prescrit.
+
+---
+
+## 0 quaterdecies. Merge `orders` × `adhérents` et remise au vert — 2026-08-16
+
+Branche back `feat/adherents` (PR #27, **ouverte**), qui a reçu `main` — donc `orders` — par
+`a5043e2`. **Le front, lui, a déjà les deux lots sur `main`** : la page `adhérents` appelle donc
+`/clients` et `/subscriptions`, que le back `main` **n'expose pas encore**. Tant que la PR #27
+n'est pas mergée, cette page est en 404 contre le back déployé.
+
+Le merge n'a produit **aucun conflit textuel** — les deux lots touchent des fichiers différents —
+mais **quatre défauts**, dont deux étaient de vraies régressions. Back remis à **371 tests verts**,
+typecheck et lint propres ; front vérifié **629 tests**, typecheck vert (il n'était pas touché).
+
+| # | Défaut                                                                   | Régression du merge ? | Correctif                          |
+| - | ------------------------------------------------------------------------ | --------------------- | ---------------------------------- |
+| A | 15 tests appelaient `MemberFactory.merge({ firstName })`                 | ✅ oui                | idiome `.with('user', 1, …)`       |
+| B | `buyer_service` lisait `members.first_name` → **500** sur tout QR        | ✅ oui                | requête sur `users`                |
+| C | `expiring_soon` asserté à `1` en absolu                                  | ❌ non                | assertion relative à la liste      |
+| D | regex `\d{4}` sur le numéro d'adhérent                                   | ❌ non                | `\d{4,}`                           |
+
+### B n'était pas un dommage de merge, mais un bug révélé par lui
+
+`resolveBuyerNames` reçoit des ids venant d'`orders.client_id` et de `pre_orders.user_id`, qui
+référencent **tous deux `users`**. Interroger `members` ne fonctionnait que par le partage de clé
+primaire — et ne nommait donc que les acheteurs qui se trouvaient être membres du BAE. **Un client,
+c'est-à-dire exactement la personne qu'on identifie au comptoir, retombait toujours sur
+`Client #id`.** La colonne supprimée était le symptôme ; le mauvais choix de table était la
+maladie. Le fichier portait d'ailleurs le commentaire annonçant sa propre correction.
+
+Les colonnes étant **nullables** sur `users` (un compte créé par inscription directe n'a pas de
+nom), l'assemblage passe par un `joinName` local qui reproduit `User.fullName` : concaténer sans
+filtrer rendait « null null ».
+
+### C et D : deux tests qui mesuraient la base de dev, pas la règle
+
+Ils **échouaient déjà avant le merge**, sur la base de dev d'aujourd'hui — ce sont des assertions
+absolues sur une base **partagée et peuplée** :
+
+- `expiring_soon` était asserté à `1` alors que la base porte **30** cotisations à moins de 30
+  jours de l'échéance. Les quatre assertions voisines comparaient le résumé à la liste, donc
+  passaient ; seule celle-là citait un nombre.
+- ⚠️ **`padStart(4, '0')` est une largeur *minimale*, pas un format fixe.** La séquence
+  `users.id` est à **15 126** : le numéro rendu est `EXT-2025-15521`, et `\d{4}` ne matche plus.
+  **Le code était juste, le test faux** — et il aurait cassé en production au 10 000ᵉ compte.
+
+C'est la troisième fois que la base de dev partagée produit de faux échecs (voir §0 undecies,
+§0 decies). **Une assertion absolue sur un compte global est un bug de test dans ce dépôt**, pas
+une exigence.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.
@@ -1140,18 +1289,23 @@ passwordConfirmation }`. Vérifier l'ancien via `User.verifyCredentials`, puis p
   de l'école** et n'est pas remplacée par le SSO Keycloak — les deux clés cohabitent, avec des
   rôles distincts (§9.4).
 
-### 3.4 Domaines sans aucune route
+### 3.4 Domaines sans aucune route — ✅ **les quatre sont routés**
 
-Tables et migrations présentes, aucun contrôleur :
+> **Cette section est close** (2026-08-16). Conservée comme trace, pas comme travail restant.
 
-| Domaine              | Tables                                            | Pages front concernées                        |
-| -------------------- | ------------------------------------------------- | --------------------------------------------- |
-| Commandes / caisse   | `orders`, `order_products`                        | `caisse`, `caisse/cloture`, `soiree/live`     |
-| Précommandes         | `pre_orders`, `pre_order_items`                   | `precommandes` (public), `precommandes-admin` |
-| Cotisations          | `subscriptions` (+ `fast_passes`, **déjà routé**) | `adherents`, page publique de paiement        |
-| Produits d'événement | `event_products` (`quantity`, `price`)            | `soiree/bilan`, `analyse`                     |
+| Domaine              | Tables                                  | Contrôleur                                     | Lot              |
+| -------------------- | --------------------------------------- | ---------------------------------------------- | ---------------- |
+| Commandes / caisse   | `orders`, `order_products`              | `OrdersController`                             | §0 terdecies     |
+| Précommandes         | `pre_orders`, `pre_order_items`         | `PreOrdersController`                          | §0 terdecies     |
+| Cotisations          | `subscriptions` (+ `fast_passes`)       | `SubscriptionsController`, `ClientsController` | §0 undecies ⚠️   |
+| Produits d'événement | `event_products` (`quantity`, `price`)  | `EventProductsController`                      | §0 septies       |
 
-`GET /v1/transactions` existe **en lecture seule** : la caisse a besoin du chemin d'écriture.
+⚠️ **La ligne « Cotisations » n'est vraie que sur la branche `feat/adherents`** — la PR #27 du back
+est encore ouverte. Voir §0 quaterdecies.
+
+`GET /v1/transactions` demeure **en lecture seule**, et c'est désormais délibéré : la caisse écrit
+sa transaction par `order_service`, pas par un `POST /transactions`. Le rapprochement de la page
+`paiements` (§4) reste, lui, à construire.
 
 ---
 
@@ -1159,19 +1313,29 @@ Tables et migrations présentes, aucun contrôleur :
 
 Toutes sont déjà en `loadComponent`, il ne manque que les données.
 
-| Page                                  | Ce qu'il faut                                                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `caisse` + `cloture`                  | Commandes + transactions en écriture. `OrdersService` tourne sur `buildSeedOrders()`                   |
-| `soiree/live`                         | Idem, plus le websocket (`core/services/websocket/`)                                                   |
-| `soiree/bilan`                        | `event_products`                                                                                       |
-| `precommandes` + `precommandes-admin` | `pre_orders`                                                                                           |
-| `adherents`                           | `fast_passes` (**déjà routé**) + `subscriptions`. Voir §4.1                                            |
-| `tickets`                             | Support / helpdesk — **aucune table**. Voir §4.2                                                       |
-| `paiements`                           | `transactions` en lecture + rapprochement                                                              |
-| `notifications`                       | Aucune table                                                                                           |
-| `parametres/integrations`, `modules`  | Aucune table                                                                                           |
-| `stocks/scanner`                      | Le composant de scan partagé (§10.1, §11.4) ; reste la décision produit sur ce qu'on fait du code lu   |
-| `etats`                               | **À laisser tel quel** : galerie d'états d'interface (404, hors-ligne, vide…), pas une page de données |
+> ⚠️ **Tableau réévalué contre le code le 2026-08-16.** Les lots `orders` (§0 terdecies) et
+> `adhérents` (§0 undecies) en ont retiré quatre lignes. Les cinq pages restantes ont été
+> **vérifiées une par une** : aucune n'injecte le moindre service, elles portent toutes des
+> tableaux littéraux.
+
+| Page                                  | État                                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| ~~`caisse` + `cloture`~~              | ✅ **branchée** (§0 terdecies) — encaissement espèces, prix relus serveur                               |
+| ~~`soiree/live`~~                     | ✅ **branchée** (§0 terdecies) — file cuisine en SSE via Transmit, pas un websocket                     |
+| ~~`precommandes-admin`~~ → voir infra | ⚠️ le **back** est prêt (`PreOrdersController`), la **page** ne l'appelle pas encore                    |
+| ~~`adherents`~~                       | ✅ **branchée** (§0 undecies) — mais le back attend la PR #27, cf. §0 quaterdecies                      |
+| `soiree/bilan` (210 l.)               | `event_products` — la table **et** le contrôleur existent désormais : plus rien ne bloque               |
+| `precommandes-admin` (358 l.)         | `pre_orders` — **le back est livré**, la page garde ses `pickups` littéraux                             |
+| `paiements` (186 l.)                  | `transactions` en lecture + rapprochement. `GET /transactions` existe, gardé par `transaction:read`     |
+| `notifications` (147 l.)              | Aucune table. Dépend du §15 (mailer) et du §21                                                          |
+| `tickets` (149 l.)                    | Support / helpdesk — **aucune table**. Voir §4.2 et §26. À faire **après** le §15                       |
+| `parametres/integrations`, `modules`  | Aucune table. Voir §22.3 — c'est une décision d'architecture, pas une page                              |
+| `stocks/scanner`                      | Le scan **existe** depuis le §0 terdecies (`barcode/`, `POST /qr/verify`) ; reste la décision produit    |
+| `etats`                               | **À laisser tel quel** : galerie d'états d'interface (404, hors-ligne, vide…), pas une page de données  |
+
+**Les deux moins chères sont désormais `soiree/bilan` et `precommandes-admin`** : leur backend est
+livré, il ne manque que le câblage — exactement la situation qu'était `adhérents` avant le §0
+undecies.
 
 `home` : les tuiles « encaissements » et « affectation » sont branchées ; le **fil d'activité est
 volontairement vide** — c'est un fil d'événements métier, pas le journal HTTP (§8).
