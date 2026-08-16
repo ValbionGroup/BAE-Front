@@ -8,14 +8,26 @@ import {
   type ApiSellableLine,
   type CheckoutLine,
 } from '#core/services/orders/orders-service';
+import { PreOrdersService } from '#core/services/pre-orders/pre-orders-service';
 import type { LoadingStatus } from '#core/models/global.model';
 import type { Order, OrderStatus } from '#core/models/order.model';
+import type { PreOrderTicket } from '#core/models/pre-order.model';
 import { messageOf } from '#shared/utils/api-error';
 
 interface OrdersState {
   loading: LoadingStatus;
   loadError: string | null;
   orders: Order[];
+  /**
+   * Les précommandes de la soirée, **à part des commandes**.
+   *
+   * Deux listes plutôt qu'une fusionnée : tout ce qui compte l'argent et les
+   * temps du service (`cashedCents`, `averagePrepSeconds`, `marginPercent`,
+   * `cadence`) lit `orders`. Les garder séparées fait que ces compteurs
+   * excluent les précommandes **par construction**, sans qu'aucun d'eux n'ait à
+   * y penser — l'oubli d'un seul filtre aurait suffi à fausser la recette.
+   */
+  preOrders: PreOrderTicket[];
   sellable: ApiSellableLine[];
   /** Soirée actuellement chargée, pour ne pas mélanger deux services. */
   eventId: string | null;
@@ -26,15 +38,33 @@ function byOldest(orders: readonly Order[], status: OrderStatus): Order[] {
   return orders
     .filter((order) => order.status === status)
     .sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() || a.id - b.id,
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() || a.id - b.id,
     );
+}
+
+/**
+ * Les précommandes d'un statut, la plus urgente d'abord.
+ *
+ * Le tri est celui de l'heure de retrait, pas de la date de commande : une
+ * précommande passée hier pour 22 h n'est pas prioritaire sur une passée ce
+ * matin pour 19 h. Sans heure, elle passe en tête — rien ne dit quand elle sera
+ * réclamée, donc on la prépare.
+ */
+function byPickup(tickets: readonly PreOrderTicket[], status: OrderStatus): PreOrderTicket[] {
+  return tickets
+    .filter((ticket) => ticket.status === status)
+    .sort((a, b) => {
+      const left = a.pickupAt === null ? 0 : new Date(a.pickupAt).getTime();
+      const right = b.pickupAt === null ? 0 : new Date(b.pickupAt).getTime();
+      return left - right || a.id - b.id;
+    });
 }
 
 const initial: OrdersState = {
   loading: 'init',
   loadError: null,
   orders: [],
+  preOrders: [],
   sellable: [],
   eventId: null,
 };
@@ -48,6 +78,20 @@ export const OrdersStore = signalStore(
     pending: computed(() => byOldest(store.orders(), 'pending')),
     inProgress: computed(() => byOldest(store.orders(), 'in_progress')),
     ready: computed(() => byOldest(store.orders(), 'ready')),
+
+    /**
+     * ⚠️ Seules les précommandes **dues** entrent dans « En attente ». Les
+     * autres existent en base mais n'ont rien à faire sous les yeux de la
+     * cuisine : une file qui affiche des tickets à préparer dans trois heures
+     * n'est plus une file, c'est une liste.
+     */
+    pendingPreOrders: computed(() =>
+      byPickup(store.preOrders(), 'pending').filter((ticket) => ticket.due),
+    ),
+    // Une fois démarrée, une précommande reste visible quoi qu'il arrive : elle
+    // est physiquement sur le plan de travail.
+    inProgressPreOrders: computed(() => byPickup(store.preOrders(), 'in_progress')),
+    readyPreOrders: computed(() => byPickup(store.preOrders(), 'ready')),
     /** Ce que la cuisine a en charge — les trois colonnes non terminales. */
     activeCount: computed(
       () =>
@@ -57,6 +101,7 @@ export const OrdersStore = signalStore(
   })),
   withMethods((store) => {
     const svc = inject(OrdersService);
+    const preOrdersSvc = inject(PreOrdersService);
 
     async function load(eventId: string): Promise<void> {
       if (store.loading() === 'loading') return;
@@ -76,6 +121,15 @@ export const OrdersStore = signalStore(
           sellable,
           loading: 'loaded',
         });
+
+        // Chargées à part, et l'échec est absorbé : une précommande manquante
+        // gêne le comptoir, une file de commandes vide arrête le service. Le
+        // chemin critique ne doit pas dépendre de l'accessoire.
+        try {
+          patchState(store, { preOrders: await lastValueFrom(preOrdersSvc.list(eventId)) });
+        } catch {
+          patchState(store, { preOrders: [] });
+        }
       } catch (error: unknown) {
         patchState(store, {
           loading: 'error',
@@ -100,9 +154,46 @@ export const OrdersStore = signalStore(
       });
     }
 
+    function upsertPreOrder(ticket: PreOrderTicket): void {
+      patchState(store, (state) => {
+        const known = state.preOrders.some((p) => p.id === ticket.id);
+        return {
+          preOrders: known
+            ? state.preOrders.map((p) => (p.id === ticket.id ? ticket : p))
+            : [...state.preOrders, ticket],
+        };
+      });
+    }
+
     return {
       load,
       upsert,
+      upsertPreOrder,
+
+      async advancePreOrder(preOrderId: number, next: OrderStatus): Promise<boolean> {
+        try {
+          upsertPreOrder(await lastValueFrom(preOrdersSvc.setStatus(preOrderId, next)));
+          return true;
+        } catch (error: unknown) {
+          patchState(store, {
+            loadError: messageOf(error, 'Ce changement de statut a été refusé.'),
+          });
+          return false;
+        }
+      },
+
+      /** Remise au client — le seul geste qui clôt une précommande. */
+      async collectPreOrder(preOrderId: number): Promise<boolean> {
+        try {
+          upsertPreOrder(await lastValueFrom(preOrdersSvc.collect(preOrderId)));
+          return true;
+        } catch (error: unknown) {
+          patchState(store, {
+            loadError: messageOf(error, 'Cette précommande n’a pas pu être remise.'),
+          });
+          return false;
+        }
+      },
 
       async advance(orderId: number, next: OrderStatus): Promise<boolean> {
         try {

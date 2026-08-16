@@ -55,7 +55,9 @@
           à venir se fait depuis la Logistique.
         </p>
         <div class="mt-3">
-          <bfd-btn kind="secondary" size="sm" (clicked)="leave()">Retour au tableau de bord</bfd-btn>
+          <bfd-btn kind="secondary" size="sm" (clicked)="leave()"
+            >Retour au tableau de bord</bfd-btn
+          >
         </div>
       </div>
     </div>
@@ -103,11 +105,14 @@
           En cuisine
         </div>
         <div class="tnum mt-1 text-[22px] font-semibold -tracking-[0.4px] text-warn">
-          {{ orders.activeCount() }}
+          {{ orders.activeCount() + activePreOrderCount() }}
         </div>
         <div class="mt-0.5 text-[10.5px] text-muted">
           {{ orders.pending().length }} attente · {{ orders.inProgress().length }} prépa ·
           {{ orders.ready().length }} prêtes
+          @if (activePreOrderCount() > 0) {
+            · <span class="text-blue">{{ activePreOrderCount() }} précomm.</span>
+          }
         </div>
       </div>
 
@@ -153,7 +158,9 @@
       <div class="grid min-h-0 grid-cols-1 overflow-hidden md:grid-cols-3">
         @for (column of columns(); track column.key) {
           <div
-            [class]="'flex min-h-0 flex-col overflow-hidden border-r border-border-s ' + column.tint"
+            [class]="
+              'flex min-h-0 flex-col overflow-hidden border-r border-border-s ' + column.tint
+            "
           >
             <div [class]="'flex items-center gap-2.5 border-b-2 px-4 py-3 ' + column.headerBg">
               <span [class]="'h-2 w-2 rounded-full ' + column.accent"></span>
@@ -168,49 +175,77 @@
                   'tnum inline-flex h-6 min-w-7 items-center justify-center rounded-sm px-2 text-xs font-bold text-white ' +
                   column.accent
                 "
-                >{{ column.orders.length }}</span
+                >{{ column.tickets.length }}</span
               >
             </div>
 
             <div class="min-h-0 flex-1 overflow-y-auto">
               <div class="flex flex-col gap-2.5 p-2.5">
-                @for (order of column.orders; track order.id) {
+                @for (ticket of column.tickets; track ticket.key) {
+                  @let isPreOrder = ticket.kind === 'pre_order';
                   <article
                     [class]="
-                      'rounded-md border border-l-[3px] bg-surface p-2.5 ' + ticketBorder(order)
+                      'rounded-md border border-l-[3px] p-2.5 ' +
+                      ticketBorder(ticket) +
+                      (isPreOrder ? ' bg-blue-soft/20' : ' bg-surface')
                     "
                   >
+                    @if (isPreOrder) {
+                      <div
+                        class="mb-2 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-wider text-blue"
+                      >
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue"></span>
+                        Précommande · à préparer en priorité
+                      </div>
+                    }
+
                     <div class="flex items-start gap-2.5">
                       <div
-                        class="min-w-12.5 rounded-sm border border-border bg-bg px-2 py-1 text-center"
+                        [class]="
+                          'min-w-12.5 rounded-sm border px-2 py-1 text-center ' +
+                          (isPreOrder ? 'border-blue/40 bg-blue-soft/40' : 'border-border bg-bg')
+                        "
                       >
                         <div class="mono text-[9px] tracking-wide text-muted opacity-75">N°</div>
                         <div class="mono tnum text-lg font-bold leading-none text-text">
-                          {{ order.number }}
+                          {{ ticket.reference }}
                         </div>
                       </div>
                       <div class="min-w-0 flex-1">
                         <div class="truncate text-[13px] font-semibold text-text">
-                          {{ order.clientName }}
+                          {{ ticket.clientName }}
                         </div>
-                        <div class="mono tnum mt-1 text-[11px] text-muted">
-                          {{ formatCents(order.totalCents) }} €
-                        </div>
+                        @if (ticket.payment; as payment) {
+                          <div class="mono tnum mt-1 text-[11px] text-muted">{{ payment }}</div>
+                        }
                       </div>
                       <div class="text-right">
-                        <div
-                          [class]="'mono tnum text-base font-bold leading-none ' + timerColor(order)"
-                        >
-                          {{ elapsed(order) }}
-                        </div>
-                        <div class="mt-1 text-[9.5px] uppercase tracking-wider text-muted">
-                          {{ column.short }}
-                        </div>
+                        @if (isPreOrder) {
+                          <!-- L'horloge d'une précommande est son heure de retrait,
+                               pas le temps écoulé : elle ne se mesure pas au service. -->
+                          <div class="mono tnum text-base font-bold leading-none text-blue">
+                            {{ pickupLabel(ticket) }}
+                          </div>
+                          <div class="mt-1 text-[9.5px] uppercase tracking-wider text-muted">
+                            retrait
+                          </div>
+                        } @else {
+                          <div
+                            [class]="
+                              'mono tnum text-base font-bold leading-none ' + timerColor(ticket)
+                            "
+                          >
+                            {{ elapsed(ticket) }}
+                          </div>
+                          <div class="mt-1 text-[9.5px] uppercase tracking-wider text-muted">
+                            {{ column.short }}
+                          </div>
+                        }
                       </div>
                     </div>
 
                     <ul class="mt-2 flex flex-col gap-0.5">
-                      @for (line of order.lines; track line.productId) {
+                      @for (line of ticket.lines; track line.productId) {
                         <li class="flex items-center gap-2 py-1 text-[12.5px] text-text">
                           <span
                             class="mono tnum inline-flex h-4.5 min-w-6 items-center justify-center rounded-[3px] bg-surface-2 px-1.5 text-[11px] font-semibold text-text-2"
@@ -221,11 +256,27 @@
                       }
                     </ul>
 
-                    <div class="mt-2.5 flex gap-1.5">
-                      <bfd-btn kind="ghost" size="sm" (clicked)="cancelOrder(order)"
-                        >Annuler</bfd-btn
+                    @if (ticket.warning; as warning) {
+                      <p
+                        class="mt-2 rounded-sm bg-danger-soft/40 px-2 py-1 text-[11px] font-semibold text-danger"
+                        role="alert"
                       >
-                      <bfd-btn kind="primary" size="sm" [full]="true" (clicked)="advance(order)">
+                        {{ warning }}
+                      </p>
+                    }
+
+                    <div class="mt-2.5 flex gap-1.5">
+                      @if (!isPreOrder) {
+                        <bfd-btn kind="ghost" size="sm" (clicked)="cancelTicket(ticket)"
+                          >Annuler</bfd-btn
+                        >
+                      }
+                      <bfd-btn
+                        kind="primary"
+                        size="sm"
+                        [full]="true"
+                        (clicked)="advanceTicket(ticket)"
+                      >
                         {{ column.action }}
                       </bfd-btn>
                     </div>

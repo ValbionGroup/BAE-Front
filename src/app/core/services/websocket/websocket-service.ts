@@ -3,14 +3,23 @@ import { Observable, Subject } from 'rxjs';
 import { Transmit, type Subscription } from '@adonisjs/transmit-client';
 import { WsMessage } from '#core/models/ws-message.model';
 import { toOrder, type ApiOrder } from '#core/services/orders/orders-service';
+import type { PreOrderTicket } from '#core/models/pre-order.model';
 import { TokensService } from '#core/services/tokens/tokens-service';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 
-/** Forme diffusée par le back (`orders_realtime.ts`). */
-interface OrdersBroadcast {
-  readonly event: WsMessage['type'];
-  readonly order: ApiOrder;
-}
+/**
+ * Formes diffusées par le back (`orders_realtime.ts`) sur le canal d'une soirée.
+ *
+ * ⚠️ La charge utile ne s'appelle pas pareil selon l'événement (`order` contre
+ * `preOrder`) : lire aveuglément `message.order` sur une diffusion de
+ * précommande donnait un `undefined` qui explosait dans `toOrder`.
+ */
+type OrdersBroadcast =
+  | {
+      readonly event: 'order.created' | 'order.updated' | 'order.cancelled';
+      readonly order: ApiOrder;
+    }
+  | { readonly event: 'pre_order.updated'; readonly preOrder: PreOrderTicket };
 
 @Injectable({ providedIn: 'root' })
 export class WebsocketService {
@@ -61,10 +70,11 @@ export class WebsocketService {
     await subscription.create();
 
     subscription.onMessage<OrdersBroadcast>((message) => {
-      this._messages$.next({
-        type: message.event,
-        payload: toOrder(message.order),
-      } as WsMessage);
+      this._messages$.next(
+        message.event === 'pre_order.updated'
+          ? { type: message.event, payload: message.preOrder }
+          : { type: message.event, payload: toOrder(message.order) },
+      );
     });
   }
 

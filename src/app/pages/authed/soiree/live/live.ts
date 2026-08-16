@@ -26,8 +26,98 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Logo } from '#shared/components/ui/logo/logo';
 import { OrdersStore } from '#core/store/orders.store';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
-import { nextStatus, type Order } from '#core/models/order.model';
+import { nextStatus, type Order, type OrderStatus } from '#core/models/order.model';
+import type { PreOrderTicket } from '#core/models/pre-order.model';
 import { formatCents } from '#shared/utils/money';
+
+/**
+ * Ce qu'une carte de la file cuisine a besoin de savoir, quelle que soit son
+ * origine.
+ *
+ * Commandes et précommandes se rendent dans les **mêmes** colonnes : pour la
+ * cuisine, il n'y a qu'une file. Plutôt que de brancher le gabarit sur le type à
+ * chaque champ, les deux sources sont ramenées ici — la différence tient dans
+ * deux fonctions d'adaptation, et la carte reste écrite une fois.
+ *
+ * Les champs qui n'existent que d'un côté sont **explicitement nuls** de l'autre
+ * (`totalCents` pour une précommande, déjà payée ailleurs ; `since` pour une
+ * précommande, dont le délai ne se mesure pas au service) plutôt que remplis
+ * d'une valeur plausible : un zéro se serait retrouvé dans un total.
+ */
+interface KitchenTicket {
+  /** Unique **toutes sources confondues** : l'id seul se télescoperait. */
+  readonly key: string;
+  readonly kind: 'order' | 'pre_order';
+  readonly id: number;
+  readonly reference: string;
+  readonly clientName: string;
+  readonly lines: readonly { productId: number; productName: string; quantity: number }[];
+  readonly status: OrderStatus;
+  /**
+   * L'état du règlement, **déjà résolu**.
+   *
+   * ⚠️ Un libellé plutôt qu'un montant et un booléen : la première version
+   * déduisait « payée » de l'absence de montant, ce qui ne dit que « ce n'est
+   * pas une commande de comptoir ». Une précommande impayée s'affichait donc
+   * « Payée à la commande » juste au-dessus de l'alerte disant le contraire.
+   * `null` quand il n'y a rien à en dire — l'alerte s'en charge.
+   */
+  readonly payment: string | null;
+  /** Début du chronomètre, `null` quand le ticket n'en a pas. */
+  readonly since: string | null;
+  /** Heure de retrait convenue, `null` hors précommande ou si non choisie. */
+  readonly pickupAt: string | null;
+  /** Ce qui doit arrêter la main du service avant qu'il ne remette la commande. */
+  readonly warning: string | null;
+}
+
+function ticketOfOrder(order: Order): KitchenTicket {
+  return {
+    key: `o${order.id}`,
+    kind: 'order',
+    id: order.id,
+    reference: String(order.number),
+    clientName: order.clientName,
+    lines: order.lines,
+    status: order.status,
+    payment: `${formatCents(order.totalCents)} €`,
+    since: order.createdAt,
+    pickupAt: null,
+    warning: null,
+  };
+}
+
+function ticketOfPreOrder(preOrder: PreOrderTicket): KitchenTicket {
+  return {
+    key: `p${preOrder.id}`,
+    kind: 'pre_order',
+    id: preOrder.id,
+    reference: preOrder.reference,
+    clientName: preOrder.clientName,
+    lines: preOrder.lines,
+    status: preOrder.status,
+    payment: preOrder.paid ? 'Payée à la commande' : null,
+    since: null,
+    pickupAt: preOrder.pickupAt,
+    // Une précommande est censée être payée à la commande. Quand elle ne l'est
+    // pas, le serveur refusera la remise — autant que le comptoir le voie avant
+    // d'avoir emballé.
+    warning: preOrder.paid ? null : 'Aucun paiement rattaché',
+  };
+}
+
+/**
+ * Une colonne : les précommandes **en tête**, les commandes du service ensuite.
+ *
+ * L'épinglage est délibéré et non trié : une précommande est attendue à une
+ * heure convenue, alors qu'une commande du comptoir est servie au fil de l'eau.
+ * Les intercaler par ancienneté enterrerait la précommande sous le service dès
+ * le premier coup de feu — c'est-à-dire exactement quand il ne faut pas
+ * l'oublier.
+ */
+function merge(preOrders: readonly PreOrderTicket[], orders: readonly Order[]): KitchenTicket[] {
+  return [...preOrders.map(ticketOfPreOrder), ...orders.map(ticketOfOrder)];
+}
 
 /**
  * Pilotage d'une soirée en service.
@@ -232,7 +322,7 @@ export class SoireeLive implements OnInit {
       tint: 'bg-bg',
       headerBg: 'border-muted bg-surface',
       action: 'Démarrer',
-      orders: this.orders.pending(),
+      tickets: merge(this.orders.pendingPreOrders(), this.orders.pending()),
     },
     {
       key: 'in_progress' as const,
@@ -243,7 +333,7 @@ export class SoireeLive implements OnInit {
       tint: 'bg-warn-soft/10',
       headerBg: 'border-warn bg-warn-soft/30',
       action: 'Marquer prête',
-      orders: this.orders.inProgress(),
+      tickets: merge(this.orders.inProgressPreOrders(), this.orders.inProgress()),
     },
     {
       key: 'ready' as const,
@@ -254,41 +344,88 @@ export class SoireeLive implements OnInit {
       tint: 'bg-ok-soft/10',
       headerBg: 'border-ok bg-ok-soft/30',
       action: 'Remise au client',
-      orders: this.orders.ready(),
+      tickets: merge(this.orders.readyPreOrders(), this.orders.ready()),
     },
   ]);
 
-  /** Le liseré gauche vire au rouge dès qu'une commande traîne. */
-  protected ticketBorder(order: Order): string {
-    if (order.status === 'ready') return 'border-ok/40 border-l-ok';
-    const seconds = (this.now() - new Date(order.createdAt).getTime()) / 1000;
-    if (seconds >= 300) return 'border-danger/50 border-l-danger';
-    if (order.status === 'in_progress') return 'border-border-s border-l-warn';
+  /**
+   * Les précommandes que la cuisine a effectivement sur les bras.
+   *
+   * Elles comptent ici — c'est une charge de travail, pas une métrique de
+   * service. Les compteurs d'argent et de temps (`cashedCents`, `ordersCount`,
+   * `averagePrepSeconds`, `marginPercent`) lisent `orders` et les ignorent donc
+   * par construction, ce qui est la seule chose que leur exclusion protégeait.
+   */
+  protected readonly activePreOrderCount = computed(
+    () =>
+      this.orders.pendingPreOrders().length +
+      this.orders.inProgressPreOrders().length +
+      this.orders.readyPreOrders().length,
+  );
+
+  /** L'heure de retrait, `—` quand le client n'en a pas choisi. */
+  protected pickupLabel(ticket: KitchenTicket): string {
+    if (ticket.pickupAt === null) return '—';
+    return this.timeOf(ticket.pickupAt);
+  }
+
+  protected async advanceTicket(ticket: KitchenTicket): Promise<void> {
+    const next = nextStatus(ticket.status);
+    if (!next) return;
+
+    if (ticket.kind === 'order') {
+      await this.orders.advance(ticket.id, next);
+      return;
+    }
+
+    // ⚠️ Une précommande se clôt par `collect`, jamais par un passage à
+    // `completed` : seul `collect` écrit `received_quantity`. Passer par le
+    // statut marquerait le ticket fini sans que rien n'ait changé de mains.
+    if (next === 'completed') {
+      await this.orders.collectPreOrder(ticket.id);
+      return;
+    }
+    await this.orders.advancePreOrder(ticket.id, next);
+  }
+
+  protected async cancelTicket(ticket: KitchenTicket): Promise<void> {
+    if (ticket.kind !== 'order') return;
+    await this.orders.cancel(ticket.id);
+  }
+
+  /**
+   * Le liseré gauche vire au rouge dès qu'une commande traîne.
+   *
+   * Une précommande garde le sien, bleu : elle n'est pas en retard tant que
+   * l'heure de retrait n'est pas passée, et la teinte la distingue au premier
+   * coup d'œil du service courant.
+   */
+  protected ticketBorder(ticket: KitchenTicket): string {
+    if (ticket.kind === 'pre_order') return 'border-blue/40 border-l-blue';
+    if (ticket.status === 'ready') return 'border-ok/40 border-l-ok';
+    if (this.secondsSince(ticket) >= 300) return 'border-danger/50 border-l-danger';
+    if (ticket.status === 'in_progress') return 'border-border-s border-l-warn';
     return 'border-border-s border-l-muted';
   }
 
+  private secondsSince(ticket: KitchenTicket): number {
+    if (ticket.since === null) return 0;
+    return Math.max(0, (this.now() - new Date(ticket.since).getTime()) / 1000);
+  }
+
   /** Temps écoulé depuis la prise de commande, `m:ss`. */
-  protected elapsed(order: Order): string {
-    const seconds = Math.max(0, Math.floor((this.now() - new Date(order.createdAt).getTime()) / 1000));
+  protected elapsed(ticket: KitchenTicket): string {
+    const seconds = Math.floor(this.secondsSince(ticket));
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   }
 
   /** Seuils de la maquette : à surveiller à 3 minutes, urgent à 5. */
-  protected timerColor(order: Order): string {
-    if (order.status === 'ready') return 'text-ok';
-    const seconds = (this.now() - new Date(order.createdAt).getTime()) / 1000;
+  protected timerColor(ticket: KitchenTicket): string {
+    if (ticket.status === 'ready') return 'text-ok';
+    const seconds = this.secondsSince(ticket);
     if (seconds >= 300) return 'text-danger';
     if (seconds >= 180) return 'text-warn';
     return 'text-text';
-  }
-
-  protected async advance(order: Order): Promise<void> {
-    const next = nextStatus(order.status);
-    if (next) await this.orders.advance(order.id, next);
-  }
-
-  protected async cancelOrder(order: Order): Promise<void> {
-    await this.orders.cancel(order.id);
   }
 
   protected readonly formatCents = formatCents;
@@ -381,6 +518,10 @@ export class SoireeLive implements OnInit {
     // Une commande poussée par le serveur entre par le même chemin qu'un retour
     // d'appel : `upsert` ne peut donc pas produire deux états différents.
     this.realtime.messages$.pipe(takeUntilDestroyed()).subscribe((message) => {
+      if (message.type === 'pre_order.updated') {
+        this.orders.upsertPreOrder(message.payload);
+        return;
+      }
       this.orders.upsert(message.payload);
     });
 
