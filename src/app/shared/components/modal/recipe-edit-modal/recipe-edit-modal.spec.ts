@@ -105,6 +105,48 @@ describe(RecipeEditModal.name, () => {
   });
 
   /**
+   * Une recette consomme une fraction d'unité d'achat. La virgule décimale est
+   * ce qu'on tape sur un clavier français, et `Number('0,0833')` vaut `NaN` :
+   * validation et envoi doivent passer par la même lecture.
+   */
+  it('accepte une quantité décimale, virgule comprise', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Hot-dog');
+    modal.addLine();
+    const [line] = modal.lines().map((l) => l.key);
+    modal.setGood(line, '10');
+    modal.setQuantity(line, '0,0833');
+
+    const submitted = modal.submit();
+    const request = http.expectOne(`${baseUrl}/products`);
+    expect(request.request.body.goods).toEqual([
+      { goodId: 10, quantity: 0.0833, instruction: null },
+    ]);
+    request.flush({ id: 9, name: 'Hot-dog' });
+    await tick();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+    await submitted;
+  });
+
+  it('refuse une quantité nulle ou illisible', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Hot-dog');
+    modal.addLine();
+    const [line] = modal.lines().map((l) => l.key);
+    modal.setGood(line, '10');
+
+    for (const bad of ['0', '-1', 'abc', '']) {
+      modal.setQuantity(line, bad);
+      await modal.submit();
+      http.expectNone(`${baseUrl}/products`);
+    }
+  });
+
+  /**
    * La clé primaire de `product_goods` est `(product_id, good_id)`. Sans ce
    * contrôle, la deuxième occurrence part à l'API pour en revenir en refus.
    */

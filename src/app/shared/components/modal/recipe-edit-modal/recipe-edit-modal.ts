@@ -40,12 +40,15 @@ interface IngredientLine {
   readonly instruction: string;
 }
 
-/** `product_goods.quantity` est un `integer unsigned` : ni décimale, ni zéro. */
+/**
+ * Une recette consomme une fraction d'unité d'achat : `0,0833` paquet de pains
+ * pour un hot-dog. La virgule est acceptée autant que le point.
+ */
 function parseQuantity(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!/^\d+$/.test(trimmed)) return null;
+  const trimmed = raw.trim().replace(',', '.');
+  if (!/^\d*\.?\d+$/.test(trimmed)) return null;
   const parsed = Number(trimmed);
-  return parsed >= 1 ? parsed : null;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function emptyToNull(raw: string): string | null {
@@ -242,7 +245,8 @@ export class RecipeEditModal {
       recipe: emptyToNull(this.method()),
       goods: this.lines().map((line) => ({
         goodId: Number(line.goodId),
-        quantity: Number(line.quantity.trim()),
+        // `parseQuantity`, pas `Number` : la virgule décimale donnerait `NaN`.
+        quantity: parseQuantity(line.quantity)!,
         instruction: emptyToNull(line.instruction),
       })),
     };
