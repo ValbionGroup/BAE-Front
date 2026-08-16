@@ -32,7 +32,10 @@ import { Badge } from '#shared/components/ui/badge/badge';
 import { Kbd } from '#shared/components/ui/kbd/kbd';
 import { formatCents } from '#shared/utils/money';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { PaymentModal, type PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
+import {
+  PaymentModal,
+  type PaymentMethod,
+} from '#shared/components/modal/payment-modal/payment-modal';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
 import type { Buyer } from '#core/services/buyers/buyers-service';

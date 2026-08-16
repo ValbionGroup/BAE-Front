@@ -217,17 +217,19 @@ describe(Caisse.name, () => {
     it('vide le panier une fois la commande enregistree', async () => {
       const store = await withCart();
 
-      const done = component["checkout"]("cash");
-      http.expectOne((r) => r.url.includes('/events/7/orders')).flush({
-        id: 42,
-        number: 1,
-        eventId: 7,
-        status: 'pending',
-        clientName: 'Anonyme',
-        lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
-        totalCents: 250,
-        createdAt: new Date().toISOString(),
-      });
+      const done = component['checkout']('cash');
+      http
+        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .flush({
+          id: 42,
+          number: 1,
+          eventId: 7,
+          status: 'pending',
+          clientName: 'Anonyme',
+          lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
+          totalCents: 250,
+          createdAt: new Date().toISOString(),
+        });
       await done;
 
       expect(store.itemCount()).toBe(0);
@@ -240,7 +242,7 @@ describe(Caisse.name, () => {
     it('preserve le panier quand le serveur refuse', async () => {
       const store = await withCart();
 
-      const done = component["checkout"]("cash");
+      const done = component['checkout']('cash');
       http
         .expectOne((r) => r.url.includes('/events/7/orders'))
         .flush(
@@ -256,18 +258,20 @@ describe(Caisse.name, () => {
     it('annonce le numero de commande apres encaissement', async () => {
       const store = await withCart();
 
-      const done = component["checkout"]("cash");
-      http.expectOne((r) => r.url.includes('/events/7/orders')).flush({
-        id: 42,
-        number: 7,
-        eventId: 7,
-        status: 'pending',
-        clientName: 'Anonyme',
-        lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
-        totalCents: 250,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      const done = component['checkout']('cash');
+      http
+        .expectOne((r) => r.url.includes('/events/7/orders'))
+        .flush({
+          id: 42,
+          number: 7,
+          eventId: 7,
+          status: 'pending',
+          clientName: 'Anonyme',
+          lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
+          totalCents: 250,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
       await done;
       fixture.detectChanges();
 
@@ -280,7 +284,7 @@ describe(Caisse.name, () => {
     it('affiche le refus sans vider le panier', async () => {
       const store = await withCart();
 
-      const done = component["checkout"]("cash");
+      const done = component['checkout']('cash');
       http
         .expectOne((r) => r.url.includes('/events/7/orders'))
         .flush(

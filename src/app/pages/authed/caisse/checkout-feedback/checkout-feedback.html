@@ -11,7 +11,12 @@
     (click)="close()"
   >
     <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
-      <svg [lucideIcon]="ok ? icCheck : icError" [size]="44" class="text-white" aria-hidden="true"></svg>
+      <svg
+        [lucideIcon]="ok ? icCheck : icError"
+        [size]="44"
+        class="text-white"
+        aria-hidden="true"
+      ></svg>
     </span>
     <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
       Précommande
@@ -40,7 +45,9 @@
 
   <!-- BUREAU — bandeau. -->
   <div
-    [class]="'hidden border-b p-4 md:block ' + (ok ? 'border-ok bg-ok/12' : 'border-warn bg-warn/12')"
+    [class]="
+      'hidden border-b p-4 md:block ' + (ok ? 'border-ok bg-ok/12' : 'border-warn bg-warn/12')
+    "
     role="status"
   >
     <div class="flex items-start gap-3">
@@ -53,7 +60,11 @@
         <svg [lucideIcon]="ok ? icCheck : icError" [size]="22" aria-hidden="true"></svg>
       </span>
       <div class="min-w-0 flex-1">
-        <div [class]="'text-[11px] font-semibold uppercase tracking-[0.8px] ' + (ok ? 'text-ok' : 'text-warn')">
+        <div
+          [class]="
+            'text-[11px] font-semibold uppercase tracking-[0.8px] ' + (ok ? 'text-ok' : 'text-warn')
+          "
+        >
           Précommande · {{ scan.preOrder.eventName }}
         </div>
         <div class="text-[19px] font-bold leading-tight text-text">{{ scan.buyer.name }}</div>

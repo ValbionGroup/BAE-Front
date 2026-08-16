@@ -144,7 +144,9 @@
           </span>
           <div class="min-w-0 flex-1">
             <div class="truncate text-[12.5px] font-medium text-text">{{ buyer.name }}</div>
-            <div class="text-[10.5px] text-muted">{{ fastPassLabel(buyer) ?? 'Sans fast pass' }}</div>
+            <div class="text-[10.5px] text-muted">
+              {{ fastPassLabel(buyer) ?? 'Sans fast pass' }}
+            </div>
           </div>
           <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
         </div>
@@ -278,7 +280,6 @@
             }
           </bfd-btn>
         </div>
-
       </div>
     </aside>
   </div>

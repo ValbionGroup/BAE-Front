@@ -25,7 +25,6 @@ export class Topbar {
   /** Ouvre le tiroir de navigation — visible sous `md` seulement. */
   readonly menuClick = output<void>();
 
-
   protected readonly theme = inject(ThemeService);
   private readonly pageHeader = inject(PageHeaderService);
   protected readonly header = this.pageHeader.header;
