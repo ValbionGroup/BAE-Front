@@ -48,6 +48,18 @@ describe(Login.name, () => {
   });
 
   /**
+   * Le cas qui remplace une page JSON de l'API : quand l'IdP est injoignable, le
+   * back renvoie ici plutôt que de laisser remonter l'exception. Le message doit
+   * dire d'attendre, pas d'insister — réessayer tout de suite n'y change rien.
+   */
+  it('dit d’attendre quand EirbConnect est indisponible', async () => {
+    const text = errorText(await mount('idp_unavailable'));
+
+    expect(text).toContain('indisponible');
+    expect(text).not.toContain('a échoué');
+  });
+
+  /**
    * `not_a_member` n'est pas censé arriver côté public — le provisionnement à la
    * volée crée la ligne `clients`. S'il arrivait quand même, l'écran doit rester
    * compréhensible plutôt que de laisser un libellé de dashboard parler de

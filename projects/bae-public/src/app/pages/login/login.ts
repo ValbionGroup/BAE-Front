@@ -22,6 +22,7 @@ const SSO_ERRORS: Readonly<Record<string, string>> = {
   session_expired: 'La connexion a expiré. Réessayez.',
   exchange_failed: 'La connexion avec EirbConnect a échoué. Réessayez.',
   access_denied: 'Vous avez refusé l’autorisation.',
+  idp_unavailable: 'EirbConnect est momentanément indisponible. Réessayez dans quelques minutes.',
 };
 
 @Component({
