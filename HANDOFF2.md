@@ -978,3 +978,96 @@ et les adhérents.
   (`@adonisjs/transmit`)**, pas par le websocket que le §4 du `HANDOFF.md` annonçait.
 - ⚠️ **Lydia** — `paymentMethod` accepte `'lydia'` depuis le §0 terdecies, mais **rien n'encaisse**.
   C'est un libellé enregistré. Tout le §10 reste ouvert.
+
+---
+
+## 34. Séparation des pages publiques — ✅ livré le 2026-08-17
+
+**Ferme la partie « structure » du §4.3 de `HANDOFF.md` et le point 10 du §12.** Branche
+`feat/split-public-front` côté front, `feat/public-front-prereqs` côté back.
+Front **139 fichiers de test / 673 tests**, back **455 tests**, typecheck et format verts.
+
+### 34.1 Ce qui a été fait
+
+Le §4.3 disait « projet Angular séparé » sans trancher entre un dépôt distinct et une seconde
+application. **Mono-dépôt retenu**, en trois projets :
+
+| Projet          | Rôle                                           | Préfixe |
+| --------------- | ---------------------------------------------- | ------- |
+| `bae-dashboard` | l'ancien `src/`, inchangé fonctionnellement    | `bfd-`  |
+| `bae-public`    | espace commandes, port 4201                    | `bfp-`  |
+| `bae-ui`        | primitives, 6 intercepteurs, thème, jetons CSS | `bae-`  |
+
+Le facteur décisif contre deux dépôts : le design system n'est pas stable (§14), donc la taxe
+« publier une lib puis bumper deux dépôts » se paierait à chaque retouche. En mono-dépôt, le CI
+se retravaille **une fois**.
+
+⚠️ **`bae-ui` n'est pas construite.** Les deux applications en consomment les **sources** via
+l'alias `@bae/ui` → `projects/bae-ui/src/public-api.ts`. Raison : Tailwind 4 ne génère un
+utilitaire que s'il **voit** le source qui le mentionne. Une lib compilée par `ng-packagr` et lue
+depuis `node_modules/` sortirait du périmètre de scan, et les `bae-*` arriveraient **sans style**.
+Chaque `styles.css` porte donc un `@source '../../bae-ui/src'`.
+
+### 34.2 Ce qui reste dans le dashboard, et pourquoi
+
+`shared/components/modal/` **n'a pas été mutualisé** : `modal-container.ts` importe `RolesModal`
+en dur et `modal.models.ts` dépend de `JobPeriod`. Les sortir demande de faire porter le composant
+par `ModalConfig`. Le front public n'a aucune modale : à faire le jour où il en aura une.
+Restent aussi `presence-lock.ts` (lié au store des affectations), `buyer-picker`, `my-qr-card`.
+
+### 34.3 Trois pièges rencontrés, qui resserviront
+
+- ⚠️ **Une suite de tests peut rétrécir en silence.** Après l'extraction, `pnpm test` affichait
+  « 103 passed » en vert — au lieu de 139. Le champ `include` du builder `@angular/build:unit-test`
+  est **relatif à la racine du projet**, et les specs de la bibliothèque étaient tombés hors
+  périmètre : ils n'échouaient pas, ils n'existaient plus. **Toujours comparer le nombre**, jamais
+  la seule couleur. Corrigé par une cible `test` propre à `bae-ui` — qui doit emprunter le
+  `buildTarget` du dashboard, le builder exigeant une cible de build qu'une bibliothèque n'a pas.
+- ⚠️ **`import packageInfo from 'package.json'` inline tout le fichier**, dépendances comprises,
+  dans le paquet livré. Un front public n'a pas à publier cet inventaire. Utiliser l'import
+  **nommé** (`import { version } from …`), qui se tree-shake. `bae-logo` reçoit désormais la
+  version par `input()` au lieu de la lire.
+- ⚠️ **Le build Docker était déjà cassé sur `main`**, indépendamment de ce lot : le `Dockerfile`
+  préparait `pnpm@10.33.3` alors que `package.json` exige `>=11.0.0 <12.0.0`, et corepack refuse
+  une **plage** dans `devEngines`. Il manquait par ailleurs `pnpm-workspace.yaml` dans le `COPY`,
+  sans lequel pnpm 11 refuse les scripts de build. Les deux sont corrigés.
+
+### 34.4 Correctif de production : le cookie était host-only
+
+`session_cookie.ts` posait `bae_token` **sans attribut `domain`** — donc _host-only_, il ne repart
+que vers l'hôte exact qui l'a posé. Invisible en développement, où tout tient sur `localhost` (le
+port n'entre pas dans l'identité d'un cookie). En production, avec `api.` / `dashboard.` /
+`order.bae.eirb.fr`, **aucun des deux fronts n'aurait renvoyé le cookie** : session muette, sans
+la moindre erreur. Ajout de `COOKIE_DOMAIN` (optionnel, vide en local, `.bae.eirb.fr` en prod).
+
+### 34.5 ⚠️ Le §4.4 se trompait : `/account/profile` ne casse pas
+
+Le §4.4 de `HANDOFF.md` annonçait que `GET /v1/account/profile` **casserait** pour un client sans
+ligne `members`, et recommandait un endpoint client distinct. **C'est faux, mesuré** : le corps de
+`MemberTransformer` utilise `?.` partout et `transform(null)` propage `null`. Le §4.4 décrivait un
+état du code antérieur au déplacement de `first_name`/`last_name` vers `users` (§0 undecies).
+
+Le chemin était simplement **non testé** — les trois cas de `profile_permissions.spec.ts` partent
+tous de `MemberFactory`. `tests/functional/profile_client.spec.ts` le couvre désormais.
+
+**Conséquence : l'endpoint client distinct n'est pas nécessaire.** Le front public lit
+`/account/profile` tel quel, avec `member: null` traité explicitement par son `SessionStore`.
+
+### 34.6 Vérifié, pas supposé
+
+- Boucle SSO publique complète contre le Keycloak local : `redirect?app=public` → PKCE S256 →
+  formulaire → callback → **retour sur `:4201`** → cookie `bae_token` → `/account/profile` **200**
+  avec `member: null`, et **ligne `clients` créée en JIT** (vérifiée en base).
+- Paquet de production de `bae-public` inspecté : **ni `@ngrx`, ni `CaisseStore`, `StocksStore`,
+  `CoordinationStore`, `EventsStore`, `OrdersStore`, `permissionGuard`, `AppShell`, `ModalService`**.
+  **424 Ko contre 1,4 Mo** pour le dashboard. C'est la seule preuve qui vaille : aucun test
+  unitaire ne verrait un store importé par mégarde.
+- Image Docker `Dockerfile.public` construite et son contenu inspecté ; les deux pages rendues
+  au navigateur, styles de la bibliothèque compris.
+
+### 34.7 Ce que ce lot **n'a pas** fait
+
+La page précommandes **reste une maquette statique**, et c'est assumé. Le back n'expose
+**aucune route client** : `middleware.audience('client')` n'est utilisé nulle part, il n'existe ni
+`POST /pre-orders` côté client, ni catalogue lisible sans permission staff. C'est le chantier
+suivant, et il est côté back.
