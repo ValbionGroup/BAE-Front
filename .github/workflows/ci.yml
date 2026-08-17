@@ -50,7 +50,7 @@ jobs:
           runtime: node@lts
 
       - name: Create environment
-        run: cp src/environment/environment.example.ts src/environment/environment.ts
+        run: cp projects/bae-ui/src/environment/environment.example.ts projects/bae-ui/src/environment/environment.ts
 
       - name: Set timezone
         uses: szenius/set-timezone@v2.0
@@ -91,7 +91,7 @@ jobs:
           key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Create environment
-        run: cp src/environment/environment.example.ts src/environment/environment.ts
+        run: cp projects/bae-ui/src/environment/environment.example.ts projects/bae-ui/src/environment/environment.ts
 
       - name: Check type checking
         run: pnpm typecheck
