@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import packageInfo from '../../../../../../package.json';
+import packageInfo from '../../../../../../../../package.json';
 
 @Component({
   selector: 'bfd-logo',

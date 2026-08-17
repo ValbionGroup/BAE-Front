@@ -20,10 +20,10 @@
   },
   "private": true,
   "imports": {
-    "#core/*": "./src/app/core/*",
-    "#shared/*": "./src/app/shared/*",
-    "#pages/*": "./src/app/pages/*",
-    "#app/*": "./src/app/*"
+    "#core/*": "./projects/bae-dashboard/src/app/core/*",
+    "#shared/*": "./projects/bae-dashboard/src/app/shared/*",
+    "#pages/*": "./projects/bae-dashboard/src/app/pages/*",
+    "#app/*": "./projects/bae-dashboard/src/app/*"
   },
   "dependencies": {
     "@adonisjs/transmit-client": "^1.1.0",
