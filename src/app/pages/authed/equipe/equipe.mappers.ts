@@ -6,6 +6,7 @@ import {
   LucideTrash2,
   type LucideIconInput,
 } from '@lucide/angular';
+import { teamMemberName } from '#core/services/team/team-service';
 import type {
   ApiTeamLog,
   ApiTeamMember,
@@ -105,7 +106,7 @@ export function toMemberRows(
       const activityMs = lastActivity.get(member.id) ?? null;
       return {
         id: member.id,
-        nom: `${member.firstName} ${member.lastName}`.trim(),
+        nom: teamMemberName(member),
         // `role` is a preloaded object: reading it directly would print [object Object].
         role: member.role?.name ?? null,
         points: member.points,
@@ -175,7 +176,7 @@ export function toAuditEntries(
   limit = AUDIT_LIMIT,
 ): AuditEntry[] {
   const nameByUserId = new Map<number, string>(
-    members.map((member) => [member.id, `${member.firstName} ${member.lastName}`.trim()]),
+    members.map((member) => [member.id, teamMemberName(member)]),
   );
 
   return [...logs]

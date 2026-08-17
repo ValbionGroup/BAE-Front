@@ -1492,9 +1492,14 @@ noieraient tout le reste.
 
 ### Ce qui reste
 
-- ⚠️ **`ticket:read` / `ticket:write` ne sont pas encore en base** : le catalogue les déclare, mais
-  il faut rejouer `node ace db:seed --files="./database/seeders/main_seeder.ts"` pour créer les
-  lignes `roles_permissions`. Sans ça, personne ne voit les tickets des autres.
+- ~~`ticket:read` / `ticket:write` ne sont pas encore en base~~ — **faux, vérifié le 2026-08-16** :
+  elles y sont, et sont attribuées à `President`, `Administrateur` et `Secretaire`.
+- ⚠️ **Le seeder de permissions n'élague pas.** `fetchOrCreateMany` n'insère que : une permission
+  retirée du catalogue survit indéfiniment en base, `GET /permissions` la liste, la matrice
+  l'affiche — et l'enregistrement échoue en **422**, le validateur ne la connaissant plus. Vu en
+  vrai : 8 rescapées d'un ancien nommage (`stock:create` / `stock:update`, remplacés par
+  `stock:write`), qu'aucun rôle n'utilise. Nettoyage :
+  `delete from permissions where permission like '%:create' or permission like '%:update';`
 - Le fil se remplira à mesure qu'on ajoutera des `recordEvent()` sur les gestes qui le méritent.
 - Le **front public** n'existe toujours pas : `app=public` est implémenté et testé, rien ne l'appelle.
 - **Logout global SSO** (`id_token_hint`) non implémenté.

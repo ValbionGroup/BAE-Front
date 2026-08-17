@@ -35,6 +35,7 @@ import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
 import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { toAuditEntries, toMemberRows, toPermsMatrix } from './equipe.mappers';
 import type { AuditEntry, Invitation } from './equipe.types';
+import { teamMemberName } from '#core/services/team/team-service';
 import type { ApiTeamMember } from '#core/services/team/team-service';
 
 @Component({
@@ -270,7 +271,7 @@ export class Equipe implements OnInit {
   }
 
   private confirmDelete(member: ApiTeamMember): void {
-    const name = `${member.firstName} ${member.lastName}`.trim();
+    const name = teamMemberName(member);
     this.modal.open({
       type: 'delete',
       title: 'Supprimer ce membre ?',

@@ -27,19 +27,49 @@ export interface ApiTeamRoleWithPermissions extends ApiTeamRole {
   permissions: ApiTeamPermission[];
 }
 
+/** L'utilisateur préchargé derrière un membre. C'est lui qui porte l'identité. */
+export interface ApiTeamMemberUser {
+  id: number;
+  email: string;
+  /** Nullables : un compte créé par inscription directe n'a pas encore de nom. */
+  firstName: string | null;
+  lastName: string | null;
+}
+
 /**
- * `GET /members` row. WARNING: `role` is an OBJECT (preloaded relation), never a string.
- * Read `role.name` for display and handle `role === null` (members without a role exist).
+ * Ligne de `GET /members`.
+ *
+ * ⚠️ `role` est un **objet** (relation préchargée), jamais une chaîne. Lire
+ * `role.name`, et traiter `role === null` (des membres sans rôle existent).
+ *
+ * ⚠️ **`firstName` / `lastName` ne sont PAS à plat ici.** Ils ont été remontés de
+ * `members` vers `users`, et cet endpoint renvoie le modèle brut : ils vivent
+ * donc sous `user`. Les lire à plat donnait « undefined undefined » à l'écran,
+ * sans aucune erreur. Passer par `teamMemberName()`, qui centralise le repli.
+ *
+ * (`/account/profile` les expose bien à plat, lui : il applique
+ * `MemberTransformer`. Les deux endpoints n'ont pas la même forme.)
  */
 export interface ApiTeamMember {
   id: number;
-  firstName: string;
-  lastName: string;
   roleId: number | null;
   points: number;
   createdAt: string | null;
   updatedAt: string | null;
   role: ApiTeamRole | null;
+  user: ApiTeamMemberUser | null;
+}
+
+/**
+ * Nom affichable d'un membre, avec repli sur l'email puis sur l'identifiant :
+ * une ligne sans nom reste identifiable, plutôt que de devenir vide.
+ */
+export function teamMemberName(member: ApiTeamMember): string {
+  const parts = [member.user?.firstName, member.user?.lastName].filter(
+    (part): part is string => typeof part === 'string' && part.trim() !== '',
+  );
+  if (parts.length > 0) return parts.join(' ');
+  return member.user?.email ?? `#${member.id}`;
 }
 
 /**

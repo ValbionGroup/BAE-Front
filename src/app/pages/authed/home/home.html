@@ -636,7 +636,7 @@
           </div>
         } @else if (activity.unavailable()) {
           <div class="border-t border-border-s px-4 py-6 text-center text-[12px] text-muted">
-            Fil d'activité indisponible — non encore fourni par l'API.
+            Aucune activité récente.
           </div>
         } @else {
           @for (a of activity.data(); track $index) {
