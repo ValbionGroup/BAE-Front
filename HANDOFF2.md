@@ -1071,3 +1071,74 @@ La page précommandes **reste une maquette statique**, et c'est assumé. Le back
 **aucune route client** : `middleware.audience('client')` n'est utilisé nulle part, il n'existe ni
 `POST /pre-orders` côté client, ni catalogue lisible sans permission staff. C'est le chantier
 suivant, et il est côté back.
+
+---
+
+## 35. L'API ne joignait pas l'IdP en conteneur — ✅ corrigé le 2026-08-17
+
+Trouvé juste après le §34 : le SSO fonctionnait avec `node ace serve` **sur l'hôte**, et échouait
+dès que l'API tournait dans `bae-api-dev`. Back **460 tests**.
+
+### 35.1 Le piège, qui n'est pas une erreur de configuration
+
+**Une URL d'IdP sert deux consommateurs qui ne l'atteignent pas de la même façon.** Les métadonnées
+OIDC portent `authorization_endpoint`, suivi par le **navigateur**, et `token_endpoint` /
+`userinfo_endpoint`, appelés par le **serveur**. `openid-client` lit les deux dans le même jeu de
+métadonnées, issu d'une seule `discovery()`.
+
+Tant que les deux passent par la même adresse publique, la distinction ne se voit pas. Mesuré
+depuis le réseau de l'API :
+
+| Depuis `bae-back_bae-dev-network`       | Résultat                                                    |
+| --------------------------------------- | ----------------------------------------------------------- |
+| `localhost:8080` ← ce que `.env` disait | **échec** — dans un conteneur, `localhost` est le conteneur |
+| `keycloak:8080`                         | **échec** — Keycloak est sur le réseau `keycloak_keycloak`  |
+| `host.docker.internal:8080`             | 200                                                         |
+
+⚠️ **Le réflexe — pointer `KEYCLOAK_ISSUER` sur l'adresse que le serveur sait joindre — déplace la
+panne au lieu de la corriger.** La découverte repart, la redirection aussi, et c'est le
+**navigateur** qui échoue sur un nom d'hôte interne qu'il ne résout pas : plus tard, et déguisé en
+problème d'IdP.
+
+⚠️ **Second piège, en amont :** sans attribut de realm `frontendUrl`, Keycloak dérive `issuer` et
+**tous** ses endpoints de l'en-tête `Host` de l'appelant. Vérifié : le même realm annonce
+`issuer: http://localhost:8080/...` vu de l'hôte et `http://host.docker.internal:8080/...` vu d'un
+conteneur. C'est aussi **le mode d'échec classique de Keycloak derrière un proxy** — donc un risque
+de production, pas seulement de développement.
+
+### 35.2 La forme retenue
+
+Séparer les deux adresses, ce que Keycloak appelle le _backchannel_ :
+
+- `KEYCLOAK_ISSUER` — adresse **publique**. Celle du navigateur, et celle que le claim `iss` porte.
+- `KEYCLOAK_INTERNAL_URL` — **optionnelle**, chemin serveur → IdP quand il diffère. Vide, tout se
+  comporte comme avant.
+
+`app/services/oidc_backchannel.ts` réécrit l'**origine** (jamais le chemin) des seules requêtes
+sortantes du serveur ; `oidc_service.ts` la branche via `client.customFetch`, **aux deux
+emplacements** — l'option de `discovery()` ne couvre que la requête de métadonnées, pas l'échange
+du code ni `/userinfo`. `setup-dev-keycloak.sh` pose `frontendUrl` sur le realm, idempotent.
+`docker-compose.dev.yml` transmettait par ailleurs **zéro variable `KEYCLOAK_*`** : l'app ne
+démarrait que grâce au bind mount qui lui donnait le `.env`.
+
+### 35.3 Vérifié par test de contrôle
+
+API **en conteneur**, avec la base migrée :
+
+| Configuration                | `redirect?app=public`                                                  |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| sans `KEYCLOAK_INTERNAL_URL` | **HTTP 500**, erreur réseau dans les journaux                          |
+| avec                         | **HTTP 302** vers `http://localhost:8080/...` — l'adresse **publique** |
+
+Puis boucle complète depuis le conteneur : formulaire → callback → cookie → `/account/profile`
+**200**. L'échange du code passe donc aussi, ce qui prouve que le `customFetch` posé sur la
+`Configuration` sert bien au-delà de la découverte.
+
+### 35.4 En production
+
+EirbConnect est une URL publique joignable depuis le serveur : `KEYCLOAK_INTERNAL_URL` restera
+**vide**, et le code se comporte comme avant. Ce qui compte pour la production est ailleurs — c'est
+le §35.1 second point : **si EirbConnect est derrière un proxy qui n'honore pas `X-Forwarded-*`**,
+ses métadonnées annonceront des hôtes internes et le flux cassera exactement de la même façon. Le
+symptôme à reconnaître : une redirection vers un nom d'hôte que le navigateur ne résout pas, ou un
+`iss` qui ne correspond pas à l'issuer configuré.
