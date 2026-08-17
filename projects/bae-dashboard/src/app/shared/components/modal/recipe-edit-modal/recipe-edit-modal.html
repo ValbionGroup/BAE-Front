@@ -1,0 +1,190 @@
+<bfd-modal-shell
+  [icon]="icChef"
+  tone="blue"
+  [title]="isEdit() ? 'Modifier la recette' : 'Nouvelle recette'"
+  [subtitle]="
+    isEdit()
+      ? 'Entête, ingrédients et méthode de confection.'
+      : 'Une recette peut naître sans ingrédient et se composer ensuite.'
+  "
+  [width]="720"
+  (close)="cancel()"
+>
+  @if (detailLoading()) {
+    <p class="m-0 py-6 text-center text-[12.5px] text-muted">Chargement de la recette…</p>
+  } @else if (detailError()) {
+    <p role="alert" class="m-0 py-6 text-center text-[12.5px] text-danger">
+      Impossible de charger cette recette. Fermez et réessayez.
+    </p>
+  } @else {
+    <div class="flex flex-col gap-3.5">
+      <bae-field label="Nom">
+        <bae-input
+          placeholder="Crêpe sucrée"
+          [value]="name()"
+          [invalid]="submitted() && name().trim() === ''"
+          (valueChange)="onName($event)"
+        />
+      </bae-field>
+
+      <bae-toggle
+        label="Recette végétarienne"
+        [on]="isVegetarian()"
+        (change)="onVegetarian($event)"
+      />
+
+      <bae-field label="Description" hint="Facultatif — ce qu'est le produit, en une phrase.">
+        <textarea
+          rows="2"
+          placeholder="Crêpe de froment, sucre en poudre."
+          class="w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="description()"
+          (input)="onDescription($event)"
+        ></textarea>
+      </bae-field>
+
+      <bae-field
+        label="Méthode de confection"
+        hint="Facultatif — la marche à suivre d'ensemble. Les gestes propres à un ingrédient se notent sur sa ligne."
+      >
+        <textarea
+          rows="3"
+          placeholder="Chauffer la plaque, verser une louche, retourner à mi-cuisson."
+          class="w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="method()"
+          (input)="onMethod($event)"
+        ></textarea>
+      </bae-field>
+
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <h3 class="m-0 text-xs font-medium text-text-2">Ingrédients</h3>
+          <span class="text-[11px] text-muted">L'ordre des lignes est l'ordre d'assemblage.</span>
+          <span class="flex-1"></span>
+          <bae-btn
+            kind="secondary"
+            size="sm"
+            [icon]="icPlus"
+            [disabled]="goodsMissing()"
+            (clicked)="addLine()"
+            >Ajouter</bae-btn
+          >
+        </div>
+
+        @if (goodsMissing()) {
+          <p
+            class="m-0 rounded-md border border-dashed border-border-s bg-surface p-3 text-[12px] text-muted"
+          >
+            Aucun produit au catalogue : créez-en un depuis la page Stocks avant de composer une
+            recette.
+          </p>
+        } @else if (lines().length === 0) {
+          <p
+            class="m-0 rounded-md border border-dashed border-border-s bg-surface p-3 text-center text-[12px] text-muted"
+          >
+            Aucun ingrédient. « Ajouter » en pose un premier.
+          </p>
+        } @else {
+          <div class="flex flex-col gap-1.5">
+            <div
+              class="grid grid-cols-[1fr_104px_1fr_92px] gap-2 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+            >
+              <span>Produit</span>
+              <span>Quantité</span>
+              <span>Instruction</span>
+              <span class="text-right">Ordre</span>
+            </div>
+
+            @for (line of lines(); track line.key; let i = $index; let last = $last) {
+              <div class="grid grid-cols-[1fr_104px_1fr_92px] items-center gap-2">
+                <select
+                  aria-label="Produit"
+                  [attr.aria-invalid]="
+                    submitted() && (line.goodId === '' || duplicateGoodIds().has(line.goodId))
+                      ? 'true'
+                      : null
+                  "
+                  class="h-9 w-full rounded-md border border-border bg-surface-2 px-2 text-[12.5px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+                  [value]="line.goodId"
+                  (change)="setGood(line.key, $any($event.target).value)"
+                >
+                  <option value="">Choisir un produit…</option>
+                  @for (good of stocks.products(); track good.id) {
+                    <option [value]="good.id">{{ good.name }}</option>
+                  }
+                </select>
+
+                <bae-input
+                  ariaLabel="Quantité"
+                  type="text"
+                  placeholder="1"
+                  [suffix]="unitOf(line.goodId)"
+                  [value]="line.quantity"
+                  [invalid]="submitted() && lineInvalid(line)"
+                  (valueChange)="setQuantity(line.key, $event)"
+                />
+
+                <bae-input
+                  ariaLabel="Instruction"
+                  placeholder="Verser en pluie"
+                  [value]="line.instruction"
+                  (valueChange)="setInstruction(line.key, $event)"
+                />
+
+                <div class="flex items-center justify-end gap-0.5">
+                  <bae-btn
+                    kind="quiet"
+                    size="sm"
+                    [icon]="icUp"
+                    [disabled]="i === 0"
+                    ariaLabel="Monter cet ingrédient"
+                    (clicked)="moveLine(line.key, -1)"
+                  />
+                  <bae-btn
+                    kind="quiet"
+                    size="sm"
+                    [icon]="icDown"
+                    [disabled]="last"
+                    ariaLabel="Descendre cet ingrédient"
+                    (clicked)="moveLine(line.key, 1)"
+                  />
+                  <bae-btn
+                    kind="quiet"
+                    size="sm"
+                    [icon]="icTrash"
+                    ariaLabel="Retirer cet ingrédient"
+                    (clicked)="removeLine(line.key)"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (submitted() && !valid()) {
+        <p role="alert" class="m-0 text-[12px] text-danger">
+          Le nom est obligatoire, et chaque ingrédient doit désigner un produit distinct avec une
+          quantité supérieure à zéro. Les décimales sont admises : 0,0833 paquet pour un pain pris
+          dans un paquet de douze.
+        </p>
+      }
+
+      @if (store.saveError(); as message) {
+        <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+      }
+    </div>
+  }
+
+  <div modal-footer class="flex flex-1 justify-end gap-2">
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn
+      kind="primary"
+      size="md"
+      [disabled]="store.saving() || detailLoading() || detailError()"
+      (clicked)="submit()"
+    >
+      {{ store.saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </bae-btn>
+  </div>
+</bfd-modal-shell>

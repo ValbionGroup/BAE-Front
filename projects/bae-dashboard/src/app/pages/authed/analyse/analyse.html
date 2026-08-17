@@ -1,0 +1,201 @@
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- KPI row -->
+  <div class="mb-4 grid grid-cols-4 gap-3">
+    @if (isLoading()) {
+      @for (_ of skeletonKpis; track $index) {
+        <div class="rounded-md border border-border-s bg-surface p-3.5">
+          <bae-skeleton width="80px" height="10px" />
+          <div class="mt-2"><bae-skeleton width="60%" height="20px" variant="surface-3" /></div>
+          <div class="mt-2"><bae-skeleton width="40%" height="10px" /></div>
+        </div>
+      }
+    } @else if (store.kpis().length === 0) {
+      <div
+        class="col-span-4 rounded-md border border-dashed border-border-s bg-surface p-6 text-center text-[12px] text-muted"
+      >
+        Aucun indicateur disponible.
+      </div>
+    } @else {
+      @for (k of store.kpis(); track k.label) {
+        <div class="rounded-md border border-border-s bg-surface p-3.5">
+          <div class="mb-1 text-[11px] text-muted">{{ k.label }}</div>
+          <div class="mono tnum text-[21px] font-semibold text-text">{{ k.value }}</div>
+          <div [class]="'mt-1 text-[11px] ' + k.deltaClass">{{ k.delta }}</div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Bar chart -->
+  <div class="mb-4 rounded-md border border-border-s bg-surface p-4">
+    <div class="mb-3.5 flex items-baseline">
+      <span class="text-[13px] font-semibold text-text">Commandes par soirée</span>
+      <span class="ml-2 text-[11px] text-muted">6 dernières soirées</span>
+      <div class="flex-1"></div>
+      <div class="flex gap-3 text-[11px] text-muted">
+        <span> <span class="mr-1.5 inline-block h-2 w-2 rounded-sm bg-blue"></span>Réalisé </span>
+        <span>
+          <span
+            class="mr-1.5 inline-block h-2 w-2 rounded-sm border-[1.5px] border-dashed border-blue"
+          ></span
+          >Prédiction
+        </span>
+      </div>
+    </div>
+
+    @if (isLoading()) {
+      <div class="flex h-45 items-end gap-3.5 pb-5.5">
+        @for (_ of skeletonChartCols; track $index) {
+          <div class="flex flex-1 flex-col items-center gap-1.5">
+            <bae-skeleton width="40%" height="10px" />
+            <bae-skeleton width="100%" height="120px" variant="surface-3" />
+            <bae-skeleton width="50%" height="10px" />
+          </div>
+        }
+      </div>
+    } @else if (store.chart().length === 0) {
+      <div class="py-10 text-center text-[12px] text-muted">
+        Aucune donnée à afficher pour le moment.
+      </div>
+    } @else {
+      <div class="relative flex h-45 items-end gap-3.5 pb-5.5">
+        @for (tick of axisTicks; track tick) {
+          <div
+            class="pointer-events-none absolute left-0 right-0 h-px bg-border-s"
+            [style.bottom.px]="tickBottom(tick)"
+          >
+            <span
+              class="mono tnum absolute -left-0.5 -top-1.75 bg-surface px-1 text-[9px] text-muted"
+              >{{ tick }}</span
+            >
+          </div>
+        }
+        @for (col of store.chart(); track col.d) {
+          <div class="flex flex-1 flex-col items-center gap-1.5">
+            <span
+              [class]="
+                'mono tnum text-[11px] font-semibold ' + (col.pred ? 'text-blue' : 'text-text-2')
+              "
+              >{{ col.cmd }}</span
+            >
+            <div
+              class="w-full rounded-t-sm"
+              [style.height.px]="barHeight(col.cmd)"
+              [style.background]="
+                col.pred
+                  ? 'transparent'
+                  : 'linear-gradient(180deg, var(--bae-blue) 0%, color-mix(in oklch, var(--bae-blue) 60%, var(--bae-surface)) 100%)'
+              "
+              [style.border]="col.pred ? '1.5px dashed var(--bae-blue)' : 'none'"
+            ></div>
+            <span class="text-[10px] text-muted">{{ col.d }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Prediction + history -->
+  <div class="grid grid-cols-[1fr_1.6fr] gap-3.5">
+    @if (isLoading()) {
+      <div class="rounded-md border border-border-s bg-surface p-4">
+        <bae-skeleton width="60%" height="10px" />
+        <div class="mt-2"><bae-skeleton width="90%" height="12px" /></div>
+        <div class="mt-4"><bae-skeleton width="50%" height="36px" variant="surface-3" /></div>
+        <div class="mt-4 grid grid-cols-2 gap-2.5">
+          <div>
+            <bae-skeleton width="60%" height="10px" />
+            <div class="mt-1"><bae-skeleton width="50%" height="14px" variant="surface-3" /></div>
+          </div>
+          <div>
+            <bae-skeleton width="60%" height="10px" />
+            <div class="mt-1"><bae-skeleton width="50%" height="14px" variant="surface-3" /></div>
+          </div>
+        </div>
+      </div>
+    } @else if (store.prediction(); as p) {
+      <div class="relative overflow-hidden rounded-md border border-blue bg-surface p-4">
+        <span class="absolute -top-8 -right-8 h-30 w-30 rounded-full bg-blue opacity-[.08]"></span>
+        <div class="mono mb-1.5 text-[10px] tracking-wider text-blue">
+          {{ p.label }}
+        </div>
+        <div class="mb-4 text-[13px] text-text-2">
+          {{ p.description }}
+        </div>
+        <div class="mb-1 flex items-baseline gap-2">
+          <span class="mono tnum text-[38px] font-bold -tracking-[1px] text-text">{{
+            p.expectedOrders
+          }}</span>
+          <span class="text-[13px] text-muted">commandes (± {{ p.range }})</span>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2.5">
+          <div>
+            <div class="mb-0.5 text-[10px] text-muted">Revenu estimé</div>
+            <div class="mono tnum text-[15px] font-semibold text-text">
+              {{ p.estimatedRevenue }}
+            </div>
+          </div>
+          <div>
+            <div class="mb-0.5 text-[10px] text-muted">Précommandes</div>
+            <div class="mono tnum text-[15px] font-semibold text-blue">{{ p.prereg }}</div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div
+        class="flex items-center justify-center rounded-md border border-dashed border-border-s bg-surface p-6 text-center text-[12px] text-muted"
+      >
+        Aucune prédiction disponible.
+      </div>
+    }
+
+    <div class="overflow-hidden rounded-md border border-border-s bg-surface">
+      <div class="border-b border-border-s px-3.5 py-3 text-[13px] font-semibold text-text">
+        Historique des soirées
+      </div>
+      @if (isLoading()) {
+        @for (_ of skeletonRows; track $index; let last = $last) {
+          <div
+            [class]="
+              'grid grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 ' +
+              (last ? '' : 'border-b border-border-s')
+            "
+          >
+            <bae-skeleton width="70%" height="12px" variant="surface-3" />
+            <bae-skeleton width="60%" height="10px" />
+            <bae-skeleton width="80%" height="12px" variant="surface-3" />
+            <bae-skeleton width="60%" height="10px" />
+            <bae-skeleton width="14px" height="14px" />
+          </div>
+        }
+      } @else if (store.soirees().length === 0) {
+        <div class="px-3.5 py-8 text-center text-[12px] text-muted">Aucune soirée à afficher.</div>
+      } @else {
+        @for (s of store.soirees(); track s.n; let i = $index) {
+          <div
+            [class]="
+              'grid grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+              (i ? 'border-t border-border-s' : '')
+            "
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-text">{{ s.n }}</span>
+              @if (s.pred) {
+                <bae-badge kind="blue">À venir</bae-badge>
+              }
+            </div>
+            <span class="mono text-[11px] text-muted">{{ s.d }}</span>
+            <span class="mono tnum text-right text-[13px] text-text">{{ s.rev }}</span>
+            <span class="mono tnum text-right text-[12px] text-text-2">{{ s.cmd }} cmd</span>
+            <svg
+              [lucideIcon]="icChevronRight"
+              [size]="14"
+              class="justify-self-end text-muted"
+              aria-hidden="true"
+            ></svg>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

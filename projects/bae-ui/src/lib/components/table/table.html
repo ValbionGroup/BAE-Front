@@ -1,0 +1,21 @@
+<div
+  class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+>
+  <table class="w-full text-sm" [attr.aria-label]="name()">
+    <thead>
+      <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        @for (column of columns(); track $any(column.key)) {
+          <th scope="col" [class]="getThClasses(column)">
+            {{ column.label }}
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody
+      bae-table-content
+      [columns]="columns()"
+      [rows]="rows()"
+      [emptyMessage]="emptyMessage()"
+    ></tbody>
+  </table>
+</div>

@@ -1,7 +1,14 @@
 services:
-  web:
+  dashboard:
     image: registry.eirb.fr/valbiongroup/bae-front-dashboard:latest
     container_name: bae-front-dashboard
     ports:
       - '8080:80'
+    restart: unless-stopped
+
+  public:
+    image: registry.eirb.fr/valbiongroup/bae-front-public:latest
+    container_name: bae-front-public
+    ports:
+      - '8081:80'
     restart: unless-stopped

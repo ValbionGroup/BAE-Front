@@ -1,0 +1,116 @@
+<bfd-modal-shell
+  [icon]="icPackage"
+  tone="warn"
+  title="Clôturer la soirée"
+  [subtitle]="eventName() || 'Ce qui n\'a pas servi'"
+  [width]="620"
+  (close)="cancel()"
+>
+  @if (loading()) {
+    <div class="py-6 text-center text-[12px] text-muted">Lecture de ce qui a été prélevé…</div>
+  } @else if (lines().length === 0) {
+    <div class="rounded-md border border-border-s bg-surface-2 p-4 text-center">
+      <div class="text-[12.5px] text-text">Aucune production lancée sur cette soirée.</div>
+      <div class="mt-1 text-[11.5px] text-muted">Il n'y a donc rien à remettre en stock.</div>
+    </div>
+  } @else {
+    <div class="flex flex-col gap-2">
+      @for (line of lines(); track line.good.goodId) {
+        <div class="rounded-md border border-border-s bg-surface-2 p-3">
+          <div class="flex items-baseline gap-2">
+            <span class="flex-1 text-[12.5px] font-medium text-text">{{ line.good.goodName }}</span>
+            <span class="tnum text-[11.5px] text-muted">
+              sorti {{ line.good.takenQty }} {{ line.good.unit }}
+              @if (line.good.returnedQty > 0) {
+                · déjà remis {{ line.good.returnedQty }}
+              }
+            </span>
+          </div>
+
+          <div class="mt-2 flex items-center gap-2">
+            <label class="sr-only" [attr.for]="'qty-' + line.good.goodId">
+              Quantité qui revient pour {{ line.good.goodName }}
+            </label>
+            <bae-input
+              size="sm"
+              type="text"
+              placeholder="0"
+              [value]="line.quantity"
+              [invalid]="tooMuch(line)"
+              [ariaLabel]="'Quantité qui revient pour ' + line.good.goodName"
+              (valueChange)="setQuantity(line.good.goodId, $event)"
+            />
+            <span class="text-[11.5px] text-muted">
+              sur {{ line.good.returnableQty }} possible{{ line.good.returnableQty > 1 ? 's' : '' }}
+            </span>
+
+            <span class="flex-1"></span>
+
+            <div
+              role="radiogroup"
+              [attr.aria-label]="'Destination pour ' + line.good.goodName"
+              class="inline-flex rounded-md border border-border-s bg-surface p-0.5"
+            >
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="line.destination === 'reserve'"
+                [class]="
+                  'rounded-sm px-2.5 py-1 text-[11.5px] ' +
+                  (line.destination === 'reserve'
+                    ? 'bg-ok-soft text-ok font-semibold'
+                    : 'text-muted')
+                "
+                (click)="setDestination(line.good.goodId, 'reserve')"
+              >
+                En réserve
+              </button>
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="line.destination === 'discard'"
+                [class]="
+                  'rounded-sm px-2.5 py-1 text-[11.5px] ' +
+                  (line.destination === 'discard'
+                    ? 'bg-danger-soft text-danger font-semibold'
+                    : 'text-muted')
+                "
+                (click)="setDestination(line.good.goodId, 'discard')"
+              >
+                Au rebut
+              </button>
+            </div>
+          </div>
+
+          @if (tooMuch(line)) {
+            <div role="alert" class="mt-1.5 text-[11.5px] text-danger">
+              La soirée n'a prélevé que {{ line.good.returnableQty }} — on ne peut pas en remettre
+              davantage.
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <p class="mt-3 text-[11px] text-muted">
+      Remettre en réserve recrédite les lots <strong>dans l'ordre inverse du prélèvement</strong> —
+      les lots à date courte ayant été entamés en premier. Mettre au rebut n'écrit rien : la sortie
+      de stock a déjà eu lieu au lancement, jeter c'est simplement ne pas recréditer.
+    </p>
+  }
+
+  @if (error(); as message) {
+    <div role="alert" class="mt-3 rounded-md border border-danger bg-danger-soft/40 p-2.5">
+      <span class="text-[12px] text-danger">{{ message }}</span>
+    </div>
+  }
+
+  <div modal-footer class="contents">
+    <div class="flex-1"></div>
+    <bae-btn kind="ghost" [icon]="icDownload" (clicked)="printClosing()">Imprimer</bae-btn>
+    <bae-btn kind="ghost" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn kind="primary" [disabled]="busy() || anyInvalid() || loading()" (clicked)="submit()">
+      Clôturer
+    </bae-btn>
+  </div>
+</bfd-modal-shell>

@@ -1,0 +1,75 @@
+<bfd-modal-shell
+  tone="ok"
+  [icon]="icCheck"
+  title="Liste de courses prête"
+  subtitle="Soirée Hivernale · 24 produits · économie 12,80 €"
+  [width]="620"
+  (close)="close()"
+>
+  <div class="grid grid-cols-3 gap-2.5 mb-4">
+    @for (s of stats; track s.l) {
+      <div class="p-3 bg-surface-2 border border-border-s rounded-md">
+        <div class="text-[10px] text-muted uppercase tracking-wider">{{ s.l }}</div>
+        <div
+          [class]="
+            'mono tnum text-[17px] font-semibold mt-1 ' + (s.accent ? 'text-ok' : 'text-text')
+          "
+        >
+          {{ s.v }}
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="mono text-[10px] text-muted tracking-wider mb-2">RÉPARTITION OPTIMALE</div>
+  <div class="bg-surface-2 border border-border-s rounded-md mb-4">
+    @for (s of splits; track s.e; let i = $index) {
+      <div [class]="'px-3.5 py-3 ' + (i ? 'border-t border-border-s' : '')">
+        <div class="flex items-baseline gap-2.5">
+          <span class="text-[13px] font-medium text-text flex-1">{{ s.e }}</span>
+          <span class="mono tnum text-[11px] text-muted">{{ s.items }} produits</span>
+          <span class="mono tnum text-[13px] font-semibold text-text">{{ fmt(s.total) }} €</span>
+        </div>
+        <div class="mt-2 h-1 rounded-sm bg-border overflow-hidden">
+          <div [class]="'h-full ' + s.cls" [style.width.%]="s.frac"></div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="mono text-[10px] text-muted tracking-wider mb-2">ASSIGNATION</div>
+  <bae-field label="Qui s'en occupe ?" class="block">
+    <div class="flex items-center gap-2 flex-wrap">
+      @for (p of people(); track p.n) {
+        <button
+          type="button"
+          (click)="togglePerson(p.n)"
+          [class]="
+            'inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-xs font-medium cursor-pointer border ' +
+            (p.sel
+              ? 'bg-blue-soft text-blue border-blue'
+              : 'bg-surface-2 text-text-2 border-border')
+          "
+        >
+          <bae-avatar [name]="p.n" [size]="20" />
+          {{ p.n }}
+          @if (p.sel) {
+            <svg [lucideIcon]="icCheck" [size]="10" aria-hidden="true"></svg>
+          }
+        </button>
+      }
+    </div>
+  </bae-field>
+
+  <bae-field label="Date limite des courses" class="block mt-3.5">
+    <bae-input [icon]="icCalendar" value="12/02/2026 · 18:00 (J-2)" />
+  </bae-field>
+
+  <div modal-footer class="contents">
+    <bae-btn kind="ghost" size="sm" [icon]="icTicket">Joindre 2 bons d'achat</bae-btn>
+    <div class="flex-1"></div>
+    <bae-btn kind="ghost" (clicked)="close()">Plus tard</bae-btn>
+    <bae-btn kind="secondary" [icon]="icDownload">Exporter PDF</bae-btn>
+    <bae-btn kind="primary" [iconRight]="icArrowRight" (clicked)="close()">Ouvrir la liste</bae-btn>
+  </div>
+</bfd-modal-shell>

@@ -1,0 +1,299 @@
+<ng-template #actions>
+  <bae-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bae-btn>
+  <!-- Aucune table `invitations` ni endpoint côté back (§3.2) : le bouton reste
+       en place — le manque est côté API — mais cesse de l'être en silence. -->
+  <bae-btn
+    kind="primary"
+    size="md"
+    [icon]="icPlus"
+    [disabled]="true"
+    title="Endpoint d'invitation non disponible"
+    >Inviter un membre</bae-btn
+  >
+</ng-template>
+
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- Tabs -->
+  <div class="flex gap-4 border-b border-border-s mb-5" role="tablist" aria-label="Sections équipe">
+    @for (tab of tabs; track tab; let i = $index) {
+      <button
+        type="button"
+        role="tab"
+        [id]="'equipe-tab-' + i"
+        [attr.aria-controls]="i === activeTab() ? 'equipe-panel-' + activeTab() : null"
+        [attr.aria-selected]="i === activeTab()"
+        (click)="activeTab.set(i)"
+        [class]="
+          'px-0 py-2.5 -mb-px bg-transparent border-0 border-b-2 cursor-pointer text-[13px] font-medium ' +
+          (i === activeTab() ? 'border-blue text-text' : 'border-transparent text-muted')
+        "
+      >
+        {{ tab }}
+        @if (i === 3) {
+          <bae-badge kind="blue" class="ml-2">{{ invitations.length }}</bae-badge>
+        }
+      </button>
+    }
+  </div>
+
+  @if (loading() === 'error') {
+    <div
+      role="alert"
+      class="bg-danger-soft border border-danger rounded-lg px-4 py-3 text-[12.5px] text-danger mb-[18px]"
+    >
+      {{ loadError() }}
+    </div>
+  }
+
+  <div
+    role="tabpanel"
+    [id]="'equipe-panel-' + activeTab()"
+    [attr.aria-labelledby]="'equipe-tab-' + activeTab()"
+  >
+    @switch (activeTab()) {
+      @case (0) {
+        <bae-card [padding]="0" class="block">
+          <div class="flex items-center px-4 py-3.5 border-b border-border-s">
+            <div class="flex-1">
+              <div class="text-[13px] font-semibold text-text">Membres</div>
+              <div class="text-[11px] text-muted mt-0.5">
+                {{ recentlyActiveCount() }} actif(s) sur les 5 dernières minutes · d'après le
+                journal de requêtes
+              </div>
+            </div>
+            <label class="w-[220px]">
+              <span class="sr-only">Filtrer les membres</span>
+              <bae-input
+                [icon]="icSearch"
+                placeholder="Filtrer…"
+                size="sm"
+                (valueChange)="onSearch($event)"
+              />
+            </label>
+          </div>
+
+          <div
+            class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
+          >
+            <span></span><span>Nom</span><span>Rôle</span><span>Scope</span
+            ><span>Dernière act.</span><span></span>
+          </div>
+
+          @if (loading() === 'loading' || loading() === 'init') {
+            @for (row of skeletonRows; track row) {
+              <div
+                class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center gap-2 px-4 py-3 border-b border-border-s"
+              >
+                <bae-skeleton width="28px" height="28px" rounded="pill" />
+                <bae-skeleton width="60%" height="10px" />
+                <bae-skeleton width="70px" height="10px" />
+                <bae-skeleton width="40px" height="10px" />
+                <bae-skeleton width="60px" height="10px" />
+                <span></span>
+              </div>
+            }
+          } @else if (errors().members) {
+            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+              {{ errors().members }}
+            </div>
+          } @else if (team().length === 0) {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucun membre à afficher.
+            </div>
+          } @else {
+            @for (m of team(); track m.id; let last = $last) {
+              <div
+                [class]="
+                  'grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center px-4 py-3 text-[12.5px] ' +
+                  (last ? '' : 'border-b border-border-s')
+                "
+              >
+                <div class="relative w-7">
+                  <bae-avatar [name]="m.nom" [size]="28" />
+                  @if (m.recentlyActive) {
+                    <span
+                      class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-ok border-2 border-surface"
+                      aria-hidden="true"
+                    ></span>
+                  }
+                </div>
+                <div class="min-w-0">
+                  <div class="font-medium text-text truncate">{{ m.nom }}</div>
+                  <div class="text-[10.5px] text-muted mt-px">{{ m.points }} pts</div>
+                </div>
+                <bae-badge [kind]="roleKind(m.role)">{{ m.role ?? 'Sans rôle' }}</bae-badge>
+                <!-- Scope: deriving it from the role's permissions is out of scope for now. -->
+                <span class="text-faint text-xs" title="Non calculé">—</span>
+                <span
+                  [class]="'text-[11.5px] ' + (m.recentlyActive ? 'text-ok' : 'text-muted')"
+                  [title]="
+                    m.lastActivityLabel ? 'Dernière requête tracée' : 'Aucune activité tracée'
+                  "
+                  >{{ m.lastActivityLabel ?? '—' }}</span
+                >
+                <button
+                  type="button"
+                  data-testid="member-actions"
+                  class="justify-self-end w-6 h-6 inline-flex items-center justify-center rounded-sm bg-transparent border-0 text-muted cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-blue/40"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'Actions pour ' + m.nom"
+                  [attr.title]="actionsReason(m.id)"
+                  [disabled]="actionsDisabled(m.id)"
+                  (click)="onActionsClick($event, m.id)"
+                >
+                  <svg [lucideIcon]="icMore" [size]="14" aria-hidden="true"></svg>
+                </button>
+              </div>
+            }
+          }
+        </bae-card>
+      }
+
+      @case (1) {
+        <bae-card [padding]="0" class="block">
+          <div class="px-4 py-3.5 border-b border-border-s">
+            <div class="text-[13px] font-semibold text-text">Matrice des permissions</div>
+            <div class="text-[11px] text-muted mt-0.5">
+              {{ perms().rows.length }} permission(s) · {{ perms().roles.length }} rôle(s)
+            </div>
+          </div>
+
+          @if (loading() === 'loading' || loading() === 'init') {
+            <div class="px-4 py-4 flex flex-col gap-2">
+              @for (row of skeletonRows; track row) {
+                <bae-skeleton height="14px" />
+              }
+            </div>
+          } @else if (errors().roles || errors().permissions) {
+            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+              {{ errors().roles ?? errors().permissions }}
+            </div>
+          } @else if (perms().rows.length === 0 || perms().roles.length === 0) {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucun rôle ou aucune permission enregistrée.
+            </div>
+          } @else {
+            <!-- relative : `sr-only` est en position absolue ; sans ancêtre positionné
+                 son bloc conteneur devient le bloc conteneur initial, il échappe donc
+                 à ce défilement et étend la hauteur du document. -->
+            <div class="relative overflow-x-auto">
+              <table class="w-full border-collapse text-[12.5px]">
+                <caption class="sr-only">
+                  Permissions par rôle.
+                </caption>
+                <thead>
+                  <tr
+                    class="border-b border-border-s text-[10px] font-semibold text-muted uppercase tracking-wider"
+                  >
+                    <th scope="col" class="text-left px-4 py-2.5 min-w-[160px]">Permission</th>
+                    @for (r of perms().roles; track r.id) {
+                      <th scope="col" class="text-center px-2 py-2.5 whitespace-nowrap">
+                        {{ r.name }}
+                        <span class="block font-normal normal-case text-faint"
+                          >{{ r.memberCount }} mb.</span
+                        >
+                      </th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of perms().rows; track p.permission) {
+                    <tr class="border-b border-border-s last:border-b-0">
+                      <th scope="row" class="text-left px-4 py-2 font-medium text-text mono">
+                        {{ p.permission }}
+                      </th>
+                      @for (cell of p.cells; track $index) {
+                        <td class="text-center px-2 py-2">
+                          <bae-checkbox
+                            [checked]="cell === 'granted'"
+                            [disabled]="cellDisabled(perms().roles[$index].id, p.permission)"
+                            [ariaLabel]="p.permission + ' pour ' + perms().roles[$index].name"
+                            (change)="onToggle(perms().roles[$index].id, p.permission, $event)"
+                          />
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </bae-card>
+      }
+
+      @case (2) {
+        <bae-card [padding]="0" class="block">
+          <div class="px-4 py-3.5 border-b border-border-s">
+            <div class="text-[13px] font-semibold text-text">Audit log · récent</div>
+            <div class="text-[11px] text-muted mt-0.5">
+              {{ audit().length }} entrée(s) les plus récentes · journal de requêtes
+            </div>
+          </div>
+
+          @if (loading() === 'loading' || loading() === 'init') {
+            <div class="px-4 py-4 flex flex-col gap-3">
+              @for (row of skeletonRows; track row) {
+                <bae-skeleton height="14px" />
+              }
+            </div>
+          } @else if (errors().logs) {
+            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+              {{ errors().logs }}
+            </div>
+          } @else if (audit().length === 0) {
+            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+              Aucune activité tracée.
+            </div>
+          } @else {
+            @for (l of audit(); track l.id) {
+              <div class="flex gap-2.5 px-4 py-3 border-t border-border-s items-start">
+                <div
+                  [class]="
+                    'w-[26px] h-[26px] rounded-sm inline-flex items-center justify-center shrink-0 ' +
+                    auditIconClass(l.c)
+                  "
+                >
+                  <svg [lucideIcon]="l.icon" [size]="13" aria-hidden="true"></svg>
+                </div>
+                <div class="flex-1 text-xs text-text-2 leading-relaxed min-w-0">
+                  <span class="text-text font-medium">{{ l.who }}</span> {{ l.a }}
+                  <span class="mono text-blue break-all">{{ l.em }}</span>
+                  @if (l.s) {
+                    {{ l.s }}
+                  }
+                  <div class="text-[10.5px] text-muted mt-0.5">{{ l.when }}</div>
+                </div>
+              </div>
+            }
+          }
+        </bae-card>
+      }
+
+      @case (3) {
+        <!--
+          MOCK — aucune table `invitations` ni endpoint côté backend.
+          Le panneau est conservé volontairement : le manque est côté API.
+        -->
+        <bae-card class="block">
+          <div class="flex items-center mb-2.5">
+            <div class="flex-1 text-[13px] font-semibold text-text">Invitations en attente</div>
+            <bae-badge kind="blue">{{ invitations.length }}</bae-badge>
+          </div>
+          <p class="text-[11px] text-warn mb-1">
+            Données de démonstration · endpoint non disponible
+          </p>
+          @for (iv of invitations; track iv.mail; let i = $index) {
+            <div [class]="'py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
+              <div class="text-[12.5px] text-text font-medium">{{ iv.mail }}</div>
+              <div class="text-[11px] text-muted mt-0.5">{{ iv.role }} · expire {{ iv.exp }}</div>
+              <div class="flex gap-1.5 mt-2">
+                <bae-btn kind="ghost" size="sm">Renvoyer</bae-btn>
+                <bae-btn kind="ghost" size="sm">Annuler</bae-btn>
+              </div>
+            </div>
+          }
+        </bae-card>
+      }
+    }
+  </div>
+</div>

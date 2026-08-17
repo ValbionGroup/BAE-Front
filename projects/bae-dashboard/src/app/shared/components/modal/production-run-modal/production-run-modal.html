@@ -1,0 +1,118 @@
+<bfd-modal-shell
+  [icon]="icChef"
+  tone="blue"
+  title="Lancer une production"
+  [subtitle]="productName()"
+  [width]="560"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    <bae-field
+      label="Quantité à produire"
+      hint="En unités de recette — 200 hot-dogs, pas 200 saucisses."
+    >
+      <div class="flex items-center gap-2">
+        <bae-input
+          type="text"
+          placeholder="100"
+          [value]="quantity()"
+          [invalid]="quantity() !== '' && parsedQuantity() === null"
+          (valueChange)="onQuantity($event)"
+        />
+        @if (remaining() > 0) {
+          <bae-btn kind="ghost" size="sm" (clicked)="useRemaining()">
+            Reste {{ remaining() }}
+          </bae-btn>
+        }
+      </div>
+    </bae-field>
+
+    <div class="text-[11.5px] text-muted">
+      Prévu au menu <span class="tnum text-text-2">{{ plannedQty() }}</span> · déjà produit
+      <span class="tnum text-text-2">{{ producedQty() }}</span>
+    </div>
+
+    @if (plan(); as lines) {
+      <div class="rounded-md border border-border-s bg-surface-2 p-3">
+        <div class="mb-2 text-[12px] font-semibold text-text">Lots à prélever</div>
+        <div class="flex flex-col gap-2">
+          @for (line of lines; track line.goodId) {
+            <div>
+              <div class="flex items-baseline gap-2">
+                <span class="text-[12.5px] font-medium text-text">{{ line.goodName }}</span>
+                <span class="tnum text-[11.5px] text-muted">
+                  besoin {{ line.needQty }} {{ line.unit }}
+                </span>
+              </div>
+              @if (line.picks.length === 0) {
+                <div class="mt-1 text-[11.5px] text-danger">
+                  Aucun lot utilisable — disponible {{ line.availableQty }}.
+                </div>
+              } @else {
+                <div class="mt-1 flex flex-wrap gap-1.5">
+                  @for (pick of line.picks; track pick.batchId) {
+                    <span
+                      class="mono inline-flex items-center gap-1.5 rounded-sm border border-border-s bg-surface px-2 py-1 text-[11.5px] text-text-2"
+                    >
+                      #{{ pick.label }}
+                      <span class="tnum font-semibold text-text">{{ pick.takeQty }}</span>
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <p class="mt-2.5 text-[11px] text-muted">
+          Les lots périmés ne sont jamais proposés, et le non-alimentaire n'est pas prélevé.
+        </p>
+      </div>
+    }
+
+    @if (blocked()) {
+      <div class="rounded-md border border-danger bg-danger-soft/40 p-3">
+        <div class="mb-1 flex items-center gap-2">
+          <bae-badge kind="danger" [dot]="true">stock insuffisant</bae-badge>
+        </div>
+        <ul class="text-[11.5px] text-text-2">
+          @for (short of shortfalls(); track short.goodId) {
+            <li>
+              {{ short.goodName }} — manque
+              <span class="tnum font-semibold">{{ short.missingQty }}</span>
+            </li>
+          }
+        </ul>
+        <p class="mt-2 text-[11px] text-muted">
+          Le lancement serait refusé en bloc : rien n'est prélevé tant qu'une denrée manque.
+        </p>
+      </div>
+    }
+
+    @if (error(); as message) {
+      <div role="alert" class="rounded-md border border-danger bg-danger-soft/40 p-2.5">
+        <span class="text-[12px] text-danger">{{ message }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="flex flex-1 justify-end gap-2" modal-footer>
+    @if (plan() !== null) {
+      <bae-btn kind="ghost" [icon]="icDownload" (clicked)="printPlan()">Imprimer le plan</bae-btn>
+    }
+    <bae-btn kind="ghost" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn
+      kind="secondary"
+      [disabled]="parsedQuantity() === null || busy()"
+      (clicked)="simulate()"
+    >
+      Voir les lots
+    </bae-btn>
+    <bae-btn
+      kind="primary"
+      [disabled]="parsedQuantity() === null || busy() || blocked() || plan() === null"
+      (clicked)="confirm()"
+    >
+      Confirmer le prélèvement
+    </bae-btn>
+  </div>
+</bfd-modal-shell>

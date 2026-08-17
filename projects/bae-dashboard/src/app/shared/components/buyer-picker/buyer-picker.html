@@ -1,0 +1,96 @@
+<div class="rounded-md border border-border-s bg-surface-2 p-3">
+  <div class="flex items-center gap-2">
+    <span class="flex-1 text-[12.5px] font-medium text-text">Identifier le client</span>
+    <bae-btn kind="ghost" size="sm" [icon]="icClose" (clicked)="close()"></bae-btn>
+  </div>
+
+  <div class="mt-2">
+    <bae-input
+      type="text"
+      placeholder="Nom ou prénom…"
+      [icon]="icSearch"
+      [value]="query()"
+      (valueChange)="onQuery($event)"
+    />
+  </div>
+
+  @if (searching()) {
+    <p class="mt-2 text-[11.5px] text-muted">Recherche…</p>
+  }
+
+  @if (results().length > 0) {
+    <ul class="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto">
+      @for (buyer of results(); track buyer.userId) {
+        <li>
+          <button
+            type="button"
+            class="flex w-full items-center justify-between gap-2 rounded-md border border-border-s bg-surface px-2.5 py-2 text-left hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-blue/40"
+            (click)="choose(buyer)"
+          >
+            <span class="min-w-0 flex-1 truncate text-[12.5px] font-medium text-text">
+              {{ buyer.name }}
+            </span>
+            @if (buyer.fastPass) {
+              <bae-badge kind="ok">{{ fastPassLabel(buyer) }}</bae-badge>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (query().trim().length >= 2 && !searching()) {
+    <p class="mt-2 text-[11.5px] text-muted">Aucun résultat.</p>
+  }
+
+  <!-- Un seul <video>, toujours monté : le masquer par une classe et non par un
+       @if est ce qui garantit que la caméra écrit dans l'élément visible. -->
+  <div class="mt-2.5">
+    <div [class]="camera() === 'idle' ? 'hidden' : 'relative overflow-hidden rounded-md bg-black'">
+      <video
+        #video
+        class="block h-40 w-full object-cover"
+        muted
+        autoplay
+        playsinline
+        aria-label="Aperçu de la caméra"
+      ></video>
+
+      <!-- Réticule : sans repère visuel, un aperçu sombre ne dit pas s'il cherche. -->
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          class="h-24 w-24 rounded-lg border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+        ></div>
+      </div>
+
+      <div
+        class="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-center text-[11px] font-medium text-white"
+      >
+        @if (camera() === 'starting') {
+          Ouverture de la caméra…
+        } @else {
+          Présentez le QR dans le cadre
+        }
+      </div>
+    </div>
+
+    @if (scanSupported) {
+      <bae-btn
+        kind="secondary"
+        size="sm"
+        [full]="true"
+        [icon]="icCamera"
+        [class]="camera() === 'idle' ? '' : 'mt-2 block'"
+        (clicked)="toggleCamera()"
+      >
+        {{ camera() === 'idle' ? 'Scanner un QR' : 'Arrêter la caméra' }}
+      </bae-btn>
+    } @else {
+      <p class="text-[11px] text-muted">
+        Le scan n'est pas disponible sur ce navigateur — la recherche par nom fonctionne partout.
+      </p>
+    }
+  </div>
+
+  @if (error(); as message) {
+    <p class="mt-2 text-[11.5px] text-danger">{{ message }}</p>
+  }
+</div>

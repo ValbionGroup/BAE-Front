@@ -1423,7 +1423,7 @@ Le jeton vit désormais dans un cookie `httpOnly` posé par la connexion **et** 
 ⚠️ **Le `tokensGuard` d'AdonisJS ne lit que l'en-tête `Authorization`.** D'où
 `bearer_from_cookie_middleware`, qui traduit le cookie en en-tête — **et qui doit rester avant
 `initialize_auth_middleware`**. Raison : `silent_auth_middleware` appelle `ctx.auth.check()` sur
-*chaque* requête et **met le résultat en cache**. Placé après lui, le même en-tête — vérifié
+_chaque_ requête et **met le résultat en cache**. Placé après lui, le même en-tête — vérifié
 identique octet pour octet à un appel qui réussit — donnait **401**. Symptôme parfaitement
 déroutant : entrée identique, résultat différent.
 
@@ -1447,8 +1447,8 @@ et son `EventSource` avec `withCredentials: true`. Il a suffi de retirer l'injec
 ⚠️ **Le CSRF ne s'applique qu'aux requêtes portant le cookie de session.** Deux exclusions, chacune
 motivée :
 
-- **En-tête `Authorization` explicite** → exclu. Un site tiers peut faire *envoyer* un cookie par le
-  navigateur, il ne peut pas *fabriquer* cet en-tête. Cela préserve aussi tests, curl et scripts.
+- **En-tête `Authorization` explicite** → exclu. Un site tiers peut faire _envoyer_ un cookie par le
+  navigateur, il ne peut pas _fabriquer_ cet en-tête. Cela préserve aussi tests, curl et scripts.
 - **Aucun cookie de session** → exclu. Il n'y a alors pas d'authentification ambiante à détourner.
   Cela couvre connexion et inscription, et surtout **préserve les codes de retour** : un appelant
   anonyme doit recevoir 401 (« identifiez-vous »), pas 403 (« interdit »).

@@ -1,0 +1,174 @@
+<div class="grid h-full min-h-0 grid-cols-[380px_1fr] overflow-hidden">
+  <!-- Liste -->
+  <div class="flex min-h-0 flex-col overflow-hidden border-r border-border-s">
+    <div class="border-b border-border-s px-4 py-3.5">
+      <bae-btn kind="primary" size="md" [full]="true" (clicked)="startComposing()">
+        Nouveau ticket
+      </bae-btn>
+      <div class="mt-2.5 flex gap-1.5">
+        @for (t of tabs; track t) {
+          <button
+            type="button"
+            (click)="activeTab.set(t)"
+            [attr.aria-pressed]="t === activeTab()"
+            [class]="
+              'cursor-pointer rounded-sm border px-2 py-1 text-[10.5px] font-medium ' +
+              (t === activeTab()
+                ? 'border-border bg-surface-2 text-text'
+                : 'border-transparent bg-transparent text-muted')
+            "
+          >
+            {{ t }}
+          </button>
+        }
+      </div>
+      <div class="mt-2 text-[11px] text-muted">
+        {{ counts().total }} au total · {{ counts().open }} ouverts · {{ counts().inProgress }} en
+        cours
+      </div>
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      @if (loadState() === 'loading') {
+        <div class="p-4 text-xs text-muted">Chargement…</div>
+      } @else if (loadState() === 'error') {
+        <div class="p-4 text-xs text-danger" role="alert">{{ loadError() }}</div>
+      } @else if (visible().length === 0) {
+        <div class="p-4 text-xs text-muted">Aucun ticket ici.</div>
+      }
+
+      @for (t of visible(); track t.id) {
+        <button
+          type="button"
+          (click)="select(t.id)"
+          [class]="
+            'w-full cursor-pointer border-b border-l-2 border-border-s px-4 py-3 text-left ' +
+            (t.id === selectedId()
+              ? 'border-l-blue bg-surface-2'
+              : 'border-l-transparent hover:bg-surface-2/50')
+          "
+        >
+          <div class="flex items-center gap-2">
+            <span class="min-w-0 flex-1 truncate text-[13px] font-medium text-text">
+              {{ t.subject }}
+            </span>
+            <bae-badge [kind]="badge(t.status).kind">{{ badge(t.status).label }}</bae-badge>
+          </div>
+          <div class="mt-0.5 text-[11px] text-muted">
+            <span class="mono">#{{ t.id }}</span>
+            @if (t.authorName) {
+              · {{ t.authorName }}
+            }
+          </div>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Détail / composition -->
+  <div class="min-h-0 overflow-y-auto p-[22px]">
+    @if (composing()) {
+      <bae-card>
+        <h2 class="m-0 mb-3 text-[18px] font-semibold text-text">Nouveau ticket</h2>
+        <form [formGroup]="openForm" (ngSubmit)="submitTicket()">
+          <label class="mb-1 block text-[11px] font-medium text-muted" for="ticket-subject">
+            Sujet
+          </label>
+          <input
+            id="ticket-subject"
+            formControlName="subject"
+            class="mb-3 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          />
+
+          <label class="mb-1 block text-[11px] font-medium text-muted" for="ticket-body">
+            Description
+          </label>
+          <textarea
+            id="ticket-body"
+            formControlName="body"
+            rows="6"
+            class="mb-3 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          ></textarea>
+
+          <div class="flex gap-2">
+            <bae-btn kind="ghost" (clicked)="composing.set(false)">Annuler</bae-btn>
+            <bae-btn kind="primary" type="submit" [disabled]="openForm.invalid">Envoyer</bae-btn>
+          </div>
+        </form>
+      </bae-card>
+    } @else if (detail(); as d) {
+      <div class="mb-4 flex items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <h2 class="m-0 -tracking-[0.3px] text-[20px] font-semibold text-text">
+              {{ d.subject }}
+            </h2>
+            <bae-badge [kind]="badge(d.status).kind">{{ badge(d.status).label }}</bae-badge>
+          </div>
+          <div class="mono mt-1 text-[11px] text-muted">
+            #{{ d.id }}
+            @if (d.authorName) {
+              · ouvert par {{ d.authorName }}
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (loadError()) {
+        <div
+          class="mb-3 flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-sm text-danger"
+          role="alert"
+        >
+          <svg [lucideIcon]="icAlert" [size]="14" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>{{ loadError() }}</span>
+        </div>
+      }
+
+      <bae-card [padding]="0">
+        @for (m of d.messages; track m.id) {
+          <div class="border-b border-border-s px-4 py-3.5 last:border-0">
+            <div class="mb-1 flex items-center gap-2">
+              <span class="text-[12px] font-medium text-text">{{
+                m.authorName ?? 'Compte supprimé'
+              }}</span>
+            </div>
+            <p class="m-0 whitespace-pre-line text-[13px] leading-relaxed text-text-2">
+              {{ m.body }}
+            </p>
+          </div>
+        }
+      </bae-card>
+
+      <form [formGroup]="replyForm" (ngSubmit)="submitReply()" class="mt-3">
+        <textarea
+          formControlName="body"
+          rows="3"
+          placeholder="Répondre…"
+          aria-label="Répondre au ticket"
+          class="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+        ></textarea>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <bae-btn kind="primary" type="submit" [disabled]="replyForm.invalid">Répondre</bae-btn>
+          <!--
+            Ces trois boutons exigent `ticket:write`. Ils restent visibles pour
+            tous : le serveur tranche, et un 403 explicite vaut mieux qu'un bouton
+            qui disparaît sans dire pourquoi.
+          -->
+          <bae-btn kind="secondary" (clicked)="setStatus('in_progress')">Prendre en charge</bae-btn>
+          <bae-btn kind="secondary" (clicked)="setStatus('closed')">Clore</bae-btn>
+          <bae-btn kind="ghost" (clicked)="setStatus('open')">Rouvrir</bae-btn>
+        </div>
+      </form>
+    } @else {
+      <div class="py-16 text-center">
+        <svg
+          [lucideIcon]="icTicket"
+          [size]="24"
+          class="mx-auto mb-2 text-muted"
+          aria-hidden="true"
+        ></svg>
+        <div class="text-xs text-muted">Sélectionne un ticket, ou ouvres-en un nouveau.</div>
+      </div>
+    }
+  </div>
+</div>

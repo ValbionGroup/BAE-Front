@@ -7,25 +7,25 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "BAE-Front": {
+    "bae-dashboard": {
       "projectType": "application",
       "schematics": {},
-      "root": "",
-      "sourceRoot": "src",
+      "root": "projects/bae-dashboard",
+      "sourceRoot": "projects/bae-dashboard/src",
       "prefix": "bfd",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "browser": "src/main.ts",
-            "tsConfig": "tsconfig.app.json",
+            "browser": "projects/bae-dashboard/src/main.ts",
+            "tsConfig": "projects/bae-dashboard/tsconfig.app.json",
             "assets": [
               {
                 "glob": "**/*",
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": ["projects/bae-dashboard/src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -55,10 +55,89 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "BAE-Front:build:production"
+              "buildTarget": "bae-dashboard:build:production"
             },
             "development": {
-              "buildTarget": "BAE-Front:build:development"
+              "buildTarget": "bae-dashboard:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
+        }
+      }
+    },
+    "bae-ui": {
+      "projectType": "library",
+      "root": "projects/bae-ui",
+      "sourceRoot": "projects/bae-ui/src",
+      "prefix": "bae",
+      "architect": {
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/bae-ui/tsconfig.spec.json",
+            "buildTarget": "bae-dashboard:build:development"
+          }
+        }
+      }
+    },
+    "bae-public": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "projects/bae-public",
+      "sourceRoot": "projects/bae-public/src",
+      "prefix": "bfp",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "projects/bae-public/src/main.ts",
+            "tsConfig": "projects/bae-public/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/bae-public/public"
+              }
+            ],
+            "styles": ["projects/bae-public/src/styles.css"]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 4201
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "bae-public:build:production"
+            },
+            "development": {
+              "buildTarget": "bae-public:build:development"
             }
           },
           "defaultConfiguration": "development"

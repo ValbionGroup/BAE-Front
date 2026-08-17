@@ -1,0 +1,60 @@
+<div class="flex h-full overflow-hidden">
+  <bfd-parametres-side-nav />
+
+  <div class="flex-1 overflow-y-auto px-8 pt-6 pb-8">
+    <h2 class="m-0 mb-1 text-[19px] font-semibold -tracking-[0.2px] text-text">Profil</h2>
+    <p class="m-0 mb-5 text-[12.5px] text-muted">Mets à jour tes infos et tes préférences.</p>
+
+    <!-- Avatar row -->
+    <div class="mb-5 flex items-center gap-4">
+      <bae-avatar name="Léa Marchand" [size]="64" />
+      <div>
+        <div class="text-sm font-semibold text-text">Léa Marchand</div>
+        <div class="mt-0.5 text-xs text-muted">Trésorière · ENSEIRB-MATMECA · 2A INFO</div>
+      </div>
+      <div class="flex-1"></div>
+      <bae-btn kind="ghost" size="sm" [icon]="icUpload">Changer la photo</bae-btn>
+    </div>
+
+    <div class="mb-5 grid grid-cols-2 gap-3.5">
+      <bae-field label="Prénom"><bae-input value="Léa" /></bae-field>
+      <bae-field label="Nom"><bae-input value="Marchand" /></bae-field>
+      <bae-field label="Email"
+        ><bae-input [icon]="icMail" value="lea.marchand@enseirb-matmeca.fr"
+      /></bae-field>
+      <bae-field label="Promo"><bae-input value="2026 — Filière INFO" /></bae-field>
+    </div>
+
+    <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Affichage</h3>
+    <div class="mb-5 grid grid-cols-3 gap-2.5">
+      @for (opt of themeOptions; track opt.id) {
+        @let active = activeTheme() === opt.id;
+        <div
+          (click)="setTheme(opt.id)"
+          [class]="
+            'cursor-pointer rounded-md p-3.5 border-[1.5px] ' +
+            (active ? 'border-blue' : 'border-border')
+          "
+          [style.background]="
+            active
+              ? 'color-mix(in oklch, var(--bae-blue) 6%, var(--bae-surface))'
+              : 'var(--bae-surface)'
+          "
+        >
+          <svg
+            [lucideIcon]="opt.icon"
+            [size]="18"
+            [class]="'mb-2 ' + (active ? 'text-blue' : 'text-text-2')"
+            aria-hidden="true"
+          ></svg>
+          <div class="text-[13px] font-medium text-text">{{ opt.label }}</div>
+          <div class="mt-0.5 text-[11px] text-muted">{{ opt.sub }}</div>
+        </div>
+      }
+    </div>
+
+    <div class="mt-4 max-w-sm">
+      <bfd-my-qr-card />
+    </div>
+  </div>
+</div>

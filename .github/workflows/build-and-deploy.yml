@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: production
     steps:
+      # `environment.ts` vit dans la bibliothèque partagée : les deux
+      # applications le lisent via `API_BASE_URL`, donc une seule génération
+      # alimente les deux images.
       - name: Generate environment.ts
         env:
           API_URL: ${{ vars.BAE_API_URL }}
@@ -29,8 +32,8 @@ jobs:
             exit 1
           fi
 
-          mkdir -p src/environment
-          cat > src/environment/environment.ts <<EOF
+          mkdir -p projects/bae-ui/src/environment
+          cat > projects/bae-ui/src/environment/environment.ts <<EOF
           export const environment = {
             production: true,
             apiUrl: '$API_URL',
@@ -41,28 +44,54 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: environment
-          path: src/environment/environment.ts
+          path: projects/bae-ui/src/environment/environment.ts
           retention-days: 1
 
-  build-and-push:
-    name: Build and push Docker image
+  build-and-push-dashboard:
+    name: Build and push dashboard image
     needs: [create-env]
     permissions:
       id-token: write
     uses: Eirbware/.github/.github/workflows/build-and-publish.yml@master
     with:
-      file: './Dockerfile'
-      image_name: ${{ github.repository }}
+      file: './Dockerfile.dashboard'
+      image_name: ValbionGroup/bae-front-dashboard
       artifact_name: environment
-      artifact_path: src/environment
+      artifact_path: projects/bae-ui/src/environment
     secrets:
       registry_username: ${{ secrets.registry_username }}
       registry_api_key: ${{ secrets.registry_api_key }}
 
-  deploy:
-    name: Deploy on Portainer
-    needs: [build-and-push]
+  build-and-push-public:
+    name: Build and push public image
+    needs: [create-env]
+    permissions:
+      id-token: write
+    uses: Eirbware/.github/.github/workflows/build-and-publish.yml@master
+    with:
+      file: './Dockerfile.public'
+      image_name: ValbionGroup/bae-front-public
+      artifact_name: environment
+      artifact_path: projects/bae-ui/src/environment
+    secrets:
+      registry_username: ${{ secrets.registry_username }}
+      registry_api_key: ${{ secrets.registry_api_key }}
+
+  # Le déclencheur est un tag, pas un push de branche : un filtre `paths:` ne
+  # s'y appliquerait pas. Les deux fronts partagent donc une version et se
+  # déploient ensemble — c'est la contrepartie assumée du mono-dépôt.
+  deploy-dashboard:
+    name: Deploy dashboard on Portainer
+    needs: [build-and-push-dashboard]
     uses: Eirbware/.github/.github/workflows/deploy-stack.yml@master
     secrets:
       portainer_stack_webhook: ${{ secrets.portainer_stack_webhook }}
+      wireguard_conf: ${{ secrets.wireguard_conf }}
+
+  deploy-public:
+    name: Deploy public front on Portainer
+    needs: [build-and-push-public]
+    uses: Eirbware/.github/.github/workflows/deploy-stack.yml@master
+    secrets:
+      portainer_stack_webhook: ${{ secrets.portainer_stack_webhook_public }}
       wireguard_conf: ${{ secrets.wireguard_conf }}

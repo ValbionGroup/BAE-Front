@@ -1,12 +1,13 @@
 {
   "name": "bae-front",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test bae-dashboard && ng test bae-public && ng test bae-ui",
+    "start:public": "ng serve bae-public",
     "typecheck": "tsc --build tsconfig.json",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -20,10 +21,10 @@
   },
   "private": true,
   "imports": {
-    "#core/*": "./src/app/core/*",
-    "#shared/*": "./src/app/shared/*",
-    "#pages/*": "./src/app/pages/*",
-    "#app/*": "./src/app/*"
+    "#core/*": "./projects/bae-dashboard/src/app/core/*",
+    "#shared/*": "./projects/bae-dashboard/src/app/shared/*",
+    "#pages/*": "./projects/bae-dashboard/src/app/pages/*",
+    "#app/*": "./projects/bae-dashboard/src/app/*"
   },
   "dependencies": {
     "@adonisjs/transmit-client": "^1.1.0",

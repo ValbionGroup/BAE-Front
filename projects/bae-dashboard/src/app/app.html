@@ -1,0 +1,15 @@
+<router-outlet />
+
+<!--
+  Les quatre sorties d'overlay vivent ici, à la racine, et non dans `AppShell`.
+
+  ⚠️ Elles y étaient, et la vue live — seule route hors shell, parce qu'elle
+  occupe l'écran entier — n'avait donc aucun conteneur : `ModalService` est
+  `providedIn: 'root'`, l'état s'ouvrait, mais personne ne le rendait. Un
+  service global ne peut pas dépendre d'un composant de mise en page pour
+  s'afficher.
+-->
+<bfd-modal-container />
+<bae-toast-container />
+<bae-dropdown-container />
+<bae-tooltip-container />

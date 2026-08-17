@@ -1,0 +1,252 @@
+<ng-template #actions>
+  <bae-btn kind="ghost" size="md">Sauvegarder brouillon</bae-btn>
+  <bae-btn kind="secondary" size="md" [icon]="icDownload">Imprimer ticket Z</bae-btn>
+  <bae-btn kind="danger" size="md" [icon]="icLock">Verrouiller &amp; clôturer</bae-btn>
+</ng-template>
+
+<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+  <!-- Steps header -->
+  <div class="flex gap-0 items-center mb-[22px] p-3.5 bg-surface border border-border-s rounded-lg">
+    @for (s of steps; track s.n; let last = $last) {
+      <div class="flex items-center gap-2.5 flex-1">
+        <div
+          [class]="
+            'w-7 h-7 rounded-full inline-flex items-center justify-center text-xs font-semibold ' +
+            stepCircleClass(s.status)
+          "
+        >
+          @if (s.status === 'done') {
+            <svg [lucideIcon]="icCheck" [size]="14" aria-hidden="true"></svg>
+          } @else {
+            {{ s.n }}
+          }
+        </div>
+        <div>
+          <div class="text-xs font-medium text-text">{{ s.l }}</div>
+          <div class="mono text-[10.5px] text-muted mt-px">{{ s.t }}</div>
+        </div>
+      </div>
+      @if (!last) {
+        <div class="w-6 h-px bg-border shrink-0"></div>
+      }
+    }
+  </div>
+
+  <div class="grid grid-cols-[1.4fr_1fr] gap-[18px]">
+    <!-- LEFT: Cash counting -->
+    <bae-card [padding]="0">
+      <div class="px-4 py-3.5 border-b border-border-s">
+        <div class="text-sm font-semibold text-text">Comptage espèces · Caisse A</div>
+        <div class="text-[11.5px] text-muted mt-0.5">
+          Saisir le nombre de chaque billet/pièce — le total se calcule automatiquement
+        </div>
+      </div>
+
+      <div class="p-[18px]">
+        <!-- Billets -->
+        <div class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-2.5">
+          Billets
+        </div>
+        <div class="grid grid-cols-4 gap-2.5">
+          @for (d of billets(); track d.v) {
+            <div class="bg-surface-2 border border-border-s rounded-md p-2.5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="tnum text-[13px] font-semibold text-text">{{ denomLabel(d) }}</span>
+                <span class="mono text-[10px] text-muted">× {{ d.count }}</span>
+              </div>
+              <div class="flex items-center gap-1 bg-bg border border-border rounded-sm px-1 h-8">
+                <button
+                  type="button"
+                  (click)="dec(d.v)"
+                  class="w-[22px] h-[22px] bg-transparent text-muted border-0 cursor-pointer text-sm"
+                >
+                  −
+                </button>
+                <input
+                  type="text"
+                  [value]="d.count"
+                  (change)="setCount(d.v, $event)"
+                  class="tnum flex-1 text-center bg-transparent border-0 outline-none text-text text-sm font-semibold min-w-0"
+                />
+                <button
+                  type="button"
+                  (click)="inc(d.v)"
+                  class="w-[22px] h-[22px] bg-transparent text-muted border-0 cursor-pointer text-sm"
+                >
+                  +
+                </button>
+              </div>
+              <div class="mono tnum text-[11px] text-text-2 mt-1.5 text-right">
+                = {{ denomTotal(d) }} €
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Pièces -->
+        <div class="text-[11px] font-semibold tracking-wider text-muted uppercase my-2.5 mt-5">
+          Pièces
+        </div>
+        <div class="grid grid-cols-5 gap-2.5">
+          @for (d of pieces(); track d.v) {
+            <div class="bg-surface-2 border border-border-s rounded-md p-2.5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="tnum text-[12.5px] font-semibold text-text">{{ denomLabel(d) }}</span>
+                <span class="mono text-[10px] text-muted">× {{ d.count }}</span>
+              </div>
+              <div
+                class="flex items-center gap-1 bg-bg border border-border rounded-sm px-1"
+                style="height: 30px"
+              >
+                <button
+                  type="button"
+                  (click)="dec(d.v)"
+                  class="w-5 h-5 bg-transparent text-muted border-0 cursor-pointer text-[13px]"
+                >
+                  −
+                </button>
+                <input
+                  type="text"
+                  [value]="d.count"
+                  (change)="setCount(d.v, $event)"
+                  class="tnum flex-1 text-center bg-transparent border-0 outline-none text-text text-[13px] font-semibold min-w-0"
+                />
+                <button
+                  type="button"
+                  (click)="inc(d.v)"
+                  class="w-5 h-5 bg-transparent text-muted border-0 cursor-pointer text-[13px]"
+                >
+                  +
+                </button>
+              </div>
+              <div class="mono tnum text-[10.5px] text-muted mt-1 text-right">
+                {{ denomTotal(d) }} €
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Total -->
+        <div
+          class="mt-[22px] p-4 border border-blue rounded-lg flex items-center"
+          style="
+            background: linear-gradient(
+              135deg,
+              var(--bae-surface2),
+              color-mix(in oklch, var(--bae-blue) 10%, var(--bae-surface2))
+            );
+          "
+        >
+          <div class="flex-1">
+            <div class="text-[11px] text-muted">Total compté · espèces</div>
+            <div class="tnum text-3xl font-semibold text-text mt-0.5 -tracking-[0.5px]">
+              {{ formatMoney(cashCounted()) }} €
+            </div>
+          </div>
+          <bae-btn kind="secondary" [icon]="icScan">Compter à nouveau</bae-btn>
+        </div>
+      </div>
+    </bae-card>
+
+    <!-- RIGHT: Reconciliation -->
+    <div class="flex flex-col gap-[18px]">
+      <bae-card [padding]="0">
+        <div class="px-4 py-3.5 border-b border-border-s">
+          <div class="text-sm font-semibold text-text">Réconciliation</div>
+          <div class="text-[11.5px] text-muted mt-0.5">
+            Calculé d'après les transactions enregistrées
+          </div>
+        </div>
+        <div class="p-[18px]">
+          @for (row of recRows; track row.k; let i = $index; let last = $last) {
+            <div
+              [class]="
+                'flex justify-between items-center py-2 text-[12.5px] ' +
+                (last ? '' : 'border-b border-border-s')
+              "
+            >
+              <span class="text-text-2">{{ row.k }}</span>
+              <span
+                [class]="
+                  'mono tnum ' +
+                  (row.c === 'plus' ? 'text-ok' : row.c === 'minus' ? 'text-red' : 'text-text')
+                "
+                >{{ row.v }} €</span
+              >
+            </div>
+          }
+
+          <div class="flex justify-between pt-3.5 pb-1.5 border-t-2 border-border mt-1.5">
+            <span class="text-[12.5px] text-text-2 font-medium">Total attendu</span>
+            <span class="mono tnum text-base font-semibold text-text"
+              >{{ formatMoney(expected) }} €</span
+            >
+          </div>
+          <div class="flex justify-between pt-1">
+            <span class="text-[12.5px] text-text-2">Total compté</span>
+            <span class="mono tnum text-base font-semibold text-text"
+              >{{ formatMoney(cashCounted()) }} €</span
+            >
+          </div>
+
+          <!-- Difference -->
+          <div
+            [class]="'mt-4 p-3.5 border rounded-md ' + diffStyles().bg + ' ' + diffStyles().border"
+          >
+            <div class="flex items-center gap-2.5">
+              <svg
+                [lucideIcon]="diff() < -1 ? icAlert : icCheck"
+                [size]="20"
+                [class]="diffStyles().text"
+                aria-hidden="true"
+              ></svg>
+              <div class="flex-1">
+                <div class="text-xs text-muted">Écart</div>
+                <div [class]="'tnum text-[22px] font-semibold mt-px ' + diffStyles().text">
+                  {{ diff() >= 0 ? '+' : '' }}{{ formatMoney(diff()) }} €
+                </div>
+              </div>
+            </div>
+            @if (diff() < -1 || diff() > 1) {
+              <div class="text-[11.5px] text-text-2 mt-2 leading-relaxed">
+                Écart de plus de 1 € — saisir une note justificative avant de clôturer.
+              </div>
+            }
+          </div>
+
+          <bae-field label="Note de clôture" hint="Visible par la trésorière" class="mt-3.5 block">
+            <textarea
+              class="w-full bg-surface-2 border border-border rounded-md p-2.5 text-text text-[12.5px] font-sans outline-none resize-y"
+              rows="2"
+            >
+2 pièces de 1 € manquantes — possible erreur de rendu monnaie sur table 4.</textarea>
+          </bae-field>
+        </div>
+      </bae-card>
+
+      <bae-card>
+        <div class="text-[13px] font-semibold text-text mb-3">Autres canaux</div>
+        @for (c of channels; track c.k; let i = $index) {
+          <div
+            [class]="
+              'flex items-center gap-3 py-2.5 ' + (i === 0 ? '' : 'border-t border-border-s')
+            "
+          >
+            <div
+              [class]="
+                'w-8 h-8 rounded-md bg-surface-2 inline-flex items-center justify-center ' + c.cls
+              "
+            >
+              <svg [lucideIcon]="c.icon" [size]="15" aria-hidden="true"></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-text font-medium">{{ c.k }}</div>
+              <div class="text-[10.5px] text-muted mt-px">{{ c.sub }}</div>
+            </div>
+            <span class="mono tnum text-[13px] font-semibold text-text">{{ c.v }}</span>
+          </div>
+        }
+      </bae-card>
+    </div>
+  </div>
+</div>

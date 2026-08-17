@@ -1,0 +1,98 @@
+<ng-template #actions>
+  <bae-btn
+    kind="secondary"
+    size="md"
+    [icon]="icCheck"
+    [disabled]="unreadCount() === 0"
+    (clicked)="markAllRead()"
+  >
+    Tout marquer comme lu
+  </bae-btn>
+</ng-template>
+
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
+  <div class="flex gap-1.5 border-b border-border-s px-[22px] py-3">
+    @for (t of tabs(); track t[0]) {
+      <button
+        type="button"
+        (click)="setTab(t[0])"
+        [attr.aria-pressed]="t[0] === activeTab()"
+        [class]="
+          'cursor-pointer rounded-sm border px-2.5 py-1 text-[11px] font-medium ' +
+          (t[0] === activeTab()
+            ? 'border-border bg-surface-2 text-text'
+            : 'border-transparent bg-transparent text-muted')
+        "
+      >
+        {{ t[0] }}
+        <span class="mono tnum ml-1 text-[10px] text-muted">{{ t[1] }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="min-h-0 flex-1 overflow-y-auto">
+    @if (loadState() === 'loading') {
+      <div class="p-[22px] text-xs text-muted">Chargement…</div>
+    } @else if (loadState() === 'error') {
+      <div class="flex items-start gap-2.5 p-[22px] text-xs text-danger" role="alert">
+        <svg [lucideIcon]="icAlert" [size]="14" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+        <span>{{ loadError() }}</span>
+      </div>
+    } @else if (notifs().length === 0) {
+      <div class="px-[22px] py-16 text-center text-xs text-muted">
+        @if (activeTab() === 'Non lues') {
+          Tout est lu.
+        } @else {
+          Aucune notification pour l'instant.
+        }
+      </div>
+    }
+
+    @for (n of notifs(); track n.id) {
+      <button
+        type="button"
+        (click)="markRead(n.id)"
+        [class]="
+          'flex w-full cursor-pointer items-start gap-3 border-b border-border-s px-[22px] py-3.5 text-left hover:bg-surface-2/50 ' +
+          (n.unread ? 'bg-surface-2/30' : '')
+        "
+      >
+        <div
+          [class]="
+            'mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md ' +
+            (n.col === 'warn'
+              ? 'bg-warn-soft text-warn'
+              : n.col === 'danger'
+                ? 'bg-danger-soft text-danger'
+                : n.col === 'ok'
+                  ? 'bg-ok-soft text-ok'
+                  : 'bg-surface text-blue')
+          "
+        >
+          <svg [lucideIcon]="n.icon" [size]="15" aria-hidden="true"></svg>
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-[13px] font-medium text-text">{{ n.title }}</span>
+            @if (n.unread) {
+              <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-blue" aria-label="Non lue"></span>
+            }
+          </div>
+          @if (n.detail) {
+            <div class="mt-0.5 text-[11.5px] leading-relaxed text-muted">{{ n.detail }}</div>
+          }
+        </div>
+
+        <span class="mono shrink-0 text-[10.5px] text-muted">{{ n.when }}</span>
+      </button>
+    }
+  </div>
+
+  <!--
+    ⚠️ Seules les notifications du canal `in_app` apparaissent ici. Les rappels
+    partis par mail sont le **même fait**, livré autrement : ils vivent dans la
+    même table mais sur un autre canal, et les mélanger ferait croire à un double
+    envoi. Voir `BAE-Back/NOTIFICATIONS.md`.
+  -->
+</div>

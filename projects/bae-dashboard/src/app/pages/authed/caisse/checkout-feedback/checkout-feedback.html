@@ -1,0 +1,169 @@
+@if (pickup(); as scan) {
+  @let ok = scan.preOrder.paid && !scan.preOrder.fullyCollected;
+
+  <!-- MOBILE — retrait de précommande, pleine page. -->
+  <div
+    [class]="
+      'fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 p-8 text-center md:hidden ' +
+      (ok ? 'bg-ok' : 'bg-warn')
+    "
+    role="status"
+    (click)="close()"
+  >
+    <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+      <svg
+        [lucideIcon]="ok ? icCheck : icError"
+        [size]="44"
+        class="text-white"
+        aria-hidden="true"
+      ></svg>
+    </span>
+    <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
+      Précommande
+    </div>
+    <div class="text-[30px] font-bold leading-tight text-white">{{ scan.buyer.name }}</div>
+
+    <ul class="flex flex-col gap-1">
+      @for (line of scan.preOrder.lines; track line.productId) {
+        <li class="text-[17px] font-medium text-white">
+          ×{{ line.quantity }} {{ line.productName }}
+        </li>
+      }
+    </ul>
+
+    <p class="text-[19px] font-bold text-white">
+      @if (scan.preOrder.fullyCollected) {
+        Déjà retirée — ne pas remettre
+      } @else if (scan.preOrder.paid) {
+        Déjà payée — laisser passer
+      } @else {
+        Aucun paiement rattaché — vérifier
+      }
+    </p>
+    <p class="text-[13px] text-white/80">Touchez pour continuer.</p>
+  </div>
+
+  <!-- BUREAU — bandeau. -->
+  <div
+    [class]="
+      'hidden border-b p-4 md:block ' + (ok ? 'border-ok bg-ok/12' : 'border-warn bg-warn/12')
+    "
+    role="status"
+  >
+    <div class="flex items-start gap-3">
+      <span
+        [class]="
+          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ' +
+          (ok ? 'bg-ok' : 'bg-warn')
+        "
+      >
+        <svg [lucideIcon]="ok ? icCheck : icError" [size]="22" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div
+          [class]="
+            'text-[11px] font-semibold uppercase tracking-[0.8px] ' + (ok ? 'text-ok' : 'text-warn')
+          "
+        >
+          Précommande · {{ scan.preOrder.eventName }}
+        </div>
+        <div class="text-[19px] font-bold leading-tight text-text">{{ scan.buyer.name }}</div>
+        <ul class="mt-1 flex flex-col gap-0.5">
+          @for (line of scan.preOrder.lines; track line.productId) {
+            <li class="text-[12.5px] text-text-2">
+              ×{{ line.quantity }} {{ line.productName }}
+              @if (line.receivedQuantity > 0) {
+                <span class="text-muted">· {{ line.receivedQuantity }} déjà remis</span>
+              }
+            </li>
+          }
+        </ul>
+        <div [class]="'mt-1 text-[13px] font-semibold ' + (ok ? 'text-ok' : 'text-warn')">
+          @if (scan.preOrder.fullyCollected) {
+            Déjà entièrement retirée — ne pas remettre une seconde fois.
+          } @else if (scan.preOrder.paid) {
+            Déjà payée — laisser passer, ne rien encaisser.
+          } @else {
+            Aucun paiement rattaché — ne pas remettre sans vérifier.
+          }
+        </div>
+      </div>
+      <bae-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bae-btn>
+    </div>
+  </div>
+} @else if (order(); as done) {
+  <!-- MOBILE — la vue entière confirme, comme un contrôle de billet. -->
+  <div
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-ok p-8 text-center md:hidden"
+    role="status"
+    (click)="close()"
+  >
+    <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+      <svg [lucideIcon]="icCheck" [size]="44" class="text-white" aria-hidden="true"></svg>
+    </span>
+    <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
+      Commande encaissée
+    </div>
+    <div class="tnum text-[96px] font-bold leading-none text-white">n°{{ done.number }}</div>
+    <div class="text-[17px] font-medium text-white">
+      {{ formatCents(done.totalCents) }} € · {{ done.clientName }}
+    </div>
+    <p class="text-[13px] text-white/80">Annoncez ce numéro au client. Touchez pour continuer.</p>
+  </div>
+
+  <!-- BUREAU — bandeau au-dessus du ticket. -->
+  <div class="hidden border-b border-ok bg-ok/12 p-4 md:block" role="status">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-ok text-white">
+        <svg [lucideIcon]="icCheck" [size]="22" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-ok">
+          Commande encaissée
+        </div>
+        <div class="tnum text-[30px] font-bold leading-tight text-text">n°{{ done.number }}</div>
+        <div class="text-[12px] text-muted">
+          {{ formatCents(done.totalCents) }} € · {{ done.clientName }} — à annoncer au client
+        </div>
+      </div>
+      <bae-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bae-btn>
+    </div>
+  </div>
+} @else if (error(); as message) {
+  <!-- MOBILE — refus, plein écran. -->
+  <div
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-danger p-8 text-center md:hidden"
+    role="alert"
+    (click)="close()"
+  >
+    <span class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+      <svg [lucideIcon]="icError" [size]="44" class="text-white" aria-hidden="true"></svg>
+    </span>
+    <div class="text-[15px] font-semibold uppercase tracking-[1.5px] text-white/80">
+      Encaissement refusé
+    </div>
+    <p class="text-[17px] font-medium text-white">{{ message }}</p>
+    <p class="text-[13px] text-white/80">
+      Le panier est conservé. Touchez pour revenir et réessayer.
+    </p>
+  </div>
+
+  <!-- BUREAU — refus, bandeau. -->
+  <div class="hidden border-b border-danger bg-danger/12 p-4 md:block" role="alert">
+    <div class="flex items-center gap-3">
+      <span
+        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-danger text-white"
+      >
+        <svg [lucideIcon]="icError" [size]="22" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.8px] text-danger">
+          Encaissement refusé
+        </div>
+        <div class="mt-0.5 text-[13px] font-medium text-text">{{ message }}</div>
+        <div class="text-[12px] text-muted">Le panier est conservé.</div>
+      </div>
+      <bae-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bae-btn>
+    </div>
+  </div>
+}

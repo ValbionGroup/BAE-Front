@@ -1,0 +1,175 @@
+<div class="flex h-screen bg-bg text-text font-sans">
+  <!-- LEFT brand pane -->
+  <div
+    class="relative hidden w-[46%] flex-col justify-between overflow-hidden border-r border-border-s p-14 lg:flex"
+    style="
+      background:
+        radial-gradient(circle at 18% 12%, var(--bae-redSoft) 0%, transparent 45%),
+        radial-gradient(circle at 92% 88%, var(--bae-blueSoft) 0%, transparent 50%),
+        var(--bae-sidebar);
+    "
+  >
+    <bae-logo [size]="32" [version]="appVersion" />
+
+    <div>
+      <div class="mono mb-4 text-[11px] tracking-widest text-muted">
+        BUREAU DES ALTERNANTS DE L'ENSEIRB
+      </div>
+      <h2 class="m-0 text-[42px] font-semibold leading-[1.08] -tracking-[1px] text-text">
+        Stocks, présences,<br />caisse — une seule<br />
+        <span class="text-blue">console</span> pour la <span class="text-red">soirée</span>.
+      </h2>
+      <div class="mt-7 flex flex-wrap gap-2.5">
+        @for (tag of brandTags; track tag) {
+          <bae-badge kind="ghost">{{ tag }}</bae-badge>
+        }
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4 text-[11.5px] text-muted">
+      <span class="mono">© BAE {{ year() }}</span>
+      <span class="ml-auto inline-flex items-center gap-1.5" role="status" aria-live="polite">
+        <span class="relative inline-flex h-1.5 w-1.5" aria-hidden="true">
+          <span
+            class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:hidden"
+            [class]="serviceDotClass()"
+          ></span>
+          <span
+            class="relative inline-flex h-1.5 w-1.5 rounded-full"
+            [class]="serviceDotClass()"
+          ></span>
+        </span>
+        {{ serviceLabel() }}
+      </span>
+    </div>
+  </div>
+
+  <!-- RIGHT form pane -->
+  <div class="flex flex-1 items-center justify-center p-10">
+    <div class="w-95">
+      <div class="mono mb-2.5 text-[11px] font-semibold tracking-widest text-blue">CONNEXION</div>
+      <h1 class="m-0 text-[28px] font-semibold -tracking-[0.6px] text-text">
+        Bon retour parmi nous.
+      </h1>
+      <p class="mt-2 mb-7 text-sm text-muted">
+        Saisissez vos identifiants ou utilisez votre compte Bordeaux INP.
+      </p>
+
+      <div class="mb-5">
+        <bae-btn
+          kind="secondary"
+          [full]="true"
+          size="lg"
+          [icon]="icShield"
+          (clicked)="loginWithEirbConnect()"
+        >
+          Se connecter avec EirbConnect
+        </bae-btn>
+      </div>
+
+      @if (ssoError(); as error) {
+        <div
+          class="mb-5 flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-sm text-danger"
+          role="alert"
+          aria-live="assertive"
+        >
+          <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>{{ error }}</span>
+        </div>
+      }
+
+      <div class="my-5 flex items-center gap-3">
+        <span class="h-px flex-1 bg-border-s"></span>
+        <span class="text-[11px] uppercase tracking-widest text-muted">ou par email</span>
+        <span class="h-px flex-1 bg-border-s"></span>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="flex flex-col gap-3.5">
+        @if (loginError(); as err) {
+          <div
+            class="flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-sm text-danger"
+            role="alert"
+            aria-live="assertive"
+          >
+            <svg
+              [lucideIcon]="icAlert"
+              [size]="16"
+              class="mt-0.5 shrink-0"
+              aria-hidden="true"
+            ></svg>
+            <span>{{ err.message || 'Identifiants incorrects.' }}</span>
+          </div>
+        }
+
+        <bae-field label="Email">
+          <bfd-text-input
+            formControlName="email"
+            id="login-email"
+            type="email"
+            placeholder="prenom.nom@enseirb-matmeca.fr"
+            autocomplete="email"
+            [invalid]="form.controls.email.invalid && form.controls.email.touched"
+            [errorId]="
+              form.controls.email.invalid && form.controls.email.touched
+                ? 'login-email-error'
+                : null
+            "
+          />
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <span id="login-email-error" class="text-[11px] text-danger" role="alert">
+              @if (form.controls.email.errors?.['required']) {
+                L'adresse e-mail est requise.
+              } @else if (form.controls.email.errors?.['email']) {
+                Saisissez une adresse e-mail valide.
+              }
+            </span>
+          }
+        </bae-field>
+
+        <bae-field label="Mot de passe">
+          <bfd-text-input
+            formControlName="password"
+            id="login-password"
+            type="password"
+            placeholder="••••••••••••"
+            autocomplete="current-password"
+            [invalid]="form.controls.password.invalid && form.controls.password.touched"
+            [errorId]="
+              form.controls.password.invalid && form.controls.password.touched
+                ? 'login-password-error'
+                : null
+            "
+          />
+          @if (form.controls.password.invalid && form.controls.password.touched) {
+            <span id="login-password-error" class="text-[11px] text-danger" role="alert">
+              Le mot de passe est requis.
+            </span>
+          }
+        </bae-field>
+
+        <div class="mt-0.5 flex items-center justify-between">
+          <div></div>
+          <a class="cursor-pointer text-xs text-blue">Mot de passe oublié ?</a>
+        </div>
+
+        <div class="mt-2">
+          <bae-btn
+            kind="primary"
+            [full]="true"
+            size="lg"
+            [iconRight]="icArrowRight"
+            type="submit"
+            [disabled]="form.invalid"
+          >
+            Se connecter
+          </bae-btn>
+        </div>
+      </form>
+
+      <p class="mt-7 text-center text-xs text-muted">
+        Pas encore de compte ?
+        <a class="cursor-pointer font-medium text-text">Demander un accès</a>
+      </p>
+    </div>
+  </div>
+</div>

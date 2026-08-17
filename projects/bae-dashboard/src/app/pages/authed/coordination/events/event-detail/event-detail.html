@@ -1,0 +1,109 @@
+@let s = state();
+
+@if (s) {
+  <div class="flex flex-1 min-w-0 flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center gap-2.5 border-b border-border-s bg-surface px-5 py-3">
+      <bae-badge [kind]="s.statusKind" [dot]="true">{{ s.statusLabel }}</bae-badge>
+      <span class="min-w-0 flex-1 truncate text-[14px] font-semibold text-text"
+        >Éditer · {{ s.name }}</span
+      >
+      <bae-btn kind="ghost" size="sm" [icon]="icX" (clicked)="close.emit()" />
+    </div>
+
+    <!-- Body -->
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pb-6 pt-5">
+      <!-- Bannière affectation membres -->
+      <div class="flex items-center gap-3 rounded-md border border-blue/30 bg-blue-soft px-4 py-3">
+        <svg [lucideIcon]="icUsers" [size]="18" class="shrink-0 text-blue" aria-hidden="true"></svg>
+        <div class="flex-1 min-w-0">
+          <div class="text-[12.5px] font-semibold text-text">Affectation des membres</div>
+          <div class="mt-0.5 text-[11px] text-muted leading-snug">
+            Gérez les postes, affectez les membres et suivez le service
+          </div>
+        </div>
+        <bae-btn kind="primary" size="sm" (clicked)="navigate()">Ouvrir →</bae-btn>
+      </div>
+
+      <bae-field label="Nom de la soirée">
+        <bae-input [value]="s.name" (valueChange)="updateName($event)" />
+      </bae-field>
+
+      <div class="grid grid-cols-3 gap-3">
+        <bae-field label="Date">
+          <bae-input [icon]="icCalendar" [value]="s.date" (valueChange)="updateDate($event)" />
+        </bae-field>
+        <bae-field label="Début">
+          <bae-input [icon]="icClock" [value]="s.time" (valueChange)="updateTime($event)" />
+        </bae-field>
+        <bae-field label="Fin (estimée)">
+          <bae-input [icon]="icClock" [value]="s.endTime" (valueChange)="updateEndTime($event)" />
+        </bae-field>
+      </div>
+
+      <bae-field label="Description (interne)">
+        <textarea
+          [value]="s.description"
+          (input)="updateDescription($event)"
+          class="min-h-16 w-full resize-y rounded-md border border-border bg-surface-2 p-2.5 font-sans text-[12.5px] text-text outline-none focus:border-blue"
+        ></textarea>
+      </bae-field>
+
+      <bae-field [label]="'Recettes assignées (' + s.recipes.length + ')'">
+        <div class="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface-2 p-2">
+          @for (r of s.recipes; track r) {
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border border-border-s bg-surface px-2 py-1 text-[11.5px] text-text-2"
+            >
+              <svg [lucideIcon]="icChef" [size]="11" class="text-muted" aria-hidden="true"></svg>
+              {{ r }}
+              <button
+                type="button"
+                (click)="removeRecipe(r)"
+                class="inline-flex cursor-pointer items-center border-none bg-transparent p-0 text-muted hover:text-danger"
+                [attr.aria-label]="'Retirer ' + r"
+              >
+                <svg [lucideIcon]="icX" [size]="10" aria-hidden="true"></svg>
+              </button>
+            </span>
+          }
+          <button
+            type="button"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-border bg-transparent px-2 py-1 font-sans text-[11.5px] text-muted hover:bg-surface hover:text-text-2"
+          >
+            <svg [lucideIcon]="icPlus" [size]="10" aria-hidden="true"></svg>
+            Ajouter
+          </button>
+        </div>
+      </bae-field>
+
+      <div class="rounded-md border border-border-s bg-surface p-1">
+        @for (o of s.options; track o.key; let i = $index) {
+          <div
+            [class]="'flex items-center gap-3 px-3 py-2.5 ' + (i ? 'border-t border-border-s' : '')"
+          >
+            <div class="flex-1">
+              <div class="text-[12.5px] text-text">{{ o.label }}</div>
+              <div class="mt-0.5 text-[11px] text-muted">{{ o.hint }}</div>
+            </div>
+            <bae-toggle [on]="o.enabled" (change)="toggleOption(o.key, $event)" />
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="flex items-center gap-2 border-t border-border-s bg-surface px-5 py-3">
+      <bae-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="openDelete()">Supprimer</bae-btn>
+      <div class="flex-1"></div>
+      <bae-btn kind="ghost" size="sm" (clicked)="close.emit()">Annuler</bae-btn>
+      <bae-btn kind="primary" size="sm" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
+        >Enregistrer</bae-btn
+      >
+    </div>
+  </div>
+} @else {
+  <div class="flex flex-1 items-center justify-center">
+    <span class="text-[13px] text-muted">Sélectionnez une soirée pour l'éditer</span>
+  </div>
+}
