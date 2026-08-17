@@ -1,10 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideTicket } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Field, Input, ToastService } from '@bae/ui';
 import { LogistiqueStore } from '#core/store/logistique.store';
-import { ToastService } from '#shared/components/toast/toast.service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 

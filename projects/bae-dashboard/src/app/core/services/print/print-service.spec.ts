@@ -1,8 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { API_BASE_URL, ToastService } from '@bae/ui';
 import { PrintService } from './print-service';
 
 describe(PrintService.name, () => {

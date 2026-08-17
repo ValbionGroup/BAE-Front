@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Adherents } from './adherents';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { ClientDetail, ClientRow, ClientsSummary } from './adherents.types';
 
 const baseUrl = 'http://api.test/v1';

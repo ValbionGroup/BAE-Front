@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { JobPeriod } from '#core/models/job-period.model';
 
 import { MemberAssignmentsStore } from './member-assignments.store';

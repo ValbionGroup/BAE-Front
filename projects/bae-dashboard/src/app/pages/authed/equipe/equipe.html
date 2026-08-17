@@ -1,14 +1,14 @@
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bfd-btn>
+  <bae-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bae-btn>
   <!-- Aucune table `invitations` ni endpoint côté back (§3.2) : le bouton reste
        en place — le manque est côté API — mais cesse de l'être en silence. -->
-  <bfd-btn
+  <bae-btn
     kind="primary"
     size="md"
     [icon]="icPlus"
     [disabled]="true"
     title="Endpoint d'invitation non disponible"
-    >Inviter un membre</bfd-btn
+    >Inviter un membre</bae-btn
   >
 </ng-template>
 
@@ -30,7 +30,7 @@
       >
         {{ tab }}
         @if (i === 3) {
-          <bfd-badge kind="blue" class="ml-2">{{ invitations.length }}</bfd-badge>
+          <bae-badge kind="blue" class="ml-2">{{ invitations.length }}</bae-badge>
         }
       </button>
     }
@@ -52,7 +52,7 @@
   >
     @switch (activeTab()) {
       @case (0) {
-        <bfd-card [padding]="0" class="block">
+        <bae-card [padding]="0" class="block">
           <div class="flex items-center px-4 py-3.5 border-b border-border-s">
             <div class="flex-1">
               <div class="text-[13px] font-semibold text-text">Membres</div>
@@ -63,7 +63,7 @@
             </div>
             <label class="w-[220px]">
               <span class="sr-only">Filtrer les membres</span>
-              <bfd-input
+              <bae-input
                 [icon]="icSearch"
                 placeholder="Filtrer…"
                 size="sm"
@@ -84,11 +84,11 @@
               <div
                 class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center gap-2 px-4 py-3 border-b border-border-s"
               >
-                <bfd-skeleton width="28px" height="28px" rounded="pill" />
-                <bfd-skeleton width="60%" height="10px" />
-                <bfd-skeleton width="70px" height="10px" />
-                <bfd-skeleton width="40px" height="10px" />
-                <bfd-skeleton width="60px" height="10px" />
+                <bae-skeleton width="28px" height="28px" rounded="pill" />
+                <bae-skeleton width="60%" height="10px" />
+                <bae-skeleton width="70px" height="10px" />
+                <bae-skeleton width="40px" height="10px" />
+                <bae-skeleton width="60px" height="10px" />
                 <span></span>
               </div>
             }
@@ -109,7 +109,7 @@
                 "
               >
                 <div class="relative w-7">
-                  <bfd-avatar [name]="m.nom" [size]="28" />
+                  <bae-avatar [name]="m.nom" [size]="28" />
                   @if (m.recentlyActive) {
                     <span
                       class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-ok border-2 border-surface"
@@ -121,7 +121,7 @@
                   <div class="font-medium text-text truncate">{{ m.nom }}</div>
                   <div class="text-[10.5px] text-muted mt-px">{{ m.points }} pts</div>
                 </div>
-                <bfd-badge [kind]="roleKind(m.role)">{{ m.role ?? 'Sans rôle' }}</bfd-badge>
+                <bae-badge [kind]="roleKind(m.role)">{{ m.role ?? 'Sans rôle' }}</bae-badge>
                 <!-- Scope: deriving it from the role's permissions is out of scope for now. -->
                 <span class="text-faint text-xs" title="Non calculé">—</span>
                 <span
@@ -146,11 +146,11 @@
               </div>
             }
           }
-        </bfd-card>
+        </bae-card>
       }
 
       @case (1) {
-        <bfd-card [padding]="0" class="block">
+        <bae-card [padding]="0" class="block">
           <div class="px-4 py-3.5 border-b border-border-s">
             <div class="text-[13px] font-semibold text-text">Matrice des permissions</div>
             <div class="text-[11px] text-muted mt-0.5">
@@ -161,7 +161,7 @@
           @if (loading() === 'loading' || loading() === 'init') {
             <div class="px-4 py-4 flex flex-col gap-2">
               @for (row of skeletonRows; track row) {
-                <bfd-skeleton height="14px" />
+                <bae-skeleton height="14px" />
               }
             </div>
           } @else if (errors().roles || errors().permissions) {
@@ -204,7 +204,7 @@
                       </th>
                       @for (cell of p.cells; track $index) {
                         <td class="text-center px-2 py-2">
-                          <bfd-checkbox
+                          <bae-checkbox
                             [checked]="cell === 'granted'"
                             [disabled]="cellDisabled(perms().roles[$index].id, p.permission)"
                             [ariaLabel]="p.permission + ' pour ' + perms().roles[$index].name"
@@ -218,11 +218,11 @@
               </table>
             </div>
           }
-        </bfd-card>
+        </bae-card>
       }
 
       @case (2) {
-        <bfd-card [padding]="0" class="block">
+        <bae-card [padding]="0" class="block">
           <div class="px-4 py-3.5 border-b border-border-s">
             <div class="text-[13px] font-semibold text-text">Audit log · récent</div>
             <div class="text-[11px] text-muted mt-0.5">
@@ -233,7 +233,7 @@
           @if (loading() === 'loading' || loading() === 'init') {
             <div class="px-4 py-4 flex flex-col gap-3">
               @for (row of skeletonRows; track row) {
-                <bfd-skeleton height="14px" />
+                <bae-skeleton height="14px" />
               }
             </div>
           } @else if (errors().logs) {
@@ -266,7 +266,7 @@
               </div>
             }
           }
-        </bfd-card>
+        </bae-card>
       }
 
       @case (3) {
@@ -274,10 +274,10 @@
           MOCK — aucune table `invitations` ni endpoint côté backend.
           Le panneau est conservé volontairement : le manque est côté API.
         -->
-        <bfd-card class="block">
+        <bae-card class="block">
           <div class="flex items-center mb-2.5">
             <div class="flex-1 text-[13px] font-semibold text-text">Invitations en attente</div>
-            <bfd-badge kind="blue">{{ invitations.length }}</bfd-badge>
+            <bae-badge kind="blue">{{ invitations.length }}</bae-badge>
           </div>
           <p class="text-[11px] text-warn mb-1">
             Données de démonstration · endpoint non disponible
@@ -287,12 +287,12 @@
               <div class="text-[12.5px] text-text font-medium">{{ iv.mail }}</div>
               <div class="text-[11px] text-muted mt-0.5">{{ iv.role }} · expire {{ iv.exp }}</div>
               <div class="flex gap-1.5 mt-2">
-                <bfd-btn kind="ghost" size="sm">Renvoyer</bfd-btn>
-                <bfd-btn kind="ghost" size="sm">Annuler</bfd-btn>
+                <bae-btn kind="ghost" size="sm">Renvoyer</bae-btn>
+                <bae-btn kind="ghost" size="sm">Annuler</bae-btn>
               </div>
             </div>
           }
-        </bfd-card>
+        </bae-card>
       }
     }
   </div>

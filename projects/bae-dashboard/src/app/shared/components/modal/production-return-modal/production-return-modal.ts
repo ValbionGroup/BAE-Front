@@ -1,15 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideDownload, LucidePackageOpen } from '@lucide/angular';
 import { lastValueFrom } from 'rxjs';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Input } from '#shared/components/ui/input/input';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { Btn, Input, ToastService, messageOf } from '@bae/ui';
 import {
   ProductionService,
   type ReturnableGood,
 } from '#core/services/production/production-service';
 import { PrintService } from '#core/services/print/print-service';
-import { messageOf } from '#shared/utils/api-error';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 

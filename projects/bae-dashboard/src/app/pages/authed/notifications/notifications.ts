@@ -24,7 +24,7 @@ import {
   NotificationsService,
   type ApiNotification,
 } from '#core/services/notifications/notifications-service';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Btn } from '@bae/ui';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 type Tab = 'Toutes' | 'Non lues';

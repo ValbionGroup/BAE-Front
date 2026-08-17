@@ -33,14 +33,12 @@ import {
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ProductionRunModal } from '#shared/components/modal/production-run-modal/production-run-modal';
 import { ProductionReturnModal } from '#shared/components/modal/production-return-modal/production-return-modal';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Logo } from '#shared/components/ui/logo/logo';
+import { Btn, Badge, Logo, formatCents } from '@bae/ui';
 import { OrdersStore } from '#core/store/orders.store';
+import { APP_VERSION } from '#app/app-version';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { nextStatus, type Order, type OrderStatus } from '#core/models/order.model';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
-import { formatCents } from '#shared/utils/money';
 import { stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
 
 const WATCH_ORDER_SECONDS = 180;
@@ -129,6 +127,8 @@ function merge(preOrders: readonly PreOrderTicket[], orders: readonly Order[]): 
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SoireeLive implements OnInit {
+  protected readonly appVersion = APP_VERSION;
+
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 

@@ -88,7 +88,7 @@
           }
         </div>
       </div>
-      <bfd-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bfd-btn>
+      <bae-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bae-btn>
     </div>
   </div>
 } @else if (order(); as done) {
@@ -126,7 +126,7 @@
           {{ formatCents(done.totalCents) }} € · {{ done.clientName }} — à annoncer au client
         </div>
       </div>
-      <bfd-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bfd-btn>
+      <bae-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bae-btn>
     </div>
   </div>
 } @else if (error(); as message) {
@@ -163,7 +163,7 @@
         <div class="mt-0.5 text-[13px] font-medium text-text">{{ message }}</div>
         <div class="text-[12px] text-muted">Le panier est conservé.</div>
       </div>
-      <bfd-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bfd-btn>
+      <bae-btn kind="ghost" size="sm" (clicked)="close()">Fermer</bae-btn>
     </div>
   </div>
 }

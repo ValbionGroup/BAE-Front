@@ -15,6 +15,7 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
+      "@bae/ui": ["./projects/bae-ui/src/public-api.ts"],
       "#core/*": ["./projects/bae-dashboard/src/app/core/*"],
       "#shared/*": ["./projects/bae-dashboard/src/app/shared/*"],
       "#pages/*": ["./projects/bae-dashboard/src/app/pages/*"],

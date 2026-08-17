@@ -21,11 +21,8 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { LogistiqueStore } from '#core/store/logistique.store';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Badge, Skeleton, Btn, ToastService } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { ToastService } from '#shared/components/toast/toast.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
 import { PrintService } from '#core/services/print/print-service';

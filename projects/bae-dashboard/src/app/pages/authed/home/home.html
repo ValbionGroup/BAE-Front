@@ -21,8 +21,8 @@
       @if (stats.loading()) {
         @for (_ of r3; track $index) {
           <div class="flex flex-col items-end gap-1.5">
-            <bfd-skeleton width="100px" height="10px" />
-            <bfd-skeleton width="70px" height="18px" variant="surface-3" />
+            <bae-skeleton width="100px" height="10px" />
+            <bae-skeleton width="70px" height="18px" variant="surface-3" />
           </div>
         }
       } @else if (stats.error(); as err) {
@@ -56,23 +56,23 @@
       @if (nextEvent.loading()) {
         <div class="rounded-lg border border-border-s bg-surface p-5.5">
           <div class="mb-2 flex gap-2.5">
-            <bfd-skeleton width="140px" height="20px" rounded="pill" />
-            <bfd-skeleton width="100px" height="20px" rounded="pill" />
+            <bae-skeleton width="140px" height="20px" rounded="pill" />
+            <bae-skeleton width="100px" height="20px" rounded="pill" />
           </div>
-          <bfd-skeleton width="240px" height="28px" variant="surface-3" />
+          <bae-skeleton width="240px" height="28px" variant="surface-3" />
           <div class="mt-3 flex gap-4.5">
-            <bfd-skeleton width="160px" height="12px" />
-            <bfd-skeleton width="160px" height="12px" />
-            <bfd-skeleton width="140px" height="12px" />
+            <bae-skeleton width="160px" height="12px" />
+            <bae-skeleton width="160px" height="12px" />
+            <bae-skeleton width="140px" height="12px" />
           </div>
           <div class="mt-4.5 grid grid-cols-4 gap-3">
             @for (_ of r4; track $index) {
               <div class="rounded-md border border-border-s bg-surface-2 p-3">
-                <bfd-skeleton width="60px" height="10px" />
+                <bae-skeleton width="60px" height="10px" />
                 <div class="mt-2">
-                  <bfd-skeleton width="50%" height="18px" variant="surface-3" />
+                  <bae-skeleton width="50%" height="18px" variant="surface-3" />
                 </div>
-                <div class="mt-3"><bfd-skeleton width="100%" height="4px" /></div>
+                <div class="mt-3"><bae-skeleton width="100%" height="4px" /></div>
               </div>
             }
           </div>
@@ -96,11 +96,11 @@
           ></div>
 
           <div class="mb-2 flex items-center gap-2.5">
-            <bfd-badge kind="red" [dot]="true">PROCHAINE SOIRÉE</bfd-badge>
-            <bfd-badge kind="ghost">DANS {{ n.days }} JOURS</bfd-badge>
+            <bae-badge kind="red" [dot]="true">PROCHAINE SOIRÉE</bae-badge>
+            <bae-badge kind="ghost">DANS {{ n.days }} JOURS</bae-badge>
             @let me = responseEvent()?.memberPresence;
             @if (me === Presence.PENDING || me === undefined) {
-              <bfd-badge kind="warn" [dot]="true">Non répondu</bfd-badge>
+              <bae-badge kind="warn" [dot]="true">Non répondu</bae-badge>
             }
           </div>
 
@@ -148,14 +148,14 @@
               <div class="mb-0.5 text-[11px] text-muted">Votre réponse</div>
               @if (responseLoading()) {
                 <div class="flex gap-1.5">
-                  <bfd-skeleton width="92px" height="28px" rounded="md" />
-                  <bfd-skeleton width="92px" height="28px" rounded="md" />
+                  <bae-skeleton width="92px" height="28px" rounded="md" />
+                  <bae-skeleton width="92px" height="28px" rounded="md" />
                 </div>
               } @else {
                 @let me = responseEvent()?.memberPresence;
                 @let locked = presenceLocked();
                 <div class="flex gap-1.5">
-                  <bfd-btn
+                  <bae-btn
                     id="presence-present"
                     size="sm"
                     [icon]="icCheck"
@@ -164,10 +164,10 @@
                     (clicked)="respondPresent()"
                   >
                     Présent·e
-                  </bfd-btn>
+                  </bae-btn>
                   <!-- Disabled, never hidden (D8): the member has to see that
                        the option exists and read why it is out of reach. -->
-                  <bfd-btn
+                  <bae-btn
                     id="presence-absent"
                     size="sm"
                     [kind]="me === Presence.ABSENT ? 'danger' : 'outline'"
@@ -177,7 +177,7 @@
                     (clicked)="respondAbsent()"
                   >
                     Absent·e
-                  </bfd-btn>
+                  </bae-btn>
                 </div>
                 @if (locked) {
                   <!-- Why « Absent·e » is disabled, and how to get out of it.
@@ -234,12 +234,12 @@
       <!-- Agenda + Alerts -->
       <div class="grid grid-cols-2 gap-4.5">
         <!-- AGENDA -->
-        <bfd-card [padding]="0">
+        <bae-card [padding]="0">
           <div class="flex items-center border-b border-border-s px-4 py-3.5">
             <div class="flex-1">
               <div class="text-[13px] font-semibold text-text">Soirées à venir</div>
               @if (agenda.loading()) {
-                <div class="mt-0.5"><bfd-skeleton width="180px" height="10px" /></div>
+                <div class="mt-0.5"><bae-skeleton width="180px" height="10px" /></div>
               } @else {
                 <div class="mt-0.5 text-[11px] text-muted">
                   {{ agenda.data().length }} événement{{
@@ -249,9 +249,9 @@
                 </div>
               }
             </div>
-            <bfd-btn kind="ghost" size="sm" [iconRight]="icArrowRight" (clicked)="goToAgenda()">
+            <bae-btn kind="ghost" size="sm" [iconRight]="icArrowRight" (clicked)="goToAgenda()">
               Tout voir
-            </bfd-btn>
+            </bae-btn>
           </div>
 
           @if (agenda.loading()) {
@@ -261,12 +261,12 @@
                   'flex items-center gap-3.5 px-4 py-3 ' + (last ? '' : 'border-b border-border-s')
                 "
               >
-                <bfd-skeleton width="42px" height="38px" rounded="md" variant="surface-3" />
+                <bae-skeleton width="42px" height="38px" rounded="md" variant="surface-3" />
                 <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <bfd-skeleton width="60%" height="12px" variant="surface-3" />
-                  <bfd-skeleton width="40%" height="10px" />
+                  <bae-skeleton width="60%" height="12px" variant="surface-3" />
+                  <bae-skeleton width="40%" height="10px" />
                 </div>
-                <bfd-skeleton width="64px" height="18px" rounded="pill" />
+                <bae-skeleton width="64px" height="18px" rounded="pill" />
               </div>
             }
           } @else if (agenda.data().length === 0) {
@@ -292,19 +292,19 @@
                   <div class="text-[13px] font-medium text-text">{{ e.name }}</div>
                   <div class="mt-0.5 text-[11px] text-muted">{{ e.sub }}</div>
                 </div>
-                <bfd-badge [kind]="e.statusKind">{{ e.status }}</bfd-badge>
+                <bae-badge [kind]="e.statusKind">{{ e.status }}</bae-badge>
               </div>
             }
           }
-        </bfd-card>
+        </bae-card>
 
         <!-- ALERTS -->
-        <bfd-card [padding]="0">
+        <bae-card [padding]="0">
           <div class="flex items-center border-b border-border-s px-4 py-3.5">
             <div class="flex-1">
               <div class="text-[13px] font-semibold text-text">Alertes & rappels</div>
               @if (alerts.loading()) {
-                <div class="mt-0.5"><bfd-skeleton width="140px" height="10px" /></div>
+                <div class="mt-0.5"><bae-skeleton width="140px" height="10px" /></div>
               } @else {
                 <div class="mt-0.5 text-[11px] text-muted">
                   {{ alerts.data().length }} élément{{ alerts.data().length === 1 ? '' : 's' }}
@@ -312,7 +312,7 @@
               }
             </div>
             @if (!alerts.loading() && alerts.data().length > 0) {
-              <bfd-badge kind="warn" [dot]="true">{{ alerts.data().length }}</bfd-badge>
+              <bae-badge kind="warn" [dot]="true">{{ alerts.data().length }}</bae-badge>
             }
           </div>
 
@@ -323,10 +323,10 @@
                   'flex items-start gap-3 px-4 py-3 ' + (last ? '' : 'border-b border-border-s')
                 "
               >
-                <bfd-skeleton width="30px" height="30px" rounded="md" variant="surface-3" />
+                <bae-skeleton width="30px" height="30px" rounded="md" variant="surface-3" />
                 <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <bfd-skeleton width="70%" height="12px" variant="surface-3" />
-                  <bfd-skeleton width="90%" height="10px" />
+                  <bae-skeleton width="70%" height="12px" variant="surface-3" />
+                  <bae-skeleton width="90%" height="10px" />
                 </div>
               </div>
             }
@@ -355,15 +355,15 @@
                   <div class="text-[13px] font-medium text-text">{{ a.title }}</div>
                   <div class="mt-0.5 text-[11px] text-muted">{{ a.sub }}</div>
                 </div>
-                <bfd-btn kind="ghost" size="sm">{{ a.action }}</bfd-btn>
+                <bae-btn kind="ghost" size="sm">{{ a.action }}</bae-btn>
               </div>
             }
           }
-        </bfd-card>
+        </bae-card>
       </div>
 
       <!-- ENCAISSEMENTS chart -->
-      <bfd-card [padding]="0">
+      <bae-card [padding]="0">
         <div class="flex items-center border-b border-border-s px-4 py-3.5">
           <div class="flex-1">
             <div class="text-[13px] font-semibold text-text">
@@ -395,8 +395,8 @@
           <div class="flex h-35 items-end gap-2 p-4">
             @for (_ of r6; track $index) {
               <div class="flex flex-1 flex-col items-center gap-1.5">
-                <bfd-skeleton width="80%" height="60px" variant="surface-3" />
-                <bfd-skeleton width="50%" height="10px" />
+                <bae-skeleton width="80%" height="60px" variant="surface-3" />
+                <bae-skeleton width="50%" height="10px" />
               </div>
             }
           </div>
@@ -455,13 +455,13 @@
             <span class="ml-auto">Total · {{ encaissementsTotal() }}</span>
           </div>
         }
-      </bfd-card>
+      </bae-card>
     </div>
 
     <!-- RIGHT rail -->
     <div class="flex flex-col gap-4.5">
       <!-- ROLE -->
-      <bfd-card>
+      <bae-card>
         <div class="text-[13px] font-semibold text-text">Votre rôle ce soir-là</div>
         <div class="mt-0.5 text-[11px] text-muted">
           @if (responseEvent(); as ev) {
@@ -475,16 +475,16 @@
           <div class="mt-3.5 rounded-md border border-border-s bg-surface-2 p-3.5">
             <div class="flex items-center justify-between">
               <div class="flex flex-col gap-1.5">
-                <bfd-skeleton width="40px" height="10px" />
-                <bfd-skeleton width="140px" height="20px" variant="surface-3" />
+                <bae-skeleton width="40px" height="10px" />
+                <bae-skeleton width="140px" height="20px" variant="surface-3" />
               </div>
-              <bfd-skeleton width="38px" height="38px" rounded="md" variant="surface-3" />
+              <bae-skeleton width="38px" height="38px" rounded="md" variant="surface-3" />
             </div>
             <div class="mt-3.5 flex flex-col gap-2">
               @for (_ of r4; track $index) {
                 <div class="flex justify-between">
-                  <bfd-skeleton width="80px" height="10px" />
-                  <bfd-skeleton width="100px" height="10px" />
+                  <bae-skeleton width="80px" height="10px" />
+                  <bae-skeleton width="100px" height="10px" />
                 </div>
               }
             </div>
@@ -572,10 +572,10 @@
             Aucun poste assigné pour la prochaine soirée.
           </div>
         }
-      </bfd-card>
+      </bae-card>
 
       <!-- QUICK ACTIONS -->
-      <bfd-card>
+      <bae-card>
         <div class="mb-3 flex items-center">
           <div class="flex-1 text-[13px] font-semibold text-text">Accès rapides</div>
           <svg [lucideIcon]="icSettings" [size]="14" class="text-muted" aria-hidden="true"></svg>
@@ -584,8 +584,8 @@
           <div class="grid grid-cols-2 gap-2">
             @for (_ of r6; track $index) {
               <div class="flex flex-col gap-2 rounded-md border border-border-s bg-surface-2 p-3">
-                <bfd-skeleton width="16px" height="16px" />
-                <bfd-skeleton width="80%" height="12px" variant="surface-3" />
+                <bae-skeleton width="16px" height="16px" />
+                <bae-skeleton width="80%" height="12px" variant="surface-3" />
               </div>
             }
           </div>
@@ -609,10 +609,10 @@
             }
           </div>
         }
-      </bfd-card>
+      </bae-card>
 
       <!-- ACTIVITY -->
-      <bfd-card [padding]="0">
+      <bae-card [padding]="0">
         <div class="px-4 pt-3.5 pb-2.5">
           <div class="text-[13px] font-semibold text-text">Activité de l'équipe</div>
         </div>
@@ -620,10 +620,10 @@
         @if (activity.loading()) {
           @for (_ of r4; track $index) {
             <div class="flex items-start gap-2.5 border-t border-border-s px-4 py-2.5">
-              <bfd-skeleton width="22px" height="22px" rounded="pill" variant="surface-3" />
+              <bae-skeleton width="22px" height="22px" rounded="pill" variant="surface-3" />
               <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                <bfd-skeleton width="90%" height="10px" variant="surface-3" />
-                <bfd-skeleton width="50%" height="9px" />
+                <bae-skeleton width="90%" height="10px" variant="surface-3" />
+                <bae-skeleton width="50%" height="9px" />
               </div>
             </div>
           }
@@ -641,7 +641,7 @@
         } @else {
           @for (a of activity.data(); track $index) {
             <div class="flex items-start gap-2.5 border-t border-border-s px-4 py-2.5">
-              <bfd-avatar [name]="a.who" [size]="22" />
+              <bae-avatar [name]="a.who" [size]="22" />
               <div class="min-w-0 flex-1 text-[12px] leading-normal text-text-2">
                 <span class="font-medium text-text">{{ a.who }}</span> {{ a.what }}
                 @if (a.emphasis) {
@@ -655,7 +655,7 @@
             </div>
           }
         }
-      </bfd-card>
+      </bae-card>
     </div>
   </div>
 </div>

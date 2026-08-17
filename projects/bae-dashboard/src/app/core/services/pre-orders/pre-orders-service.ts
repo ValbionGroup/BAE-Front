@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
 import type { OrderStatus } from '#core/models/order.model';
 

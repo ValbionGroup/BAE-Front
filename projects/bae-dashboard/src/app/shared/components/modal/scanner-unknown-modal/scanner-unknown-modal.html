@@ -29,49 +29,49 @@
   </div>
 
   <div class="grid grid-cols-[2fr_1fr] gap-3 mb-3">
-    <bfd-field label="Nom du produit *">
-      <bfd-input placeholder="ex. Cornichons aigres-doux 720g" />
-    </bfd-field>
-    <bfd-field label="Catégorie *">
+    <bae-field label="Nom du produit *">
+      <bae-input placeholder="ex. Cornichons aigres-doux 720g" />
+    </bae-field>
+    <bae-field label="Catégorie *">
       <div
         class="flex items-center h-9 px-3 bg-surface-2 border border-border rounded-md text-[13px] text-text"
       >
         <span class="flex-1">Sec</span>
         <svg [lucideIcon]="icChevDown" [size]="14" class="text-muted"></svg>
       </div>
-    </bfd-field>
+    </bae-field>
   </div>
 
   <div class="grid grid-cols-3 gap-3 mb-3">
-    <bfd-field label="Conditionnement">
-      <bfd-input placeholder="Bocal" />
-    </bfd-field>
-    <bfd-field label="Contenance">
-      <bfd-input value="720" suffix="g" />
-    </bfd-field>
-    <bfd-field label="Unité de stock">
+    <bae-field label="Conditionnement">
+      <bae-input placeholder="Bocal" />
+    </bae-field>
+    <bae-field label="Contenance">
+      <bae-input value="720" suffix="g" />
+    </bae-field>
+    <bae-field label="Unité de stock">
       <div
         class="flex items-center h-9 px-3 bg-surface-2 border border-border rounded-md text-[13px] text-text"
       >
         <span class="flex-1">Pièce</span>
         <svg [lucideIcon]="icChevDown" [size]="14" class="text-muted"></svg>
       </div>
-    </bfd-field>
+    </bae-field>
   </div>
 
   <div class="grid grid-cols-3 gap-3 mb-3.5">
-    <bfd-field label="Prix d'achat (réf.)">
-      <bfd-input value="2,40" suffix="€" />
-    </bfd-field>
-    <bfd-field label="Quantité de ce lot">
-      <bfd-input value="3" suffix="pc" />
-    </bfd-field>
-    <bfd-field label="DLC du lot">
-      <bfd-input [icon]="icCalendar" value="08/2027" />
-    </bfd-field>
+    <bae-field label="Prix d'achat (réf.)">
+      <bae-input value="2,40" suffix="€" />
+    </bae-field>
+    <bae-field label="Quantité de ce lot">
+      <bae-input value="3" suffix="pc" />
+    </bae-field>
+    <bae-field label="DLC du lot">
+      <bae-input [icon]="icCalendar" value="08/2027" />
+    </bae-field>
   </div>
 
-  <bfd-field label="Emplacement de stockage">
+  <bae-field label="Emplacement de stockage">
     <div class="flex gap-1.5 flex-wrap mt-1">
       @for (l of emplacements; track l; let i = $index) {
         <button
@@ -88,7 +88,7 @@
         </button>
       }
     </div>
-  </bfd-field>
+  </bae-field>
 
   <div
     class="mt-4 p-3 bg-blue-soft border border-blue rounded-md flex gap-2.5 items-start text-[12.5px] text-text-2"
@@ -101,11 +101,11 @@
   </div>
 
   <div modal-footer class="contents">
-    <bfd-btn kind="ghost" size="sm" (clicked)="close()">Ignorer ce scan</bfd-btn>
+    <bae-btn kind="ghost" size="sm" (clicked)="close()">Ignorer ce scan</bae-btn>
     <div class="flex-1"></div>
-    <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" [icon]="icPlus" (clicked)="close()"
-      >Créer &amp; ajouter au stock</bfd-btn
+    <bae-btn kind="ghost" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="primary" [icon]="icPlus" (clicked)="close()"
+      >Créer &amp; ajouter au stock</bae-btn
     >
   </div>
 </bfd-modal-shell>

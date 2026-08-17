@@ -21,13 +21,9 @@ import {
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RecipesStore } from '#core/store/recipes.store';
 import { PrintService } from '#core/services/print/print-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Input } from '#shared/components/ui/input/input';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { Btn, Badge, Input, Skeleton, ToastService } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { RecipeEditModal } from '#shared/components/modal/recipe-edit-modal/recipe-edit-modal';
-import { ToastService } from '#shared/components/toast/toast.service';
 import type { RecipeIngredient, RecipeProduct } from './recipes.types';
 
 interface RecetteRow {

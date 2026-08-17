@@ -9,8 +9,7 @@ import {
 import { lastValueFrom } from 'rxjs';
 import { toDataURL } from 'qrcode';
 import { BuyersService } from '#core/services/buyers/buyers-service';
-import { messageOf } from '#shared/utils/api-error';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { messageOf, Btn } from '@bae/ui';
 
 /**
  * Le QR d'identité de la personne connectée, à présenter au comptoir.

@@ -16,8 +16,7 @@ import {
   LucideZap,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { Btn, Avatar } from '@bae/ui';
 
 @Component({
   selector: 'bfd-etats',

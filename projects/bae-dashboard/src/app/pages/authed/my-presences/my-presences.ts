@@ -23,11 +23,7 @@ import {
 } from '@lucide/angular';
 import { Store } from '@ngrx/store';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { Btn, Badge, BadgeKind, Card, Skeleton, ToastService } from '@bae/ui';
 import { EventDetail, Presence } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
 import {

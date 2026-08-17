@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { MemberEditModal } from './member-edit-modal';
 import { TeamStore } from '#core/store/team.store';
 import { ModalService } from '../modal.service';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 
 const baseUrl = 'http://api.test/v1';
 

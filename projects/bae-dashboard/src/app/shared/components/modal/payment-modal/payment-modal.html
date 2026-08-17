@@ -19,23 +19,23 @@
       <p class="text-[11.5px] text-muted">Client : {{ clientName() }}</p>
 
       <div class="grid grid-cols-2 gap-2">
-        <bfd-btn
+        <bae-btn
           kind="primary"
           size="lg"
           [full]="true"
           [icon]="icCash"
           [disabled]="submitting()"
           (clicked)="choose('cash')"
-          >Espèces</bfd-btn
+          >Espèces</bae-btn
         >
-        <bfd-btn
+        <bae-btn
           kind="secondary"
           size="lg"
           [full]="true"
           [icon]="icLydia"
           [disabled]="true"
           title="L'encaissement Lydia attend l'accès à leur API."
-          >Lydia</bfd-btn
+          >Lydia</bae-btn
         >
       </div>
     } @else {
@@ -70,10 +70,10 @@
       </div>
 
       <div class="flex gap-1.5">
-        <bfd-btn kind="secondary" size="sm" [full]="true" (clicked)="setExact()"
-          >Compte juste</bfd-btn
+        <bae-btn kind="secondary" size="sm" [full]="true" (clicked)="setExact()"
+          >Compte juste</bae-btn
         >
-        <bfd-btn kind="ghost" size="sm" (clicked)="clearGiven()">Effacer</bfd-btn>
+        <bae-btn kind="ghost" size="sm" (clicked)="clearGiven()">Effacer</bae-btn>
       </div>
 
       <!-- Le rendu occupe la place du total : c'est le seul chiffre que la
@@ -113,12 +113,12 @@
 
   <div class="flex flex-1 justify-end gap-2" modal-footer>
     @if (step() === 'cash') {
-      <bfd-btn kind="ghost" [disabled]="submitting()" (clicked)="back()">Retour</bfd-btn>
-      <bfd-btn kind="primary" [disabled]="!canConfirmCash()" (clicked)="pay('cash')">
+      <bae-btn kind="ghost" [disabled]="submitting()" (clicked)="back()">Retour</bae-btn>
+      <bae-btn kind="primary" [disabled]="!canConfirmCash()" (clicked)="pay('cash')">
         Encaisser {{ formatCents(totalCents()) }} €
-      </bfd-btn>
+      </bae-btn>
     } @else {
-      <bfd-btn kind="ghost" [disabled]="submitting()" (clicked)="cancel()">Annuler</bfd-btn>
+      <bae-btn kind="ghost" [disabled]="submitting()" (clicked)="cancel()">Annuler</bae-btn>
     }
   </div>
 </bfd-modal-shell>

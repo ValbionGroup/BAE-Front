@@ -12,7 +12,7 @@ import { PreOrdersService } from '#core/services/pre-orders/pre-orders-service';
 import type { LoadingStatus } from '#core/models/global.model';
 import type { Order, OrderStatus } from '#core/models/order.model';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
-import { messageOf } from '#shared/utils/api-error';
+import { messageOf } from '@bae/ui';
 
 interface OrdersState {
   loading: LoadingStatus;

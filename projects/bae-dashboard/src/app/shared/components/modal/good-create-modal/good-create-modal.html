@@ -7,17 +7,17 @@
   (close)="cancel()"
 >
   <div class="flex flex-col gap-3">
-    <bfd-field label="Nom du produit">
-      <bfd-input
+    <bae-field label="Nom du produit">
+      <bae-input
         placeholder="ex. Cornichons aigres-doux 720g"
         [value]="name()"
         [invalid]="submitted() && name().trim() === ''"
         (valueChange)="onName($event)"
       />
-    </bfd-field>
+    </bae-field>
 
     <div class="grid grid-cols-2 gap-3">
-      <bfd-field label="Catégorie">
+      <bae-field label="Catégorie">
         <select
           class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-60"
           [value]="categoryId()"
@@ -29,11 +29,11 @@
             <option [value]="category.id">{{ category.name }}</option>
           }
         </select>
-      </bfd-field>
+      </bae-field>
 
       <!-- `<select>` et non texte libre : `goods.unit` est un enum contraint en
            base (`goods_unit_check`), une valeur hors liste part en 500. -->
-      <bfd-field label="Unité de stock">
+      <bae-field label="Unité de stock">
         <select
           class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
           [value]="unit()"
@@ -44,12 +44,12 @@
             <option [value]="u.value">{{ u.label }}</option>
           }
         </select>
-      </bfd-field>
+      </bae-field>
     </div>
 
-    <bfd-field label="Marque" hint="Facultatif.">
-      <bfd-input placeholder="ex. Maille" [value]="brand()" (valueChange)="onBrand($event)" />
-    </bfd-field>
+    <bae-field label="Marque" hint="Facultatif.">
+      <bae-input placeholder="ex. Maille" [value]="brand()" (valueChange)="onBrand($event)" />
+    </bae-field>
 
     @if (barcode(); as code) {
       <div
@@ -76,14 +76,14 @@
   </div>
 
   <div modal-footer class="flex flex-1 justify-end gap-2">
-    <bfd-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bfd-btn>
-    <bfd-btn
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn
       kind="primary"
       size="md"
       [disabled]="store.creatingGood() || categoriesMissing()"
       (clicked)="submit()"
     >
       {{ store.creatingGood() ? 'Enregistrement…' : 'Créer le produit' }}
-    </bfd-btn>
+    </bae-btn>
   </div>
 </bfd-modal-shell>

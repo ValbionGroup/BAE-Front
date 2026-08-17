@@ -50,11 +50,11 @@
 
   <div class="px-5.5 py-3.5 border-t border-border-s flex items-center justify-end gap-2">
     @for (a of actions(); track $index) {
-      <bfd-btn
+      <bae-btn
         [kind]="a.variant === 'primary' ? 'primary' : 'ghost'"
         size="md"
         (clicked)="onAction(a.action)"
-        >{{ a.label }}</bfd-btn
+        >{{ a.label }}</bae-btn
       >
     }
   </div>

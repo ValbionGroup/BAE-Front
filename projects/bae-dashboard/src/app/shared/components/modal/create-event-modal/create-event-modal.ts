@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { LucideX } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Btn } from '@bae/ui';
 import { CreateEventModalConfig } from '../modal.models';
 
 @Component({

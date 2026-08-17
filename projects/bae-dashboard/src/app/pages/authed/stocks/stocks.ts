@@ -25,12 +25,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { StocksStore } from '#core/store/stocks.store';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
-import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
-import { Toggle } from '#shared/components/ui/toggle/toggle';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Badge, Card, Checkbox, Toggle, Input } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import { PrintService } from '#core/services/print/print-service';

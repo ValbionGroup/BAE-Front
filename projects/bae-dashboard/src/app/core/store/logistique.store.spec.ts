@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { LogistiqueStore } from './logistique.store';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type {
   ApiGood,
   ApiShoppingList,

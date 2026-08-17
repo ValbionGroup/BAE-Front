@@ -5,9 +5,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideMockStore, MockStore } from '@ngrx/store/testing';
 
 import { Equipe } from './equipe';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
-import { DropdownService } from '#shared/components/dropdown/dropdown.service';
-import type { DropdownItemAction } from '#shared/components/dropdown/dropdown.models';
+import { API_BASE_URL, DropdownService } from '@bae/ui';
+import type { DropdownItemAction } from '@bae/ui';
 
 const baseUrl = 'http://api.test/v1';
 

@@ -35,12 +35,7 @@ import { EventsStore } from '#core/store/events.store';
 import { RecipesStore } from '#core/store/recipes.store';
 import { EventDetail, MenuItem } from '#core/models/event.model';
 import type { RecipeProduct } from '#pages/authed/recettes/recipes.types';
-import { ToastService } from '#shared/components/toast/toast.service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Input } from '#shared/components/ui/input/input';
-import { DropdownService } from '#shared/components/dropdown/dropdown.service';
-import { DropdownItem } from '#shared/components/dropdown/dropdown.models';
+import { ToastService, Btn, Badge, BadgeKind, Input, DropdownService, DropdownItem } from '@bae/ui';
 import { PrintService } from '#core/services/print/print-service';
 
 type TabKey = 'upcoming' | 'preparing' | 'past' | 'all';

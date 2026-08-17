@@ -8,7 +8,7 @@ import {
   type CreateGoodPayload,
 } from '#core/services/stocks/stocks-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf, settle } from '#shared/utils/api-error';
+import { messageOf, settle } from '@bae/ui';
 import type { DlcStatus, StockBatchRow, StockProduct } from '#pages/authed/stocks/stocks.types';
 
 function dlcStatus(expirationDate: string | null, today: Date): DlcStatus {

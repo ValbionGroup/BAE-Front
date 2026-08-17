@@ -1,5 +1,5 @@
 import type { LucideIconInput } from '@lucide/angular';
-import type { BadgeKind } from '#shared/components/ui/badge/badge';
+import type { BadgeKind } from '@bae/ui';
 import type { JobPeriod } from '#core/models/job-period.model';
 
 export interface KpiTile {

@@ -1,7 +1,7 @@
 <div class="flex h-screen flex-col overflow-hidden bg-bg">
   <!-- TOPBAR — la page est hors app-shell : elle porte sa propre barre. -->
   <header class="flex items-center gap-4 border-b border-border-s bg-sidebar px-6 py-3.5">
-    <bfd-logo />
+    <bae-logo [version]="appVersion" />
 
     @if (currentEvent(); as event) {
       <div
@@ -18,23 +18,23 @@
     <div class="flex-1"></div>
 
     <div class="flex gap-1.5">
-      <bfd-btn
+      <bae-btn
         kind="ghost"
         size="md"
         [icon]="icBell"
         [disabled]="true"
         title="Aucun système de notification"
-        >Push équipe</bfd-btn
+        >Push équipe</bae-btn
       >
-      <bfd-btn kind="ghost" size="md" (clicked)="leave()">Quitter</bfd-btn>
+      <bae-btn kind="ghost" size="md" (clicked)="leave()">Quitter</bae-btn>
       @if (canSettle()) {
-        <bfd-btn
+        <bae-btn
           kind="danger"
           size="md"
           [icon]="icLock"
           [disabled]="currentEvent() === null"
           (clicked)="closeNight()"
-          >Clôturer la soirée</bfd-btn
+          >Clôturer la soirée</bae-btn
         >
       }
     </div>
@@ -49,8 +49,8 @@
           à venir se fait depuis la Logistique.
         </p>
         <div class="mt-3">
-          <bfd-btn kind="secondary" size="sm" (clicked)="leave()"
-            >Retour au tableau de bord</bfd-btn
+          <bae-btn kind="secondary" size="sm" (clicked)="leave()"
+            >Retour au tableau de bord</bae-btn
           >
         </div>
       </div>
@@ -261,11 +261,11 @@
 
                     <div class="mt-2.5 flex gap-1.5">
                       @if (!isPreOrder && column.key === 'in_progress' && canCancel()) {
-                        <bfd-btn kind="ghost" size="sm" (clicked)="cancelTicket(ticket)"
-                          >Annuler</bfd-btn
+                        <bae-btn kind="ghost" size="sm" (clicked)="cancelTicket(ticket)"
+                          >Annuler</bae-btn
                         >
                       }
-                      <bfd-btn
+                      <bae-btn
                         kind="primary"
                         size="sm"
                         [icon]="column.actionIcon"
@@ -273,7 +273,7 @@
                         (clicked)="advanceTicket(ticket)"
                       >
                         {{ column.action }}
-                      </bfd-btn>
+                      </bae-btn>
                     </div>
                   </article>
                 } @empty {
@@ -317,7 +317,7 @@
         <!-- Flux transactions -->
         <div class="flex items-center px-4 pb-1.5 pt-3.5">
           <div class="flex-1 text-[12px] font-semibold text-text">Flux transactions</div>
-          <bfd-badge kind="ok" [dot]="true">Live</bfd-badge>
+          <bae-badge kind="ok" [dot]="true">Live</bae-badge>
         </div>
         @if (recentOrders().length === 0) {
           <p class="px-4 pb-3 text-[11px] text-muted">Rien encore encaissé.</p>
@@ -467,7 +467,7 @@
                     </div>
                     @let urgent = row.level === 'out' || row.level === 'low';
                     @if (canProduce()) {
-                      <bfd-btn
+                      <bae-btn
                         [kind]="urgent ? 'primary' : row.beyondPlan ? 'ghost' : 'secondary'"
                         size="sm"
                         [title]="
@@ -476,7 +476,7 @@
                             : 'Lancer une fournée : prélève les lots et met à jour le vendable.'
                         "
                         (clicked)="openRun(row)"
-                        >{{ !urgent && row.beyondPlan ? 'Au-delà du plan' : 'Relancer' }}</bfd-btn
+                        >{{ !urgent && row.beyondPlan ? 'Au-delà du plan' : 'Relancer' }}</bae-btn
                       >
                     }
                   </div>
@@ -491,8 +491,8 @@
 
           @if (canCashier()) {
             <div class="mt-2.5">
-              <bfd-btn kind="ghost" size="sm" [full]="true" (clicked)="openCaisse()"
-                >Ouvrir la caisse</bfd-btn
+              <bae-btn kind="ghost" size="sm" [full]="true" (clicked)="openCaisse()"
+                >Ouvrir la caisse</bae-btn
               >
             </div>
           }

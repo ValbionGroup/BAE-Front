@@ -1,7 +1,7 @@
 <ng-template #actions>
-  <bfd-btn kind="secondary" size="md" [icon]="icUser" (clicked)="openMyPresences()">
+  <bae-btn kind="secondary" size="md" [icon]="icUser" (clicked)="openMyPresences()">
     Mes présences
-  </bfd-btn>
+  </bae-btn>
 </ng-template>
 
 <div class="h-full grid grid-cols-[1fr_360px]">
@@ -24,7 +24,7 @@
         }
       </div>-->
       <div class="flex-1"></div>
-      <bfd-btn kind="ghost" size="sm" (clicked)="goToToday()">Aujourd'hui</bfd-btn>
+      <bae-btn kind="ghost" size="sm" (clicked)="goToToday()">Aujourd'hui</bae-btn>
       <button
         (click)="previousMonth()"
         type="button"
@@ -80,7 +80,7 @@
             >
               <span class="overflow-hidden text-ellipsis whitespace-nowrap">{{ ev.name }}</span>
               @if (isPresenceLoading(ev)) {
-                <bfd-skeleton width="56px" height="10px" />
+                <bae-skeleton width="56px" height="10px" />
               } @else {
                 <span class="mono text-[9.5px] opacity-85">{{ respLabel(ev) }}</span>
               }

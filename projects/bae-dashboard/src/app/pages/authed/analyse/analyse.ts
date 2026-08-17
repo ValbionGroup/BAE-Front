@@ -6,8 +6,7 @@ import {
   LucideFunnel,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { Badge, Skeleton } from '@bae/ui';
 import { AnalyseStore } from '#core/store/analyse.store';
 import { EventsStore } from '#core/store/events.store';
 

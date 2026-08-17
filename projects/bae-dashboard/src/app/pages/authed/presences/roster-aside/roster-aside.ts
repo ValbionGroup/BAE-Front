@@ -8,9 +8,7 @@ import {
   untracked,
 } from '@angular/core';
 import { LucideBell } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { Btn, Badge, BadgeKind, Avatar } from '@bae/ui';
 import { Presence, RosterRow } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
 

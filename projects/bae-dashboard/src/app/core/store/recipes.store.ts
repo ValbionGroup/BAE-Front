@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
 import { RecipesService, type ApiRecipeDetail } from '#core/services/recipes/recipes-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf } from '#shared/utils/api-error';
+import { messageOf } from '@bae/ui';
 import type {
   RecipeIngredient,
   RecipeProduct,

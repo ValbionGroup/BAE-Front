@@ -18,11 +18,7 @@ import {
   LucideUsers,
   LucideX,
 } from '@lucide/angular';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
-import { Toggle } from '#shared/components/ui/toggle/toggle';
+import { Badge, Btn, Field, Input, Toggle } from '@bae/ui';
 import { Router } from '@angular/router';
 import { CoordinationStore } from '#core/store/coordination.store';
 import { ModalService } from '#shared/components/modal/modal.service';

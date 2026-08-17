@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { OrdersStore } from './orders.store';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { ApiOrder } from '#core/services/orders/orders-service';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
 

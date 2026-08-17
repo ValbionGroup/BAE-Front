@@ -9,10 +9,7 @@ import {
   LucideTrash2,
   LucideUsers,
 } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Badge, Field, Input } from '@bae/ui';
 import { CoordinationStore } from '#core/store/coordination.store';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';

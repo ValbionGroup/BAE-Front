@@ -1,11 +1,11 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bfd-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printInventory()"
-    >Inventaire</bfd-btn
+  <bae-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bae-btn>
+  <bae-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printInventory()"
+    >Inventaire</bae-btn
   >
   <span data-testid="add-good">
-    <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateGood()">Produit</bfd-btn>
+    <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateGood()">Produit</bae-btn>
   </span>
 </ng-template>
 
@@ -17,7 +17,7 @@
     <!-- KPI row -->
     <div class="grid grid-cols-4 gap-3">
       @for (k of kpis(); track k.label) {
-        <bfd-card [padding]="12">
+        <bae-card [padding]="12">
           <div class="mb-1.5 flex items-center gap-2.5">
             <span
               [class]="
@@ -32,14 +32,14 @@
           <div class="tnum text-[18px] font-semibold -tracking-[0.3px]" [class]="k.colorClass">
             {{ k.value }}
           </div>
-        </bfd-card>
+        </bae-card>
       }
     </div>
 
     <!-- Filter bar -->
     <div class="flex items-center gap-2">
       <div class="flex-1">
-        <bfd-input
+        <bae-input
           [icon]="icSearch"
           placeholder="Rechercher un produit…"
           size="sm"
@@ -72,21 +72,21 @@
           {{ selectedIds().size }} sélectionné{{ selectedIds().size !== 1 ? 's' : '' }}
         </span>
         <span class="flex-1"></span>
-        <bfd-btn kind="ghost" size="sm" (clicked)="clearSelection()">Annuler</bfd-btn>
-        <bfd-btn kind="danger" size="sm" [icon]="icTrash">Supprimer</bfd-btn>
+        <bae-btn kind="ghost" size="sm" (clicked)="clearSelection()">Annuler</bae-btn>
+        <bae-btn kind="danger" size="sm" [icon]="icTrash">Supprimer</bae-btn>
       </div>
     }
 
     <!-- Products table -->
     <!-- `fill` : sans lui les classes de flex s'arrêtent à l'hôte et le corps du
          tableau, projeté dans le `<div>` interne, ne défile pas. -->
-    <bfd-card [padding]="0" [fill]="true" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <bae-card [padding]="0" [fill]="true" class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <!-- Header -->
       <div
         class="grid grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] gap-3 border-b border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
       >
         <div (click)="$event.stopPropagation()">
-          <bfd-checkbox [checked]="allSelected()" (change)="toggleAll()" />
+          <bae-checkbox [checked]="allSelected()" (change)="toggleAll()" />
         </div>
         <button
           type="button"
@@ -143,12 +143,12 @@
                 <span class="absolute inset-y-0 left-0 w-[2.5px] bg-blue" aria-hidden="true"></span>
               }
               <div (click)="$event.stopPropagation()">
-                <bfd-checkbox [checked]="selectedIds().has(p.id)" (change)="toggleSelect(p.id)" />
+                <bae-checkbox [checked]="selectedIds().has(p.id)" (change)="toggleSelect(p.id)" />
               </div>
               <span class="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-text">
                 {{ p.name }}
               </span>
-              <bfd-badge kind="ghost">{{ p.categoryName }}</bfd-badge>
+              <bae-badge kind="ghost">{{ p.categoryName }}</bae-badge>
               <span class="tnum text-right font-medium">
                 {{ p.totalQty }} <span class="text-[11px] text-muted">{{ p.unit }}</span>
               </span>
@@ -212,7 +212,7 @@
           affiché{{ visibleProducts().length !== 1 ? 's' : '' }}</span
         >
       </div>
-    </bfd-card>
+    </bae-card>
   </div>
 
   <!-- RIGHT: detail panel -->
@@ -223,17 +223,17 @@
       <div class="flex items-start gap-2">
         <div class="flex-1">
           @if (p.expiredBatchCount > 0) {
-            <bfd-badge kind="danger" [dot]="true">
+            <bae-badge kind="danger" [dot]="true">
               {{ p.expiredBatchCount }} lot{{ p.expiredBatchCount !== 1 ? 's' : '' }} périmé{{
                 p.expiredBatchCount !== 1 ? 's' : ''
               }}
-            </bfd-badge>
+            </bae-badge>
           } @else if (p.soonBatchCount > 0) {
-            <bfd-badge kind="warn" [dot]="true">
+            <bae-badge kind="warn" [dot]="true">
               {{ p.soonBatchCount }} proche péremption
-            </bfd-badge>
+            </bae-badge>
           } @else {
-            <bfd-badge kind="ok" [dot]="true">Stock OK</bfd-badge>
+            <bae-badge kind="ok" [dot]="true">Stock OK</bae-badge>
           }
           <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
             {{ p.name }}
@@ -268,7 +268,7 @@
           <label
             class="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted select-none"
           >
-            <bfd-toggle [on]="showEmptyBatches()" (change)="showEmptyBatches.set($event)" />
+            <bae-toggle [on]="showEmptyBatches()" (change)="showEmptyBatches.set($event)" />
             Afficher les lots vides
           </label>
         </div>
@@ -288,12 +288,12 @@
                 <div class="flex items-center gap-2">
                   <span class="mono text-[12px] font-semibold text-text">#{{ b.label }}</span>
                   @if (b.dlcStatus === 'expired') {
-                    <bfd-badge kind="danger" [dot]="true">périmé</bfd-badge>
+                    <bae-badge kind="danger" [dot]="true">périmé</bae-badge>
                   } @else if (b.dlcStatus === 'soon') {
-                    <bfd-badge kind="warn" [dot]="true">bientôt</bfd-badge>
+                    <bae-badge kind="warn" [dot]="true">bientôt</bae-badge>
                   }
                   @if (b.id === firstToTakeId()) {
-                    <bfd-badge kind="warn" [dot]="true">prendre en 1er</bfd-badge>
+                    <bae-badge kind="warn" [dot]="true">prendre en 1er</bae-badge>
                   }
                   <span class="flex-1"></span>
                   <span class="tnum text-[13px] font-semibold text-text">
@@ -319,19 +319,19 @@
                   </span>
                 </div>
                 <div class="mt-2.5 flex gap-1.5">
-                  <bfd-btn kind="ghost" size="sm" [icon]="icDownload" (clicked)="printLabels(b.id)"
-                    >Étiquette</bfd-btn
+                  <bae-btn kind="ghost" size="sm" [icon]="icDownload" (clicked)="printLabels(b.id)"
+                    >Étiquette</bae-btn
                   >
                 </div>
                 @if (b.dlcStatus === 'expired') {
                   <div class="mt-2.5 flex gap-1.5">
-                    <bfd-btn
+                    <bae-btn
                       kind="danger"
                       size="sm"
                       [icon]="icTrash"
                       [disabled]="b.remainingQty === 0"
                       (clicked)="discard(b)"
-                      >Mettre au rebut</bfd-btn
+                      >Mettre au rebut</bae-btn
                     >
                   </div>
                 }

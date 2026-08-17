@@ -5,7 +5,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '#core/services/auth/auth-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
-import { ApiError, isApiError } from '#core/models/api-response.model';
+import { ApiError, isApiError } from '@bae/ui';
 
 import * as AuthActions from './auth.actions';
 import { AppRoutes } from '#app/app.routes';

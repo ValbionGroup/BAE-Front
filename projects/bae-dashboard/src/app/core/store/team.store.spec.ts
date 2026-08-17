@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { TeamStore } from './team.store';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { ApiTeamMember } from '#core/services/team/team-service';
 
 const baseUrl = 'http://api.test/v1';
@@ -268,16 +268,14 @@ describe(TeamStore.name, () => {
 
   it('restores only the edited row, keeping a concurrent write that landed meanwhile', async () => {
     const loaded = store.load();
-    httpMock
-      .expectOne(`${baseUrl}/members`)
-      .flush([
-        MEMBER,
-        {
-          ...MEMBER,
-          id: 3,
-          user: { id: 3, email: 'ana@bae.test', firstName: 'Ana', lastName: 'Klein' },
-        },
-      ]);
+    httpMock.expectOne(`${baseUrl}/members`).flush([
+      MEMBER,
+      {
+        ...MEMBER,
+        id: 3,
+        user: { id: 3, email: 'ana@bae.test', firstName: 'Ana', lastName: 'Klein' },
+      },
+    ]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
     httpMock.expectOne(`${baseUrl}/logs`).flush([]);

@@ -10,7 +10,7 @@ import {
   type UpdateMemberPatch,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf, settle } from '#shared/utils/api-error';
+import { messageOf, settle } from '@bae/ui';
 
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
 export interface TeamSectionErrors {

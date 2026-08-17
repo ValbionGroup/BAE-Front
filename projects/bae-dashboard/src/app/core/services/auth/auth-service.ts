@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import { Observable } from 'rxjs';
 import { UserProfileModel } from '#core/models/user.model';
 import { ApiEndPointV1 } from '#core/models/endpoint.model';

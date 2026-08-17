@@ -8,11 +8,7 @@ import {
   LucideUpload,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { ThemeService } from '#core/services/theme/theme-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
+import { ThemeService, Btn, Field, Input, Avatar } from '@bae/ui';
 import { MyQrCard } from '#shared/components/my-qr-card/my-qr-card';
 import { ParametresSideNav } from './side-nav/side-nav';
 

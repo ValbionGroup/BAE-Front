@@ -20,9 +20,7 @@ import {
   LucideTriangleAlert,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Card } from '#shared/components/ui/card/card';
-import { Field } from '#shared/components/ui/field/field';
+import { Btn, Card, Field } from '@bae/ui';
 
 interface Denom {
   readonly v: number;

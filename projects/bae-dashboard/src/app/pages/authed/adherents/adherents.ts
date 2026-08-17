@@ -26,11 +26,7 @@ import {
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ClientsStore } from '#core/store/clients.store';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
-import { Input } from '#shared/components/ui/input/input';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton } from '@bae/ui';
 import type { ClientDetail, ClientRow, MembershipStatus } from './adherents.types';
 
 interface InfoRow {

@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { MemberModel, UserModel } from '#core/models/user.model';
-import { ApiError } from '#core/models/api-response.model';
+import { ApiError } from '@bae/ui';
 
 // Logout
 export const logout = createAction('[Auth] Logout');

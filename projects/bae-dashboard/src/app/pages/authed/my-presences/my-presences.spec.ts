@@ -15,7 +15,7 @@ import { EventsService } from '#core/services/events/events-service';
 import { CoordinationService } from '#core/services/coordination/coordination-service';
 import { PreferencesService } from '#core/services/preferences/preferences-service';
 import { Presence, type EventDetail } from '#core/models/event.model';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { ToastService } from '@bae/ui';
 import type { JobPeriod } from '#core/models/job-period.model';
 
 const MEMBER = { id: 1, firstName: 'Lucas', lastName: 'ESPIET', points: 0, role: 'admin' };
@@ -329,8 +329,8 @@ describe(MyPresences.name, () => {
     });
 
     /**
-     * These are raw `<button>`s, not `bfd-btn` (id/aria-describedby need to
-     * land on the real element) — the themed focus ring `bfd-btn` gave for
+     * These are raw `<button>`s, not `bae-btn` (id/aria-describedby need to
+     * land on the real element) — the themed focus ring `bae-btn` gave for
      * free has to be carried over by hand, or a keyboard user tabbing here
      * falls back to the browser's default outline.
      */

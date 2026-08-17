@@ -5,7 +5,7 @@ import { EventDetail, MenuItem, Presence, RosterRow } from '#core/models/event.m
 import { LogistiqueService } from '#core/services/logistique/logistique-service';
 import { lastValueFrom } from 'rxjs';
 import { LoadingStatus } from '#core/models/global.model';
-import { messageOf } from '#shared/utils/api-error';
+import { messageOf } from '@bae/ui';
 
 /**
  * Outcome of a presence write, handed back to the caller.

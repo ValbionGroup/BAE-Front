@@ -6,9 +6,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { vi } from 'vitest';
 
 import { StocksScanner } from './scanner';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL, ToastService } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { ToastService } from '#shared/components/toast/toast.service';
 
 const baseUrl = 'http://api.test/v1';
 

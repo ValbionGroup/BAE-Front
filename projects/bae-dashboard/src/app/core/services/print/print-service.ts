@@ -1,8 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
-import { ToastService } from '#shared/components/toast/toast.service';
-import { messageOf } from '#shared/utils/api-error';
+import { API_BASE_URL, ToastService, messageOf } from '@bae/ui';
 
 /**
  * Télécharge un document PDF généré côté back et l'ouvre dans un nouvel

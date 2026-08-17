@@ -8,8 +8,7 @@ import {
   output,
 } from '@angular/core';
 import { LucideCheck, LucideDynamicIcon, LucideTriangleAlert } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { formatCents } from '#shared/utils/money';
+import { Btn, formatCents } from '@bae/ui';
 import type { Order } from '#core/models/order.model';
 import type { Buyer, PreOrderPickup } from '#core/services/buyers/buyers-service';
 

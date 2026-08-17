@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { StocksStore } from './stocks.store';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { ApiStockItem } from '#core/services/stocks/stocks-service';
 
 const baseUrl = 'http://api.test/v1';

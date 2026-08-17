@@ -16,14 +16,11 @@ import {
   LucideStar,
   LucideTriangleAlert,
 } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Badge, Input, ToastService } from '@bae/ui';
 import { EventsStore } from '#core/store/events.store';
 import { RecipesStore } from '#core/store/recipes.store';
 import type { MenuItem } from '#core/models/event.model';
 import type { RecipeProduct } from '#pages/authed/recettes/recipes.types';
-import { ToastService } from '#shared/components/toast/toast.service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 

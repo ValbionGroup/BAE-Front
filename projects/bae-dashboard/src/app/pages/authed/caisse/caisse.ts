@@ -27,10 +27,7 @@ import { PageHeaderService } from '#core/services/page-header/page-header-servic
 import { CaisseStore } from '#core/store/caisse.store';
 import { EventsStore } from '#core/store/events.store';
 import { MenuItem } from '#core/models/event.model';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Kbd } from '#shared/components/ui/kbd/kbd';
-import { formatCents } from '#shared/utils/money';
+import { Btn, Badge, Kbd, formatCents } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import {
   PaymentModal,

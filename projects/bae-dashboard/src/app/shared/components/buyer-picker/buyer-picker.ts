@@ -10,16 +10,13 @@ import {
 } from '@angular/core';
 import { LucideCamera, LucideSearch, LucideX } from '@lucide/angular';
 import { lastValueFrom } from 'rxjs';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Input } from '#shared/components/ui/input/input';
-import { Badge } from '#shared/components/ui/badge/badge';
+import { Btn, Input, Badge, messageOf } from '@bae/ui';
 import {
   BuyersService,
   type Buyer,
   type PreOrderPickup,
 } from '#core/services/buyers/buyers-service';
 import { BarcodeScannerService, QR_FORMATS } from '#core/services/barcode/barcode-scanner-service';
-import { messageOf } from '#shared/utils/api-error';
 
 /**
  * Identification d'un acheteur, **en ligne dans le panier** plutôt qu'en modale :

@@ -8,7 +8,7 @@ import {
   LucideX,
   LucideXCircle,
 } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Btn } from '@bae/ui';
 import { MessageModalConfig, ModalAction } from '../modal.models';
 
 const NOOP = () => {};

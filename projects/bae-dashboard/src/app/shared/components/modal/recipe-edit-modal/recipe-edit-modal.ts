@@ -14,13 +14,9 @@ import {
   LucidePlus,
   LucideTrash2,
 } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
-import { Toggle } from '#shared/components/ui/toggle/toggle';
+import { Btn, Field, Input, Toggle, ToastService } from '@bae/ui';
 import { RecipesStore } from '#core/store/recipes.store';
 import { StocksStore } from '#core/store/stocks.store';
-import { ToastService } from '#shared/components/toast/toast.service';
 import type { RecipeWritePayload } from '#pages/authed/recettes/recipes.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';

@@ -7,7 +7,7 @@
   (close)="cancel()"
 >
   <div class="flex flex-col gap-3">
-    <bfd-field label="Enseigne">
+    <bae-field label="Enseigne">
       <select
         class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
         [value]="supplierId()"
@@ -25,10 +25,10 @@
           </option>
         }
       </select>
-    </bfd-field>
+    </bae-field>
 
-    <bfd-field label="Valeur" hint="En euros — la virgule est acceptée.">
-      <bfd-input
+    <bae-field label="Valeur" hint="En euros — la virgule est acceptée.">
+      <bae-input
         type="text"
         placeholder="20"
         suffix="€"
@@ -36,24 +36,24 @@
         [invalid]="submitted() && parsedValue() === null"
         (valueChange)="onValue($event)"
       />
-    </bfd-field>
+    </bae-field>
 
-    <bfd-field label="Date d'expiration">
-      <bfd-input
+    <bae-field label="Date d'expiration">
+      <bae-input
         type="date"
         [value]="expiresAt()"
         [invalid]="submitted() && expiresAt() === ''"
         (valueChange)="onExpiresAt($event)"
       />
-    </bfd-field>
+    </bae-field>
 
-    <bfd-field label="Condition" hint="Facultatif — par exemple « à partir de 80 € ».">
-      <bfd-input
+    <bae-field label="Condition" hint="Facultatif — par exemple « à partir de 80 € ».">
+      <bae-input
         placeholder="à partir de 80 €"
         [value]="condition()"
         (valueChange)="onCondition($event)"
       />
-    </bfd-field>
+    </bae-field>
 
     @if (submitted() && !valid()) {
       <p role="alert" class="m-0 text-[12px] text-danger">
@@ -67,9 +67,9 @@
   </div>
 
   <div modal-footer class="flex-1 flex justify-end gap-2">
-    <bfd-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" size="md" [disabled]="saving()" (clicked)="submit()">
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn kind="primary" size="md" [disabled]="saving()" (clicked)="submit()">
       {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
-    </bfd-btn>
+    </bae-btn>
   </div>
 </bfd-modal-shell>

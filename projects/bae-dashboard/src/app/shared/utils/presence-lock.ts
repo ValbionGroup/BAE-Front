@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { isApiError } from '#core/models/api-response.model';
+import { isApiError } from '@bae/ui';
 import type { MemberAssignment } from '#core/store/member-assignments.store';
 
 /** Toast wording for a refused presence write. Shared by `home.ts` and

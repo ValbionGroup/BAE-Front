@@ -9,7 +9,7 @@
         var(--bae-sidebar);
     "
   >
-    <bfd-logo [size]="32" />
+    <bae-logo [size]="32" [version]="appVersion" />
 
     <div>
       <div class="mono mb-4 text-[11px] tracking-widest text-muted">
@@ -21,7 +21,7 @@
       </h2>
       <div class="mt-7 flex flex-wrap gap-2.5">
         @for (tag of brandTags; track tag) {
-          <bfd-badge kind="ghost">{{ tag }}</bfd-badge>
+          <bae-badge kind="ghost">{{ tag }}</bae-badge>
         }
       </div>
     </div>
@@ -56,7 +56,7 @@
       </p>
 
       <div class="mb-5">
-        <bfd-btn
+        <bae-btn
           kind="secondary"
           [full]="true"
           size="lg"
@@ -64,7 +64,7 @@
           (clicked)="loginWithEirbConnect()"
         >
           Se connecter avec EirbConnect
-        </bfd-btn>
+        </bae-btn>
       </div>
 
       @if (ssoError(); as error) {
@@ -101,7 +101,7 @@
           </div>
         }
 
-        <bfd-field label="Email">
+        <bae-field label="Email">
           <bfd-text-input
             formControlName="email"
             id="login-email"
@@ -124,9 +124,9 @@
               }
             </span>
           }
-        </bfd-field>
+        </bae-field>
 
-        <bfd-field label="Mot de passe">
+        <bae-field label="Mot de passe">
           <bfd-text-input
             formControlName="password"
             id="login-password"
@@ -145,7 +145,7 @@
               Le mot de passe est requis.
             </span>
           }
-        </bfd-field>
+        </bae-field>
 
         <div class="mt-0.5 flex items-center justify-between">
           <div></div>
@@ -153,7 +153,7 @@
         </div>
 
         <div class="mt-2">
-          <bfd-btn
+          <bae-btn
             kind="primary"
             [full]="true"
             size="lg"
@@ -162,7 +162,7 @@
             [disabled]="form.invalid"
           >
             Se connecter
-          </bfd-btn>
+          </bae-btn>
         </div>
       </form>
 

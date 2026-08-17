@@ -1,7 +1,7 @@
 <div class="flex h-screen flex-col overflow-hidden bg-bg text-text font-sans">
   <!-- Public top nav -->
   <header class="flex shrink-0 items-center gap-7 border-b border-border-s px-14 py-4">
-    <bfd-logo />
+    <bae-logo />
     <div class="flex-1"></div>
     <nav class="flex gap-5 text-[13.5px] text-text-2">
       @for (item of publicNav; track item; let i = $index) {
@@ -9,15 +9,15 @@
       }
     </nav>
     <span class="h-4.5 w-px bg-border" aria-hidden="true"></span>
-    <bfd-btn kind="ghost" size="sm">Mes commandes</bfd-btn>
-    <bfd-btn kind="outline" size="sm" [icon]="icUser">Connexion</bfd-btn>
+    <bae-btn kind="ghost" size="sm">Mes commandes</bae-btn>
+    <bae-btn kind="outline" size="sm" [icon]="icUser">Connexion</bae-btn>
   </header>
 
   <div class="flex-1 overflow-y-auto">
     <!-- Hero -->
     <section class="grid grid-cols-[1.2fr_1fr] items-center gap-14 px-14 pt-14 pb-8">
       <div>
-        <bfd-badge kind="red" [dot]="true">Précommandes ouvertes</bfd-badge>
+        <bae-badge kind="red" [dot]="true">Précommandes ouvertes</bae-badge>
         <h1
           class="my-3.5 mb-4 text-[56px] font-semibold leading-[1.02] -tracking-[1.2px] text-text"
         >
@@ -29,10 +29,10 @@
           sécurisé, retrait article par article au stand. Économisez 0,50 € sur chaque hot-dog.
         </p>
         <div class="mt-6 flex gap-3">
-          <bfd-btn kind="primary" size="lg" [iconRight]="icArrowRight"
-            >Commencer ma commande</bfd-btn
+          <bae-btn kind="primary" size="lg" [iconRight]="icArrowRight"
+            >Commencer ma commande</bae-btn
           >
-          <bfd-btn kind="ghost" size="lg">Voir le menu</bfd-btn>
+          <bae-btn kind="ghost" size="lg">Voir le menu</bae-btn>
         </div>
         <div class="mt-8 flex gap-6 text-xs text-muted">
           <span class="inline-flex items-center gap-1.5">
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Hero card: featured event -->
-      <bfd-card [padding]="0" class="block overflow-hidden">
+      <bae-card [padding]="0" class="block overflow-hidden">
         <div
           class="relative h-35"
           style="background: linear-gradient(135deg, var(--bae-red) 0%, var(--bae-blue) 100%)"
@@ -94,10 +94,10 @@
               <div class="text-[11px] text-muted">Clôture des précommandes</div>
               <div class="mono text-sm font-semibold text-text">14/02 · 18:30</div>
             </div>
-            <bfd-btn kind="primary" size="md" [iconRight]="icArrowRight">Commander</bfd-btn>
+            <bae-btn kind="primary" size="md" [iconRight]="icArrowRight">Commander</bae-btn>
           </div>
         </div>
-      </bfd-card>
+      </bae-card>
     </section>
 
     <!-- Upcoming events -->
@@ -111,7 +111,7 @@
 
       <div class="grid grid-cols-3 gap-3.5">
         @for (e of events; track e.n) {
-          <bfd-card [padding]="16">
+          <bae-card [padding]="16">
             <div class="flex items-start gap-3.5">
               <div
                 [class]="
@@ -128,7 +128,7 @@
                 <div class="flex items-center gap-1.5">
                   <span class="text-[15px] font-semibold text-text">{{ e.n }}</span>
                   @if (e.soon) {
-                    <bfd-badge kind="warn">Bientôt</bfd-badge>
+                    <bae-badge kind="warn">Bientôt</bae-badge>
                   }
                 </div>
                 <div class="mt-1 text-xs text-muted">{{ e.s }}</div>
@@ -145,7 +145,7 @@
                 </div>
               </div>
             </div>
-          </bfd-card>
+          </bae-card>
         }
       </div>
     </section>
@@ -160,7 +160,7 @@
       </div>
 
       <div class="grid grid-cols-[1fr_360px] gap-6">
-        <bfd-card [padding]="0">
+        <bae-card [padding]="0">
           @for (sec of menu; track sec.c; let si = $index) {
             <div [class]="si > 0 ? 'border-t border-border-s' : ''">
               <div
@@ -203,10 +203,10 @@
               }
             </div>
           }
-        </bfd-card>
+        </bae-card>
 
         <!-- Cart summary -->
-        <bfd-card [padding]="0" class="self-start">
+        <bae-card [padding]="0" class="self-start">
           <div class="border-b border-border-s p-4">
             <div class="text-sm font-semibold text-text">Votre précommande</div>
             <div class="mt-0.5 text-[11.5px] text-muted">Soirée Hivernale · 14/02</div>
@@ -240,22 +240,22 @@
             >
           </div>
           <div class="px-3.5 pb-3.5">
-            <bfd-btn kind="primary" size="lg" [full]="true" [iconRight]="icArrowRight"
-              >Payer avec Lydia</bfd-btn
+            <bae-btn kind="primary" size="lg" [full]="true" [iconRight]="icArrowRight"
+              >Payer avec Lydia</bae-btn
             >
             <div class="mt-2 text-center text-[10.5px] leading-relaxed text-muted">
               En commandant vous acceptez les <a class="text-text-2">CGV</a>. QR code envoyé par
               email après paiement.
             </div>
           </div>
-        </bfd-card>
+        </bae-card>
       </div>
     </section>
 
     <footer
       class="flex items-center gap-4 border-t border-border-s px-14 py-8 text-[11.5px] text-muted"
     >
-      <bfd-logo [size]="22" />
+      <bae-logo [size]="22" />
       <div class="flex-1"></div>
       <span>© BAE ENSEIRB-MATMECA · 2026</span>
       <span>·</span><span>CGV</span> <span>·</span><span>Confidentialité</span> <span>·</span

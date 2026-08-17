@@ -17,7 +17,7 @@ import {
   LucideTrash2,
   LucideFlame,
 } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Btn } from '@bae/ui';
 import { JOB_PERIODS, JOB_PERIOD_LABELS, type JobPeriod } from '#core/models/job-period.model';
 import { RoleModalJob, RoleModalRole, RolesModalConfig } from '../modal.models';
 import { ModalShell } from '../modal-shell/modal-shell';

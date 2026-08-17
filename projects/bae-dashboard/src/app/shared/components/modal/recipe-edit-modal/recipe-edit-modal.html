@@ -18,22 +18,22 @@
     </p>
   } @else {
     <div class="flex flex-col gap-3.5">
-      <bfd-field label="Nom">
-        <bfd-input
+      <bae-field label="Nom">
+        <bae-input
           placeholder="Crêpe sucrée"
           [value]="name()"
           [invalid]="submitted() && name().trim() === ''"
           (valueChange)="onName($event)"
         />
-      </bfd-field>
+      </bae-field>
 
-      <bfd-toggle
+      <bae-toggle
         label="Recette végétarienne"
         [on]="isVegetarian()"
         (change)="onVegetarian($event)"
       />
 
-      <bfd-field label="Description" hint="Facultatif — ce qu'est le produit, en une phrase.">
+      <bae-field label="Description" hint="Facultatif — ce qu'est le produit, en une phrase.">
         <textarea
           rows="2"
           placeholder="Crêpe de froment, sucre en poudre."
@@ -41,9 +41,9 @@
           [value]="description()"
           (input)="onDescription($event)"
         ></textarea>
-      </bfd-field>
+      </bae-field>
 
-      <bfd-field
+      <bae-field
         label="Méthode de confection"
         hint="Facultatif — la marche à suivre d'ensemble. Les gestes propres à un ingrédient se notent sur sa ligne."
       >
@@ -54,20 +54,20 @@
           [value]="method()"
           (input)="onMethod($event)"
         ></textarea>
-      </bfd-field>
+      </bae-field>
 
       <div class="flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <h3 class="m-0 text-xs font-medium text-text-2">Ingrédients</h3>
           <span class="text-[11px] text-muted">L'ordre des lignes est l'ordre d'assemblage.</span>
           <span class="flex-1"></span>
-          <bfd-btn
+          <bae-btn
             kind="secondary"
             size="sm"
             [icon]="icPlus"
             [disabled]="goodsMissing()"
             (clicked)="addLine()"
-            >Ajouter</bfd-btn
+            >Ajouter</bae-btn
           >
         </div>
 
@@ -114,7 +114,7 @@
                   }
                 </select>
 
-                <bfd-input
+                <bae-input
                   ariaLabel="Quantité"
                   type="text"
                   placeholder="1"
@@ -124,7 +124,7 @@
                   (valueChange)="setQuantity(line.key, $event)"
                 />
 
-                <bfd-input
+                <bae-input
                   ariaLabel="Instruction"
                   placeholder="Verser en pluie"
                   [value]="line.instruction"
@@ -132,7 +132,7 @@
                 />
 
                 <div class="flex items-center justify-end gap-0.5">
-                  <bfd-btn
+                  <bae-btn
                     kind="quiet"
                     size="sm"
                     [icon]="icUp"
@@ -140,7 +140,7 @@
                     ariaLabel="Monter cet ingrédient"
                     (clicked)="moveLine(line.key, -1)"
                   />
-                  <bfd-btn
+                  <bae-btn
                     kind="quiet"
                     size="sm"
                     [icon]="icDown"
@@ -148,7 +148,7 @@
                     ariaLabel="Descendre cet ingrédient"
                     (clicked)="moveLine(line.key, 1)"
                   />
-                  <bfd-btn
+                  <bae-btn
                     kind="quiet"
                     size="sm"
                     [icon]="icTrash"
@@ -177,14 +177,14 @@
   }
 
   <div modal-footer class="flex flex-1 justify-end gap-2">
-    <bfd-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bfd-btn>
-    <bfd-btn
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn
       kind="primary"
       size="md"
       [disabled]="store.saving() || detailLoading() || detailError()"
       (clicked)="submit()"
     >
       {{ store.saving() ? 'Enregistrement…' : 'Enregistrer' }}
-    </bfd-btn>
+    </bae-btn>
   </div>
 </bfd-modal-shell>

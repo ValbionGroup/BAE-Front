@@ -26,14 +26,9 @@ import { PageHeaderService } from '#core/services/page-header/page-header-servic
 import { StocksService } from '#core/services/stocks/stocks-service';
 import { StocksStore } from '#core/store/stocks.store';
 import { BarcodeScannerService } from '#core/services/barcode/barcode-scanner-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Badge, Field, Input, ToastService, messageOf } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
-import { ToastService } from '#shared/components/toast/toast.service';
-import { messageOf } from '#shared/utils/api-error';
 import type { StockProduct } from '../stocks.types';
 
 /** `goodId` à `null` : code non rattaché, la ligne propose la création et ne

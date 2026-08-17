@@ -1,6 +1,6 @@
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icDownload">Exporter ICS</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icSettings">Préférences</bfd-btn>
+  <bae-btn kind="ghost" size="md" [icon]="icDownload">Exporter ICS</bae-btn>
+  <bae-btn kind="secondary" size="md" [icon]="icSettings">Préférences</bae-btn>
 </ng-template>
 
 <div class="h-full overflow-y-auto p-5">
@@ -25,20 +25,20 @@
                 class="flex items-center gap-4.5 rounded-lg border border-border-s bg-surface p-4"
               >
                 <div class="w-13.5 py-2 text-center">
-                  <bfd-skeleton width="32px" height="20px" variant="surface-3" />
+                  <bae-skeleton width="32px" height="20px" variant="surface-3" />
                   <div class="mt-1.5 flex justify-center">
-                    <bfd-skeleton width="24px" height="8px" />
+                    <bae-skeleton width="24px" height="8px" />
                   </div>
                 </div>
                 <div class="flex flex-1 flex-col gap-1.5">
-                  <bfd-skeleton width="180px" height="14px" variant="surface-3" />
-                  <bfd-skeleton width="220px" height="11px" />
-                  <bfd-skeleton width="150px" height="11px" />
+                  <bae-skeleton width="180px" height="14px" variant="surface-3" />
+                  <bae-skeleton width="220px" height="11px" />
+                  <bae-skeleton width="150px" height="11px" />
                 </div>
                 <div class="flex shrink-0 gap-1.5">
-                  <bfd-skeleton width="78px" height="26px" rounded="md" />
-                  <bfd-skeleton width="78px" height="26px" rounded="md" />
-                  <bfd-skeleton width="78px" height="26px" rounded="md" />
+                  <bae-skeleton width="78px" height="26px" rounded="md" />
+                  <bae-skeleton width="78px" height="26px" rounded="md" />
+                  <bae-skeleton width="78px" height="26px" rounded="md" />
                 </div>
               </div>
             }
@@ -87,7 +87,7 @@
                   <div class="flex items-center gap-2">
                     <div class="text-sm font-semibold text-text">{{ e.name }}</div>
                     @if (isNext) {
-                      <bfd-badge kind="red" [dot]="true">J−{{ daysFromToday(e.date) }}</bfd-badge>
+                      <bae-badge kind="red" [dot]="true">J−{{ daysFromToday(e.date) }}</bae-badge>
                     }
                   </div>
                   @if (e.description) {
@@ -120,9 +120,9 @@
                 <!-- Response buttons -->
                 <div class="flex shrink-0 gap-1.5">
                   @if (isPresenceLoading(e)) {
-                    <bfd-skeleton width="78px" height="26px" rounded="md" />
-                    <bfd-skeleton width="78px" height="26px" rounded="md" />
-                    <bfd-skeleton width="78px" height="26px" rounded="md" />
+                    <bae-skeleton width="78px" height="26px" rounded="md" />
+                    <bae-skeleton width="78px" height="26px" rounded="md" />
+                    <bae-skeleton width="78px" height="26px" rounded="md" />
                   } @else {
                     <button
                       type="button"
@@ -193,7 +193,7 @@
         </p>
 
         @if (loading()) {
-          <bfd-card [padding]="0">
+          <bae-card [padding]="0">
             @for (_ of skeletonRows; track $index; let last = $last) {
               <div
                 [class]="
@@ -201,14 +201,14 @@
                   (!last ? 'border-b border-border-s' : '')
                 "
               >
-                <bfd-skeleton width="48px" height="14px" />
-                <bfd-skeleton width="60%" height="12px" variant="surface-3" />
-                <bfd-skeleton width="80px" height="12px" />
-                <bfd-skeleton width="64px" height="18px" rounded="pill" />
-                <bfd-skeleton width="48px" height="12px" />
+                <bae-skeleton width="48px" height="14px" />
+                <bae-skeleton width="60%" height="12px" variant="surface-3" />
+                <bae-skeleton width="80px" height="12px" />
+                <bae-skeleton width="64px" height="18px" rounded="pill" />
+                <bae-skeleton width="48px" height="12px" />
               </div>
             }
-          </bfd-card>
+          </bae-card>
         } @else if (pastEvents().length === 0) {
           <div
             class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-6 py-10 text-center"
@@ -220,7 +220,7 @@
             </div>
           </div>
         } @else {
-          <bfd-card [padding]="0">
+          <bae-card [padding]="0">
             @for (p of pastEvents(); track p.id; let last = $last) {
               <div
                 [class]="
@@ -244,13 +244,13 @@
                   }
                 </span>
                 @if (isPresenceLoading(p)) {
-                  <span><bfd-skeleton width="64px" height="18px" rounded="pill" /></span>
-                  <span class="flex justify-end"><bfd-skeleton width="48px" height="12px" /></span>
+                  <span><bae-skeleton width="64px" height="18px" rounded="pill" /></span>
+                  <span class="flex justify-end"><bae-skeleton width="48px" height="12px" /></span>
                 } @else {
                   <span>
-                    <bfd-badge [kind]="pastBadgeKind(p)" [dot]="true">
+                    <bae-badge [kind]="pastBadgeKind(p)" [dot]="true">
                       {{ pastStatusLabel(p) }}
-                    </bfd-badge>
+                    </bae-badge>
                   </span>
                   <span [class]="'mono tnum text-right font-semibold ' + creditClass(p)">
                     {{ creditLabel(p) }}
@@ -258,7 +258,7 @@
                 }
               </div>
             }
-          </bfd-card>
+          </bae-card>
         }
       </section>
     </div>
@@ -266,22 +266,22 @@
     <!-- RIGHT COLUMN -->
     <aside class="flex flex-col gap-4.5">
       <!-- Engagement score -->
-      <bfd-card>
+      <bae-card>
         <div class="text-[13px] font-semibold text-text">Score d’engagement</div>
         <div class="mt-0.5 text-[11px] text-muted">Influe sur l’algo d’affectation</div>
 
         @if (engagementLoading()) {
           <div class="mt-3.5 flex justify-center">
-            <bfd-skeleton width="120px" height="48px" variant="surface-3" />
+            <bae-skeleton width="120px" height="48px" variant="surface-3" />
           </div>
           <div class="mt-4 flex flex-col gap-2.5">
             @for (_ of skeletonRows; track $index) {
               <div>
                 <div class="mb-1 flex justify-between">
-                  <bfd-skeleton width="60px" height="11px" />
-                  <bfd-skeleton width="24px" height="11px" />
+                  <bae-skeleton width="60px" height="11px" />
+                  <bae-skeleton width="24px" height="11px" />
                 </div>
-                <bfd-skeleton width="100%" height="4px" />
+                <bae-skeleton width="100%" height="4px" />
               </div>
             }
           </div>
@@ -308,21 +308,21 @@
             }
           </div>
         }
-      </bfd-card>
+      </bae-card>
 
       <!-- Preferences -->
-      <!--<bfd-card>
+      <!--<bae-card>
         <div class="text-[13px] font-semibold text-text">Préférences</div>
         <div class="mt-0.5 mb-3.5 text-[11px] text-muted">L’algo essaie de respecter</div>
 
         <div class="flex flex-col gap-2.5">
           <div class="flex items-center justify-between">
             <span class="text-[12.5px] text-text-2">Poste préféré</span>
-            <bfd-badge kind="blue">Caisse</bfd-badge>
+            <bae-badge kind="blue">Caisse</bae-badge>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-[12.5px] text-text-2">Poste évité</span>
-            <bfd-badge kind="neutral">Plonge</bfd-badge>
+            <bae-badge kind="neutral">Plonge</bae-badge>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-[12.5px] text-text-2">Indisponibilités</span>
@@ -330,17 +330,17 @@
           </div>
           <div class="flex items-center justify-between">
             <span class="text-[12.5px] text-text-2">Notif. relance</span>
-            <bfd-toggle
+            <bae-toggle
               [on]="notifReminder()"
               (change)="notifReminder.set($event)"
               label="Notifications de relance"
             />
           </div>
         </div>
-        <bfd-btn kind="ghost" size="sm" [icon]="icEdit" [full]="true" class="mt-3.5 block">
+        <bae-btn kind="ghost" size="sm" [icon]="icEdit" [full]="true" class="mt-3.5 block">
           Modifier
-        </bfd-btn>
-      </bfd-card>-->
+        </bae-btn>
+      </bae-card>-->
     </aside>
   </div>
 </div>

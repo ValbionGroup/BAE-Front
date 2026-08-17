@@ -31,7 +31,7 @@
             <label class="sr-only" [attr.for]="'qty-' + line.good.goodId">
               Quantité qui revient pour {{ line.good.goodName }}
             </label>
-            <bfd-input
+            <bae-input
               size="sm"
               type="text"
               placeholder="0"
@@ -107,10 +107,10 @@
 
   <div modal-footer class="contents">
     <div class="flex-1"></div>
-    <bfd-btn kind="ghost" [icon]="icDownload" (clicked)="printClosing()">Imprimer</bfd-btn>
-    <bfd-btn kind="ghost" (clicked)="cancel()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" [disabled]="busy() || anyInvalid() || loading()" (clicked)="submit()">
+    <bae-btn kind="ghost" [icon]="icDownload" (clicked)="printClosing()">Imprimer</bae-btn>
+    <bae-btn kind="ghost" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn kind="primary" [disabled]="busy() || anyInvalid() || loading()" (clicked)="submit()">
       Clôturer
-    </bfd-btn>
+    </bae-btn>
   </div>
 </bfd-modal-shell>

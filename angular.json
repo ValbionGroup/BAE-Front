@@ -67,6 +67,21 @@
           "builder": "@angular/build:unit-test"
         }
       }
+    },
+    "bae-ui": {
+      "projectType": "library",
+      "root": "projects/bae-ui",
+      "sourceRoot": "projects/bae-ui/src",
+      "prefix": "bae",
+      "architect": {
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/bae-ui/tsconfig.spec.json",
+            "buildTarget": "bae-dashboard:build:development"
+          }
+        }
+      }
     }
   }
 }

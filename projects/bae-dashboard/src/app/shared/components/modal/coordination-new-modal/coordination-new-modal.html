@@ -6,45 +6,45 @@
   [width]="700"
   (close)="close()"
 >
-  <bfd-field label="Nom de la soirée *">
-    <bfd-input placeholder="ex. Soirée Saint-Patrick" (valueChange)="name.set($event)" />
-  </bfd-field>
+  <bae-field label="Nom de la soirée *">
+    <bae-input placeholder="ex. Soirée Saint-Patrick" (valueChange)="name.set($event)" />
+  </bae-field>
 
   <div class="grid grid-cols-3 gap-3 mt-3.5">
-    <bfd-field label="Date *">
-      <bfd-input [icon]="icCalendar" placeholder="JJ/MM/AAAA" (valueChange)="date.set($event)" />
-    </bfd-field>
-    <bfd-field label="Début *">
-      <bfd-input [icon]="icClock" placeholder="20:00" (valueChange)="time.set($event)" />
-    </bfd-field>
-    <bfd-field label="Fin (estimée)">
-      <bfd-input [icon]="icClock" placeholder="23:30" (valueChange)="endTime.set($event)" />
-    </bfd-field>
+    <bae-field label="Date *">
+      <bae-input [icon]="icCalendar" placeholder="JJ/MM/AAAA" (valueChange)="date.set($event)" />
+    </bae-field>
+    <bae-field label="Début *">
+      <bae-input [icon]="icClock" placeholder="20:00" (valueChange)="time.set($event)" />
+    </bae-field>
+    <bae-field label="Fin (estimée)">
+      <bae-input [icon]="icClock" placeholder="23:30" (valueChange)="endTime.set($event)" />
+    </bae-field>
   </div>
 
-  <bfd-field label="Description (interne)" class="block mt-3.5">
+  <bae-field label="Description (interne)" class="block mt-3.5">
     <textarea
       class="w-full bg-surface-2 border border-border rounded-md p-2.5 text-text text-[12.5px] font-sans outline-none resize-y"
       placeholder="Notes pour l'équipe : thème, dress-code, particularités…"
       rows="2"
     ></textarea>
-  </bfd-field>
+  </bae-field>
 
   <div modal-footer class="contents">
-    <bfd-btn kind="ghost" size="sm" [icon]="icCheck">Enregistrer brouillon</bfd-btn>
+    <bae-btn kind="ghost" size="sm" [icon]="icCheck">Enregistrer brouillon</bae-btn>
     <div class="flex-1"></div>
     <div class="flex gap-1 mr-2.5">
       <span class="w-[22px] h-1 rounded-sm bg-blue"></span>
       <span class="w-[22px] h-1 rounded-sm bg-border"></span>
       <span class="w-[22px] h-1 rounded-sm bg-border"></span>
     </div>
-    <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn
+    <bae-btn kind="ghost" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn
       kind="primary"
       [iconRight]="icArrowRight"
       [disabled]="!canSubmit()"
       (clicked)="submit()"
-      >Suite · Recettes</bfd-btn
+      >Suite · Recettes</bae-btn
     >
   </div>
 </bfd-modal-shell>

@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideMockStore } from '@ngrx/store/testing';
 
 import { LogistiqueAssignModal } from './logistique-assign-modal';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 
 const baseUrl = 'http://api.test/v1';
 

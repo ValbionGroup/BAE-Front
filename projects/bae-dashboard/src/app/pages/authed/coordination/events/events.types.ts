@@ -1,4 +1,4 @@
-import type { BadgeKind } from '#shared/components/ui/badge/badge';
+import type { BadgeKind } from '@bae/ui';
 
 export type EventStatus = 'preparing' | 'planning' | 'draft' | 'past';
 export type TabKey = 'upcoming' | 'past';

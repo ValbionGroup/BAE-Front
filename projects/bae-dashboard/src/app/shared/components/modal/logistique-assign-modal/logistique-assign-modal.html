@@ -23,7 +23,7 @@
     }
     <div class="flex-1"></div>
     <div class="w-[200px]">
-      <bfd-input [icon]="icSearch" placeholder="Rechercher…" size="sm" />
+      <bae-input [icon]="icSearch" placeholder="Rechercher…" size="sm" />
     </div>
   </div>
 
@@ -67,7 +67,7 @@
             ></svg>
           }
         </div>
-        <bfd-badge kind="ghost">{{ r.c }}</bfd-badge>
+        <bae-badge kind="ghost">{{ r.c }}</bae-badge>
         <span class="mono tnum text-muted text-right">{{ fmt(r.cost) }} €</span>
         <span class="mono tnum text-ok text-right">+{{ fmt(r.marge) }} €</span>
         @if (r.sel) {
@@ -123,9 +123,9 @@
         </div>
       </div>
     </div>
-    <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
-      >Enregistrer &amp; générer courses</bfd-btn
+    <bae-btn kind="ghost" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="primary" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
+      >Enregistrer &amp; générer courses</bae-btn
     >
   </div>
 </bfd-modal-shell>

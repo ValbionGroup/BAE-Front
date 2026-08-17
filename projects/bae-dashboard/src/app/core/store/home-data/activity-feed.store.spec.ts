@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { ActivityFeedStore } from './activity-feed.store';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { ApiActivityEvent } from '#core/services/activity/activity-service';
 
 const API = 'http://api.test/v1';

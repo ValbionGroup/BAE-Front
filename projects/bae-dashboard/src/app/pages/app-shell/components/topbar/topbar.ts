@@ -3,8 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LucideBell, LucideChevronRight, LucideMenu, LucideMoon, LucideSun } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { ThemeService } from '#core/services/theme/theme-service';
-import { BfdTooltip } from '#shared/components/tooltip/bfd-tooltip.directive';
+import { ThemeService, BfdTooltip } from '@bae/ui';
 
 @Component({
   selector: 'bfd-topbar',

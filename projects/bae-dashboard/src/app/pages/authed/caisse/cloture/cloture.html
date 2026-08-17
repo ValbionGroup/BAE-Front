@@ -1,7 +1,7 @@
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md">Sauvegarder brouillon</bfd-btn>
-  <bfd-btn kind="secondary" size="md" [icon]="icDownload">Imprimer ticket Z</bfd-btn>
-  <bfd-btn kind="danger" size="md" [icon]="icLock">Verrouiller &amp; clôturer</bfd-btn>
+  <bae-btn kind="ghost" size="md">Sauvegarder brouillon</bae-btn>
+  <bae-btn kind="secondary" size="md" [icon]="icDownload">Imprimer ticket Z</bae-btn>
+  <bae-btn kind="danger" size="md" [icon]="icLock">Verrouiller &amp; clôturer</bae-btn>
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
@@ -34,7 +34,7 @@
 
   <div class="grid grid-cols-[1.4fr_1fr] gap-[18px]">
     <!-- LEFT: Cash counting -->
-    <bfd-card [padding]="0">
+    <bae-card [padding]="0">
       <div class="px-4 py-3.5 border-b border-border-s">
         <div class="text-sm font-semibold text-text">Comptage espèces · Caisse A</div>
         <div class="text-[11.5px] text-muted mt-0.5">
@@ -143,14 +143,14 @@
               {{ formatMoney(cashCounted()) }} €
             </div>
           </div>
-          <bfd-btn kind="secondary" [icon]="icScan">Compter à nouveau</bfd-btn>
+          <bae-btn kind="secondary" [icon]="icScan">Compter à nouveau</bae-btn>
         </div>
       </div>
-    </bfd-card>
+    </bae-card>
 
     <!-- RIGHT: Reconciliation -->
     <div class="flex flex-col gap-[18px]">
-      <bfd-card [padding]="0">
+      <bae-card [padding]="0">
         <div class="px-4 py-3.5 border-b border-border-s">
           <div class="text-sm font-semibold text-text">Réconciliation</div>
           <div class="text-[11.5px] text-muted mt-0.5">
@@ -214,17 +214,17 @@
             }
           </div>
 
-          <bfd-field label="Note de clôture" hint="Visible par la trésorière" class="mt-3.5 block">
+          <bae-field label="Note de clôture" hint="Visible par la trésorière" class="mt-3.5 block">
             <textarea
               class="w-full bg-surface-2 border border-border rounded-md p-2.5 text-text text-[12.5px] font-sans outline-none resize-y"
               rows="2"
             >
 2 pièces de 1 € manquantes — possible erreur de rendu monnaie sur table 4.</textarea>
-          </bfd-field>
+          </bae-field>
         </div>
-      </bfd-card>
+      </bae-card>
 
-      <bfd-card>
+      <bae-card>
         <div class="text-[13px] font-semibold text-text mb-3">Autres canaux</div>
         @for (c of channels; track c.k; let i = $index) {
           <div
@@ -246,7 +246,7 @@
             <span class="mono tnum text-[13px] font-semibold text-text">{{ c.v }}</span>
           </div>
         }
-      </bfd-card>
+      </bae-card>
     </div>
   </div>
 </div>

@@ -1,7 +1,7 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
-    >Nouvelle recette</bfd-btn
+  <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
+    >Nouvelle recette</bae-btn
   >
 </ng-template>
 
@@ -12,7 +12,7 @@
       class="flex items-center gap-3 border-b border-border-s bg-danger-soft px-6 py-2.5 text-[12.5px] text-danger"
     >
       <span class="flex-1">{{ message }}</span>
-      <bfd-btn kind="quiet" size="sm" (clicked)="store.clearDeleteError()">Fermer</bfd-btn>
+      <bae-btn kind="quiet" size="sm" (clicked)="store.clearDeleteError()">Fermer</bae-btn>
     </div>
   }
 
@@ -36,7 +36,7 @@
     </div>
     <div class="flex-1"></div>
     <div class="w-60">
-      <bfd-input
+      <bae-input
         [icon]="icSearch"
         placeholder="Rechercher une recette…"
         size="sm"
@@ -65,15 +65,15 @@
           <div
             class="grid grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-6 py-3"
           >
-            <bfd-skeleton width="32px" height="32px" rounded="md" variant="surface-3" />
+            <bae-skeleton width="32px" height="32px" rounded="md" variant="surface-3" />
             <div class="flex flex-col gap-1.5">
-              <bfd-skeleton width="60%" height="12px" variant="surface-3" />
-              <bfd-skeleton width="40%" height="10px" />
+              <bae-skeleton width="60%" height="12px" variant="surface-3" />
+              <bae-skeleton width="40%" height="10px" />
             </div>
-            <bfd-skeleton width="40%" height="10px" />
-            <bfd-skeleton width="60%" height="10px" />
-            <bfd-skeleton width="60%" height="10px" />
-            <bfd-skeleton width="70%" height="10px" />
+            <bae-skeleton width="40%" height="10px" />
+            <bae-skeleton width="60%" height="10px" />
+            <bae-skeleton width="60%" height="10px" />
+            <bae-skeleton width="70%" height="10px" />
           </div>
         }
       } @else if (loading() === 'error') {
@@ -93,8 +93,8 @@
               Créez votre première recette pour la voir apparaître ici.
             </div>
           </div>
-          <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
-            >Nouvelle recette</bfd-btn
+          <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
+            >Nouvelle recette</bae-btn
           >
         </div>
       } @else {
@@ -166,10 +166,10 @@
     <div class="overflow-y-auto px-6 pt-5 pb-8">
       @if (loading() === 'init' || loading() === 'loading') {
         <div class="mb-4 flex items-start gap-3">
-          <bfd-skeleton width="48px" height="48px" rounded="md" variant="surface-3" />
+          <bae-skeleton width="48px" height="48px" rounded="md" variant="surface-3" />
           <div class="flex flex-1 flex-col gap-1.5">
-            <bfd-skeleton width="40%" height="20px" variant="surface-3" />
-            <bfd-skeleton width="60%" height="11px" />
+            <bae-skeleton width="40%" height="20px" variant="surface-3" />
+            <bae-skeleton width="60%" height="11px" />
           </div>
         </div>
         <div
@@ -177,8 +177,8 @@
         >
           @for (_ of r3; track $index) {
             <div class="flex flex-col gap-1.5">
-              <bfd-skeleton width="70%" height="10px" />
-              <bfd-skeleton width="60%" height="20px" variant="surface-3" />
+              <bae-skeleton width="70%" height="10px" />
+              <bae-skeleton width="60%" height="20px" variant="surface-3" />
             </div>
           }
         </div>
@@ -206,17 +206,17 @@
               {{ recipe.usage }} · {{ recipe.ing }} ingrédient{{ recipe.ing !== 1 ? 's' : '' }}
             </div>
           </div>
-          <bfd-btn
+          <bae-btn
             kind="ghost"
             size="sm"
             [icon]="icDownload"
             (clicked)="printRecipe(recipe.id, recipe.nom)"
-            >Imprimer</bfd-btn
+            >Imprimer</bae-btn
           >
-          <bfd-btn kind="ghost" size="sm" [icon]="icEdit" (clicked)="openEdit(recipe.id)"
-            >Éditer</bfd-btn
+          <bae-btn kind="ghost" size="sm" [icon]="icEdit" (clicked)="openEdit(recipe.id)"
+            >Éditer</bae-btn
           >
-          <bfd-btn
+          <bae-btn
             kind="ghost"
             size="sm"
             [icon]="icTrash"
@@ -286,10 +286,10 @@
                   (i ? 'border-t border-border-s' : '')
                 "
               >
-                <bfd-skeleton width="60%" height="11px" variant="surface-3" />
-                <bfd-skeleton width="40px" height="10px" />
-                <bfd-skeleton width="50px" height="10px" />
-                <bfd-skeleton width="60px" height="10px" />
+                <bae-skeleton width="60%" height="11px" variant="surface-3" />
+                <bae-skeleton width="40px" height="10px" />
+                <bae-skeleton width="50px" height="10px" />
+                <bae-skeleton width="60px" height="10px" />
               </div>
             }
           </div>
@@ -330,7 +330,7 @@
                 </span>
                 <div class="text-right">
                   @if (g.warn) {
-                    <bfd-badge kind="warn">Lot DLC J-2</bfd-badge>
+                    <bae-badge kind="warn">Lot DLC J-2</bae-badge>
                   } @else {
                     <span class="tnum text-[11px] text-muted">{{ g.stock }} en stock</span>
                   }
@@ -345,8 +345,8 @@
           <div class="flex flex-col gap-2">
             @for (_ of r3; track $index) {
               <div class="flex items-start gap-2.5">
-                <bfd-skeleton width="22px" height="22px" rounded="sm" variant="surface-3" />
-                <bfd-skeleton width="80%" height="12px" />
+                <bae-skeleton width="22px" height="22px" rounded="sm" variant="surface-3" />
+                <bae-skeleton width="80%" height="12px" />
               </div>
             }
           </div>

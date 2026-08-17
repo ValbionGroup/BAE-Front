@@ -7,12 +7,12 @@
   (close)="cancel()"
 >
   <div class="flex flex-col gap-3">
-    <bfd-field
+    <bae-field
       label="Quantité à produire"
       hint="En unités de recette — 200 hot-dogs, pas 200 saucisses."
     >
       <div class="flex items-center gap-2">
-        <bfd-input
+        <bae-input
           type="text"
           placeholder="100"
           [value]="quantity()"
@@ -20,12 +20,12 @@
           (valueChange)="onQuantity($event)"
         />
         @if (remaining() > 0) {
-          <bfd-btn kind="ghost" size="sm" (clicked)="useRemaining()">
+          <bae-btn kind="ghost" size="sm" (clicked)="useRemaining()">
             Reste {{ remaining() }}
-          </bfd-btn>
+          </bae-btn>
         }
       </div>
-    </bfd-field>
+    </bae-field>
 
     <div class="text-[11.5px] text-muted">
       Prévu au menu <span class="tnum text-text-2">{{ plannedQty() }}</span> · déjà produit
@@ -72,7 +72,7 @@
     @if (blocked()) {
       <div class="rounded-md border border-danger bg-danger-soft/40 p-3">
         <div class="mb-1 flex items-center gap-2">
-          <bfd-badge kind="danger" [dot]="true">stock insuffisant</bfd-badge>
+          <bae-badge kind="danger" [dot]="true">stock insuffisant</bae-badge>
         </div>
         <ul class="text-[11.5px] text-text-2">
           @for (short of shortfalls(); track short.goodId) {
@@ -97,22 +97,22 @@
 
   <div class="flex flex-1 justify-end gap-2" modal-footer>
     @if (plan() !== null) {
-      <bfd-btn kind="ghost" [icon]="icDownload" (clicked)="printPlan()">Imprimer le plan</bfd-btn>
+      <bae-btn kind="ghost" [icon]="icDownload" (clicked)="printPlan()">Imprimer le plan</bae-btn>
     }
-    <bfd-btn kind="ghost" (clicked)="cancel()">Annuler</bfd-btn>
-    <bfd-btn
+    <bae-btn kind="ghost" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn
       kind="secondary"
       [disabled]="parsedQuantity() === null || busy()"
       (clicked)="simulate()"
     >
       Voir les lots
-    </bfd-btn>
-    <bfd-btn
+    </bae-btn>
+    <bae-btn
       kind="primary"
       [disabled]="parsedQuantity() === null || busy() || blocked() || plan() === null"
       (clicked)="confirm()"
     >
       Confirmer le prélèvement
-    </bfd-btn>
+    </bae-btn>
   </div>
 </bfd-modal-shell>

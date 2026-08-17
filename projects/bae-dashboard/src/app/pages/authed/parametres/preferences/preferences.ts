@@ -8,10 +8,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { PreferencesStore } from '#core/store/preferences.store';
-import { ToastService } from '#shared/components/toast/toast.service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Card } from '#shared/components/ui/card/card';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { ToastService, Btn, Card, Skeleton } from '@bae/ui';
 import { ParametresSideNav } from '../side-nav/side-nav';
 
 /**

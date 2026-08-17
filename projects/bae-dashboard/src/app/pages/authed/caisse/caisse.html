@@ -1,10 +1,10 @@
 <ng-template #actions>
   @if (store.sessionActive()) {
-    <bfd-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bfd-btn>
+    <bae-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bae-btn>
   } @else if (store.todayEvent()) {
-    <bfd-btn kind="primary" size="md" [icon]="icCalendarPlus" (clicked)="startSession()">
+    <bae-btn kind="primary" size="md" [icon]="icCalendarPlus" (clicked)="startSession()">
       Lancer la session
-    </bfd-btn>
+    </bae-btn>
   }
 </ng-template>
 
@@ -24,9 +24,9 @@
           Une soirée est prévue aujourd'hui : <span class="text-text">{{ ev.name }}</span
           >{{ ev.location ? ' · ' + ev.location : '' }}.
         </p>
-        <bfd-btn kind="primary" size="lg" [icon]="icCalendarPlus" (clicked)="startSession()">
+        <bae-btn kind="primary" size="lg" [icon]="icCalendarPlus" (clicked)="startSession()">
           Lancer la session pour {{ ev.name }}
-        </bfd-btn>
+        </bae-btn>
       } @else {
         <p class="text-[12.5px] text-muted">
           Aucune soirée n'est programmée pour aujourd'hui. La caisse ne peut pas être ouverte.
@@ -54,7 +54,7 @@
           </button>
         }
         <div class="flex-1"></div>
-        <bfd-btn kind="outline" size="md" [icon]="icSearch">Rechercher</bfd-btn>
+        <bae-btn kind="outline" size="md" [icon]="icSearch">Rechercher</bae-btn>
       </div>
 
       <!-- Product grid -->
@@ -90,12 +90,12 @@
                   <span class="text-[13px] font-medium text-muted">€</span>
                 </span>
                 @if (!sellable) {
-                  <bfd-badge kind="ghost">Rupture</bfd-badge>
+                  <bae-badge kind="ghost">Rupture</bae-badge>
                 } @else if (isLow(it.productId)) {
                   <!-- `left` n'est jamais nul ici : « bas » suppose un restant connu. -->
-                  <bfd-badge kind="warn" [dot]="true">{{ left }} rest.</bfd-badge>
+                  <bae-badge kind="warn" [dot]="true">{{ left }} rest.</bae-badge>
                 } @else {
-                  <bfd-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bfd-badge>
+                  <bae-badge kind="ghost">{{ it.category ?? 'Sans catégorie' }}</bae-badge>
                 }
               </div>
             </button>
@@ -107,16 +107,16 @@
       <div
         class="hidden items-center gap-3.5 rounded-md border border-border-s bg-surface px-3.5 py-2.5 text-[11px] text-muted lg:flex"
       >
-        <span><bfd-kbd>F1</bfd-kbd> · catégorie suivante</span>
+        <span><bae-kbd>F1</bae-kbd> · catégorie suivante</span>
         <span>
-          <bfd-kbd>+</bfd-kbd> / <bfd-kbd>−</bfd-kbd> ·
+          <bae-kbd>+</bae-kbd> / <bae-kbd>−</bae-kbd> ·
           @if (store.activeLine(); as line) {
             <span class="text-text">{{ line.name }}</span>
           } @else {
             quantité
           }
         </span>
-        <span><bfd-kbd>Entrée</bfd-kbd> · encaisser</span>
+        <span><bae-kbd>Entrée</bae-kbd> · encaisser</span>
         <span class="flex-1"></span>
         @if (store.sessionEvent(); as ev) {
           <span
@@ -151,7 +151,7 @@
             {{ store.totalQuantity() }} quantité{{ store.totalQuantity() > 1 ? 's' : '' }}
           </div>
         </div>
-        <bfd-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bfd-btn>
+        <bae-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bae-btn>
       </div>
 
       <!-- Client -->
@@ -170,7 +170,7 @@
               {{ fastPassLabel(buyer) ?? 'Sans fast pass' }}
             </div>
           </div>
-          <bfd-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bfd-btn>
+          <bae-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bae-btn>
         </div>
       } @else if (pickingBuyer()) {
         <div class="m-4">
@@ -193,7 +193,7 @@
             <div class="text-[12.5px] font-medium text-text">Client anonyme</div>
             <div class="text-[10.5px] text-muted">Facultatif — QR ou recherche par nom.</div>
           </div>
-          <bfd-btn kind="ghost" size="sm" (clicked)="pickingBuyer.set(true)">Identifier</bfd-btn>
+          <bae-btn kind="ghost" size="sm" (clicked)="pickingBuyer.set(true)">Identifier</bae-btn>
         </div>
       }
 
@@ -239,12 +239,12 @@
               <span class="tnum text-[13px] font-semibold text-text"
                 >{{ formatCents(it.price * it.quantity) }} €</span
               >
-              <bfd-btn
+              <bae-btn
                 kind="ghost"
                 size="sm"
                 [icon]="icX"
                 (clicked)="store.removeFromCart(it.productId)"
-              ></bfd-btn>
+              ></bae-btn>
             </div>
           }
         }
@@ -292,7 +292,7 @@
             </div>
           </div>
 
-          <bfd-btn
+          <bae-btn
             kind="primary"
             size="xl"
             [full]="true"
@@ -308,7 +308,7 @@
                 >Encaisser · {{ formatCents(store.subtotal()) }} €</span
               >
             }
-          </bfd-btn>
+          </bae-btn>
         </div>
       </div>
     </aside>

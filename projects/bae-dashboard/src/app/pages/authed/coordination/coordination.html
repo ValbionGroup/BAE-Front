@@ -1,14 +1,14 @@
 <!-- Topbar actions, projected via PageHeaderService -->
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
+  <bae-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
     Postes
-  </bfd-btn>
-  <bfd-btn kind="ghost" size="md" [icon]="icDownload" (clicked)="printAssignments()">
+  </bae-btn>
+  <bae-btn kind="ghost" size="md" [icon]="icDownload" (clicked)="printAssignments()">
     Imprimer l'affectation
-  </bfd-btn>
+  </bae-btn>
   <!-- Disabled, never hidden: a vanished action reads as a bug. The reason is
        spelled out in the banner below, which the live region announces. -->
-  <bfd-btn
+  <bae-btn
     kind="secondary"
     size="md"
     [icon]="icZap"
@@ -20,10 +20,10 @@
     } @else {
       {{ algoRunning() ? 'Affectation en cours…' : "Lancer l'affectation automatique" }}
     }
-  </bfd-btn>
+  </bae-btn>
   <!-- Disabled, never hidden, same convention as the automatic-assignment
        button above: a vanished action reads as a bug. -->
-  <bfd-btn
+  <bae-btn
     kind="primary"
     size="md"
     [icon]="icCheck"
@@ -35,7 +35,7 @@
     } @else {
       Valider l'affectation
     }
-  </bfd-btn>
+  </bae-btn>
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">
@@ -158,16 +158,16 @@
             {{ group.label }}
           </h2>
           @if (group.postes.length === 0) {
-            <bfd-badge kind="ghost">Aucun poste sur ce moment</bfd-badge>
+            <bae-badge kind="ghost">Aucun poste sur ce moment</bae-badge>
           } @else if (group.isFull) {
-            <bfd-badge kind="ok"
-              >Complet · {{ group.assignedCount }}/{{ group.neededCount }}</bfd-badge
+            <bae-badge kind="ok"
+              >Complet · {{ group.assignedCount }}/{{ group.neededCount }}</bae-badge
             >
           } @else {
-            <bfd-badge kind="warn"
+            <bae-badge kind="warn"
               >{{ group.toFill }} à pourvoir · {{ group.assignedCount }}/{{
                 group.neededCount
-              }}</bfd-badge
+              }}</bae-badge
             >
           }
         </div>
@@ -197,7 +197,7 @@
                     <div class="flex items-center gap-1.5">
                       <span class="text-[13px] font-semibold text-text">{{ p.label }}</span>
                       @if (p.restricted) {
-                        <bfd-badge kind="ghost">Éligibilité restreinte</bfd-badge>
+                        <bae-badge kind="ghost">Éligibilité restreinte</bae-badge>
                       }
                     </div>
                     <div class="mono tnum mt-px text-[11px] text-muted">
@@ -205,9 +205,9 @@
                     </div>
                   </div>
                   @if (full) {
-                    <bfd-badge kind="ok">Complet</bfd-badge>
+                    <bae-badge kind="ok">Complet</bae-badge>
                   } @else {
-                    <bfd-badge kind="warn">{{ toFill(p) }} à pourvoir</bfd-badge>
+                    <bae-badge kind="warn">{{ toFill(p) }} à pourvoir</bae-badge>
                   }
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -218,7 +218,7 @@
                         (m.lock ? 'bg-surface-2 ring-1 ring-inset ring-blue/40' : 'bg-surface-2')
                       "
                     >
-                      <bfd-avatar [name]="m.name" [size]="20" />
+                      <bae-avatar [name]="m.name" [size]="20" />
                       <span class="flex-1 text-[12px] text-text">{{ m.name }}</span>
                       <button
                         type="button"
@@ -314,7 +314,7 @@
         "
       >
         <div class="relative">
-          <bfd-avatar [name]="m.name" [size]="22" />
+          <bae-avatar [name]="m.name" [size]="22" />
           @if (m.isPresent) {
             <span
               role="img"

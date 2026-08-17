@@ -22,12 +22,11 @@ import {
   LucideTruck,
   LucideUsers,
 } from '@lucide/angular';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
-import { Kbd } from '#shared/components/ui/kbd/kbd';
-import { Logo } from '#shared/components/ui/logo/logo';
+import { Avatar, Kbd, Logo } from '@bae/ui';
 import { logout } from '#core/store/auth/auth.actions';
 import { selectMember, selectPermissions } from '#core/store/auth/auth.selector';
 import { AppRoutes } from '#app/app-routes.const';
+import { APP_VERSION } from '#app/app-version';
 import { permissionFor } from '#core/auth/route-permissions';
 
 interface NavItem {
@@ -106,6 +105,8 @@ const FOOTER: readonly NavItem[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Sidebar {
+  protected readonly appVersion = APP_VERSION;
+
   readonly navigated = output<void>();
 
   protected onSidebarClick(event: Event): void {

@@ -6,15 +6,15 @@
   (close)="close()"
 >
   <div class="flex flex-col gap-3">
-    <bfd-field label="Prénom">
-      <bfd-input [value]="firstName()" (valueChange)="onFirstName($event)" />
-    </bfd-field>
+    <bae-field label="Prénom">
+      <bae-input [value]="firstName()" (valueChange)="onFirstName($event)" />
+    </bae-field>
 
-    <bfd-field label="Nom">
-      <bfd-input [value]="lastName()" (valueChange)="onLastName($event)" />
-    </bfd-field>
+    <bae-field label="Nom">
+      <bae-input [value]="lastName()" (valueChange)="onLastName($event)" />
+    </bae-field>
 
-    <bfd-field
+    <bae-field
       label="Rôle"
       [hint]="
         roleLocked()
@@ -33,7 +33,7 @@
           <option [value]="role.id" [selected]="role.id === roleId()">{{ role.name }}</option>
         }
       </select>
-    </bfd-field>
+    </bae-field>
 
     @if (store.memberErrorId() === memberId() && store.memberError(); as message) {
       <p role="alert" class="text-[12px] text-danger">{{ message }}</p>
@@ -41,9 +41,9 @@
   </div>
 
   <div modal-footer class="flex-1 flex justify-end gap-2">
-    <bfd-btn kind="ghost" size="md" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="primary" size="md" [disabled]="!canSubmit()" (clicked)="submit()">
+    <bae-btn kind="ghost" size="md" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="primary" size="md" [disabled]="!canSubmit()" (clicked)="submit()">
       Enregistrer
-    </bfd-btn>
+    </bae-btn>
   </div>
 </bfd-modal-shell>

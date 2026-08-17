@@ -12,15 +12,11 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import * as AuthActions from '#core/store/auth/auth.actions';
 import { selectLoginError } from '#core/store/auth/auth.selector';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL, Logo, Btn, Badge, Field, Toggle } from '@bae/ui';
 import { HealthService } from '#core/services/health/health-service';
 import { ServiceStatus } from '#core/models/health.model';
 import { TextInput } from '#shared/components/text-input/text-input';
-import { Logo } from '#shared/components/ui/logo/logo';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Field } from '#shared/components/ui/field/field';
-import { Toggle } from '#shared/components/ui/toggle/toggle';
+import { APP_VERSION } from '#app/app-version';
 
 @Component({
   selector: 'bfd-login',
@@ -29,6 +25,8 @@ import { Toggle } from '#shared/components/ui/toggle/toggle';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
+  protected readonly appVersion = APP_VERSION;
+
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
   private readonly apiBaseUrl = inject(API_BASE_URL);

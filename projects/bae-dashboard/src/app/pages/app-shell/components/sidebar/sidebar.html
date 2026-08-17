@@ -5,7 +5,7 @@
 >
   <!-- Logo -->
   <div class="shrink-0 px-1 pb-4">
-    <bfd-logo />
+    <bae-logo [version]="appVersion" />
   </div>
 
   <!-- Search -->
@@ -15,7 +15,7 @@
     >
       <svg lucideSearch [size]="14"></svg>
       <span class="flex-1">Rechercher…</span>
-      <bfd-kbd>⌘K</bfd-kbd>
+      <bae-kbd>⌘K</bae-kbd>
     </div>
   </div>
 
@@ -67,7 +67,7 @@
   </div>
 
   <div class="shrink-0 flex items-center gap-2.5 px-1.5 pt-2.5 mt-2 border-t border-border-s">
-    <bfd-avatar [name]="userName()" [size]="28" />
+    <bae-avatar [name]="userName()" [size]="28" />
     <div class="flex-1 min-w-0 leading-tight">
       <div class="text-[13px] font-medium text-text truncate">{{ userName() }}</div>
       <div class="text-[11px] text-muted">{{ userRole() }}</div>

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { LucideTrash2, LucideX } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Btn } from '@bae/ui';
 import { DeleteModalConfig } from '../modal.models';
 
 @Component({

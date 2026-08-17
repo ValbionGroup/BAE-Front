@@ -2,7 +2,7 @@
   <bfd-parametres-side-nav />
 
   <div class="flex min-w-0 flex-1 flex-col gap-4">
-    <bfd-card [padding]="22">
+    <bae-card [padding]="22">
       <div class="flex flex-col gap-1">
         <h2 class="text-[15px] font-semibold text-text">Mes préférences de postes</h2>
         <p class="text-[12.5px] leading-relaxed text-text-2">
@@ -15,13 +15,13 @@
       @if (store.loading() === 'loading' || store.loading() === 'init') {
         <div class="mt-4 flex flex-col gap-2">
           @for (row of skeletonRows; track row) {
-            <bfd-skeleton width="100%" height="44px" />
+            <bae-skeleton width="100%" height="44px" />
           }
         </div>
       } @else if (store.loadError(); as err) {
         <div class="mt-4 rounded-md border border-danger/40 px-4 py-6 text-center" role="alert">
           <p class="text-[12.5px] text-danger">{{ err }}</p>
-          <bfd-btn kind="ghost" size="sm" (clicked)="store.refresh()">Réessayer</bfd-btn>
+          <bae-btn kind="ghost" size="sm" (clicked)="store.refresh()">Réessayer</bae-btn>
         </div>
       } @else {
         <div class="mt-4 flex flex-col gap-5">
@@ -117,19 +117,19 @@
           <div class="flex items-center justify-end gap-2 border-t border-border-s pt-4">
             @if (store.dirty()) {
               <span class="mr-auto text-[12px] text-muted">Modifications non enregistrées</span>
-              <bfd-btn kind="ghost" size="md" (clicked)="store.reset()">Annuler</bfd-btn>
+              <bae-btn kind="ghost" size="md" (clicked)="store.reset()">Annuler</bae-btn>
             }
-            <bfd-btn
+            <bae-btn
               kind="primary"
               size="md"
               [disabled]="!store.dirty() || store.saving()"
               (clicked)="onSave()"
             >
               {{ store.saving() ? 'Enregistrement…' : 'Enregistrer' }}
-            </bfd-btn>
+            </bae-btn>
           </div>
         </div>
       }
-    </bfd-card>
+    </bae-card>
   </div>
 </div>

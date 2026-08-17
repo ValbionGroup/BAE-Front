@@ -44,7 +44,7 @@ __screenshots__/
 Thumbs.db
 
 # Environment files
-src/environment/environment.ts
+projects/bae-ui/src/environment/environment.ts
 
 # Design specs — documents de travail, jamais versionnés
 docs/superpowers/

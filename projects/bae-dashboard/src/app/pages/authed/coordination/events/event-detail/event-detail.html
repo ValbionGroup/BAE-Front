@@ -4,11 +4,11 @@
   <div class="flex flex-1 min-w-0 flex-col overflow-hidden">
     <!-- Header -->
     <div class="flex items-center gap-2.5 border-b border-border-s bg-surface px-5 py-3">
-      <bfd-badge [kind]="s.statusKind" [dot]="true">{{ s.statusLabel }}</bfd-badge>
+      <bae-badge [kind]="s.statusKind" [dot]="true">{{ s.statusLabel }}</bae-badge>
       <span class="min-w-0 flex-1 truncate text-[14px] font-semibold text-text"
         >Éditer · {{ s.name }}</span
       >
-      <bfd-btn kind="ghost" size="sm" [icon]="icX" (clicked)="close.emit()" />
+      <bae-btn kind="ghost" size="sm" [icon]="icX" (clicked)="close.emit()" />
     </div>
 
     <!-- Body -->
@@ -22,34 +22,34 @@
             Gérez les postes, affectez les membres et suivez le service
           </div>
         </div>
-        <bfd-btn kind="primary" size="sm" (clicked)="navigate()">Ouvrir →</bfd-btn>
+        <bae-btn kind="primary" size="sm" (clicked)="navigate()">Ouvrir →</bae-btn>
       </div>
 
-      <bfd-field label="Nom de la soirée">
-        <bfd-input [value]="s.name" (valueChange)="updateName($event)" />
-      </bfd-field>
+      <bae-field label="Nom de la soirée">
+        <bae-input [value]="s.name" (valueChange)="updateName($event)" />
+      </bae-field>
 
       <div class="grid grid-cols-3 gap-3">
-        <bfd-field label="Date">
-          <bfd-input [icon]="icCalendar" [value]="s.date" (valueChange)="updateDate($event)" />
-        </bfd-field>
-        <bfd-field label="Début">
-          <bfd-input [icon]="icClock" [value]="s.time" (valueChange)="updateTime($event)" />
-        </bfd-field>
-        <bfd-field label="Fin (estimée)">
-          <bfd-input [icon]="icClock" [value]="s.endTime" (valueChange)="updateEndTime($event)" />
-        </bfd-field>
+        <bae-field label="Date">
+          <bae-input [icon]="icCalendar" [value]="s.date" (valueChange)="updateDate($event)" />
+        </bae-field>
+        <bae-field label="Début">
+          <bae-input [icon]="icClock" [value]="s.time" (valueChange)="updateTime($event)" />
+        </bae-field>
+        <bae-field label="Fin (estimée)">
+          <bae-input [icon]="icClock" [value]="s.endTime" (valueChange)="updateEndTime($event)" />
+        </bae-field>
       </div>
 
-      <bfd-field label="Description (interne)">
+      <bae-field label="Description (interne)">
         <textarea
           [value]="s.description"
           (input)="updateDescription($event)"
           class="min-h-16 w-full resize-y rounded-md border border-border bg-surface-2 p-2.5 font-sans text-[12.5px] text-text outline-none focus:border-blue"
         ></textarea>
-      </bfd-field>
+      </bae-field>
 
-      <bfd-field [label]="'Recettes assignées (' + s.recipes.length + ')'">
+      <bae-field [label]="'Recettes assignées (' + s.recipes.length + ')'">
         <div class="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface-2 p-2">
           @for (r of s.recipes; track r) {
             <span
@@ -75,7 +75,7 @@
             Ajouter
           </button>
         </div>
-      </bfd-field>
+      </bae-field>
 
       <div class="rounded-md border border-border-s bg-surface p-1">
         @for (o of s.options; track o.key; let i = $index) {
@@ -86,7 +86,7 @@
               <div class="text-[12.5px] text-text">{{ o.label }}</div>
               <div class="mt-0.5 text-[11px] text-muted">{{ o.hint }}</div>
             </div>
-            <bfd-toggle [on]="o.enabled" (change)="toggleOption(o.key, $event)" />
+            <bae-toggle [on]="o.enabled" (change)="toggleOption(o.key, $event)" />
           </div>
         }
       </div>
@@ -94,11 +94,11 @@
 
     <!-- Footer actions -->
     <div class="flex items-center gap-2 border-t border-border-s bg-surface px-5 py-3">
-      <bfd-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="openDelete()">Supprimer</bfd-btn>
+      <bae-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="openDelete()">Supprimer</bae-btn>
       <div class="flex-1"></div>
-      <bfd-btn kind="ghost" size="sm" (clicked)="close.emit()">Annuler</bfd-btn>
-      <bfd-btn kind="primary" size="sm" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
-        >Enregistrer</bfd-btn
+      <bae-btn kind="ghost" size="sm" (clicked)="close.emit()">Annuler</bae-btn>
+      <bae-btn kind="primary" size="sm" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"
+        >Enregistrer</bae-btn
       >
     </div>
   </div>

@@ -1,5 +1,5 @@
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icX" (clicked)="quit()">Quitter</bfd-btn>
+  <bae-btn kind="ghost" size="md" [icon]="icX" (clicked)="quit()">Quitter</bae-btn>
 </ng-template>
 
 <div class="grid h-full grid-cols-[1.4fr_1fr] grid-rows-[minmax(0,1fr)] overflow-hidden">
@@ -27,9 +27,9 @@
 
     <div class="absolute top-4 left-4 z-10 flex gap-2">
       @if (cameraLive()) {
-        <bfd-badge kind="danger" [dot]="true">CAMÉRA · LIVE</bfd-badge>
+        <bae-badge kind="danger" [dot]="true">CAMÉRA · LIVE</bae-badge>
       } @else {
-        <bfd-badge kind="warn" [dot]="true">CAMÉRA INDISPONIBLE</bfd-badge>
+        <bae-badge kind="warn" [dot]="true">CAMÉRA INDISPONIBLE</bae-badge>
       }
     </div>
 
@@ -57,14 +57,14 @@
       </div>
 
       <div class="w-[240px]">
-        <bfd-input
+        <bae-input
           placeholder="Code-barres…"
           [value]="manualCode()"
           (valueChange)="onManualCode($event)"
           (keyup.enter)="submitManual()"
         />
       </div>
-      <bfd-btn kind="secondary" size="md" (clicked)="submitManual()">Ajouter</bfd-btn>
+      <bae-btn kind="secondary" size="md" (clicked)="submitManual()">Ajouter</bae-btn>
     </div>
   </div>
 
@@ -118,7 +118,7 @@
               >{{ line.name }}</span
             >
             @if (line.goodId === null) {
-              <bfd-badge kind="warn">À créer</bfd-badge>
+              <bae-badge kind="warn">À créer</bae-badge>
             }
             <span class="flex-1"></span>
             <button
@@ -134,18 +134,18 @@
 
           @if (line.goodId === null) {
             <div class="mt-2.5">
-              <bfd-btn
+              <bae-btn
                 kind="outline"
                 size="sm"
                 [icon]="icPlus"
                 (clicked)="createUnknown(line.barcode)"
               >
                 Créer le produit
-              </bfd-btn>
+              </bae-btn>
             </div>
           } @else {
             <div class="mt-2.5 grid grid-cols-2 gap-2.5">
-              <bfd-field label="Quantité">
+              <bae-field label="Quantité">
                 <div class="flex h-9 items-center rounded-md border border-border bg-surface">
                   <button
                     type="button"
@@ -168,14 +168,14 @@
                     +
                   </button>
                 </div>
-              </bfd-field>
-              <bfd-field label="DLC" hint="Facultatif.">
-                <bfd-input
+              </bae-field>
+              <bae-field label="DLC" hint="Facultatif.">
+                <bae-input
                   type="date"
                   [value]="line.expirationDate"
                   (valueChange)="setExpiration(line.barcode, $event)"
                 />
-              </bfd-field>
+              </bae-field>
             </div>
           }
         </div>
@@ -189,11 +189,11 @@
         </div>
         <div class="mt-0.5 text-[11px] text-muted">en attente de validation</div>
       </div>
-      <bfd-btn kind="ghost" size="sm" [disabled]="lines().length === 0" (clicked)="clearAll()">
+      <bae-btn kind="ghost" size="sm" [disabled]="lines().length === 0" (clicked)="clearAll()">
         Tout effacer
-      </bfd-btn>
+      </bae-btn>
       <span data-testid="validate-session">
-        <bfd-btn
+        <bae-btn
           kind="primary"
           size="md"
           [icon]="icCheck"
@@ -201,7 +201,7 @@
           (clicked)="validate()"
         >
           {{ saving() ? 'Enregistrement…' : 'Valider la session' }}
-        </bfd-btn>
+        </bae-btn>
       </span>
     </div>
 

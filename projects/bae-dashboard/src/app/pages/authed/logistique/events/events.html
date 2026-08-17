@@ -27,7 +27,7 @@
     }
     <div class="flex-1"></div>
     <div class="w-60">
-      <bfd-input [icon]="icSearch" placeholder="Rechercher une soirée…" size="sm" />
+      <bae-input [icon]="icSearch" placeholder="Rechercher une soirée…" size="sm" />
     </div>
   </div>
 
@@ -63,7 +63,7 @@
               <h3 class="m-0 truncate text-[16px] font-semibold tracking-[-0.2px] text-text">
                 {{ event.name }}
               </h3>
-              <bfd-badge [kind]="badge.kind" [dot]="true">{{ badge.label }}</bfd-badge>
+              <bae-badge [kind]="badge.kind" [dot]="true">{{ badge.label }}</bae-badge>
             </div>
             <div class="mt-1 text-[12px] text-muted">{{ whenLabel(event) }}</div>
           </div>
@@ -88,15 +88,15 @@
               <div class="text-[10px] text-muted">coût denrées</div>
             </div>
             <div class="h-6.5 w-px bg-border"></div>
-            <bfd-btn
+            <bae-btn
               [kind]="menu.length ? 'secondary' : 'primary'"
               size="sm"
               [icon]="menu.length ? icEdit : icPlus"
               (clicked)="openAssign(event)"
             >
               {{ menu.length ? 'Gérer recettes' : 'Assigner recettes' }}
-            </bfd-btn>
-            <bfd-btn kind="ghost" size="sm" [icon]="icMore" />
+            </bae-btn>
+            <bae-btn kind="ghost" size="sm" [icon]="icMore" />
           </div>
         </header>
 
@@ -184,22 +184,22 @@
             class="flex items-center gap-2 border-t border-border-s bg-surface-2 px-4 py-3 text-[12px] text-text-2"
           >
             <div class="flex-1"></div>
-            <bfd-btn
+            <bae-btn
               kind="ghost"
               size="sm"
               [icon]="icDownload"
               (clicked)="printFicheLogistique(event.id, event.name)"
-              >Fiche logistique</bfd-btn
+              >Fiche logistique</bae-btn
             >
             @if (state !== 'past') {
-              <bfd-btn
+              <bae-btn
                 kind="primary"
                 size="sm"
                 [iconRight]="icArrowRight"
                 (clicked)="openCourses(event.id)"
               >
                 Générer liste de courses
-              </bfd-btn>
+              </bae-btn>
             }
           </footer>
         }

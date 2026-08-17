@@ -4,7 +4,7 @@ import { Transmit, type Subscription } from '@adonisjs/transmit-client';
 import { WsMessage } from '#core/models/ws-message.model';
 import { toOrder, type ApiOrder } from '#core/services/orders/orders-service';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 
 /**
  * Formes diffusées par le back (`orders_realtime.ts`) sur le canal d'une soirée.

@@ -12,14 +12,7 @@ import { LucideDynamicIcon, LucideLogOut, LucideMonitor, LucideShield } from '@l
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { SessionsStore } from '#core/store/sessions.store';
 import { logout } from '#core/store/auth/auth.actions';
-import { isApiError } from '#core/models/api-response.model';
-import { ToastService } from '#shared/components/toast/toast.service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { isApiError, ToastService, Btn, Badge, Card, Field, Input, Skeleton } from '@bae/ui';
 import { ParametresSideNav } from '../side-nav/side-nav';
 import type { SessionRow } from './sessions.types';
 

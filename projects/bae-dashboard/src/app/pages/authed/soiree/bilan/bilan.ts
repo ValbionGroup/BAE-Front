@@ -16,8 +16,7 @@ import {
   type EventSummary,
 } from '#core/services/summary/event-summary-service';
 import { EventsStore } from '#core/store/events.store';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
+import { Badge, Card } from '@bae/ui';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 

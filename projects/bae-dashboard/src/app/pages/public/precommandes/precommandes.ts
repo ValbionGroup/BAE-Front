@@ -7,10 +7,7 @@ import {
   LucideShield,
   LucideUser,
 } from '@lucide/angular';
-import { Logo } from '#shared/components/ui/logo/logo';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
+import { Logo, Btn, Badge, Card } from '@bae/ui';
 
 interface EventCard {
   readonly d: string;

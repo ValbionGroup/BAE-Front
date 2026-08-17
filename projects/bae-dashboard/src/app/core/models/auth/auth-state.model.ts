@@ -1,5 +1,5 @@
 import { MemberModel, UserModel } from '#core/models/user.model';
-import { ApiError } from '#core/models/api-response.model';
+import { ApiError } from '@bae/ui';
 
 export interface AuthState {
   // Optional when not logged in

@@ -7,10 +7,7 @@ import {
   LucideDynamicIcon,
   LucideTicket,
 } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Avatar, Field, Input } from '@bae/ui';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 

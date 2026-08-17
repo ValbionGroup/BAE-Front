@@ -6,7 +6,7 @@ import {
   type SubscriptionWritePayload,
 } from '#core/services/clients/clients-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf } from '#shared/utils/api-error';
+import { messageOf } from '@bae/ui';
 import type {
   ClientDetail,
   ClientRow,

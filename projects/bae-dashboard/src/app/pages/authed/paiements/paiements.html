@@ -69,9 +69,9 @@
               <td class="mono px-[22px] py-3 text-xs text-text-2">{{ r.reference }}</td>
               <td class="mono tnum px-3 py-3 text-xs text-muted">{{ r.when }}</td>
               <td class="px-3 py-3">
-                <bfd-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">
+                <bae-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">
                   {{ r.method }}
-                </bfd-badge>
+                </bae-badge>
               </td>
               <td class="px-3 py-3 text-xs text-muted">
                 {{ r.orderCount }} {{ r.orderCount > 1 ? 'commandes' : 'commande' }}

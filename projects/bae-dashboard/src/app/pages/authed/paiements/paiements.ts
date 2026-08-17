@@ -23,7 +23,7 @@ import {
   type TransactionType,
 } from '#core/services/transactions/transactions-service';
 import { EventsStore } from '#core/store/events.store';
-import { Badge } from '#shared/components/ui/badge/badge';
+import { Badge } from '@bae/ui';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 

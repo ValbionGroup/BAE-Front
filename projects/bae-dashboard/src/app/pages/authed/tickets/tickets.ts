@@ -18,9 +18,7 @@ import {
   type TicketRow,
   type TicketStatus,
 } from '#core/services/tickets/tickets-service';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Card } from '#shared/components/ui/card/card';
+import { Badge, BadgeKind, Btn, Card } from '@bae/ui';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 type Tab = 'Tout' | 'Ouverts' | 'En cours' | 'Clos';

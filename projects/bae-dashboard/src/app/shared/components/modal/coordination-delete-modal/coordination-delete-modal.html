@@ -15,7 +15,7 @@
       <div class="text-[13px] font-semibold text-text">{{ eventName() }}</div>
       <div class="text-[11px] text-muted mt-0.5">Ven. 19:30 — 23:00 · 18 membres affectés</div>
     </div>
-    <bfd-badge kind="warn" [dot]="true">En préparation</bfd-badge>
+    <bae-badge kind="warn" [dot]="true">En préparation</bae-badge>
   </div>
 
   <div class="mono text-[10px] text-muted tracking-wider mb-2">RÉPERCUSSIONS</div>
@@ -34,9 +34,9 @@
     }
   </div>
 
-  <bfd-field label='Tape "SUPPRIMER" pour confirmer'>
-    <bfd-input placeholder="SUPPRIMER" (valueChange)="confirmText.set($event)" />
-  </bfd-field>
+  <bae-field label='Tape "SUPPRIMER" pour confirmer'>
+    <bae-input placeholder="SUPPRIMER" (valueChange)="confirmText.set($event)" />
+  </bae-field>
 
   <label class="flex items-center gap-2.5 mt-3 text-[12.5px] text-text-2 cursor-pointer">
     <span
@@ -49,9 +49,9 @@
 
   <div modal-footer class="contents">
     <div class="flex-1"></div>
-    <bfd-btn kind="ghost" (clicked)="close()">Annuler</bfd-btn>
-    <bfd-btn kind="danger" [icon]="icTrash" [disabled]="!canDelete()" (clicked)="confirmDelete()"
-      >Supprimer définitivement</bfd-btn
+    <bae-btn kind="ghost" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="danger" [icon]="icTrash" [disabled]="!canDelete()" (clicked)="confirmDelete()"
+      >Supprimer définitivement</bae-btn
     >
   </div>
 </bfd-modal-shell>

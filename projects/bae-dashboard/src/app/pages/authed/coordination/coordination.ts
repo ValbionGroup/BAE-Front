@@ -49,17 +49,11 @@ import {
   isJobPeriod,
   type JobPeriod,
 } from '#core/models/job-period.model';
-import { isApiError } from '#core/models/api-response.model';
-import { DropdownService } from '#shared/components/dropdown/dropdown.service';
-import type { DropdownItemAction } from '#shared/components/dropdown/dropdown.models';
+import { isApiError, DropdownService, Btn, Badge, Avatar, ToastService } from '@bae/ui';
+import type { DropdownItemAction, ToastType } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import type { RoleModalRole } from '#shared/components/modal/modal.models';
-import type { ToastType } from '#shared/components/toast/toast.models';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
 import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
-import { ToastService } from '#shared/components/toast/toast.service';
 import { PrintService } from '#core/services/print/print-service';
 import { formatPointsDelta as sharedFormatPointsDelta } from '#shared/utils/points-delta';
 

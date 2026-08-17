@@ -48,8 +48,8 @@
     (click)="theme.toggle()"
     class="hidden w-8 h-8 rounded-md border border-border bg-surface text-text-2 sm:inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
     [attr.aria-label]="themeTooltip()"
-    [bfdTooltip]="themeTooltip()"
-    bfdTooltipPlacement="bottom"
+    [baeTooltip]="themeTooltip()"
+    baeTooltipPlacement="bottom"
   >
     @if (theme.mode() === 'dark') {
       <svg lucideSun [size]="15" aria-hidden="true"></svg>
@@ -61,9 +61,9 @@
     routerLink="/notifications"
     class="relative w-8 h-8 rounded-md border border-border bg-surface text-text-2 inline-flex items-center justify-center cursor-pointer hover:bg-surface-2"
     aria-label="Notifications"
-    bfdTooltip="Notifications"
-    bfdTooltipDescription="3 nouvelles · cliquez pour ouvrir"
-    bfdTooltipPlacement="bottom-end"
+    baeTooltip="Notifications"
+    baeTooltipDescription="3 nouvelles · cliquez pour ouvrir"
+    baeTooltipPlacement="bottom-end"
   >
     <svg lucideBell [size]="15" aria-hidden="true"></svg>
     <span

@@ -38,7 +38,7 @@
   </div>
 
   <div class="mono text-[10px] text-muted tracking-wider mb-2">ASSIGNATION</div>
-  <bfd-field label="Qui s'en occupe ?" class="block">
+  <bae-field label="Qui s'en occupe ?" class="block">
     <div class="flex items-center gap-2 flex-wrap">
       @for (p of people(); track p.n) {
         <button
@@ -51,7 +51,7 @@
               : 'bg-surface-2 text-text-2 border-border')
           "
         >
-          <bfd-avatar [name]="p.n" [size]="20" />
+          <bae-avatar [name]="p.n" [size]="20" />
           {{ p.n }}
           @if (p.sel) {
             <svg [lucideIcon]="icCheck" [size]="10" aria-hidden="true"></svg>
@@ -59,17 +59,17 @@
         </button>
       }
     </div>
-  </bfd-field>
+  </bae-field>
 
-  <bfd-field label="Date limite des courses" class="block mt-3.5">
-    <bfd-input [icon]="icCalendar" value="12/02/2026 · 18:00 (J-2)" />
-  </bfd-field>
+  <bae-field label="Date limite des courses" class="block mt-3.5">
+    <bae-input [icon]="icCalendar" value="12/02/2026 · 18:00 (J-2)" />
+  </bae-field>
 
   <div modal-footer class="contents">
-    <bfd-btn kind="ghost" size="sm" [icon]="icTicket">Joindre 2 bons d'achat</bfd-btn>
+    <bae-btn kind="ghost" size="sm" [icon]="icTicket">Joindre 2 bons d'achat</bae-btn>
     <div class="flex-1"></div>
-    <bfd-btn kind="ghost" (clicked)="close()">Plus tard</bfd-btn>
-    <bfd-btn kind="secondary" [icon]="icDownload">Exporter PDF</bfd-btn>
-    <bfd-btn kind="primary" [iconRight]="icArrowRight" (clicked)="close()">Ouvrir la liste</bfd-btn>
+    <bae-btn kind="ghost" (clicked)="close()">Plus tard</bae-btn>
+    <bae-btn kind="secondary" [icon]="icDownload">Exporter PDF</bae-btn>
+    <bae-btn kind="primary" [iconRight]="icArrowRight" (clicked)="close()">Ouvrir la liste</bae-btn>
   </div>
 </bfd-modal-shell>

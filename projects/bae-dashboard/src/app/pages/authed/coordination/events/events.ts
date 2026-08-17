@@ -26,9 +26,7 @@ import { CoordinationNewModal } from '#shared/components/modal/coordination-new-
 import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
 import { type ApiEvent } from '#core/services/coordination/coordination-service';
 import { CoordinationStore } from '#core/store/coordination.store';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge } from '#shared/components/ui/badge/badge';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Badge, Input } from '@bae/ui';
 import { CoordinationEventDetail } from './event-detail/event-detail';
 import type { CoordinationEvent, TabKey } from './events.types';
 

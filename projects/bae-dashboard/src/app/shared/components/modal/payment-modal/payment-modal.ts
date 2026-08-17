@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideEuro, LucideQrCode } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { formatCents, parseEuros } from '#shared/utils/money';
+import { Btn, formatCents, parseEuros } from '@bae/ui';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 

@@ -12,7 +12,7 @@ import { CoordinationService } from '#core/services/coordination/coordination-se
 import { PreferencesService } from '#core/services/preferences/preferences-service';
 import { StocksService } from '#core/services/stocks/stocks-service';
 import { TransactionsService } from '#core/services/transactions/transactions-service';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { ToastService } from '@bae/ui';
 import { Presence } from '#core/models/event.model';
 import type { JobPeriod } from '#core/models/job-period.model';
 import type { MemberAssignment } from '#core/store/member-assignments.store';
@@ -61,7 +61,7 @@ describe(Home.name, () => {
   });
 
   it('renders skeletons while the stores are still loading', () => {
-    expect(fixture.nativeElement.querySelectorAll('bfd-skeleton').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelectorAll('bae-skeleton').length).toBeGreaterThan(0);
   });
 });
 
@@ -323,10 +323,10 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     });
 
     /**
-     * These buttons spent a while as raw `<button>` elements, because `bfd-btn`
+     * These buttons spent a while as raw `<button>` elements, because `bae-btn`
      * did not forward `id` or `aria-*` onto the control inside it. Each hand-
      * rolled class list dropped the themed focus ring at least once, leaving a
-     * keyboard user on the browser default outline. `bfd-btn` carries the ring
+     * keyboard user on the browser default outline. `bae-btn` carries the ring
      * now that it forwards those attributes — this keeps that honest.
      */
     it('keeps the themed focus ring on both response buttons', async () => {

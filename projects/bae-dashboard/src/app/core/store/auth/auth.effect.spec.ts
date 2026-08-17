@@ -9,7 +9,7 @@ import { firstValueFrom, Observable, of, Subject } from 'rxjs';
 import { vi } from 'vitest';
 
 import { AuthEffects } from './auth.effect';
-import { ThemeService } from '#core/services/theme/theme-service';
+import { ThemeService } from '@bae/ui';
 import * as AuthActions from './auth.actions';
 
 // L'environnement de test ne fournit pas de vrai `localStorage` (Node expose un

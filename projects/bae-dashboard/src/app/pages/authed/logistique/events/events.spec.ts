@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 import { LogistiqueEvents } from './events';
 import { EventsStore } from '#core/store/events.store';
 import { MenuItem } from '#core/models/event.model';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import { PrintService } from '#core/services/print/print-service';
 
 const baseUrl = 'http://api.test/v1';

@@ -21,8 +21,7 @@ import {
 } from '@lucide/angular';
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
+import { Btn, Skeleton } from '@bae/ui';
 import { isSameDay, startOfMonth, startOfToday } from 'date-fns';
 import { EventDetail, Presence } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';

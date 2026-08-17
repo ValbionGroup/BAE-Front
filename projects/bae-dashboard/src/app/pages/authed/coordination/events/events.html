@@ -1,10 +1,10 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bfd-btn kind="ghost" size="md" [icon]="icCalendar">Calendrier</bfd-btn>
-  <bfd-btn kind="ghost" size="md" [icon]="icDownload">Exporter</bfd-btn>
-  <bfd-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openNew()">
+  <bae-btn kind="ghost" size="md" [icon]="icCalendar">Calendrier</bae-btn>
+  <bae-btn kind="ghost" size="md" [icon]="icDownload">Exporter</bae-btn>
+  <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openNew()">
     Nouvelle soirée
-  </bfd-btn>
+  </bae-btn>
 </ng-template>
 
 <div class="grid h-full grid-cols-[1.5fr_1fr] overflow-hidden">
@@ -35,7 +35,7 @@
       </div>
       <div class="flex-1"></div>
       <div class="w-60">
-        <bfd-input
+        <bae-input
           [icon]="icSearch"
           placeholder="Rechercher une soirée…"
           size="sm"
@@ -99,7 +99,7 @@
             <span class="mono tnum text-right text-[12px] text-text-2">
               {{ e.members }}/{{ e.maxMembers }}
             </span>
-            <bfd-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bfd-badge>
+            <bae-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bae-badge>
             <span
               class="inline-flex items-center gap-1 justify-self-end"
               (click)="$event.stopPropagation()"

@@ -1,27 +1,27 @@
 <ng-template #actions>
-  <bfd-btn
+  <bae-btn
     kind="ghost"
     size="md"
     [icon]="icDownload"
     [disabled]="true"
     title="L'export CSV n'est pas encore branché."
-    >Export CSV</bfd-btn
+    >Export CSV</bae-btn
   >
-  <bfd-btn
+  <bae-btn
     kind="secondary"
     size="md"
     [icon]="icUpload"
     [disabled]="true"
     title="L'import de liste n'est pas encore branché."
-    >Import liste</bfd-btn
+    >Import liste</bae-btn
   >
-  <bfd-btn
+  <bae-btn
     kind="primary"
     size="md"
     [icon]="icPlus"
     [disabled]="true"
     title="Un compte se crée par EirbConnect, jamais ici : ce bouton enregistrera une cotisation."
-    >Enregistrer une cotisation</bfd-btn
+    >Enregistrer une cotisation</bae-btn
   >
 </ng-template>
 
@@ -31,7 +31,7 @@
     <!-- Filter bar -->
     <div class="flex items-center gap-2.5 px-5 py-3 border-b border-border-s">
       <div class="flex-1 max-w-80">
-        <bfd-input
+        <bae-input
           [icon]="icSearch"
           placeholder="Nom, ID adhérent, email…"
           size="sm"
@@ -55,8 +55,8 @@
           </button>
         }
       </div>
-      <bfd-btn kind="ghost" size="sm" [icon]="icFilter" [disabled]="true" title="Tri non branché."
-        >Trier</bfd-btn
+      <bae-btn kind="ghost" size="sm" [icon]="icFilter" [disabled]="true" title="Tri non branché."
+        >Trier</bae-btn
       >
     </div>
 
@@ -71,7 +71,7 @@
 
       @if (store.loading() === 'loading' || store.loading() === 'init') {
         @for (row of [1, 2, 3, 4, 5, 6]; track row) {
-          <div class="px-5 py-2.5 border-b border-border-s"><bfd-skeleton /></div>
+          <div class="px-5 py-2.5 border-b border-border-s"><bae-skeleton /></div>
         }
       } @else if (store.loadError()) {
         <div class="px-5 py-8 text-center text-[12.5px] text-danger">
@@ -96,16 +96,16 @@
                 : 'border-l-transparent hover:bg-surface-2/50')
             "
           >
-            <bfd-avatar [name]="displayName(a)" [size]="26" />
+            <bae-avatar [name]="displayName(a)" [size]="26" />
             <div class="min-w-0">
               <div class="font-medium text-text truncate">{{ displayName(a) }}</div>
               <div class="mono text-[10.5px] text-muted mt-0.5">{{ a.membershipNumber }}</div>
             </div>
             <span class="text-text-2">{{ a.promotion ?? '—' }}</span>
             <span
-              ><bfd-badge [kind]="statusKind(a.status)" [dot]="a.status !== 'none'">{{
+              ><bae-badge [kind]="statusKind(a.status)" [dot]="a.status !== 'none'">{{
                 statusLabel(a.status)
-              }}</bfd-badge></span
+              }}</bae-badge></span
             >
             <span [class]="'mono tnum ' + expClass(a.status)">{{
               a.expiresAt ? formatDate(a.expiresAt) : '—'
@@ -133,47 +133,47 @@
       <!-- Header -->
       <div class="p-[22px] border-b border-border-s">
         <div class="flex items-start gap-3.5">
-          <bfd-avatar [name]="displayName(d)" [size]="56" />
+          <bae-avatar [name]="displayName(d)" [size]="56" />
           <div class="flex-1 min-w-0">
             <h2 class="m-0 text-xl font-semibold text-text -tracking-[0.3px]">
               {{ displayName(d) }}
             </h2>
             <div class="mono text-[11px] text-muted mt-0.5">{{ d.membershipNumber }}</div>
             <div class="flex gap-1.5 mt-2">
-              <bfd-badge [kind]="statusKind(d.status)" [dot]="d.status !== 'none'">{{
+              <bae-badge [kind]="statusKind(d.status)" [dot]="d.status !== 'none'">{{
                 d.status === 'active' ? 'Cotisation à jour' : statusLabel(d.status)
-              }}</bfd-badge>
+              }}</bae-badge>
               @if (d.promotion) {
-                <bfd-badge kind="neutral">{{ d.promotion }}</bfd-badge>
+                <bae-badge kind="neutral">{{ d.promotion }}</bae-badge>
               }
             </div>
           </div>
         </div>
 
         <div class="flex gap-1.5 mt-3.5">
-          <bfd-btn
+          <bae-btn
             kind="primary"
             size="sm"
             [icon]="icCheck"
             [full]="true"
             (clicked)="verifyInCaisse()"
-            >Vérifier en caisse</bfd-btn
+            >Vérifier en caisse</bae-btn
           >
-          <bfd-btn
+          <bae-btn
             kind="secondary"
             size="sm"
             [icon]="icMail"
             [disabled]="true"
             title="Aucun envoi d'e-mail n'est encore possible."
-            >Contacter</bfd-btn
+            >Contacter</bae-btn
           >
-          <bfd-btn
+          <bae-btn
             kind="secondary"
             size="sm"
             [icon]="icEdit"
             [disabled]="true"
             title="Le formulaire n'est pas encore branché. Il portera le téléphone, la promotion et la note : le nom et l'email viennent d'EirbConnect."
-            >Modifier</bfd-btn
+            >Modifier</bae-btn
           >
         </div>
       </div>
@@ -197,13 +197,13 @@
           <div class="flex-1 text-[11px] font-semibold tracking-wider text-muted uppercase">
             Historique cotisations
           </div>
-          <bfd-btn
+          <bae-btn
             kind="ghost"
             size="sm"
             [icon]="icPlus"
             [disabled]="true"
             title="Le formulaire de renouvellement n'est pas encore branché — l'endpoint existe."
-            >Renouveler</bfd-btn
+            >Renouveler</bae-btn
           >
         </div>
         @if (d.subscriptions.length === 0) {
@@ -280,7 +280,7 @@
         }
       </div>
     } @else if (detailLoading()) {
-      <div class="p-[22px]"><bfd-skeleton /></div>
+      <div class="p-[22px]"><bae-skeleton /></div>
     } @else {
       <div class="p-[22px] text-[12.5px] text-muted">Sélectionnez un adhérent.</div>
     }

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { RecipesStore } from './recipes.store';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import type { RecipeProduct, RecipeWritePayload } from '#pages/authed/recettes/recipes.types';
 
 const baseUrl = 'http://api.test/v1';

@@ -3,9 +3,9 @@
     <div class="mb-4">
       <div class="flex items-center gap-2">
         <h2 class="m-0 -tracking-[0.3px] text-[22px] font-semibold text-text">{{ event.name }}</h2>
-        <bfd-badge [kind]="event.status === 'completed' ? 'neutral' : 'blue'">
+        <bae-badge [kind]="event.status === 'completed' ? 'neutral' : 'blue'">
           {{ event.status === 'completed' ? 'Clôturée' : 'En cours' }}
-        </bfd-badge>
+        </bae-badge>
       </div>
       @if (event.status !== 'completed') {
         <p class="mt-1 text-[11px] text-muted">
@@ -39,7 +39,7 @@
         annulation après paiement — pas une erreur à masquer.
       -->
       <div class="mt-4 grid grid-cols-2 gap-3">
-        <bfd-card>
+        <bae-card>
           <div class="mb-2.5 text-[13px] font-semibold text-text">Encaissé par moyen</div>
           @if (cashed().length === 0) {
             <div class="text-[11px] text-muted">Aucune transaction rattachée à cette soirée.</div>
@@ -59,9 +59,9 @@
               {{ money(cashedTotal()) }} €
             </span>
           </div>
-        </bfd-card>
+        </bae-card>
 
-        <bfd-card>
+        <bae-card>
           <div class="mb-2.5 text-[13px] font-semibold text-text">Écart recette / encaissé</div>
           <div
             class="mono tnum text-[26px] font-semibold"
@@ -74,10 +74,10 @@
             Un écart n'est pas une anomalie en soi : une précommande a pu être payée un autre jour,
             une commande annulée après encaissement, ou une remise accordée au comptoir.
           </p>
-        </bfd-card>
+        </bae-card>
       </div>
 
-      <bfd-card [padding]="0" class="mt-4 block">
+      <bae-card [padding]="0" class="mt-4 block">
         <div class="border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text">
           Par produit
         </div>
@@ -143,7 +143,7 @@
             </tbody>
           </table>
         }
-      </bfd-card>
+      </bae-card>
 
       <!--
         La marge n'est pas affichée : elle demanderait le coût des denrées

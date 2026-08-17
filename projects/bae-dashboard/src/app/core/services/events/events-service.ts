@@ -9,7 +9,7 @@ import {
   RosterRow,
   RosterRowApiDto,
 } from '#core/models/event.model';
-import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { API_BASE_URL } from '@bae/ui';
 import { ApiEndPointV1 } from '#core/models/endpoint.model';
 
 @Injectable({ providedIn: 'root' })

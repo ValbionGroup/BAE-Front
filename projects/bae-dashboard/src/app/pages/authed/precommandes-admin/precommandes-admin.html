@@ -1,5 +1,5 @@
 <ng-template #actions>
-  <bfd-btn kind="primary" size="md" [icon]="icCheck" (clicked)="markReady()">Marquer prête</bfd-btn>
+  <bae-btn kind="primary" size="md" [icon]="icCheck" (clicked)="markReady()">Marquer prête</bae-btn>
 </ng-template>
 
 @if (activeEvent() === null) {
@@ -84,12 +84,12 @@
                     {{ o.itemCount }} articles · {{ o.paid ? 'Payée' : 'À encaisser' }}
                   </div>
                   <div class="mt-1.5">
-                    <bfd-badge
+                    <bae-badge
                       [kind]="statusBadge(o.status).kind"
                       [dot]="statusBadge(o.status).dot"
                     >
                       {{ statusBadge(o.status).label }}
-                    </bfd-badge>
+                    </bae-badge>
                   </div>
                 </div>
                 <svg
@@ -120,9 +120,9 @@
               <h2 class="m-0 -tracking-[0.3px] text-[22px] font-semibold text-text">
                 {{ s.client }}
               </h2>
-              <bfd-badge [kind]="statusBadge(s.status).kind" [dot]="statusBadge(s.status).dot">
+              <bae-badge [kind]="statusBadge(s.status).kind" [dot]="statusBadge(s.status).dot">
                 {{ statusBadge(s.status).label }}
-              </bfd-badge>
+              </bae-badge>
             </div>
             <div class="mt-3 flex gap-4 text-[12.5px] text-text-2">
               <span class="inline-flex items-center gap-1.5">
@@ -141,7 +141,7 @@
           </div>
         </div>
 
-        <bfd-card [padding]="0">
+        <bae-card [padding]="0">
           <div class="flex items-center border-b border-border-s px-4 py-3.5">
             <div class="flex-1 text-[13px] font-semibold text-text">Liste de préparation</div>
             <span class="text-[11px] text-muted">
@@ -176,7 +176,7 @@
               </div>
             </div>
           }
-        </bfd-card>
+        </bae-card>
 
         <!--
           La remise passe par « Remettre au client » et non par un statut : seul
@@ -184,14 +184,14 @@
           à la cuisine que c'est prêt — rien n'a encore changé de mains.
         -->
         <div class="mt-4 flex gap-2">
-          <bfd-btn kind="ghost" [full]="true" (clicked)="cancel()">Annuler</bfd-btn>
-          <bfd-btn kind="secondary" [icon]="icClock" [full]="true" (clicked)="hold()">
+          <bae-btn kind="ghost" [full]="true" (clicked)="cancel()">Annuler</bae-btn>
+          <bae-btn kind="secondary" [icon]="icClock" [full]="true" (clicked)="hold()">
             En préparation
-          </bfd-btn>
-          <bfd-btn kind="secondary" [icon]="icCheck" [full]="true" (clicked)="markReady()">
+          </bae-btn>
+          <bae-btn kind="secondary" [icon]="icCheck" [full]="true" (clicked)="markReady()">
             Marquer prête
-          </bfd-btn>
-          <bfd-btn
+          </bae-btn>
+          <bae-btn
             kind="primary"
             [icon]="icCheck"
             [full]="true"
@@ -199,7 +199,7 @@
             (clicked)="collect()"
           >
             Remettre au client
-          </bfd-btn>
+          </bae-btn>
         </div>
       } @else {
         <div class="py-16 text-center text-xs text-muted">
@@ -214,7 +214,7 @@
         Borne retrait
       </div>
 
-      <bfd-card>
+      <bae-card>
         <div class="pb-1 pt-2 text-center">
           <div
             class="relative mx-auto flex h-40 w-40 items-center justify-center rounded-md border-2 border-dashed border-border bg-bg"
@@ -225,13 +225,13 @@
           <div class="mt-1 text-[11px] text-muted">ou saisir le N° de retrait</div>
         </div>
         <div class="mt-3">
-          <bfd-input
+          <bae-input
             [icon]="icQr"
             [placeholder]="selected()?.reference ?? 'N° retrait'"
             size="lg"
           />
         </div>
-      </bfd-card>
+      </bae-card>
 
       <!--
         Le scan de retrait passe par `POST /qr/verify`, déjà livré côté back et

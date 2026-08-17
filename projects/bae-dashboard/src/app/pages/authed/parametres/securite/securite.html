@@ -7,22 +7,22 @@
 
     <div class="flex max-w-[760px] flex-col gap-[18px]">
       <!-- Password -->
-      <bfd-card>
+      <bae-card>
         <div>
           <div class="text-sm font-semibold text-text">Mot de passe</div>
           <div class="mt-0.5 text-[11.5px] text-muted">Dernière modification il y a 47 jours</div>
         </div>
         <div class="mt-3.5 grid grid-cols-2 gap-3">
-          <bfd-field label="Mot de passe actuel">
-            <bfd-input type="password" value="••••••••••" />
-          </bfd-field>
+          <bae-field label="Mot de passe actuel">
+            <bae-input type="password" value="••••••••••" />
+          </bae-field>
           <span></span>
-          <bfd-field label="Nouveau mot de passe" hint="≥ 12 caractères · 1 majuscule · 1 chiffre">
-            <bfd-input type="password" placeholder="…" />
-          </bfd-field>
-          <bfd-field label="Confirmer">
-            <bfd-input type="password" placeholder="…" />
-          </bfd-field>
+          <bae-field label="Nouveau mot de passe" hint="≥ 12 caractères · 1 majuscule · 1 chiffre">
+            <bae-input type="password" placeholder="…" />
+          </bae-field>
+          <bae-field label="Confirmer">
+            <bae-input type="password" placeholder="…" />
+          </bae-field>
         </div>
         <div class="mt-3.5">
           <div class="flex gap-1">
@@ -37,13 +37,13 @@
           </div>
         </div>
         <div class="mt-4 flex gap-2">
-          <bfd-btn kind="primary">Mettre à jour</bfd-btn>
-          <bfd-btn kind="ghost">Annuler</bfd-btn>
+          <bae-btn kind="primary">Mettre à jour</bae-btn>
+          <bae-btn kind="ghost">Annuler</bae-btn>
         </div>
-      </bfd-card>
+      </bae-card>
 
       <!-- 2FA -->
-      <bfd-card>
+      <bae-card>
         <div class="flex items-start gap-4">
           <div
             class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-ok-soft text-ok"
@@ -53,21 +53,21 @@
           <div class="flex-1">
             <div class="flex items-center gap-2.5">
               <div class="text-sm font-semibold text-text">2FA · application authenticator</div>
-              <bfd-badge kind="ok" [dot]="true">Active</bfd-badge>
+              <bae-badge kind="ok" [dot]="true">Active</bae-badge>
             </div>
             <div class="mt-1 text-[11.5px] text-muted">
               Configurée le 02 sept. 2025 · iPhone 14 (1Password)
             </div>
             <div class="mt-3 flex gap-2">
-              <bfd-btn kind="secondary" size="sm">Régénérer codes de secours</bfd-btn>
-              <bfd-btn kind="ghost" size="sm">Désactiver</bfd-btn>
+              <bae-btn kind="secondary" size="sm">Régénérer codes de secours</bae-btn>
+              <bae-btn kind="ghost" size="sm">Désactiver</bae-btn>
             </div>
           </div>
         </div>
-      </bfd-card>
+      </bae-card>
 
       <!-- Sessions -->
-      <bfd-card [padding]="0">
+      <bae-card [padding]="0">
         <div class="border-b border-border-s px-4 py-3.5">
           <div class="text-[13px] font-semibold text-text">Sessions actives</div>
           <div class="mt-0.5 text-[11px] text-muted" aria-live="polite">
@@ -84,10 +84,10 @@
         @if (loading() === 'init' || loading() === 'loading') {
           @for (placeholder of [1, 2, 3]; track placeholder) {
             <div class="flex items-center gap-3 border-t border-border-s px-4 py-3.5">
-              <bfd-skeleton width="16px" height="16px" />
+              <bae-skeleton width="16px" height="16px" />
               <div class="flex-1">
-                <bfd-skeleton width="40%" height="12px" />
-                <div class="mt-1.5"><bfd-skeleton width="60%" height="10px" /></div>
+                <bae-skeleton width="40%" height="12px" />
+                <div class="mt-1.5"><bae-skeleton width="60%" height="10px" /></div>
               </div>
             </div>
           }
@@ -95,7 +95,7 @@
           <div class="border-t border-border-s px-4 py-6 text-center" role="alert">
             <p class="m-0 text-[12.5px] text-danger">{{ loadError() }}</p>
             <div class="mt-3 flex justify-center">
-              <bfd-btn kind="secondary" size="sm" (clicked)="retry()">Réessayer</bfd-btn>
+              <bae-btn kind="secondary" size="sm" (clicked)="retry()">Réessayer</bae-btn>
             </div>
           </div>
         } @else if (sessions().length === 0) {
@@ -118,7 +118,7 @@
                       session.deviceLabel
                     }}</span>
                     @if (session.isCurrent) {
-                      <bfd-badge kind="ok">Cet appareil</bfd-badge>
+                      <bae-badge kind="ok">Cet appareil</bae-badge>
                     }
                   </div>
                   <div class="mono mt-0.5 text-[10.5px] text-muted">
@@ -137,11 +137,11 @@
                     The API refuses to revoke the current session (403), so this
                     row points at the logout flow instead of the revoke action.
                   -->
-                  <bfd-btn kind="ghost" size="sm" [icon]="icLogout" (clicked)="logoutCurrent()">
+                  <bae-btn kind="ghost" size="sm" [icon]="icLogout" (clicked)="logoutCurrent()">
                     Se déconnecter<span class="sr-only"> de cet appareil</span>
-                  </bfd-btn>
+                  </bae-btn>
                 } @else {
-                  <bfd-btn
+                  <bae-btn
                     kind="ghost"
                     size="sm"
                     [disabled]="isPending(session.id)"
@@ -149,7 +149,7 @@
                   >
                     {{ isPending(session.id) ? 'Révocation…' : 'Révoquer' }}
                     <span class="sr-only">{{ revokeLabel(session) }}</span>
-                  </bfd-btn>
+                  </bae-btn>
                 }
               </li>
             }
@@ -157,7 +157,7 @@
         }
 
         <div class="border-t border-border-s px-4 py-3">
-          <bfd-btn
+          <bae-btn
             kind="danger"
             size="sm"
             [icon]="icLogout"
@@ -167,14 +167,14 @@
             Déconnecter partout<span class="sr-only">
               : révoquer toutes les autres sessions puis se déconnecter</span
             >
-          </bfd-btn>
+          </bae-btn>
           @if (revokableCount() === 0 && loading() === 'loaded') {
             <p class="m-0 mt-1.5 text-[11px] text-muted">
               Aucune autre session : ce bouton vous déconnectera simplement.
             </p>
           }
         </div>
-      </bfd-card>
+      </bae-card>
     </div>
   </div>
 </div>

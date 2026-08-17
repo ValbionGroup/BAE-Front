@@ -26,10 +26,7 @@ import { PreOrdersService } from '#core/services/pre-orders/pre-orders-service';
 import { EventsStore } from '#core/store/events.store';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
 import type { OrderStatus } from '#core/models/order.model';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Badge, BadgeKind, Card, Input } from '@bae/ui';
 
 interface PickingLine {
   readonly name: string;

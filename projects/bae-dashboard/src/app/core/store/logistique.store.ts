@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { forkJoin, lastValueFrom } from 'rxjs';
 import { LogistiqueService } from '#core/services/logistique/logistique-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf, settle } from '#shared/utils/api-error';
+import { messageOf, settle } from '@bae/ui';
 import type {
   ApiGood,
   ApiShoppingList,

@@ -17,7 +17,7 @@ import {
 } from '#core/services/coordination/coordination-service';
 import type { JobPeriod } from '#core/models/job-period.model';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { ToastService } from '@bae/ui';
 import { PrintService } from '#core/services/print/print-service';
 import type { ModalAction, MessageModalConfig } from '#shared/components/modal/modal.models';
 

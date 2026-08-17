@@ -22,17 +22,20 @@ import { Store } from '@ngrx/store';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { TeamStore } from '#core/store/team.store';
 import { selectMember, selectPermissions } from '#core/store/auth/auth.selector';
-import { DropdownService } from '#shared/components/dropdown/dropdown.service';
+import {
+  DropdownService,
+  ToastService,
+  Btn,
+  Badge,
+  BadgeKind,
+  Card,
+  Avatar,
+  Input,
+  Skeleton,
+  Checkbox,
+} from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { MemberEditModal } from '#shared/components/modal/member-edit-modal/member-edit-modal';
-import { ToastService } from '#shared/components/toast/toast.service';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Badge, BadgeKind } from '#shared/components/ui/badge/badge';
-import { Card } from '#shared/components/ui/card/card';
-import { Avatar } from '#shared/components/ui/avatar/avatar';
-import { Input } from '#shared/components/ui/input/input';
-import { Skeleton } from '#shared/components/ui/skeleton/skeleton';
-import { Checkbox } from '#shared/components/ui/checkbox/checkbox';
 import { toAuditEntries, toMemberRows, toPermsMatrix } from './equipe.mappers';
 import type { AuditEntry, Invitation } from './equipe.types';
 import { teamMemberName } from '#core/services/team/team-service';

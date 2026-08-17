@@ -9,7 +9,7 @@ import { vi } from 'vitest';
 
 import { Logistique } from './logistique';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { ToastService } from '#shared/components/toast/toast.service';
+import { ToastService } from '@bae/ui';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
 import { PrintService } from '#core/services/print/print-service';

@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideArrowRight, LucideCalendar, LucideCheck, LucideClock } from '@lucide/angular';
-import { Btn } from '#shared/components/ui/btn/btn';
-import { Field } from '#shared/components/ui/field/field';
-import { Input } from '#shared/components/ui/input/input';
+import { Btn, Field, Input } from '@bae/ui';
 import { type ApiEvent } from '#core/services/coordination/coordination-service';
 import { CoordinationStore } from '#core/store/coordination.store';
 import { ModalService } from '../modal.service';

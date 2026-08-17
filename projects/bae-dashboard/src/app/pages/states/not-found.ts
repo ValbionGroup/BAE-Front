@@ -9,7 +9,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { LucideHouse, LucideSearch, LucideTicket } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn } from '#shared/components/ui/btn/btn';
+import { Btn } from '@bae/ui';
 
 const RAIN_CELL_WIDTH = 38;
 const RAIN_LINE_HEIGHT = 24;
