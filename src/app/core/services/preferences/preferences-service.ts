@@ -31,8 +31,14 @@ export class PreferencesService {
     return this.http.get<ApiJobPreference[]>(`${this.baseUrl}/account/preferences`);
   }
 
+  /**
+   * Sous `/account`, et pas `GET /jobs` : ce dernier porte `job:read`, une
+   * permission d'administration du catalogue que seule la coordination détient.
+   * Un membre ordinaire n'obtenait donc jamais la liste qu'on lui demande
+   * d'ordonner.
+   */
   getJobs(): Observable<ApiPreferableJob[]> {
-    return this.http.get<ApiPreferableJob[]>(`${this.baseUrl}/jobs`);
+    return this.http.get<ApiPreferableJob[]>(`${this.baseUrl}/account/preferences/jobs`);
   }
 
   /**

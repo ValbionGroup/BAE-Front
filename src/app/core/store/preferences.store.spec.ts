@@ -29,7 +29,9 @@ describe(PreferencesStore.name, () => {
 
   async function load(mine: { jobId: number; name: string; preferenceRank: number }[] = []) {
     const loaded = store.load();
-    httpMock.expectOne(`${baseUrl}/jobs`).flush(JOBS);
+    // Sous `/account` : `GET /jobs` porte `job:read`, qu'un membre ordinaire
+    // n'a pas, et le classement lui était donc inaccessible.
+    httpMock.expectOne(`${baseUrl}/account/preferences/jobs`).flush(JOBS);
     httpMock.expectOne(`${baseUrl}/account/preferences`).flush(mine);
     await loaded;
   }
