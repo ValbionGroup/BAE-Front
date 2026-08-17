@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test bae-dashboard && ng test bae-ui",
+    "test": "ng test bae-dashboard && ng test bae-public && ng test bae-ui",
+    "start:public": "ng serve bae-public",
     "typecheck": "tsc --build tsconfig.json",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

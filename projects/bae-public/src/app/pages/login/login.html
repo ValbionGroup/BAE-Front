@@ -1,0 +1,58 @@
+<div
+  class="flex min-h-screen flex-col items-center justify-center bg-bg p-6 font-sans text-text"
+  style="
+    background:
+      radial-gradient(circle at 15% 10%, var(--bae-redSoft) 0%, transparent 45%),
+      radial-gradient(circle at 88% 90%, var(--bae-blueSoft) 0%, transparent 50%), var(--bae-bg);
+  "
+>
+  <main class="w-full max-w-100">
+    <div class="mb-8 flex justify-center">
+      <bae-logo [size]="34" [version]="appVersion" />
+    </div>
+
+    <bae-card>
+      <div class="mono mb-2.5 text-[11px] font-semibold tracking-widest text-blue">
+        ESPACE COMMANDES
+      </div>
+      <h1 class="m-0 text-[26px] font-semibold -tracking-[0.6px] text-text">
+        Connectez-vous pour commander.
+      </h1>
+      <p class="mt-2 mb-6 text-sm text-muted">
+        Votre compte EirbConnect suffit : il est créé à la première connexion.
+      </p>
+
+      @if (ssoError(); as error) {
+        <div
+          class="mb-5 flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-sm text-danger"
+          role="alert"
+          aria-live="assertive"
+        >
+          <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>{{ error }}</span>
+        </div>
+      }
+
+      <bae-btn
+        kind="primary"
+        [full]="true"
+        size="lg"
+        [icon]="icShield"
+        [iconRight]="icArrowRight"
+        (clicked)="loginWithEirbConnect()"
+      >
+        Se connecter avec EirbConnect
+      </bae-btn>
+
+      <p class="mt-5 mb-0 text-center text-[12px] leading-relaxed text-muted">
+        EirbConnect est le seul mode d’accès à cet espace. Les comptes du bureau se connectent sur
+        la console d’administration.
+      </p>
+    </bae-card>
+
+    <div class="mt-6 flex items-center justify-center gap-3 text-[11.5px] text-muted">
+      <span class="mono">© BAE {{ year() }}</span>
+      <bae-badge kind="ghost">Bureau des Alternants de l’ENSEIRB</bae-badge>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+@import 'tailwindcss';
+@import '../../bae-ui/src/styles/tokens.css';
+
+/*
+ * Tailwind ne génère un utilitaire que s'il **voit** un source qui le mentionne.
+ * Les templates de la bibliothèque vivent hors de ce projet : sans cette
+ * directive, `bae-btn` et consorts arriveraient sans aucune classe.
+ */
+@source '../../bae-ui/src';

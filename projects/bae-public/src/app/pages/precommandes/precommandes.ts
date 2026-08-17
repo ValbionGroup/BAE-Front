@@ -8,6 +8,9 @@ import {
   LucideUser,
 } from '@lucide/angular';
 import { Logo, Btn, Badge, Card } from '@bae/ui';
+import { RouterLink } from '@angular/router';
+
+import { APP_VERSION } from '../../app-version';
 
 interface EventCard {
   readonly d: string;
@@ -34,12 +37,14 @@ interface MenuSection {
 }
 
 @Component({
-  selector: 'bfd-precommandes',
-  imports: [Logo, Btn, Badge, Card, LucideDynamicIcon],
+  selector: 'bfp-precommandes',
+  imports: [Logo, Btn, Badge, Card, LucideDynamicIcon, RouterLink],
   templateUrl: './precommandes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Precommandes {
+  protected readonly appVersion = APP_VERSION;
+
   protected readonly icArrowRight = LucideArrowRight;
   protected readonly icShield = LucideShield;
   protected readonly icQr = LucideQrCode;

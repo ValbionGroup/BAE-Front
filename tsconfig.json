@@ -35,6 +35,15 @@
     },
     {
       "path": "./projects/bae-dashboard/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/bae-public/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/bae-public/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/bae-ui/tsconfig.spec.json"
     }
   ]
 }

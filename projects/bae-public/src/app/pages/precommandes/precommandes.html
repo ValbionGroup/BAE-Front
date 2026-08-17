@@ -1,7 +1,7 @@
 <div class="flex h-screen flex-col overflow-hidden bg-bg text-text font-sans">
   <!-- Public top nav -->
   <header class="flex shrink-0 items-center gap-7 border-b border-border-s px-14 py-4">
-    <bae-logo />
+    <bae-logo [version]="appVersion" />
     <div class="flex-1"></div>
     <nav class="flex gap-5 text-[13.5px] text-text-2">
       @for (item of publicNav; track item; let i = $index) {
@@ -10,7 +10,9 @@
     </nav>
     <span class="h-4.5 w-px bg-border" aria-hidden="true"></span>
     <bae-btn kind="ghost" size="sm">Mes commandes</bae-btn>
-    <bae-btn kind="outline" size="sm" [icon]="icUser">Connexion</bae-btn>
+    <a routerLink="/login" class="contents">
+      <bae-btn kind="outline" size="sm" [icon]="icUser">Connexion</bae-btn>
+    </a>
   </header>
 
   <div class="flex-1 overflow-y-auto">
@@ -255,7 +257,7 @@
     <footer
       class="flex items-center gap-4 border-t border-border-s px-14 py-8 text-[11.5px] text-muted"
     >
-      <bae-logo [size]="22" />
+      <bae-logo [size]="22" [version]="appVersion" />
       <div class="flex-1"></div>
       <span>© BAE ENSEIRB-MATMECA · 2026</span>
       <span>·</span><span>CGV</span> <span>·</span><span>Confidentialité</span> <span>·</span

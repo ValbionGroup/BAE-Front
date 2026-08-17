@@ -9,11 +9,6 @@ export { AppRoutes } from './app-routes.const';
 
 export const routes: Routes = [
   {
-    path: AppRoutes.precommandes,
-    loadComponent: () =>
-      import('#pages/public/precommandes/precommandes').then((m) => m.Precommandes),
-  },
-  {
     path: AppRoutes.login,
     canActivate: [guestGuard],
     loadComponent: () => import('#pages/guest/login/login').then((m) => m.Login),
