@@ -28,9 +28,18 @@
 
     <div class="flex items-center gap-4 text-[11.5px] text-muted">
       <span class="mono">© BAE {{ year() }}</span>
-      <span class="ml-auto inline-flex items-center gap-1.5">
-        <span class="h-1.5 w-1.5 rounded-full bg-ok"></span>
-        Tous les services sont opérationnels
+      <span class="ml-auto inline-flex items-center gap-1.5" role="status" aria-live="polite">
+        <span class="relative inline-flex h-1.5 w-1.5" aria-hidden="true">
+          <span
+            class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:hidden"
+            [class]="serviceDotClass()"
+          ></span>
+          <span
+            class="relative inline-flex h-1.5 w-1.5 rounded-full"
+            [class]="serviceDotClass()"
+          ></span>
+        </span>
+        {{ serviceLabel() }}
       </span>
     </div>
   </div>

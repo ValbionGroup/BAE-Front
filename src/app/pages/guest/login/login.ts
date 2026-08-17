@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import {
   LucideArrowRight,
@@ -13,6 +13,8 @@ import { ActivatedRoute } from '@angular/router';
 import * as AuthActions from '#core/store/auth/auth.actions';
 import { selectLoginError } from '#core/store/auth/auth.selector';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
+import { HealthService } from '#core/services/health/health-service';
+import { ServiceStatus } from '#core/models/health.model';
 import { TextInput } from '#shared/components/text-input/text-input';
 import { Logo } from '#shared/components/ui/logo/logo';
 import { Btn } from '#shared/components/ui/btn/btn';
@@ -30,6 +32,7 @@ export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly health = inject(HealthService);
   private readonly ssoErrorCode = toSignal(
     inject(ActivatedRoute).queryParamMap.pipe(map((params) => params.get('sso_error'))),
     { initialValue: null },
@@ -37,11 +40,6 @@ export class Login {
 
   protected readonly loginError = toSignal(this.store.select(selectLoginError));
 
-  /**
-   * Le back ne renvoie jamais le détail d'un échec SSO dans l'URL — seulement un
-   * code, dont le libellé se décide ici. `not_a_member` est le cas nominal le
-   * plus fréquent : un compte EirbConnect valide, mais qui n'est pas du bureau.
-   */
   protected readonly ssoError = computed(() => {
     const code = this.ssoErrorCode();
     if (code === null) return null;
@@ -59,6 +57,28 @@ export class Login {
   protected readonly year = computed(() => new Date().getFullYear());
   protected readonly rememberMe = signal<boolean>(false);
 
+  protected readonly serviceStatus = signal<ServiceStatus>('checking');
+
+  protected readonly serviceLabel = computed(
+    () =>
+      ({
+        checking: 'Vérification des services…',
+        ok: 'Tous les services sont opérationnels',
+        degraded: 'Service dégradé',
+        down: 'API injoignable',
+      })[this.serviceStatus()],
+  );
+
+  protected readonly serviceDotClass = computed(
+    () =>
+      ({
+        checking: 'bg-muted',
+        ok: 'bg-ok',
+        degraded: 'bg-warn',
+        down: 'bg-danger',
+      })[this.serviceStatus()],
+  );
+
   protected form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
@@ -67,6 +87,13 @@ export class Login {
   protected readonly icShield = LucideShield;
   protected readonly icArrowRight = LucideArrowRight;
   protected readonly icAlert = LucideTriangleAlert;
+
+  constructor() {
+    this.health
+      .check()
+      .pipe(takeUntilDestroyed())
+      .subscribe((status) => this.serviceStatus.set(status));
+  }
 
   protected readonly brandTags = [
     'Gestion des présence',
