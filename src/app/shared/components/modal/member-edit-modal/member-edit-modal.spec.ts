@@ -32,8 +32,7 @@ describe(MemberEditModal.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Tommy',
-        lastName: 'Klein',
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
         roleId: 1,
         points: 0,
         createdAt: null,
@@ -68,8 +67,7 @@ describe(MemberEditModal.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 3,
-        firstName: 'Alix',
-        lastName: 'Roy',
+        user: { id: 2, email: 'alix@bae.test', firstName: 'Alix', lastName: 'Roy' },
         roleId: 2,
         points: 0,
         createdAt: null,
@@ -115,8 +113,7 @@ describe(MemberEditModal.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 4,
-        firstName: 'Ada',
-        lastName: 'Admin',
+        user: { id: 2, email: 'ada@bae.test', firstName: 'Ada', lastName: 'Admin' },
         roleId: 9,
         points: 0,
         createdAt: null,
@@ -152,8 +149,7 @@ describe(MemberEditModal.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Tommy',
-        lastName: 'Klein',
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
         roleId: 1,
         points: 0,
         createdAt: null,
@@ -191,8 +187,7 @@ describe(MemberEditModal.name, () => {
   describe('submit()', () => {
     const MEMBER = {
       id: 2,
-      firstName: 'Tommy',
-      lastName: 'Klein',
+      user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
       roleId: null,
       points: 0,
       createdAt: null,
@@ -245,7 +240,10 @@ describe(MemberEditModal.name, () => {
       void (fixture.componentInstance as unknown as { submit(): Promise<void> }).submit();
       const req = httpMock.expectOne(`${baseUrl}/members/${MEMBER.id}`);
       expect(req.request.method).toBe('PATCH');
-      req.flush({ ...MEMBER, firstName: 'Tommy', lastName: 'Klein' });
+      req.flush({
+        ...MEMBER,
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
+      });
       await flushMicrotasks();
       await fixture.whenStable();
 

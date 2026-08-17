@@ -4,10 +4,7 @@ import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '#core/services/auth/auth-service';
-import { TokensService } from '#core/services/tokens/tokens-service';
-import { ThemeService } from '#core/services/theme/theme-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
-import { isNil } from '#shared/utils/base-function';
 import { ApiError, isApiError } from '#core/models/api-response.model';
 
 import * as AuthActions from './auth.actions';
@@ -24,31 +21,27 @@ const toApiError = (err: unknown): ApiError =>
 export class AuthEffects {
   private readonly actions$ = inject(Actions);
   private readonly authService = inject(AuthService);
-  private readonly tokensService = inject(TokensService);
   private readonly websocketService = inject(WebsocketService);
   private readonly router = inject(Router);
 
+  /**
+   * ⚠️ Plus aucune garde locale préalable : le cookie de session est `httpOnly`,
+   * donc **rien ici ne peut savoir** s'il existe. C'est `/account/profile` qui
+   * répond — 200 ou 401 — et lui seul. Cet appel est aussi ce qui amorce le
+   * cookie CSRF côté serveur.
+   */
   rehydrate$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.rehydrateAuth),
       mergeMap(() =>
-        this.tokensService.getValidAccessToken().pipe(
-          switchMap((token) => {
-            if (isNil(token)) {
-              return of(AuthActions.rehydrationFailed());
-            }
-
-            return this.authService.getUserProfile$().pipe(
-              map((userProfile) =>
-                AuthActions.rehydrationSuccess({
-                  user: userProfile.user,
-                  member: userProfile.member,
-                  permissions: userProfile.permissions,
-                }),
-              ),
-              catchError(() => of(AuthActions.rehydrationFailed())),
-            );
-          }),
+        this.authService.getUserProfile$().pipe(
+          map((userProfile) =>
+            AuthActions.rehydrationSuccess({
+              user: userProfile.user,
+              member: userProfile.member,
+              permissions: userProfile.permissions,
+            }),
+          ),
           catchError(() => of(AuthActions.rehydrationFailed())),
         ),
       ),
@@ -60,8 +53,9 @@ export class AuthEffects {
       ofType(AuthActions.loginStart),
       mergeMap(({ email, password }) =>
         this.authService.login$(email, password).pipe(
-          switchMap((token) => {
-            this.tokensService.setTokens(token);
+          // Le jeton n'est pas conservé : le serveur a posé le cookie dans sa
+          // réponse, et le navigateur le renverra tout seul.
+          switchMap(() => {
             return this.authService.getUserProfile$().pipe(
               map((userProfile) =>
                 AuthActions.loginSuccess({
@@ -106,22 +100,28 @@ export class AuthEffects {
     { dispatch: false },
   );
 
+  /**
+   * ⚠️ Seul le serveur peut effacer un cookie `httpOnly` : la déconnexion est
+   * une requête, pas un nettoyage local.
+   *
+   * Le `localStorage.clear()` a disparu avec le jeton qu'il servait à effacer —
+   * et avec lui le contournement qui préservait la préférence de thème. Rien de
+   * sensible n'y vit plus.
+   *
+   * La navigation a lieu **quoi qu'il arrive** : si l'appel échoue, insister
+   * garderait l'utilisateur sur une page qu'il a demandé à quitter. Le cookie
+   * expirera de lui-même.
+   */
   logout$ = createEffect(
     () =>
       this.actions$.pipe(
         ofType(AuthActions.logout),
-        tap(() => {
+        mergeMap(() => {
           this.websocketService.shutdown();
-          this.tokensService.clear();
-          // La préférence de thème n'est pas une donnée de session : elle doit
-          // survivre à localStorage.clear() plutôt que se réinitialiser à chaque
-          // déconnexion.
-          const theme = localStorage.getItem(ThemeService.STORAGE_KEY);
-          localStorage.clear();
-          if (theme !== null) {
-            localStorage.setItem(ThemeService.STORAGE_KEY, theme);
-          }
-          this.router.navigate([AppRoutes.login]);
+          return this.authService.logout$().pipe(
+            catchError(() => of(undefined)),
+            tap(() => void this.router.navigate([AppRoutes.login])),
+          );
         }),
       ),
     { dispatch: false },

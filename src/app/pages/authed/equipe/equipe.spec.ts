@@ -60,8 +60,7 @@ describe(Equipe.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Tommy',
-        lastName: 'Klein',
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
         roleId: 1,
         points: 0,
         createdAt: null,
@@ -99,8 +98,7 @@ describe(Equipe.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Tommy',
-        lastName: 'Klein',
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
         roleId: 1,
         points: 0,
         createdAt: null,
@@ -167,8 +165,7 @@ describe(Equipe.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Tommy',
-        lastName: 'Klein',
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
         roleId: null,
         points: 0,
         createdAt: null,
@@ -195,8 +192,7 @@ describe(Equipe.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Ada',
-        lastName: 'Admin',
+        user: { id: 2, email: 'ada@bae.test', firstName: 'Ada', lastName: 'Admin' },
         roleId: 9,
         points: 0,
         createdAt: null,
@@ -235,8 +231,7 @@ describe(Equipe.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([
       {
         id: 2,
-        firstName: 'Tommy',
-        lastName: 'Klein',
+        user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
         roleId: null,
         points: 0,
         createdAt: null,
@@ -286,8 +281,7 @@ describe(Equipe.name, () => {
       httpMock.expectOne(`${baseUrl}/members`).flush([
         {
           id: 2,
-          firstName: 'Tommy',
-          lastName: 'Klein',
+          user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
           roleId: null,
           points: 0,
           createdAt: null,
@@ -349,8 +343,7 @@ describe(Equipe.name, () => {
       httpMock.expectOne(`${baseUrl}/members`).flush([
         {
           id: 2,
-          firstName: 'Tommy',
-          lastName: 'Klein',
+          user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
           roleId: null,
           points: 0,
           createdAt: null,

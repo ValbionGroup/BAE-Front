@@ -10,8 +10,7 @@ const baseUrl = 'http://api.test/v1';
 
 const MEMBER: ApiTeamMember = {
   id: 2,
-  firstName: 'Tommy',
-  lastName: 'Klein',
+  user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
   roleId: 1,
   points: 0,
   createdAt: '2026-07-08T20:33:03.835+00:00',
@@ -271,7 +270,14 @@ describe(TeamStore.name, () => {
     const loaded = store.load();
     httpMock
       .expectOne(`${baseUrl}/members`)
-      .flush([MEMBER, { ...MEMBER, id: 3, firstName: 'Ana' }]);
+      .flush([
+        MEMBER,
+        {
+          ...MEMBER,
+          id: 3,
+          user: { id: 3, email: 'ana@bae.test', firstName: 'Ana', lastName: 'Klein' },
+        },
+      ]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
     httpMock.expectOne(`${baseUrl}/logs`).flush([]);
@@ -282,7 +288,11 @@ describe(TeamStore.name, () => {
     const concurrent = store.updateMember(3, { firstName: 'Concurrent' });
 
     // Celle du membre 3 aboutit la première : elle est désormais dans l'état vivant.
-    httpMock.expectOne(`${baseUrl}/members/3`).flush({ ...MEMBER, id: 3, firstName: 'Concurrent' });
+    httpMock.expectOne(`${baseUrl}/members/3`).flush({
+      ...MEMBER,
+      id: 3,
+      user: { id: 3, email: 'ana@bae.test', firstName: 'Concurrent', lastName: 'Klein' },
+    });
     await concurrent;
 
     // Celle du membre 2 est refusée ensuite.
@@ -291,10 +301,10 @@ describe(TeamStore.name, () => {
       .flush({ message: 'Refusé par le serveur.' }, { status: 403, statusText: 'Forbidden' });
     await failing;
 
-    expect(store.members().find((m) => m.id === 2)?.firstName).toBe('Tommy');
+    expect(store.members().find((m) => m.id === 2)?.user?.firstName).toBe('Tommy');
     // Le cœur du test : une restauration par instantané `before` ramènerait la
     // ligne 3 à « Ana » et effacerait une écriture qui a pourtant abouti.
-    expect(store.members().find((m) => m.id === 3)?.firstName).toBe('Concurrent');
+    expect(store.members().find((m) => m.id === 3)?.user?.firstName).toBe('Concurrent');
     expect(store.memberError()).toBe('Refusé par le serveur.');
     expect(store.memberErrorId()).toBe(2);
   });

@@ -180,10 +180,21 @@ export const TeamStore = signalStore(
       // Écriture optimiste : le rôle affiché suit le patch tant que la réponse
       // n'est pas là. `role` est recalculé localement pour que le badge change
       // tout de suite — le serveur renverra la relation rechargée.
+      // ⚠️ Le nom vit sous `user`, pas à plat : l'écrire à plat ne changeait
+      // rien à l'écran, la ligne ne bougeant qu'au rechargement suivant.
+      const patchedUser =
+        patch.firstName === undefined && patch.lastName === undefined
+          ? target.user
+          : {
+              id: target.user?.id ?? target.id,
+              email: target.user?.email ?? '',
+              firstName: patch.firstName ?? target.user?.firstName ?? null,
+              lastName: patch.lastName ?? target.user?.lastName ?? null,
+            };
+
       const optimistic = {
         ...target,
-        ...(patch.firstName !== undefined ? { firstName: patch.firstName } : {}),
-        ...(patch.lastName !== undefined ? { lastName: patch.lastName } : {}),
+        user: patchedUser,
         ...(patch.roleId !== undefined
           ? {
               roleId: patch.roleId,

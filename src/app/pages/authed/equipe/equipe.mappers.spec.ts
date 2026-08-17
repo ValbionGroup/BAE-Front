@@ -17,8 +17,7 @@ const NOW = Date.parse('2026-08-05T12:00:00.000+00:00');
 function member(over: Partial<ApiTeamMember> = {}): ApiTeamMember {
   return {
     id: 2,
-    firstName: 'Tommy',
-    lastName: 'Klein',
+    user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
     roleId: 1,
     points: 3,
     createdAt: null,

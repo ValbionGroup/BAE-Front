@@ -1400,6 +1400,112 @@ clé horodatée aurait été pire que rien : l'apparence du dédoublonnage sans 
 
 ---
 
+## 0 octodecies. Cookie `httpOnly`, CSRF, CORS et fil d'activité — ✅ livré le 2026-08-16
+
+Branche **`feat/post-sso`** des deux côtés. Back **436 tests**, front **652 tests**, typecheck et
+lint verts. **Ferme les §9.7, §9.8, §9.10 et le fil d'activité du §8.**
+
+### CORS (§9.8) — l'allowlist ne pouvait matcher aucune requête
+
+`origin: ['bae.eirb.fr', 'dashboard.bae.eirb.fr', 'order.bae.eirb.fr']` — **sans schéma**. Un
+`Origin` HTTP vaut toujours `scheme://host[:port]` : **aucune** de ces valeurs n'aurait matché, et
+tout appel navigateur aurait été refusé en production. Invisible en développement, où `origin: true`
+accepte tout.
+
+Corrigé en **dérivant** la liste de `DASHBOARD_URL` / `PUBLIC_APP_URL` (`app/services/cors_origins.ts`) :
+ce sont déjà les destinations du callback SSO, et deux listes des mêmes origines auraient divergé.
+
+### Le cookie (§9.10) — et le piège qui a coûté le plus de temps
+
+Le jeton vit désormais dans un cookie `httpOnly` posé par la connexion **et** par le callback SSO
+(`app/services/session_cookie.ts`, un seul jeu d'options pour les trois chemins).
+
+⚠️ **Le `tokensGuard` d'AdonisJS ne lit que l'en-tête `Authorization`.** D'où
+`bearer_from_cookie_middleware`, qui traduit le cookie en en-tête — **et qui doit rester avant
+`initialize_auth_middleware`**. Raison : `silent_auth_middleware` appelle `ctx.auth.check()` sur
+*chaque* requête et **met le résultat en cache**. Placé après lui, le même en-tête — vérifié
+identique octet pour octet à un appel qui réussit — donnait **401**. Symptôme parfaitement
+déroutant : entrée identique, résultat différent.
+
+Côté front : `TokensService` **supprimé**, l'intercepteur réduit à `withCredentials: true`, et les
+deux gardes réécrits.
+
+⚠️ **`authGuard` ne peut plus rien décider de façon synchrone** : la présence du jeton n'existe plus
+côté client. Il attend que `/account/profile` réponde, en réutilisant la convention déjà posée par
+`permissionGuard` (`permissions` défini — `[]` compris — signale que le profil est réglé). Sans
+cette attente, **un simple F5 déconnecterait l'utilisateur**.
+
+`logout$` appelle désormais le serveur (seul lui peut effacer un cookie `httpOnly`) et le
+`localStorage.clear()` a disparu — avec lui le contournement qui préservait le thème.
+
+**Le temps réel n'a rien demandé** : Transmit crée déjà ses requêtes avec `credentials: 'include'`
+et son `EventSource` avec `withCredentials: true`. Il a suffi de retirer l'injection manuelle du
+`Bearer`.
+
+### CSRF (§9.7) — activé, mais seulement là où il protège
+
+⚠️ **Le CSRF ne s'applique qu'aux requêtes portant le cookie de session.** Deux exclusions, chacune
+motivée :
+
+- **En-tête `Authorization` explicite** → exclu. Un site tiers peut faire *envoyer* un cookie par le
+  navigateur, il ne peut pas *fabriquer* cet en-tête. Cela préserve aussi tests, curl et scripts.
+- **Aucun cookie de session** → exclu. Il n'y a alors pas d'authentification ambiante à détourner.
+  Cela couvre connexion et inscription, et surtout **préserve les codes de retour** : un appelant
+  anonyme doit recevoir 401 (« identifiez-vous »), pas 403 (« interdit »).
+
+⚠️ **L'ordre est structurant** : `shield` s'exécute **avant** `bearer_from_cookie_middleware`, donc
+au moment du test l'en-tête n'a pas encore été dérivé du cookie. Déplacer l'un des deux inverserait
+la condition et **désactiverait silencieusement toute la protection**.
+
+Le front recopie le cookie `XSRF-TOKEN` dans `X-XSRF-TOKEN` (`core/interceptors/csrf/`).
+⚠️ La valeur est transmise **brute** : Shield fait lui-même `decodeURIComponent(...).slice(2)` pour
+retirer le préfixe `e:` des cookies chiffrés. Décoder côté front la ferait décoder deux fois.
+
+**Vérifié contre le serveur réel**, avec un vrai bocal à cookies : connexion → 200 · lecture par le
+seul cookie → 200 · écriture sans jeton CSRF → **403** · avec jeton → **204** · lecture après
+déconnexion → **401**.
+
+⚠️ Le tour complet n'est **pas** dans la suite de tests : le client de Japa re-signe les cookies
+qu'on lui rejoue, ce qui casse la session. Le tester quand même aurait mesuré le harnais, pas le
+produit. La suite garde la moitié qui compte — le **refus**.
+
+### Le fil d'activité (§8) — il a enfin une source
+
+`ActivityFeedStore` renvoyait un tableau vide **en dur**. Il lit désormais `GET /v1/activity`.
+
+⚠️ **Seuls les faits portant un acteur y figurent.** Les rappels automatiques vivent dans la même
+table sans auteur ; les afficher donnerait « le système a rappelé la présence » et noierait les
+vraies actions. C'est aussi pourquoi ce fil n'est pas branché sur `GET /logs`, qui produirait
+« lespiet a créé /v1/events ».
+
+D'où `recordEvent()` à côté d'`emit()` : enregistrer un **fait** sans le livrer à personne. Un fil
+global n'a pas de destinataire, et confondre les deux obligerait à en inventer.
+
+⚠️ **Défaut trouvé en vérifiant à l'écran, pas par les tests** : `openTicket` n'enregistrait le fait
+que s'il avait des destinataires. Aucun rôle en base ne portait encore `ticket:read` (permission
+ajoutée au catalogue, pas encore semée) — l'ouverture disparaissait donc du fil. **Une action a eu
+lieu, qu'on la notifie ou non.** Corrigé, avec un test qui le garde.
+
+Trois émetteurs réels aujourd'hui : `ticket.opened`, `production.launched`, `event.settled`.
+**Volontairement pas d'événement par commande** : quelques centaines de ventes par soirée
+noieraient tout le reste.
+
+### Ce qui reste
+
+- ~~`ticket:read` / `ticket:write` ne sont pas encore en base~~ — **faux, vérifié le 2026-08-16** :
+  elles y sont, et sont attribuées à `President`, `Administrateur` et `Secretaire`.
+- ⚠️ **Le seeder de permissions n'élague pas.** `fetchOrCreateMany` n'insère que : une permission
+  retirée du catalogue survit indéfiniment en base, `GET /permissions` la liste, la matrice
+  l'affiche — et l'enregistrement échoue en **422**, le validateur ne la connaissant plus. Vu en
+  vrai : 8 rescapées d'un ancien nommage (`stock:create` / `stock:update`, remplacés par
+  `stock:write`), qu'aucun rôle n'utilise. Nettoyage :
+  `delete from permissions where permission like '%:create' or permission like '%:update';`
+- Le fil se remplira à mesure qu'on ajoutera des `recordEvent()` sur les gestes qui le méritent.
+- Le **front public** n'existe toujours pas : `app=public` est implémenté et testé, rien ne l'appelle.
+- **Logout global SSO** (`id_token_hint`) non implémenté.
+
+---
+
 ## 1. Ce qu'il faut savoir avant de toucher au code
 
 Ces pièges ont tous coûté du temps une première fois.

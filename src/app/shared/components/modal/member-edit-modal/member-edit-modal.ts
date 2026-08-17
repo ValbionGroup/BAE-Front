@@ -54,10 +54,10 @@ export class MemberEditModal {
   private readonly roleIdEdit = signal<number | null | undefined>(undefined);
 
   protected readonly firstName = computed(
-    () => this.firstNameEdit() ?? this.member()?.firstName ?? '',
+    () => this.firstNameEdit() ?? this.member()?.user?.firstName ?? '',
   );
   protected readonly lastName = computed(
-    () => this.lastNameEdit() ?? this.member()?.lastName ?? '',
+    () => this.lastNameEdit() ?? this.member()?.user?.lastName ?? '',
   );
   protected readonly roleId = computed(() => {
     const edited = this.roleIdEdit();
