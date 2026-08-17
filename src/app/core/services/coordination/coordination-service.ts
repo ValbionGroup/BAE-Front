@@ -4,18 +4,12 @@ import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 import type { JobPeriod } from '#core/models/job-period.model';
 
-// All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
 export interface ApiEvent {
   id: number;
   name: string;
   date: string;
   duration: number | null;
 }
-/**
- * `GET /members` returns the member's role as the full related record, not a
- * plain string. Reading `member.role` directly renders `[object Object]` —
- * always go through `role.name` for a display string.
- */
 export interface ApiRole {
   id: number;
   name: string;
@@ -31,8 +25,6 @@ export interface ApiMember {
 export interface ApiJob {
   id: number;
   name: string;
-  /** Which moment of the soirée this job belongs to. Never null server-side:
-   *  the column is `notNullable` with a `'during'` default. */
   type: JobPeriod;
 }
 export interface ApiEventJob {
@@ -44,49 +36,27 @@ export interface ApiAssignment {
   memberId: number;
   eventId: number;
   jobId: number;
-  /** A locked row is preserved verbatim by `POST /events/:id/matching`: the
-   *  algorithm neither deletes it nor puts its member back in the pool. */
   locked: boolean;
-  /** Points actually credited to the member when the matching engine created
-   *  this row (0 for rows created by hand). */
   pointsDelta: number;
-  /** ISO 8601 timestamp of the soirée's closing consolidation, or `null` when
-   *  this assignment's points have not been folded into `members.points` yet.
-   *  A non-null value on any row of an event means the event is settled:
-   *  `POST /events/:id/matching` on it answers 409 `E_EVENT_ALREADY_SETTLED`. */
   settledAt: string | null;
 }
 
-/** Un coéquipier sur un poste que je tiens. Rien de plus n'est exposé. */
 export interface ApiTeammate {
   id: number;
   firstName: string;
   lastName: string;
 }
 
-/**
- * Un de mes postes, déjà résolu par le back.
- *
- * `loadAll()` ne peut pas servir cet écran : quatre de ses sept requêtes sont
- * derrière `job:read`, une permission d'administration du catalogue qu'un
- * membre ordinaire n'a pas — et un `forkJoin` échoue en bloc au premier 403.
- */
 export interface ApiMyAssignment {
   eventId: number;
   jobId: number;
   jobName: string;
   jobType: JobPeriod;
   pointsDelta: number;
-  /** Effectif attendu sur le poste, ou `null` quand il n'a pas été fixé. */
   needed: number | null;
   teammates: readonly ApiTeammate[];
 }
 
-/**
- * `job_eligible_members` narrows which members the matching engine may put on
- * a job. A job with NO row here is unrestricted — absence means "open to
- * everyone", not "nobody is eligible".
- */
 export interface ApiJobEligibleMember {
   jobId: number;
   memberId: number;
@@ -112,34 +82,17 @@ export interface CoordinationApiData {
   preferences: ApiPreference[];
 }
 
-/** One row created by the matching engine. */
 export interface ApiMatchedAssignment {
   memberId: number;
   jobId: number;
-  /** Which period this assignment belongs to — one match per member per
-   *  period, restricted to the jobs of that `type`. */
   period: JobPeriod;
-  /** The member's global expressed rank (`member_job_preferences.rank`),
-   *  never the position inside the list restricted to this period. `null`
-   *  when the job was not ranked at all. */
   rankAchieved: number | null;
-  /** Points actually credited. No longer clamped: D6 drops `clampPoints`, so
-   *  this can legitimately be negative. */
   pointsDelta: number;
 }
 
-/** Summary returned by `POST /events/:id/matching`. */
 export interface ApiMatchingSummary {
   matched: ApiMatchedAssignment[];
-  /** Available members the engine could not place anywhere. */
   unmatchedMemberIds: number[];
-  /**
-   * Pre-existing locked rows, left untouched by the run.
-   *
-   * `period` is nullable here ONLY: it is `null` for an orphaned row whose
-   * job was deleted while an assignment still referenced it. Treat it as
-   * absent, never assume it is set.
-   */
   locked: { memberId: number; jobId: number; period: JobPeriod | null }[];
 }
 
@@ -160,25 +113,14 @@ export class CoordinationService {
     });
   }
 
-  /**
-   * Mes postes seuls, résolus côté serveur. Délibérément hors de `loadAll()` :
-   * celui-ci sert les écrans de coordination et exige `job:read` sur quatre de
-   * ses sept requêtes.
-   */
   loadMyAssignments(): Observable<ApiMyAssignment[]> {
     return this.http.get<ApiMyAssignment[]>(`${this.baseUrl}/account/assignments`);
   }
 
-  /**
-   * Deliberately NOT part of `loadAll()`: that round-trip is shared with
-   * `RoleAssignmentStore`, which already over-fetches, and only the
-   * coordination page needs the eligibility restrictions.
-   */
   getJobEligibleMembers(): Observable<ApiJobEligibleMember[]> {
     return this.http.get<ApiJobEligibleMember[]>(`${this.baseUrl}/job-eligible-members`);
   }
 
-  // Body keys are camelCase: apiCaseRequestInterceptor converts them to snake_case before sending.
   assign(
     eventId: number,
     memberId: number,
@@ -193,14 +135,6 @@ export class CoordinationService {
     });
   }
 
-  /**
-   * Flip the `locked` flag of an EXISTING assignment, in place.
-   *
-   * The composite key travels in the query string — the row has no surrogate
-   * id — while the body carries only the flag. `points_delta` is left alone by
-   * the backend: it is the matching engine's bookkeeping, refunded when a row
-   * is replaced, so a client must never overwrite it.
-   */
   setAssignmentLock(
     eventId: number,
     memberId: number,
@@ -214,16 +148,10 @@ export class CoordinationService {
     );
   }
 
-  /**
-   * Run the stable-matching engine for one event. Destructive: every
-   * non-locked assignment of the event is deleted (and its points refunded)
-   * before the new ones are written.
-   */
   runMatching(eventId: number): Observable<ApiMatchingSummary> {
     return this.http.post<ApiMatchingSummary>(`${this.baseUrl}/events/${eventId}/matching`, {});
   }
 
-  // Params are NOT converted by the interceptor — use snake_case explicitly.
   unassign(eventId: number, memberId: number, jobId: number): Observable<unknown> {
     return this.http.delete(`${this.baseUrl}/assignments`, {
       params: { member_id: memberId, event_id: eventId, job_id: jobId },

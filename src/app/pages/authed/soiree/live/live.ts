@@ -143,27 +143,14 @@ export class SoireeLive implements OnInit {
     return this.permissions().includes(permission);
   }
 
-  /**
-   * La page est ouverte à qui porte `order:serve` — consulter la file et faire
-   * avancer un ticket. Ses gestes lourds, eux, appartiennent à d'autres postes,
-   * et un bouton qui finirait en 403 vaut moins que pas de bouton du tout.
-   */
   protected readonly canProduce = computed<boolean>(() => this.has('stock:write'));
 
-  /**
-   * Clôturer enchaîne deux choses : le retour en stock (`POST
-   * /production-returns`, donc `stock:write`) puis l'atterrissage sur le bilan,
-   * dont la route exige `event:settle`. Il faut les deux, sinon la clôture
-   * s'arrête à mi-chemin.
-   */
   protected readonly canSettle = computed<boolean>(
     () => this.has('stock:write') && this.has('event:settle'),
   );
 
-  /** La caisse est une autre route, gardée : sans le droit, le lien rebondit. */
   protected readonly canCashier = computed<boolean>(() => this.has('order:write'));
 
-  /** Annuler touche à de l'argent déjà encaissé — c'est le poste caisse. */
   protected readonly canCancel = computed<boolean>(() => this.has('order:delete'));
 
   protected readonly icBell = LucideBell;
@@ -178,14 +165,12 @@ export class SoireeLive implements OnInit {
   protected readonly productionLines = signal<readonly ProductionLine[]>([]);
   protected readonly productionStatus = signal<'init' | 'loading' | 'loaded' | 'error'>('init');
 
-  /** L'horloge du comptoir. La seule donnée temps réel de cette page. */
   protected readonly now = signal<number>(Date.now());
 
   protected readonly wallClock = computed(() =>
     new Date(this.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
   );
 
-  /** L'heure de début, lue sur la soirée — plus jamais une constante. */
   protected readonly startsAt = computed(() => {
     const date = this.currentEvent()?.date;
     if (!date || Number.isNaN(date.getTime())) return null;
@@ -208,9 +193,6 @@ export class SoireeLive implements OnInit {
 
   protected readonly orders = inject(OrdersStore);
 
-  /**
-   * Encaissé du service. Les commandes annulées en sont exclues.
-   */
   protected readonly cashedCents = computed(() =>
     this.orders
       .orders()
@@ -222,7 +204,6 @@ export class SoireeLive implements OnInit {
     () => this.orders.orders().filter((order) => order.status !== 'cancelled').length,
   );
 
-  /** Les dix dernières transactions, plus récentes d'abord. */
   protected readonly recentOrders = computed(() =>
     [...this.orders.orders()]
       .filter((order) => order.status !== 'cancelled')
@@ -272,7 +253,6 @@ export class SoireeLive implements OnInit {
     return Math.round(((revenue - cost) / revenue) * 100);
   });
 
-  /** Encaissements par tranche de 5 minutes — la cadence de la maquette. */
   protected readonly cadence = computed(() => {
     const orders = this.orders.orders().filter((order) => order.status !== 'cancelled');
     if (orders.length === 0) return [] as number[];
@@ -302,11 +282,6 @@ export class SoireeLive implements OnInit {
     return order.lines.map((line) => `${line.productName} ×${line.quantity}`).join(' · ');
   }
 
-  /**
-   * Les trois colonnes du *kitchen display*, dans l'ordre du service. Une seule
-   * définition : elles ne diffèrent que par leur libellé, leur teinte et le
-   * geste qu'elles offrent.
-   */
   protected readonly columns = computed(() => [
     {
       key: 'pending' as const,
@@ -414,7 +389,6 @@ export class SoireeLive implements OnInit {
       this.orders.readyPreOrders().length,
   );
 
-  /** L'heure de retrait, `—` quand le client n'en a pas choisi. */
   protected pickupLabel(ticket: KitchenTicket): string {
     if (ticket.pickupAt === null) return '—';
     return this.timeOf(ticket.pickupAt);
@@ -457,12 +431,10 @@ export class SoireeLive implements OnInit {
     return Math.max(0, (this.now() - new Date(iso).getTime()) / 1000);
   }
 
-  /** Temps écoulé depuis la prise de commande, `m:ss`. */
   protected elapsed(ticket: KitchenTicket): string {
     return formatElapsed(this.secondsSince(ticket));
   }
 
-  /** Seuils de la maquette : à surveiller à 3 minutes, urgent à 5. */
   protected timerColor(ticket: KitchenTicket): string {
     if (ticket.status === 'ready') return 'text-ok';
     const seconds = this.secondsSince(ticket);
@@ -477,12 +449,6 @@ export class SoireeLive implements OnInit {
     void this.events.load();
   }
 
-  /**
-   * Recharge les compteurs après un lancement ou une clôture.
-   *
-   * L'identifiant est passé explicitement depuis l'effect : le relire ici
-   * ajouterait la dépendance que l'on vient précisément d'éviter.
-   */
   protected async refreshProduction(eventId?: string): Promise<void> {
     const id = eventId ?? this.currentEventId();
     if (!id) return;
@@ -537,7 +503,6 @@ export class SoireeLive implements OnInit {
     void this.router.navigate(['/caisse']);
   }
 
-  /** La page étant hors app-shell, il faut une porte de sortie explicite. */
   protected leave(): void {
     void this.router.navigate(['/']);
   }

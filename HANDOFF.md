@@ -31,7 +31,7 @@ Après les lots rôles × permissions et écritures Équipe (§0 bis, §0 ter) :
 ## 👉 Par où commencer, au 2026-08-16
 
 **L'ordre à jour est le §33 de `HANDOFF2.md`.** Les §12 (ici) et §30 (là-bas) restent utiles pour
-*pourquoi* les choses s'enchaînent, mais leurs listes sont dépassées : trois lots majeurs — documents
+_pourquoi_ les choses s'enchaînent, mais leurs listes sont dépassées : trois lots majeurs — documents
 imprimés, commandes/caisse, adhérents — ont été livrés depuis leur rédaction.
 
 **Le document a pris deux lots de retard sur le code, et ça s'est vu.** Les entrées §0 duodecies et
@@ -982,14 +982,14 @@ Branche `feat/adherents` **dans les deux dépôts**, non poussée. Back **307 te
 **584 tests** (134 fichiers), typecheck et lint verts des deux côtés. Ferme le §4.1 et une partie
 du §4.4. ⚠️ **Ne pas rejouer** : `feat/orders` n'était pas mergée au moment de ce lot.
 
-| Sujet                                                            | État                | Où                                                                 |
-| ---------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
-| Identité remontée de `members` vers `users`                      | ✅ **fait**         | migration `1787000000000`, nullables                                |
-| Table `clients` (téléphone, promotion, inscription, note)        | ✅ **fait**         | migration `1787000000001`, PK partagée avec `users` comme `members` |
-| `subscriptions.transaction_id`                                   | ✅ **fait**         | migration `1787000000002`, montant historique fidèle                |
-| `ClientsController` + `SubscriptionsController`                  | ✅ **fait**         | gardés par `client:*` et `subscription:*`                           |
-| Page `adherents` branchée, garde de route et entrée de menu      | ✅ **fait**         | `permissionGuard('client:read')`                                    |
-| Seeder de 8 adhérents couvrant les quatre états                  | ✅ **fait**         | `client_seeder.ts`                                                  |
+| Sujet                                                       | État        | Où                                                                  |
+| ----------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| Identité remontée de `members` vers `users`                 | ✅ **fait** | migration `1787000000000`, nullables                                |
+| Table `clients` (téléphone, promotion, inscription, note)   | ✅ **fait** | migration `1787000000001`, PK partagée avec `users` comme `members` |
+| `subscriptions.transaction_id`                              | ✅ **fait** | migration `1787000000002`, montant historique fidèle                |
+| `ClientsController` + `SubscriptionsController`             | ✅ **fait** | gardés par `client:*` et `subscription:*`                           |
+| Page `adherents` branchée, garde de route et entrée de menu | ✅ **fait** | `permissionGuard('client:read')`                                    |
+| Seeder de 8 adhérents couvrant les quatre états             | ✅ **fait** | `client_seeder.ts`                                                  |
 
 ### Les trois règles qui ont façonné ce lot
 
@@ -1040,15 +1040,15 @@ Plan : `docs/superpowers/plans/2026-08-12-documents-imprimes.md`.
 absente » et laissait ouverte la décision client/serveur. **La décision a été prise : côté
 serveur, Puppeteer.** Sept routes existent, toutes suffixées `/pdf` :
 
-| Document                     | Route                                     |
-| ---------------------------- | ----------------------------------------- |
-| Liste de courses             | `GET /events/:id/shopping-list/pdf`       |
-| Fiche recette                | `GET /products/:id/recipe/pdf`            |
-| Plan de production           | `GET /events/:id/production-plan/pdf`     |
-| Feuille de clôture           | `GET /events/:id/production-returns/pdf`  |
-| Inventaire de stock par lots | `GET /stock-batches/inventory/pdf`        |
-| Étiquettes de lot            | `GET /stock-batches/labels/pdf`           |
-| Feuille d'affectation        | `GET /events/:id/assignments/pdf`         |
+| Document                     | Route                                    |
+| ---------------------------- | ---------------------------------------- |
+| Liste de courses             | `GET /events/:id/shopping-list/pdf`      |
+| Fiche recette                | `GET /products/:id/recipe/pdf`           |
+| Plan de production           | `GET /events/:id/production-plan/pdf`    |
+| Feuille de clôture           | `GET /events/:id/production-returns/pdf` |
+| Inventaire de stock par lots | `GET /stock-batches/inventory/pdf`       |
+| Étiquettes de lot            | `GET /stock-batches/labels/pdf`          |
+| Feuille d'affectation        | `GET /events/:id/assignments/pdf`        |
 
 Côté front, le service partagé est `core/services/print/`.
 
@@ -1075,19 +1075,19 @@ Back : PR `feat: orders (#26)`, **16 commits**. Front : PR `feat: orders (#9)`, 
 Les deux sont sur `main`. **Ce lot ferme le §3.4 (« Commandes / caisse » et « Précommandes »), le
 §32 de `HANDOFF2.md`, et la majeure partie du §11 (QR émis par le BAE).**
 
-| Sujet                                                       | État        | Où                                                       |
-| ----------------------------------------------------------- | ----------- | -------------------------------------------------------- |
-| `OrdersController` + `PreOrdersController`                  | ✅ **fait** | `/events/:id/orders`, `/events/:id/pre-orders`           |
-| Cinq statuts de cuisine (`pending → in_progress → ready →`) | ✅ **fait** | migration `1786818947391`, transitions gardées serveur   |
-| `orders.client_id` — l'acheteur, distinct de `member_id`    | ✅ **fait** | FK vers **`users`**, pas `members`                       |
-| Encaissement espèces et rendu de monnaie                    | ✅ **fait** | `order_service.ts`, prix relus serveur                   |
-| Permissions `order:read` / `order:write` / `order:delete`   | ✅ **fait** | annuler porte sur de l'argent → permission distincte     |
-| Diffusion SSE de la file cuisine                            | ✅ **fait** | `@adonisjs/transmit`, `start/routes/realtime.ts`         |
-| QR d'identité, fast pass et précommande — les trois scannés | ✅ **fait** | `QrsController`, `POST /qr/verify`                       |
-| Recherche d'acheteur au comptoir (chemin dégradé)           | ✅ **fait** | `GET /buyers`                                            |
-| Précommandes : suivi cuisine, heure de retrait, remise      | ✅ **fait** | `POST /pre-orders/:id/collect`                           |
-| Refus de vendre au-delà du produit disponible               | ✅ **fait** | `e8eff39`                                                |
-| Caisse, `soiree/live`, kitchen display, vue mobile          | ✅ **fait** | front, y compris raccourcis clavier F1 / +/− / Entrée    |
+| Sujet                                                       | État        | Où                                                     |
+| ----------------------------------------------------------- | ----------- | ------------------------------------------------------ |
+| `OrdersController` + `PreOrdersController`                  | ✅ **fait** | `/events/:id/orders`, `/events/:id/pre-orders`         |
+| Cinq statuts de cuisine (`pending → in_progress → ready →`) | ✅ **fait** | migration `1786818947391`, transitions gardées serveur |
+| `orders.client_id` — l'acheteur, distinct de `member_id`    | ✅ **fait** | FK vers **`users`**, pas `members`                     |
+| Encaissement espèces et rendu de monnaie                    | ✅ **fait** | `order_service.ts`, prix relus serveur                 |
+| Permissions `order:read` / `order:write` / `order:delete`   | ✅ **fait** | annuler porte sur de l'argent → permission distincte   |
+| Diffusion SSE de la file cuisine                            | ✅ **fait** | `@adonisjs/transmit`, `start/routes/realtime.ts`       |
+| QR d'identité, fast pass et précommande — les trois scannés | ✅ **fait** | `QrsController`, `POST /qr/verify`                     |
+| Recherche d'acheteur au comptoir (chemin dégradé)           | ✅ **fait** | `GET /buyers`                                          |
+| Précommandes : suivi cuisine, heure de retrait, remise      | ✅ **fait** | `POST /pre-orders/:id/collect`                         |
+| Refus de vendre au-delà du produit disponible               | ✅ **fait** | `e8eff39`                                              |
+| Caisse, `soiree/live`, kitchen display, vue mobile          | ✅ **fait** | front, y compris raccourcis clavier F1 / +/− / Entrée  |
 
 ### Trois règles de conception à ne pas perdre
 
@@ -1095,7 +1095,7 @@ Les deux sont sur `main`. **Ce lot ferme le §3.4 (« Commandes / caisse » et �
    montant est relu de `event_products.price` côté serveur. Un total envoyé par le client serait
    falsifiable, et il s'agit d'argent (`app/validators/order.ts`).
 2. **`client_id` et `member_id` répondent à deux questions distinctes** et coexistent :
-   *qui achète* (un `user`, membre ou client) et *quel membre a pris la commande*.
+   _qui achète_ (un `user`, membre ou client) et _quel membre a pris la commande_.
 3. **`__transmit/events` reste non gardé, délibérément** : `EventSource` ne peut pas porter
    d'en-tête, donc pas de `Bearer`. Le flux nu ne transporte rien sans abonnement, et ce sont
    `subscribe` / `unsubscribe` — de vraies requêtes HTTP — qui filtrent.
@@ -1121,12 +1121,12 @@ Le merge n'a produit **aucun conflit textuel** — les deux lots touchent des fi
 mais **quatre défauts**, dont deux étaient de vraies régressions. Back remis à **371 tests verts**,
 typecheck et lint propres ; front vérifié **629 tests**, typecheck vert (il n'était pas touché).
 
-| # | Défaut                                                                   | Régression du merge ? | Correctif                          |
-| - | ------------------------------------------------------------------------ | --------------------- | ---------------------------------- |
-| A | 15 tests appelaient `MemberFactory.merge({ firstName })`                 | ✅ oui                | idiome `.with('user', 1, …)`       |
-| B | `buyer_service` lisait `members.first_name` → **500** sur tout QR        | ✅ oui                | requête sur `users`                |
-| C | `expiring_soon` asserté à `1` en absolu                                  | ❌ non                | assertion relative à la liste      |
-| D | regex `\d{4}` sur le numéro d'adhérent                                   | ❌ non                | `\d{4,}`                           |
+| #   | Défaut                                                            | Régression du merge ? | Correctif                     |
+| --- | ----------------------------------------------------------------- | --------------------- | ----------------------------- |
+| A   | 15 tests appelaient `MemberFactory.merge({ firstName })`          | ✅ oui                | idiome `.with('user', 1, …)`  |
+| B   | `buyer_service` lisait `members.first_name` → **500** sur tout QR | ✅ oui                | requête sur `users`           |
+| C   | `expiring_soon` asserté à `1` en absolu                           | ❌ non                | assertion relative à la liste |
+| D   | regex `\d{4}` sur le numéro d'adhérent                            | ❌ non                | `\d{4,}`                      |
 
 ### B n'était pas un dommage de merge, mais un bug révélé par lui
 
@@ -1149,7 +1149,7 @@ absolues sur une base **partagée et peuplée** :
 - `expiring_soon` était asserté à `1` alors que la base porte **30** cotisations à moins de 30
   jours de l'échéance. Les quatre assertions voisines comparaient le résumé à la liste, donc
   passaient ; seule celle-là citait un nombre.
-- ⚠️ **`padStart(4, '0')` est une largeur *minimale*, pas un format fixe.** La séquence
+- ⚠️ **`padStart(4, '0')` est une largeur _minimale_, pas un format fixe.** La séquence
   `users.id` est à **15 126** : le numéro rendu est `EXT-2025-15521`, et `\d{4}` ne matche plus.
   **Le code était juste, le test faux** — et il aurait cassé en production au 10 000ᵉ compte.
 
@@ -1167,15 +1167,15 @@ verts. **Ferme le §15 de `HANDOFF2.md`** et le §19 (helper de présence). Spec
 `docs/superpowers/plans/2026-08-16-notifications-mailer.md` · Exploitation :
 **`BAE-Back/NOTIFICATIONS.md`**.
 
-| Sujet                                                | État        | Où                                             |
-| ---------------------------------------------------- | ----------- | ---------------------------------------------- |
-| Table `activity_events` (le fait, global)            | ✅ **fait** | migration `1787100000000` + `dedupe_key`       |
-| Table `notifications` (la livraison, par canal)      | ✅ **fait** | migration `1787100000001`                      |
-| Helper `presenceStates` à trois états (§19)          | ✅ **fait** | `app/services/presence_service.ts`             |
-| Émetteur générique `emit`                            | ✅ **fait** | `app/services/notification_service.ts`         |
-| `@adonisjs/mail` + transport configurable            | ✅ **fait** | `config/mail.ts`, défaut `log`                 |
-| `notify:presence-pending` / `-upcoming` / `:dispatch`| ✅ **fait** | `commands/notify_*.ts`                         |
-| Vérification à l'écran de la chaîne complète         | ✅ **faite**| soirée temporaire, puis base restaurée         |
+| Sujet                                                 | État         | Où                                       |
+| ----------------------------------------------------- | ------------ | ---------------------------------------- |
+| Table `activity_events` (le fait, global)             | ✅ **fait**  | migration `1787100000000` + `dedupe_key` |
+| Table `notifications` (la livraison, par canal)       | ✅ **fait**  | migration `1787100000001`                |
+| Helper `presenceStates` à trois états (§19)           | ✅ **fait**  | `app/services/presence_service.ts`       |
+| Émetteur générique `emit`                             | ✅ **fait**  | `app/services/notification_service.ts`   |
+| `@adonisjs/mail` + transport configurable             | ✅ **fait**  | `config/mail.ts`, défaut `log`           |
+| `notify:presence-pending` / `-upcoming` / `:dispatch` | ✅ **fait**  | `commands/notify_*.ts`                   |
+| Vérification à l'écran de la chaîne complète          | ✅ **faite** | soirée temporaire, puis base restaurée   |
 
 ### L'idempotence est en base, pas dans le code — et c'est le cœur du lot
 
@@ -1237,16 +1237,16 @@ Branche **`feat/sso-keycloak`** dans les deux dépôts (back : 3 commits sur `fe
 front : 1 commit sur `main`). Back **404 tests**, front **632 tests**, typecheck et lint verts.
 **Ferme l'essentiel du §9** et le bug de login du §9.4.
 
-| Sujet                                                | État        | Où                                          |
-| ---------------------------------------------------- | ----------- | ------------------------------------------- |
-| Migration `keycloak_sub` + `password` nullable       | ✅ **fait** | `1787200000000`                             |
-| Garde contre le 500 sur compte sans mot de passe     | ✅ **fait** | `User.verifyPasswordCredentials`            |
-| Service OIDC avec PKCE S256 et découverte            | ✅ **fait** | `oidc_service.ts`, `openid-client` **v6.8** |
-| Résolution utilisateur en trois temps                | ✅ **fait** | `sso_provisioning_service.ts`               |
-| `redirect()` / `callback()`                          | ✅ **fait** | `keycloak_auth_controller.ts`               |
-| Gardes d'audience `member` / `client`                | ✅ **fait** | `audience_middleware.ts`, **appliqués**     |
-| Realm de développement reproductible                 | ✅ **fait** | `scripts/setup-dev-keycloak.sh`             |
-| Bouton EirbConnect sur la page de login              | ✅ **fait** | `pages/guest/login/`                        |
+| Sujet                                            | État        | Où                                          |
+| ------------------------------------------------ | ----------- | ------------------------------------------- |
+| Migration `keycloak_sub` + `password` nullable   | ✅ **fait** | `1787200000000`                             |
+| Garde contre le 500 sur compte sans mot de passe | ✅ **fait** | `User.verifyPasswordCredentials`            |
+| Service OIDC avec PKCE S256 et découverte        | ✅ **fait** | `oidc_service.ts`, `openid-client` **v6.8** |
+| Résolution utilisateur en trois temps            | ✅ **fait** | `sso_provisioning_service.ts`               |
+| `redirect()` / `callback()`                      | ✅ **fait** | `keycloak_auth_controller.ts`               |
+| Gardes d'audience `member` / `client`            | ✅ **fait** | `audience_middleware.ts`, **appliqués**     |
+| Realm de développement reproductible             | ✅ **fait** | `scripts/setup-dev-keycloak.sh`             |
+| Bouton EirbConnect sur la page de login          | ✅ **fait** | `pages/guest/login/`                        |
 
 ### La décision qui structure tout : où vit la séparation dashboard / public
 
@@ -1296,11 +1296,11 @@ notre code.**
 
 Script de bout en bout (`redirect` → formulaire → soumission → `callback`), trois scénarios :
 
-| Scénario                          | Résultat                                          |
-| --------------------------------- | ------------------------------------------------- |
-| `dashboard`, sans ligne `members` | `?sso_error=not_a_member`, **aucun cookie**       |
+| Scénario                          | Résultat                                            |
+| --------------------------------- | --------------------------------------------------- |
+| `dashboard`, sans ligne `members` | `?sso_error=not_a_member`, **aucun cookie**         |
 | `public`, sans ligne `clients`    | ligne `clients` créée (JIT), cookie posé, → `:4201` |
-| `dashboard`, avec ligne `members` | cookie posé, → `:4200`                            |
+| `dashboard`, avec ligne `members` | cookie posé, → `:4200`                              |
 
 PKCE `S256` et `state` vérifiés présents dans l'URL d'autorisation.
 
@@ -1323,26 +1323,26 @@ PKCE `S256` et `state` vérifiés présents dans l'URL d'autorisation.
 Branche **`feat/sso-keycloak`** des deux côtés. Back **421 tests**, front **638 tests**, typecheck
 et lint verts. **Ferme le §4 du présent document** et le §26 de `HANDOFF2.md`.
 
-| Page                 | Ce qui l'alimente désormais                                    |
-| -------------------- | -------------------------------------------------------------- |
-| `precommandes-admin` | `GET /events/:id/pre-orders` + `setStatus` + `collect`         |
-| `paiements`          | `GET /transactions?eventId=`                                   |
-| `notifications`      | **nouveau** `GET/PATCH /account/notifications`                 |
-| `soiree/bilan`       | **nouveau** `GET /events/:id/summary`                          |
-| `tickets`            | **nouveau domaine** : `tickets`, `ticket_messages`, 5 routes   |
+| Page                 | Ce qui l'alimente désormais                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `precommandes-admin` | `GET /events/:id/pre-orders` + `setStatus` + `collect`       |
+| `paiements`          | `GET /transactions?eventId=`                                 |
+| `notifications`      | **nouveau** `GET/PATCH /account/notifications`               |
+| `soiree/bilan`       | **nouveau** `GET /events/:id/summary`                        |
+| `tickets`            | **nouveau domaine** : `tickets`, `ticket_messages`, 5 routes |
 
 ### La règle qui a gouverné les cinq : ne pas inventer ce qui n'existe pas
 
 Le §0 nonies l'avait établi (« des chiffres faux sur un écran de service sont pires qu'un écran
 vide ») ; ce lot l'applique systématiquement. **Ce qui a été retiré des maquettes, et pourquoi :**
 
-| Retiré                                  | Parce que                                                                      |
-| --------------------------------------- | ------------------------------------------------------------------------------ |
-| Montants sur `precommandes-admin`       | `PreOrderTicket` n'en porte **aucun**, délibérément : payée un autre jour      |
-| Allergies, n° d'adhérent, « derniers retraits » | Aucune colonne, aucun endpoint                                          |
-| KPI « Lydia online » / « QR sur place »  | `transactions.type` est `cash \| lydia` — la distinction n'existe pas en base  |
-| KPI « CB » sur le bilan                  | Idem : absent de l'enum                                                        |
-| Marge nette, scores d'équipe             | Demanderaient le coût des denrées consommées, que rien ne calcule              |
+| Retiré                                          | Parce que                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| Montants sur `precommandes-admin`               | `PreOrderTicket` n'en porte **aucun**, délibérément : payée un autre jour     |
+| Allergies, n° d'adhérent, « derniers retraits » | Aucune colonne, aucun endpoint                                                |
+| KPI « Lydia online » / « QR sur place »         | `transactions.type` est `cash \| lydia` — la distinction n'existe pas en base |
+| KPI « CB » sur le bilan                         | Idem : absent de l'enum                                                       |
+| Marge nette, scores d'équipe                    | Demanderaient le coût des denrées consommées, que rien ne calcule             |
 
 Chaque retrait est **expliqué à l'écran ou en commentaire**, jamais silencieux.
 
@@ -1370,7 +1370,7 @@ ticket d'un autre rend **404 et non 403** : distinguer les deux confirmerait son
 changer qui reçoit), `ticket.updated` vers l'auteur.
 
 ⚠️ **`ticket.updated` n'a délibérément aucun `dedupeKey`.** Le dédoublonnage protège d'une
-*détection* répétée — un cron qui repasse. Un changement de statut est une *action humaine*, et un
+_détection_ répétée — un cron qui repasse. Un changement de statut est une _action humaine_, et un
 aller-retour `en cours → clos → en cours` doit notifier trois fois. Un test le garde. Y mettre une
 clé horodatée aurait été pire que rien : l'apparence du dédoublonnage sans l'effet.
 
@@ -1534,12 +1534,12 @@ passwordConfirmation }`. Vérifier l'ancien via `User.verifyCredentials`, puis p
 
 > **Cette section est close** (2026-08-16). Conservée comme trace, pas comme travail restant.
 
-| Domaine              | Tables                                  | Contrôleur                                     | Lot              |
-| -------------------- | --------------------------------------- | ---------------------------------------------- | ---------------- |
-| Commandes / caisse   | `orders`, `order_products`              | `OrdersController`                             | §0 terdecies     |
-| Précommandes         | `pre_orders`, `pre_order_items`         | `PreOrdersController`                          | §0 terdecies     |
-| Cotisations          | `subscriptions` (+ `fast_passes`)       | `SubscriptionsController`, `ClientsController` | §0 undecies ⚠️   |
-| Produits d'événement | `event_products` (`quantity`, `price`)  | `EventProductsController`                      | §0 septies       |
+| Domaine              | Tables                                 | Contrôleur                                     | Lot            |
+| -------------------- | -------------------------------------- | ---------------------------------------------- | -------------- |
+| Commandes / caisse   | `orders`, `order_products`             | `OrdersController`                             | §0 terdecies   |
+| Précommandes         | `pre_orders`, `pre_order_items`        | `PreOrdersController`                          | §0 terdecies   |
+| Cotisations          | `subscriptions` (+ `fast_passes`)      | `SubscriptionsController`, `ClientsController` | §0 undecies ⚠️ |
+| Produits d'événement | `event_products` (`quantity`, `price`) | `EventProductsController`                      | §0 septies     |
 
 ⚠️ **La ligne « Cotisations » n'est vraie que sur la branche `feat/adherents`** — la PR #27 du back
 est encore ouverte. Voir §0 quaterdecies.
@@ -1559,20 +1559,20 @@ Toutes sont déjà en `loadComponent`, il ne manque que les données.
 > **vérifiées une par une** : aucune n'injecte le moindre service, elles portent toutes des
 > tableaux littéraux.
 
-| Page                                  | État                                                                                                    |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| ~~`caisse` + `cloture`~~              | ✅ **branchée** (§0 terdecies) — encaissement espèces, prix relus serveur                               |
-| ~~`soiree/live`~~                     | ✅ **branchée** (§0 terdecies) — file cuisine en SSE via Transmit, pas un websocket                     |
-| ~~`precommandes-admin`~~ → voir infra | ⚠️ le **back** est prêt (`PreOrdersController`), la **page** ne l'appelle pas encore                    |
-| ~~`adherents`~~                       | ✅ **branchée** (§0 undecies) — mais le back attend la PR #27, cf. §0 quaterdecies                      |
-| `soiree/bilan` (210 l.)               | `event_products` — la table **et** le contrôleur existent désormais : plus rien ne bloque               |
-| `precommandes-admin` (358 l.)         | `pre_orders` — **le back est livré**, la page garde ses `pickups` littéraux                             |
-| `paiements` (186 l.)                  | `transactions` en lecture + rapprochement. `GET /transactions` existe, gardé par `transaction:read`     |
-| `notifications` (147 l.)              | Aucune table. Dépend du §15 (mailer) et du §21                                                          |
-| `tickets` (149 l.)                    | Support / helpdesk — **aucune table**. Voir §4.2 et §26. À faire **après** le §15                       |
-| `parametres/integrations`, `modules`  | Aucune table. Voir §22.3 — c'est une décision d'architecture, pas une page                              |
-| `stocks/scanner`                      | Le scan **existe** depuis le §0 terdecies (`barcode/`, `POST /qr/verify`) ; reste la décision produit    |
-| `etats`                               | **À laisser tel quel** : galerie d'états d'interface (404, hors-ligne, vide…), pas une page de données  |
+| Page                                  | État                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| ~~`caisse` + `cloture`~~              | ✅ **branchée** (§0 terdecies) — encaissement espèces, prix relus serveur                              |
+| ~~`soiree/live`~~                     | ✅ **branchée** (§0 terdecies) — file cuisine en SSE via Transmit, pas un websocket                    |
+| ~~`precommandes-admin`~~ → voir infra | ⚠️ le **back** est prêt (`PreOrdersController`), la **page** ne l'appelle pas encore                   |
+| ~~`adherents`~~                       | ✅ **branchée** (§0 undecies) — mais le back attend la PR #27, cf. §0 quaterdecies                     |
+| `soiree/bilan` (210 l.)               | `event_products` — la table **et** le contrôleur existent désormais : plus rien ne bloque              |
+| `precommandes-admin` (358 l.)         | `pre_orders` — **le back est livré**, la page garde ses `pickups` littéraux                            |
+| `paiements` (186 l.)                  | `transactions` en lecture + rapprochement. `GET /transactions` existe, gardé par `transaction:read`    |
+| `notifications` (147 l.)              | Aucune table. Dépend du §15 (mailer) et du §21                                                         |
+| `tickets` (149 l.)                    | Support / helpdesk — **aucune table**. Voir §4.2 et §26. À faire **après** le §15                      |
+| `parametres/integrations`, `modules`  | Aucune table. Voir §22.3 — c'est une décision d'architecture, pas une page                             |
+| `stocks/scanner`                      | Le scan **existe** depuis le §0 terdecies (`barcode/`, `POST /qr/verify`) ; reste la décision produit  |
+| `etats`                               | **À laisser tel quel** : galerie d'états d'interface (404, hors-ligne, vide…), pas une page de données |
 
 **Les deux moins chères sont désormais `soiree/bilan` et `precommandes-admin`** : leur backend est
 livré, il ne manque que le câblage — exactement la situation qu'était `adhérents` avant le §0
@@ -2154,12 +2154,12 @@ Ce que la doc donne :
 
 **Correspondance des claims — ils ne sont pas standards, et c'est structurant :**
 
-| Claim EirbConnect | Colonne              | Rôle                                                                                                           |
-| ----------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `uid`             | **`users.cas_id`**   | Le login école. C'est **lui** la correspondance annuaire cherchée au §9.4, et la clé de réconciliation du §9.5 |
+| Claim EirbConnect | Colonne                | Rôle                                                                                                                                 |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `uid`             | **`users.cas_id`**     | Le login école. C'est **lui** la correspondance annuaire cherchée au §9.4, et la clé de réconciliation du §9.5                       |
 | `prenom`          | **`users.first_name`** | Pas `given_name`. ⚠️ **Corrigé le 2026-08-16** : plus `clients.first_name`, la colonne a été remontée sur `users` (voir §0 undecies) |
-| `nom`             | **`users.last_name`**  | Pas `family_name`. Même correction                                                                             |
-| `sub`             | `users.keycloak_sub` | UUID interne du realm                                                                                          |
+| `nom`             | **`users.last_name`**  | Pas `family_name`. Même correction                                                                                                   |
+| `sub`             | `users.keycloak_sub`   | UUID interne du realm                                                                                                                |
 
 Autrement dit, **la question du §9.4 est résolue** : `uid` alimente `cas_id`, la réconciliation des
 comptes existants est possible, et aucun mapper supplémentaire n'est à demander pour ça. En
@@ -2342,9 +2342,9 @@ maxAge: '10m', httpOnly: true, sameSite: 'lax' })`), génère `state` et `code_v
 
 4. **C'est ici que le §4.4 s'applique** — le provisionnement dépend du cookie `sso_app` :
 
-   | `app`       | Règle                                                                                                                                                                          |
-   | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-   | `dashboard` | **Aucun provisionnement.** Pas de ligne `members` → redirection vers une page « accès non autorisé ». On n'ouvre pas le dashboard à quiconque possède un compte SSO de l'école |
+   | `app`       | Règle                                                                                                                                                                                                                                                  |
+   | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `dashboard` | **Aucun provisionnement.** Pas de ligne `members` → redirection vers une page « accès non autorisé ». On n'ouvre pas le dashboard à quiconque possède un compte SSO de l'école                                                                         |
    | `public`    | `Client.firstOrCreate({ id: user.id }, { registeredAt })`, le nom allant sur `users` (§0 undecies) — c'est le JIT provisioning, et il n'a de sens que de ce côté. **C'est l'unique chemin de création d'un compte client** : le dashboard n'en a aucun |
 
    C'est la différence de fond entre les deux portes : la zone publique s'auto-provisionne, le

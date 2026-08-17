@@ -19,8 +19,6 @@ export const routes: Routes = [
     loadComponent: () => import('#pages/guest/login/login').then((m) => m.Login),
   },
   { path: AppRoutes.soiree, pathMatch: 'full', redirectTo: AppRoutes.soireeLive },
-  // Hors `AppShell` : le kitchen display occupe l'écran entier, sans menu
-  // latéral — c'est un poste de service, pas une page de navigation.
   {
     path: AppRoutes.soireeLive,
     canActivate: [authGuard, permissionGuardFor(AppRoutes.soireeLive)],

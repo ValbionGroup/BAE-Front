@@ -54,12 +54,8 @@ import {
 } from '#shared/utils/presence-lock';
 import { startOfDay } from 'date-fns';
 
-// Re-exported: this screen's spec imports the two helpers from here, and so
-// does `my-presences.ts` — both pages just consume the shared, single-source
-// wording instead of each keeping its own copy.
 export { presenceErrorView, presenceLockExplanation, type PresenceErrorView };
 
-/** Number of past soirées charted behind each label of the period selector. */
 const PERIOD_LIMITS: readonly number[] = [1, 3, 6, 12];
 
 const EUR = new Intl.NumberFormat('fr-FR', {
@@ -82,7 +78,6 @@ export class Home implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly currentDate = new Date();
 
-  // Each card pulls from its own NgRx (signal) store with independent loading state.
   protected readonly stats = inject(StatsStore);
   protected readonly nextEvent = inject(NextEventStore);
   protected readonly agenda = inject(AgendaStore);
@@ -91,20 +86,13 @@ export class Home implements OnInit {
   protected readonly role = inject(RoleAssignmentStore);
   protected readonly quickActions = inject(QuickActionsStore);
   protected readonly activity = inject(ActivityFeedStore);
-  /**
-   * Injected directly (not through `RoleAssignmentStore`) so the presence
-   * lock can read the member's own postes the same way "mes présences" does —
-   * this page already loads it via `role.load()`, since both stores share the
-   * same singleton and single `CoordinationService.loadAll()` round trip.
-   */
+
   private readonly memberAssignments = inject(MemberAssignmentsStore);
 
   protected readonly Presence = Presence;
 
-  /** Where a member goes to rank the postes they want. */
   protected readonly preferencesLink = `/${AppRoutes.parametresPreferences}`;
 
-  /** "1er choix", "2e choix"… — French ordinals are irregular only at 1. */
   protected rankLabel(rank: number): string {
     return rank === 1 ? '1er choix' : `${rank}e choix`;
   }
@@ -123,34 +111,17 @@ export class Home implements OnInit {
     return status === 'init' || status === 'loading' || status === 'refreshing';
   });
 
-  /**
-   * Members actually assigned to the next soirée, from `/v1/assignments`.
-   *
-   * `NextEventStore.data().members` is hardcoded to 0 (that store is a pure
-   * projection of `/v1/events`, which carries no roster), so the hero binds
-   * here instead of displaying a zero that is not a real count.
-   */
   protected readonly nextEventAssignees = computed<number | null>(() => {
     const event = this.responseEvent();
-    // `GET /events` porte le compte : le déduire de `/assignments` exigeait
-    // `job:read`, et rendait donc « 0 » à tout membre hors coordination.
     return event?.assigneeCount ?? null;
   });
 
-  /**
-   * Postes really held by the logged-in member on `responseEvent()` — at most
-   * one per period (D1), ordered préparation → soirée → nettoyage. This is
-   * exactly what "mes présences" reads to decide the presence lock; the two
-   * screens must agree.
-   */
   protected readonly heldPostes = computed<readonly MemberAssignment[]>(() => {
     const event = this.responseEvent();
     if (!event) return [];
     return this.memberAssignments.assignmentsFor(event.id);
   });
 
-  /** D8/D9: holding any poste on the soirée blocks declaring oneself absent —
-   *  the whole soirée, not the moment. Going back to present is never blocked. */
   protected readonly presenceLocked = computed(() => this.heldPostes().length > 0);
 
   protected readonly presenceLockId = computed<string | null>(() => {
@@ -177,8 +148,6 @@ export class Home implements OnInit {
   }
 
   ngOnInit(): void {
-    // StatsStore, AlertsStore, AgendaStore and NextEventStore derive from these
-    // two and fetch nothing themselves — loading the sources is what fills them.
     void this.events.load();
     void this.stocks.load();
 
@@ -196,8 +165,6 @@ export class Home implements OnInit {
   protected async respondAbsent(): Promise<void> {
     const e = this.responseEvent();
     if (!e) return;
-    // The button is disabled, but a keyboard or a stale click must not spend a
-    // round trip on a refusal this page already knows about.
     if (this.presenceLocked()) return;
     await this.submitPresence(e, Presence.ABSENT);
   }
@@ -209,17 +176,12 @@ export class Home implements OnInit {
     const view = presenceErrorView(result.error);
     this.toast.show({ type: 'error', title: view.title, message: view.message });
 
-    // The refusal is proof this page's assignments are stale — another tab, or
-    // a coordinator staffing the member since the page loaded. Re-read so the
-    // lock and the poste behind it become visible instead of leaving a button
-    // that looks usable and is not.
     void this.memberAssignments.refresh();
   }
 
   protected readonly memberData = this.store.selectSignal(selectMember);
   protected readonly firstName = computed(() => this.memberData()?.firstName ?? '');
 
-  // Static presentation-only icon refs.
   protected readonly icCheck = LucideCheck;
   protected readonly icPlus = LucidePlus;
   protected readonly icCalendar = LucideCalendar;
@@ -250,7 +212,6 @@ export class Home implements OnInit {
     if (route !== undefined) void this.router.navigateByUrl(`/${route}`);
   }
 
-  // Skeleton row counts (templates can't construct arrays inline).
   protected readonly r3: readonly null[] = [null, null, null];
   protected readonly r4: readonly null[] = [null, null, null, null];
   protected readonly r6: readonly null[] = [null, null, null, null, null, null];
