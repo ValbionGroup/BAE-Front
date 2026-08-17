@@ -27,14 +27,16 @@
         >Push équipe</bfd-btn
       >
       <bfd-btn kind="ghost" size="md" (clicked)="leave()">Quitter</bfd-btn>
-      <bfd-btn
-        kind="danger"
-        size="md"
-        [icon]="icLock"
-        [disabled]="currentEvent() === null"
-        (clicked)="closeNight()"
-        >Clôturer la soirée</bfd-btn
-      >
+      @if (canSettle()) {
+        <bfd-btn
+          kind="danger"
+          size="md"
+          [icon]="icLock"
+          [disabled]="currentEvent() === null"
+          (clicked)="closeNight()"
+          >Clôturer la soirée</bfd-btn
+        >
+      }
     </div>
   </header>
 
@@ -258,7 +260,7 @@
                     }
 
                     <div class="mt-2.5 flex gap-1.5">
-                      @if (!isPreOrder && column.key === 'in_progress') {
+                      @if (!isPreOrder && column.key === 'in_progress' && canCancel()) {
                         <bfd-btn kind="ghost" size="sm" (clicked)="cancelTicket(ticket)"
                           >Annuler</bfd-btn
                         >
@@ -464,17 +466,19 @@
                       ></div>
                     </div>
                     @let urgent = row.level === 'out' || row.level === 'low';
-                    <bfd-btn
-                      [kind]="urgent ? 'primary' : row.beyondPlan ? 'ghost' : 'secondary'"
-                      size="sm"
-                      [title]="
-                        row.beyondPlan
-                          ? 'Plan atteint — produire au-delà consommera du stock non prévu.'
-                          : 'Lancer une fournée : prélève les lots et met à jour le vendable.'
-                      "
-                      (clicked)="openRun(row)"
-                      >{{ !urgent && row.beyondPlan ? 'Au-delà du plan' : 'Relancer' }}</bfd-btn
-                    >
+                    @if (canProduce()) {
+                      <bfd-btn
+                        [kind]="urgent ? 'primary' : row.beyondPlan ? 'ghost' : 'secondary'"
+                        size="sm"
+                        [title]="
+                          row.beyondPlan
+                            ? 'Plan atteint — produire au-delà consommera du stock non prévu.'
+                            : 'Lancer une fournée : prélève les lots et met à jour le vendable.'
+                        "
+                        (clicked)="openRun(row)"
+                        >{{ !urgent && row.beyondPlan ? 'Au-delà du plan' : 'Relancer' }}</bfd-btn
+                      >
+                    }
                   </div>
                 </div>
               }
@@ -485,11 +489,13 @@
             <p class="mt-2.5 text-[11px] text-danger">{{ message }}</p>
           }
 
-          <div class="mt-2.5">
-            <bfd-btn kind="ghost" size="sm" [full]="true" (clicked)="openCaisse()"
-              >Ouvrir la caisse</bfd-btn
-            >
-          </div>
+          @if (canCashier()) {
+            <div class="mt-2.5">
+              <bfd-btn kind="ghost" size="sm" [full]="true" (clicked)="openCaisse()"
+                >Ouvrir la caisse</bfd-btn
+              >
+            </div>
+          }
         </div>
       </aside>
     </div>

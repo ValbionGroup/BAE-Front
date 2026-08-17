@@ -22,7 +22,10 @@ import {
   LucideZap,
 } from '@lucide/angular';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { EventsStore } from '#core/store/events.store';
+import { selectPermissions } from '#core/store/auth/auth.selector';
+import type { Permission } from '#core/models/permission.model';
 import {
   ProductionService,
   type ProductionLine,
@@ -133,6 +136,35 @@ export class SoireeLive implements OnInit {
   private readonly production = inject(ProductionService);
   private readonly modal = inject(ModalService);
   private readonly realtime = inject(WebsocketService);
+
+  private readonly permissions = inject(Store).selectSignal(selectPermissions);
+
+  private has(permission: Permission): boolean {
+    return this.permissions().includes(permission);
+  }
+
+  /**
+   * La page est ouverte à qui porte `order:serve` — consulter la file et faire
+   * avancer un ticket. Ses gestes lourds, eux, appartiennent à d'autres postes,
+   * et un bouton qui finirait en 403 vaut moins que pas de bouton du tout.
+   */
+  protected readonly canProduce = computed<boolean>(() => this.has('stock:write'));
+
+  /**
+   * Clôturer enchaîne deux choses : le retour en stock (`POST
+   * /production-returns`, donc `stock:write`) puis l'atterrissage sur le bilan,
+   * dont la route exige `event:settle`. Il faut les deux, sinon la clôture
+   * s'arrête à mi-chemin.
+   */
+  protected readonly canSettle = computed<boolean>(
+    () => this.has('stock:write') && this.has('event:settle'),
+  );
+
+  /** La caisse est une autre route, gardée : sans le droit, le lien rebondit. */
+  protected readonly canCashier = computed<boolean>(() => this.has('order:write'));
+
+  /** Annuler touche à de l'argent déjà encaissé — c'est le poste caisse. */
+  protected readonly canCancel = computed<boolean>(() => this.has('order:delete'));
 
   protected readonly icBell = LucideBell;
   protected readonly icScan = LucideScanLine;

@@ -19,8 +19,11 @@
     </div>
   </div>
 
-  <!-- Espace -->
   <!--
+    Les groupes et leurs entrées sont filtrés par permission dans le composant :
+    un groupe dont toutes les entrées sont masquées n'arrive pas jusqu'ici, donc
+    son titre ne peut pas flotter seul.
+
     La navigation est la seule zone extensible : elle absorbe la place restante et
     défile quand les entrées dépassent la hauteur d'écran, ce qui garde le pied de
     barre atteignable. `min-h-0` est indispensable — sans lui un item de flex colonne
@@ -29,93 +32,41 @@
     d'onglet actif en `-left-2.5` reste à l'intérieur du conteneur de défilement.
   -->
   <nav class="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 -mx-2.5">
-    <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
-      Espace
-    </div>
-    @for (item of espace(); track item.id) {
-      <a
-        [routerLink]="item.route"
-        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
-        [routerLinkActiveOptions]="{ exact: item.route === '/' }"
-        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
-      >
-        <span
-          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
-        ></span>
-        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
-        <span class="flex-1">{{ item.label }}</span>
-        @if (item.badge) {
+    @for (group of groups(); track group.label) {
+      <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
+        {{ group.label }}
+      </div>
+      @for (item of group.items; track item.id) {
+        <a
+          [routerLink]="'/' + item.route"
+          routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
+          [routerLinkActiveOptions]="{ exact: isHome(item.route) }"
+          class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
+        >
           <span
-            class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
-            >{{ item.badge }}</span
-          >
-        }
-        @if (item.alert) {
-          <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
-        }
-      </a>
-    }
-
-    <!-- Préparation -->
-    <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
-      Préparation
-    </div>
-    @for (item of preparation; track item.id) {
-      <a
-        [routerLink]="item.route"
-        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
-        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
-      >
-        <span
-          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
-        ></span>
-        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
-        <span class="flex-1">{{ item.label }}</span>
-        @if (item.badge) {
-          <span
-            class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
-            >{{ item.badge }}</span
-          >
-        }
-        @if (item.alert) {
-          <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
-        }
-      </a>
-    }
-
-    <!-- Soirée -->
-    <div class="text-[10px] font-semibold tracking-wider text-faint px-3 pt-2 pb-1 uppercase">
-      Soirée
-    </div>
-    @for (item of soiree; track item.id) {
-      <a
-        [routerLink]="item.route"
-        routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
-        class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
-      >
-        <span
-          class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
-        ></span>
-        <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
-        <span class="flex-1">{{ item.label }}</span>
-        @if (item.badge) {
-          <span
-            class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
-            >{{ item.badge }}</span
-          >
-        }
-        @if (item.alert) {
-          <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
-        }
-      </a>
+            class="bae-active-bar absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-sm bg-blue opacity-0"
+          ></span>
+          <svg [lucideIcon]="item.icon" [size]="16" class="bae-icon text-muted"></svg>
+          <span class="flex-1">{{ item.label }}</span>
+          @if (item.badge) {
+            <span
+              class="text-[10px] font-semibold px-1.5 py-px rounded-lg bg-blue-soft text-blue tnum"
+              >{{ item.badge }}</span
+            >
+          }
+          @if (item.alert) {
+            <span class="w-1.5 h-1.5 rounded-full bg-warn"></span>
+          }
+        </a>
+      }
     }
   </nav>
 
-  <!-- Footer nav (Tickets / Paramètres) -->
+  <!-- Footer nav (Tickets / Équipe / Paramètres) -->
   <div class="shrink-0 pt-2.5 mt-2.5 border-t border-border-s flex flex-col">
     @for (item of footer(); track item.id) {
       <a
-        [routerLink]="item.route"
+        [routerLink]="'/' + item.route"
         routerLinkActive="bg-surface-2 text-text [&_.bae-active-bar]:opacity-100 [&_.bae-icon]:text-blue"
         class="relative flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-2 hover:bg-surface-2 cursor-pointer"
       >

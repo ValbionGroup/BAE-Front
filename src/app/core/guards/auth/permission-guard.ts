@@ -5,6 +5,8 @@ import { filter, map, take } from 'rxjs';
 import { AuthState } from '#core/models/auth/auth-state.model';
 import { selectAuthState } from '#core/store/auth/auth.selector';
 import { AppRoutes } from '#app/app-routes.const';
+import { Permission } from '#core/models/permission.model';
+import { GuardedRoute, ROUTE_PERMISSIONS } from '#core/auth/route-permissions';
 
 type SettledAuthState = AuthState & { permissions: string[] };
 
@@ -21,7 +23,7 @@ const isSettled = (state: AuthState | undefined): state is SettledAuthState =>
  * avant de trancher, plutôt que de lire une valeur qui n'est pas encore là.
  */
 export const permissionGuard =
-  (permission: string): CanActivateFn =>
+  (permission: Permission): CanActivateFn =>
   () => {
     const router = inject(Router);
     const store = inject(Store);
@@ -35,3 +37,12 @@ export const permissionGuard =
       ),
     );
   };
+
+/**
+ * Le même garde, mais sa permission vient de `ROUTE_PERMISSIONS` plutôt que
+ * d'un littéral écrit sur place. C'est la forme à utiliser dans `app.routes.ts` :
+ * elle rend impossible qu'une route soit gardée par une permission et son
+ * entrée de menu masquée par une autre.
+ */
+export const permissionGuardFor = (route: GuardedRoute): CanActivateFn =>
+  permissionGuard(ROUTE_PERMISSIONS[route]);

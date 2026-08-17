@@ -3,7 +3,7 @@ import { AppRoutes } from './app-routes.const';
 import { AppShell } from '#pages/app-shell/app-shell';
 import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
-import { permissionGuard } from '#core/guards/auth/permission-guard';
+import { permissionGuardFor } from '#core/guards/auth/permission-guard';
 
 export { AppRoutes } from './app-routes.const';
 
@@ -23,7 +23,7 @@ export const routes: Routes = [
   // latéral — c'est un poste de service, pas une page de navigation.
   {
     path: AppRoutes.soireeLive,
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuardFor(AppRoutes.soireeLive)],
     loadComponent: () => import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
   },
   {
@@ -53,11 +53,12 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.adherents,
-        canActivate: [permissionGuard('client:read')],
+        canActivate: [permissionGuardFor(AppRoutes.adherents)],
         loadComponent: () => import('#pages/authed/adherents/adherents').then((m) => m.Adherents),
       },
       {
         path: AppRoutes.stocks,
+        canActivate: [permissionGuardFor(AppRoutes.stocks)],
         children: [
           {
             path: '',
@@ -73,10 +74,12 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.recettes,
+        canActivate: [permissionGuardFor(AppRoutes.recettes)],
         loadComponent: () => import('#pages/authed/recettes/recettes').then((m) => m.Recettes),
       },
       {
         path: AppRoutes.coordination,
+        canActivate: [permissionGuardFor(AppRoutes.coordination)],
         children: [
           {
             path: '',
@@ -93,6 +96,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.logistique,
+        canActivate: [permissionGuardFor(AppRoutes.logistique)],
         children: [
           {
             path: '',
@@ -109,6 +113,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.caisse,
+        canActivate: [permissionGuardFor(AppRoutes.caisse)],
         children: [
           {
             path: '',
@@ -124,6 +129,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.precommandesAdmin,
+        canActivate: [permissionGuardFor(AppRoutes.precommandesAdmin)],
         loadComponent: () =>
           import('#pages/authed/precommandes-admin/precommandes-admin').then(
             (m) => m.PrecommandesAdmin,
@@ -134,6 +140,7 @@ export const routes: Routes = [
         children: [
           {
             path: 'bilan',
+            canActivate: [permissionGuardFor(AppRoutes.soireeBilan)],
             loadComponent: () =>
               import('#pages/authed/soiree/bilan/bilan').then((m) => m.SoireeBilan),
           },
@@ -141,6 +148,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.paiements,
+        canActivate: [permissionGuardFor(AppRoutes.paiements)],
         loadComponent: () => import('#pages/authed/paiements/paiements').then((m) => m.Paiements),
       },
       {
@@ -183,7 +191,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.equipe,
-        canActivate: [permissionGuard('role:read')],
+        canActivate: [permissionGuardFor(AppRoutes.equipe)],
         loadComponent: () => import('#pages/authed/equipe/equipe').then((m) => m.Equipe),
       },
       {

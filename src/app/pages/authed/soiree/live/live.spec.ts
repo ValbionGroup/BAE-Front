@@ -3,8 +3,11 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { provideMockStore } from '@ngrx/store/testing';
+
 import { SoireeLive } from './live';
 import { OrdersStore } from '#core/store/orders.store';
+import { Permission } from '#core/models/permission.model';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -25,7 +28,26 @@ describe(SoireeLive.name, () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SoireeLive],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // Le poste de pilotage complet : les tests de ce groupe portent sur
+        // l'affichage, pas sur les droits. Ceux-là sont plus bas.
+        provideMockStore({
+          initialState: {
+            auth: {
+              permissions: [
+                'order:serve',
+                'order:write',
+                'order:delete',
+                'stock:write',
+                'event:settle',
+              ],
+            },
+          },
+        }),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SoireeLive);
@@ -309,5 +331,71 @@ describe(SoireeLive.name, () => {
     // Sans heure de retrait, on prépare : elle passe devant celle de 21 h.
     const store = TestBed.inject(OrdersStore);
     expect(store.pendingPreOrders().map((t) => t.id)).toEqual([41, 39]);
+  });
+});
+
+describe(`${SoireeLive.name} — ce que la cuisine a le droit de faire`, () => {
+  /**
+   * Rend la page avec une soirée en cours et le jeu de permissions donné.
+   * Les requêtes de suite (commandes, production, précommandes) sont vidées en
+   * bloc : ce groupe ne teste que les boutons.
+   */
+  async function render(permissions: Permission[]): Promise<ComponentFixture<SoireeLive>> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [SoireeLive],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideMockStore({ initialState: { auth: { permissions } } }),
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(SoireeLive);
+    const http = TestBed.inject(HttpTestingController);
+    await fixture.whenStable();
+
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    for (const request of http.match(() => true)) request.flush([]);
+    await settle();
+    fixture.detectChanges();
+
+    return fixture;
+  }
+
+  const text = (fixture: ComponentFixture<SoireeLive>) =>
+    (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+  it('un membre de cuisine consulte et fait avancer, sans rien clôturer', async () => {
+    const fixture = await render(['order:serve']);
+
+    // Clôturer déclenche un retour en stock (`stock:write`) puis atterrit sur le
+    // bilan (`event:settle`) : sans les deux, le bouton est une impasse.
+    expect(text(fixture)).not.toContain('Clôturer la soirée');
+    // La caisse est une autre route, gardée : proposer le lien la ferait
+    // rebondir vers l'accueil.
+    expect(text(fixture)).not.toContain('Ouvrir la caisse');
+  });
+
+  it('rend la clôture à qui porte à la fois stock:write et event:settle', async () => {
+    const fixture = await render(['order:serve', 'stock:write', 'event:settle']);
+
+    expect(text(fixture)).toContain('Clôturer la soirée');
+  });
+
+  it('retient la clôture quand il ne manque que event:settle', async () => {
+    const fixture = await render(['order:serve', 'stock:write']);
+
+    expect(text(fixture)).not.toContain('Clôturer la soirée');
+  });
+
+  it('rend le lien caisse à qui encaisse', async () => {
+    const fixture = await render(['order:serve', 'order:write']);
+
+    expect(text(fixture)).toContain('Ouvrir la caisse');
   });
 });
