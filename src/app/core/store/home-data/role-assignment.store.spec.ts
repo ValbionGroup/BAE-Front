@@ -10,12 +10,29 @@ import { RoleAssignmentStore } from './role-assignment.store';
 
 const MEMBER = { id: 1, points: 0, firstName: 'Lucas', lastName: 'ESPIET', role: 'admin' };
 
-interface CoordinationPayloads {
-  members?: unknown[];
-  jobs?: unknown[];
-  eventJobs?: unknown[];
+interface Payloads {
   assignments?: unknown[];
   preferences?: unknown[];
+}
+
+/** Un poste déjà résolu par `GET /account/assignments`. */
+function poste(
+  jobId: number,
+  jobName: string,
+  jobType: string,
+  pointsDelta: number,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    eventId: 7,
+    jobId,
+    jobName,
+    jobType,
+    pointsDelta,
+    needed: null,
+    teammates: [],
+    ...extra,
+  };
 }
 
 describe(RoleAssignmentStore.name, () => {
@@ -39,7 +56,6 @@ describe(RoleAssignmentStore.name, () => {
     baseUrl = TestBed.inject(API_BASE_URL);
   });
 
-  /** `/events` is requested twice: once by EventsStore, once inside loadAll(). */
   async function loadEvents(): Promise<void> {
     const loaded = events.load();
     httpMock.expectOne(`${baseUrl}/events`).flush([
@@ -53,15 +69,15 @@ describe(RoleAssignmentStore.name, () => {
     await loaded;
   }
 
-  async function loadCoordination(payloads: CoordinationPayloads = {}): Promise<void> {
+  /**
+   * Deux routes personnelles. Le panneau se nourrissait de
+   * `CoordinationService.loadAll()`, dont quatre des sept requêtes exigent
+   * `job:read` — un membre ordinaire ne voyait donc jamais son propre rôle.
+   */
+  async function loadCoordination(payloads: Payloads = {}): Promise<void> {
     const loaded = store.load();
-    httpMock.expectOne(`${baseUrl}/events`).flush([]);
-    httpMock.expectOne(`${baseUrl}/members`).flush(payloads.members ?? []);
-    httpMock.expectOne(`${baseUrl}/jobs`).flush(payloads.jobs ?? []);
-    httpMock.expectOne(`${baseUrl}/event-jobs`).flush(payloads.eventJobs ?? []);
-    httpMock.expectOne(`${baseUrl}/assignments`).flush(payloads.assignments ?? []);
-    httpMock.expectOne(`${baseUrl}/responses`).flush([]);
-    httpMock.expectOne(`${baseUrl}/preferences`).flush(payloads.preferences ?? []);
+    httpMock.expectOne(`${baseUrl}/account/assignments`).flush(payloads.assignments ?? []);
+    httpMock.expectOne(`${baseUrl}/account/preferences`).flush(payloads.preferences ?? []);
     await loaded;
   }
 
@@ -77,18 +93,14 @@ describe(RoleAssignmentStore.name, () => {
     expect(store.data()).toEqual([]);
   });
 
-  it('builds the panel from assignments, jobs, event-jobs and members', async () => {
+  it('builds the panel from the resolved assignment', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
-      eventJobs: [{ eventId: 7, jobId: 1, count: 3 }],
       assignments: [
-        { memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 6 },
-        { memberId: 2, eventId: 7, jobId: 1, locked: false, pointsDelta: 6 },
-      ],
-      members: [
-        { id: 1, firstName: 'Lucas', lastName: 'ESPIET', roleId: null, role: null, points: 0 },
-        { id: 2, firstName: 'Tommy', lastName: 'Klein', roleId: null, role: null, points: 0 },
+        poste(1, 'Caisse', 'during', 6, {
+          needed: 3,
+          teammates: [{ id: 2, firstName: 'Tommy', lastName: 'Klein' }],
+        }),
       ],
     });
 
@@ -98,10 +110,18 @@ describe(RoleAssignmentStore.name, () => {
     expect(data[0].period).toBe('during');
     expect(data[0].meta).toEqual([
       { label: 'Soirée', value: 'Soirée test' },
+      // Les coéquipiers excluent l'appelant : l'effectif tenu, c'est eux + moi.
       { label: 'Effectif du poste', value: '2/3' },
       { label: 'Coéquipiers', value: 'Tommy K.' },
       { label: 'Crédit de priorité', value: '+6 pts' },
     ]);
+  });
+
+  it('affiche l’effectif sans cible quand elle n’est pas fixée', async () => {
+    await loadEvents();
+    await loadCoordination({ assignments: [poste(1, 'Caisse', 'during', 0)] });
+
+    expect(store.data()[0].meta).toContainEqual({ label: 'Effectif du poste', value: '1' });
   });
 
   /**
@@ -111,14 +131,10 @@ describe(RoleAssignmentStore.name, () => {
   it('reports which of the member’s choices the poste was', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [
-        { id: 1, name: 'Caisse', type: 'during' },
-        { id: 2, name: 'Bar', type: 'during' },
-      ],
-      assignments: [{ memberId: 1, eventId: 7, jobId: 2, locked: false, pointsDelta: 8 }],
+      assignments: [poste(2, 'Bar', 'during', 8)],
       preferences: [
-        { memberId: 1, jobId: 1, preferenceRank: 1 },
-        { memberId: 1, jobId: 2, preferenceRank: 2 },
+        { jobId: 1, name: 'Caisse', preferenceRank: 1 },
+        { jobId: 2, name: 'Bar', preferenceRank: 2 },
       ],
     });
 
@@ -128,8 +144,7 @@ describe(RoleAssignmentStore.name, () => {
   it('reports a null rank for a poste the member never ranked', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
-      assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 0 }],
+      assignments: [poste(1, 'Caisse', 'during', 0)],
       preferences: [],
     });
 
@@ -138,10 +153,7 @@ describe(RoleAssignmentStore.name, () => {
 
   it('exposes the priority credit this assignment moved', async () => {
     await loadEvents();
-    await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
-      assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 10 }],
-    });
+    await loadCoordination({ assignments: [poste(1, 'Caisse', 'during', 10)] });
 
     expect(store.data()[0].meta).toContainEqual({
       label: 'Crédit de priorité',
@@ -156,10 +168,7 @@ describe(RoleAssignmentStore.name, () => {
    */
   it('renders a negative credit rather than hiding it', async () => {
     await loadEvents();
-    await loadCoordination({
-      jobs: [{ id: 1, name: 'Caisse', type: 'during' }],
-      assignments: [{ memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: -4 }],
-    });
+    await loadCoordination({ assignments: [poste(1, 'Caisse', 'during', -4)] });
 
     expect(store.data()[0].meta).toContainEqual({
       label: 'Crédit de priorité',
@@ -176,19 +185,14 @@ describe(RoleAssignmentStore.name, () => {
   it('shows every poste held on the soirée, ordered before → during → after', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [
-        { id: 1, name: 'Installation tables', type: 'before' },
-        { id: 2, name: 'Service', type: 'during' },
-        { id: 3, name: 'Vaisselle', type: 'after' },
-      ],
       // Deliberately out of chronological order in the API response.
       assignments: [
-        { memberId: 1, eventId: 7, jobId: 3, locked: false, pointsDelta: 6 },
-        { memberId: 1, eventId: 7, jobId: 1, locked: false, pointsDelta: 4 },
-        { memberId: 1, eventId: 7, jobId: 2, locked: false, pointsDelta: -4 },
+        poste(3, 'Vaisselle', 'after', 6),
+        poste(1, 'Installation tables', 'before', 4),
+        poste(2, 'Service', 'during', -4),
       ],
       preferences: [
-        { memberId: 1, jobId: 2, preferenceRank: 1 },
+        { jobId: 2, name: 'Service', preferenceRank: 1 },
         // job 1 and job 3 are deliberately left unranked.
       ],
     });
@@ -204,26 +208,22 @@ describe(RoleAssignmentStore.name, () => {
     ]);
   });
 
-  it('reads the preferred job from /preferences, null when never expressed', async () => {
+  it('reads the preferred job from the ranking itself, null when never expressed', async () => {
     await loadEvents();
     await loadCoordination({
-      jobs: [
-        { id: 1, name: 'Caisse' },
-        { id: 2, name: 'Bar' },
-      ],
       preferences: [
-        { memberId: 1, jobId: 2, preferenceRank: 2 },
-        { memberId: 1, jobId: 1, preferenceRank: 1 },
+        { jobId: 2, name: 'Bar', preferenceRank: 2 },
+        { jobId: 1, name: 'Caisse', preferenceRank: 1 },
       ],
     });
 
     expect(store.preferredPoste()).toBe('Caisse');
   });
 
-  it('reports an error when the coordination call fails', async () => {
+  it('reports an error when the load fails', async () => {
     const loaded = store.load();
     // forkJoin fails as soon as one leg does; the others are cancelled.
-    httpMock.expectOne(`${baseUrl}/events`).error(new ProgressEvent('failed'));
+    httpMock.expectOne(`${baseUrl}/account/assignments`).error(new ProgressEvent('failed'));
     await loaded;
 
     expect(store.error()).toBeTruthy();

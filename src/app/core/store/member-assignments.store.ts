@@ -1,16 +1,15 @@
 import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { Store } from '@ngrx/store';
-import { lastValueFrom } from 'rxjs';
+import { forkJoin, lastValueFrom } from 'rxjs';
 import {
   CoordinationService,
-  type ApiAssignment,
-  type ApiEventJob,
-  type ApiJob,
-  type ApiMember,
-  type ApiPreference,
+  type ApiMyAssignment,
+  type ApiTeammate,
 } from '#core/services/coordination/coordination-service';
-import { selectMember } from '#core/store/auth/auth.selector';
+import {
+  PreferencesService,
+  type ApiJobPreference,
+} from '#core/services/preferences/preferences-service';
 import {
   JOB_PERIODS,
   JOB_PERIOD_LABELS,
@@ -21,20 +20,23 @@ import {
 import type { LoadingStatus } from '#core/models/global.model';
 
 /**
- * The coordination payload every "what am I doing on this soirée?" screen needs,
- * fetched once.
+ * Ce dont tout écran « qu'est-ce que je fais sur cette soirée ? » a besoin.
  *
- * Extracted out of `home-data/role-assignment.store.ts` rather than generalised
- * in place. That store already held the raw payload for EVERY soirée — only its
- * `data` computed narrowed it to the next one — so the loading path was already
- * general; what was home-specific was the presentation. Widening it would have
- * left "mes présences" importing a store from `home-data/`, and would have hung
- * a second, unrelated public surface off a panel model. The split keeps a single
- * round trip (`CoordinationService.loadAll()`), which is the constraint that
- * actually mattered: no third loading path.
+ * Extrait de `home-data/role-assignment.store.ts` plutôt que généralisé sur
+ * place : ce store portait déjà la charge brute de TOUTES les soirées — seul son
+ * computed `data` la réduisait à la prochaine — donc le chemin de chargement
+ * était déjà général ; ce qui était propre à l'accueil, c'était la présentation.
  *
- * Known over-fetch, inherited: `loadAll()` also pulls `/events` and
- * `/responses`, which nothing here reads.
+ * ⚠️ Ne consomme **plus** `CoordinationService.loadAll()`. Ce round-trip tire
+ * `/jobs`, `/event-jobs`, `/responses` et `/preferences`, tous gardés par
+ * `job:read` — une permission d'administration du catalogue des postes que seule
+ * la coordination détient. Un `forkJoin` échouant en bloc au premier 403, le
+ * panneau « mon rôle » ne se chargeait jamais pour un membre ordinaire.
+ *
+ * Il lit désormais deux routes personnelles, sans permission : mes affectations
+ * déjà résolues, et mon classement. Ce que l'écran montre de non personnel — qui
+ * d'autre est sur mon poste, combien il en faut — est calculé par le back, qui
+ * le restreint aux postes que je tiens.
  */
 
 /** One `member_event_assigned_jobs` row of the logged-in member, resolved. */
@@ -52,25 +54,24 @@ export interface MemberAssignment {
    * "you got what you asked for, it cost you priority" — never an error.
    */
   readonly pointsDelta: number;
+  /** Effectif attendu sur le poste, ou `null` quand il n'a pas été fixé. */
+  readonly needed: number | null;
+  /** Les autres membres affectés au même poste sur la même soirée. */
+  readonly teammates: readonly ApiTeammate[];
 }
 
 interface MemberAssignmentsState {
   readonly status: LoadingStatus;
   readonly error: string | null;
-  readonly assignments: readonly ApiAssignment[];
-  readonly jobs: readonly ApiJob[];
-  readonly eventJobs: readonly ApiEventJob[];
-  readonly members: readonly ApiMember[];
-  readonly preferences: readonly ApiPreference[];
+  readonly assignments: readonly ApiMyAssignment[];
+  /** Mon classement, trié par rang. Sert à dire de quel choix vient un poste. */
+  readonly preferences: readonly ApiJobPreference[];
 }
 
 const initialState: MemberAssignmentsState = {
   status: 'init',
   error: null,
   assignments: [],
-  jobs: [],
-  eventJobs: [],
-  members: [],
   preferences: [],
 };
 
@@ -80,8 +81,8 @@ const initialState: MemberAssignmentsState = {
  * member's own list because of an unknown enum value would read as "you hold
  * nothing" — the exact opposite of the truth.
  */
-function periodOf(job: { type: string } | undefined): JobPeriod {
-  return job && isJobPeriod(job.type) ? job.type : 'during';
+function periodOf(type: string): JobPeriod {
+  return isJobPeriod(type) ? type : 'during';
 }
 
 const PERIOD_RANK = new Map(JOB_PERIODS.map((period, index) => [period, index] as const));
@@ -90,34 +91,29 @@ export const MemberAssignmentsStore = signalStore(
   { providedIn: 'root' },
   withState<MemberAssignmentsState>(initialState),
   withComputed((store) => {
-    const member = inject(Store).selectSignal(selectMember);
-
     /**
      * Every poste the logged-in member holds, indexed by soirée and ordered
      * préparation → soirée → nettoyage inside each one.
+     *
+     * Plus de filtrage sur `memberId` : la route ne renvoie que les miennes, et
+     * le jeton dit qui je suis. Le front n'a plus à le redemander.
      */
     const byEvent = computed<ReadonlyMap<number, readonly MemberAssignment[]>>(() => {
-      const memberId = member()?.id;
       const index = new Map<number, MemberAssignment[]>();
-      if (memberId === undefined) return index;
-
-      const jobsById = new Map(store.jobs().map((job) => [job.id, job] as const));
 
       for (const row of store.assignments()) {
-        if (row.memberId !== memberId) continue;
-        const job = jobsById.get(row.jobId);
-        const period = periodOf(job);
+        const period = periodOf(row.jobType);
         const bucket = index.get(row.eventId) ?? [];
         bucket.push({
           eventId: row.eventId,
           jobId: row.jobId,
-          // A job deleted while an assignment still points at it must stay
-          // visible: the member is still expected there.
-          jobName: job?.name ?? `Poste #${row.jobId}`,
+          jobName: row.jobName,
           period,
           periodLabel: JOB_PERIOD_LABELS[period],
           shortPeriodLabel: JOB_PERIOD_SHORT_LABELS[period],
           pointsDelta: row.pointsDelta,
+          needed: row.needed,
+          teammates: row.teammates,
         });
         index.set(row.eventId, bucket);
       }
@@ -155,44 +151,55 @@ export const MemberAssignmentsStore = signalStore(
       );
     },
   })),
-  withMethods((store, svc = inject(CoordinationService)) => {
-    async function fetchAll(): Promise<void> {
-      try {
-        const raw = await lastValueFrom(svc.loadAll());
-        patchState(store, {
-          status: 'loaded',
-          error: null,
-          assignments: raw.assignments,
-          jobs: raw.jobs,
-          eventJobs: raw.eventJobs,
-          members: raw.members,
-          preferences: raw.preferences,
-        });
-      } catch {
-        patchState(store, { status: 'error', error: 'Impossible de charger vos affectations.' });
+  withMethods(
+    (
+      store,
+      coordination = inject(CoordinationService),
+      preferences = inject(PreferencesService),
+    ) => {
+      async function fetchAll(): Promise<void> {
+        try {
+          // Deux routes personnelles, sans permission. Un `forkJoin` reste
+          // légitime ici parce qu'aucune des deux ne peut être refusée à qui est
+          // connecté — ce qui était précisément le défaut de `loadAll()`.
+          const raw = await lastValueFrom(
+            forkJoin({
+              assignments: coordination.loadMyAssignments(),
+              preferences: preferences.getMine(),
+            }),
+          );
+          patchState(store, {
+            status: 'loaded',
+            error: null,
+            assignments: raw.assignments,
+            preferences: raw.preferences,
+          });
+        } catch {
+          patchState(store, { status: 'error', error: 'Impossible de charger vos affectations.' });
+        }
       }
-    }
 
-    return {
-      async load(): Promise<void> {
-        if (store.status() === 'loaded' || store.status() === 'loading') return;
-        patchState(store, { status: 'loading', error: null });
-        await fetchAll();
-      },
+      return {
+        async load(): Promise<void> {
+          if (store.status() === 'loaded' || store.status() === 'loading') return;
+          patchState(store, { status: 'loading', error: null });
+          await fetchAll();
+        },
 
-      /**
-       * Re-read unconditionally. Used after a 409 `E_PRESENCE_LOCKED_BY_ASSIGNMENT`:
-       * the refusal proves the cached assignments are stale, and the screen has
-       * to start showing the poste it did not know about.
-       */
-      async refresh(): Promise<void> {
-        patchState(store, { status: 'refreshing', error: null });
-        await fetchAll();
-      },
+        /**
+         * Re-read unconditionally. Used after a 409 `E_PRESENCE_LOCKED_BY_ASSIGNMENT`:
+         * the refusal proves the cached assignments are stale, and the screen has
+         * to start showing the poste it did not know about.
+         */
+        async refresh(): Promise<void> {
+          patchState(store, { status: 'refreshing', error: null });
+          await fetchAll();
+        },
 
-      clear(): void {
-        patchState(store, initialState);
-      },
-    };
-  }),
+        clear(): void {
+          patchState(store, initialState);
+        },
+      };
+    },
+  ),
 );

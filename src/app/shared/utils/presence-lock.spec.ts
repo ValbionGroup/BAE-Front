@@ -17,6 +17,8 @@ function poste(period: JobPeriod, jobName: string, pointsDelta = 0): MemberAssig
     periodLabel: labels[period],
     shortPeriodLabel: labels[period],
     pointsDelta,
+    needed: null,
+    teammates: [],
   };
 }
 

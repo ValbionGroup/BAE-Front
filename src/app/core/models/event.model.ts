@@ -25,6 +25,12 @@ export interface EventData {
    * vaut donc `undefined` à l'exécution depuis toujours.
    */
   status?: EventStatus;
+  /**
+   * Nombre de **personnes** affectées à la soirée — tenir deux postes n'en fait
+   * pas deux. Le héros de l'accueil le reconstituait depuis `GET /assignments`,
+   * réservé à la coordination, et affichait donc « 0 » à tout autre membre.
+   */
+  assigneeCount?: number;
 }
 
 export interface EventDetail extends EventData {
@@ -83,6 +89,7 @@ export interface EventApiDto {
   description?: string;
   duration?: number;
   status?: EventStatus;
+  assigneeCount?: number;
 }
 
 export interface RosterRowApiDto {

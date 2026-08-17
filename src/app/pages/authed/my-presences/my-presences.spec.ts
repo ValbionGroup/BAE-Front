@@ -12,10 +12,8 @@ import {
   type MemberPoste,
 } from './my-presences';
 import { EventsService } from '#core/services/events/events-service';
-import {
-  CoordinationService,
-  type CoordinationApiData,
-} from '#core/services/coordination/coordination-service';
+import { CoordinationService } from '#core/services/coordination/coordination-service';
+import { PreferencesService } from '#core/services/preferences/preferences-service';
 import { Presence, type EventDetail } from '#core/models/event.model';
 import { ToastService } from '#shared/components/toast/toast.service';
 import type { JobPeriod } from '#core/models/job-period.model';
@@ -36,20 +34,22 @@ const JOBS = [
   { id: 3, name: 'Installation tables', type: 'before' as JobPeriod },
 ];
 
-function assignment(eventId: number, jobId: number, pointsDelta: number, memberId = 1) {
-  return { memberId, eventId, jobId, locked: false, pointsDelta, settledAt: null };
-}
-
-function coordinationData(assignments: unknown[] = []): CoordinationApiData {
+/**
+ * `GET /account/assignments` renvoie le poste déjà résolu, et seulement celles
+ * de l'appelant : la reconstitution côté client passait par `/assignments`,
+ * `/jobs`, `/event-jobs` et `/members`, dont trois exigent `job:read`.
+ */
+function assignment(eventId: number, jobId: number, pointsDelta: number) {
+  const job = JOBS.find((candidate) => candidate.id === jobId);
   return {
-    events: [],
-    members: [],
-    jobs: JOBS,
-    eventJobs: [],
-    assignments,
-    responses: [],
-    preferences: [],
-  } as unknown as CoordinationApiData;
+    eventId,
+    jobId,
+    jobName: job?.name ?? 'Inconnu',
+    jobType: job?.type ?? 'during',
+    pointsDelta,
+    needed: null,
+    teammates: [],
+  };
 }
 
 function poste(period: JobPeriod, jobName: string, pointsDelta = 0): MemberPoste {
@@ -66,6 +66,8 @@ function poste(period: JobPeriod, jobName: string, pointsDelta = 0): MemberPoste
     periodLabel: labels[period],
     shortPeriodLabel: labels[period],
     pointsDelta,
+    needed: null,
+    teammates: [],
   };
 }
 
@@ -142,14 +144,21 @@ describe(MyPresences.name, () => {
 
   interface SetupOptions {
     assignments?: unknown[];
-    /** Successive `loadAll()` payloads, to model a refresh returning new data. */
-    coordination?: CoordinationApiData[];
+    /** Charges successives, pour modéliser un refresh qui renvoie autre chose. */
+    coordination?: unknown[][];
     updatePresenceForEvent?: () => Observable<unknown>;
   }
 
   async function setup(options: SetupOptions = {}): Promise<void> {
-    const payloads = options.coordination ?? [coordinationData(options.assignments ?? [])];
-    let call = 0;
+    const payloads = options.coordination ?? [options.assignments ?? []];
+    // Le store charge deux routes par passe : le curseur n'avance qu'une fois
+    // les deux lues, quel que soit l'ordre de souscription du `forkJoin`.
+    let reads = 0;
+    const take = () => {
+      const payload = payloads[Math.min(Math.floor(reads / 2), payloads.length - 1)];
+      reads += 1;
+      return payload;
+    };
 
     updatePresence = vi.fn(
       options.updatePresenceForEvent ?? (() => of(Presence.ABSENT as unknown)),
@@ -176,8 +185,16 @@ describe(MyPresences.name, () => {
     };
 
     const coordinationService = {
-      loadAll: () => of(payloads[Math.min(call++, payloads.length - 1)]),
+      loadMyAssignments: () => of(take()),
       getJobEligibleMembers: () => of([]),
+    };
+    // Les préférences n'entrent dans aucune assertion de cet écran ; le leg
+    // doit simplement exister pour que le `forkJoin` se referme.
+    const preferencesService = {
+      getMine: () => {
+        take();
+        return of([]);
+      },
     };
 
     await TestBed.configureTestingModule({
@@ -187,6 +204,7 @@ describe(MyPresences.name, () => {
         provideMockStore({ initialState: { auth: { member: MEMBER } } }),
         { provide: EventsService, useValue: eventsService },
         { provide: CoordinationService, useValue: coordinationService },
+        { provide: PreferencesService, useValue: preferencesService },
       ],
     }).compileComponents();
 
@@ -239,8 +257,15 @@ describe(MyPresences.name, () => {
       expect(text).toContain('Préparation');
     });
 
-    it('shows no poste for a member staffed on nobody else’s soirée', async () => {
-      await setup({ assignments: [assignment(7, 1, -4, 2)] });
+    /**
+     * ⚠️ « ne montre pas le poste d'un autre » ne se teste plus ici. Le front
+     * ne filtrait par `memberId` que parce qu'il recevait les affectations de
+     * tout le monde ; `GET /account/assignments` ne renvoie que les siennes, et
+     * c'est `account_assignments.spec.ts` (back) qui le garde désormais. Un
+     * test front n'aurait plus prouvé que la capacité du harnais à mentir.
+     */
+    it('shows no poste on a soirée the member holds nothing on', async () => {
+      await setup({ assignments: [assignment(9, 1, -4)] });
 
       expect(internals(component).postesFor(upcoming())).toEqual([]);
     });
@@ -402,7 +427,7 @@ describe(MyPresences.name, () => {
 
     it('re-reads the assignments so the lock becomes visible', async () => {
       await setup({
-        coordination: [coordinationData([]), coordinationData([assignment(7, 1, -4)])],
+        coordination: [[], [assignment(7, 1, -4)]],
         updatePresenceForEvent: lockedResponse(),
       });
 

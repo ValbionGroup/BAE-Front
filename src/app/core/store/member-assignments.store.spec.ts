@@ -1,23 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideMockStore } from '@ngrx/store/testing';
 import { API_BASE_URL } from '#core/tokens/api-url.token';
 import type { JobPeriod } from '#core/models/job-period.model';
 
 import { MemberAssignmentsStore } from './member-assignments.store';
 
-const MEMBER = { id: 1, points: 0, firstName: 'Lucas', lastName: 'ESPIET', role: 'admin' };
-
 interface Payloads {
-  jobs?: unknown[];
   assignments?: unknown[];
+  preferences?: unknown[];
 }
 
 /**
- * Deliberately non-chronological jobs and assignments: the store is what
- * guarantees the préparation → soirée → nettoyage order, whatever the API
- * returned.
+ * Postes délibérément dans le désordre : c'est le store qui garantit l'ordre
+ * préparation → soirée → nettoyage, quoi qu'ait renvoyé l'API.
  */
 const JOBS = [
   { id: 1, name: 'Service', type: 'during' as JobPeriod },
@@ -32,31 +28,47 @@ describe(MemberAssignmentsStore.name, () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideMockStore({ initialState: { auth: { member: MEMBER } } }),
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     store = TestBed.inject(MemberAssignmentsStore);
     httpMock = TestBed.inject(HttpTestingController);
     baseUrl = TestBed.inject(API_BASE_URL);
   });
 
+  /**
+   * Deux routes personnelles, sans permission. Le store lisait auparavant
+   * `CoordinationService.loadAll()` — sept requêtes dont quatre derrière
+   * `job:read` — et un membre ordinaire n'obtenait donc jamais ses affectations.
+   */
   async function load(payloads: Payloads = {}): Promise<void> {
     const loaded = store.load();
-    httpMock.expectOne(`${baseUrl}/events`).flush([]);
-    httpMock.expectOne(`${baseUrl}/members`).flush([]);
-    httpMock.expectOne(`${baseUrl}/jobs`).flush(payloads.jobs ?? JOBS);
-    httpMock.expectOne(`${baseUrl}/event-jobs`).flush([]);
-    httpMock.expectOne(`${baseUrl}/assignments`).flush(payloads.assignments ?? []);
-    httpMock.expectOne(`${baseUrl}/responses`).flush([]);
-    httpMock.expectOne(`${baseUrl}/preferences`).flush([]);
+    httpMock.expectOne(`${baseUrl}/account/assignments`).flush(payloads.assignments ?? []);
+    httpMock.expectOne(`${baseUrl}/account/preferences`).flush(payloads.preferences ?? []);
     await loaded;
   }
 
-  function assignment(eventId: number, jobId: number, pointsDelta: number) {
-    return { memberId: 1, eventId, jobId, locked: false, pointsDelta, settledAt: null };
+  /**
+   * Le back renvoie le poste déjà résolu. Il ne renvoie **que** les affectations
+   * de l'appelant : le filtrage par membre n'existe plus côté client, et c'est
+   * un test back (`account_assignments.spec.ts`) qui le garde.
+   */
+  function assignment(
+    eventId: number,
+    jobId: number,
+    pointsDelta: number,
+    extra: Record<string, unknown> = {},
+  ) {
+    const job = JOBS.find((candidate) => candidate.id === jobId);
+    return {
+      eventId,
+      jobId,
+      jobName: job?.name ?? 'Inconnu',
+      jobType: job?.type ?? 'during',
+      pointsDelta,
+      needed: null,
+      teammates: [],
+      ...extra,
+    };
   }
 
   it('should be created', () => {
@@ -70,24 +82,11 @@ describe(MemberAssignmentsStore.name, () => {
 
   /** Unlike RoleAssignmentStore's panel, this covers EVERY soirée at once. */
   it('indexes the member’s postes by soirée, not just the next one', async () => {
-    await load({
-      assignments: [assignment(7, 1, -4), assignment(9, 2, 6)],
-    });
+    await load({ assignments: [assignment(7, 1, -4), assignment(9, 2, 6)] });
 
     expect([...store.byEvent().keys()].sort()).toEqual([7, 9]);
     expect(store.assignmentsFor('7').map((a) => a.jobName)).toEqual(['Service']);
     expect(store.assignmentsFor('9').map((a) => a.jobName)).toEqual(['Vaisselle']);
-  });
-
-  it('keeps only the logged-in member’s rows', async () => {
-    await load({
-      assignments: [
-        assignment(7, 1, -4),
-        { memberId: 2, eventId: 7, jobId: 2, locked: false, pointsDelta: 6, settledAt: null },
-      ],
-    });
-
-    expect(store.assignmentsFor('7').map((a) => a.jobName)).toEqual(['Service']);
   });
 
   /** D1: at most one poste per period, and the three read chronologically. */
@@ -128,34 +127,35 @@ describe(MemberAssignmentsStore.name, () => {
   /** `jobs.type` has no DB check constraint: an unknown value must not make the
    *  poste vanish from the member's list. */
   it('falls back on the soirée itself for a period it does not know', async () => {
-    await load({
-      jobs: [{ id: 1, name: 'Afterwork', type: 'midnight' }],
-      assignments: [assignment(7, 1, 0)],
-    });
+    await load({ assignments: [assignment(7, 1, 0, { jobType: 'midnight' })] });
 
     expect(store.assignmentsFor('7')[0].period).toBe('during');
   });
 
-  it('names a poste whose job disappeared rather than dropping the row', async () => {
-    await load({ jobs: [], assignments: [assignment(7, 42, 0)] });
+  it('carries the staffing target and the teammates through untouched', async () => {
+    await load({
+      assignments: [
+        assignment(7, 1, 0, {
+          needed: 4,
+          teammates: [{ id: 2, firstName: 'Gerda', lastName: 'Mayer' }],
+        }),
+      ],
+    });
 
-    expect(store.assignmentsFor('7')[0].jobName).toBe('Poste #42');
+    const poste = store.assignmentsFor('7')[0];
+    expect(poste.needed).toBe(4);
+    expect(poste.teammates.map((t) => t.firstName)).toEqual(['Gerda']);
   });
 
   it('does not refetch once loaded, but refresh() does', async () => {
     await load({ assignments: [assignment(7, 1, -4)] });
 
     await store.load();
-    httpMock.expectNone(`${baseUrl}/assignments`);
+    httpMock.expectNone(`${baseUrl}/account/assignments`);
 
     const refreshed = store.refresh();
-    httpMock.expectOne(`${baseUrl}/events`).flush([]);
-    httpMock.expectOne(`${baseUrl}/members`).flush([]);
-    httpMock.expectOne(`${baseUrl}/jobs`).flush(JOBS);
-    httpMock.expectOne(`${baseUrl}/event-jobs`).flush([]);
-    httpMock.expectOne(`${baseUrl}/assignments`).flush([assignment(7, 2, 6)]);
-    httpMock.expectOne(`${baseUrl}/responses`).flush([]);
-    httpMock.expectOne(`${baseUrl}/preferences`).flush([]);
+    httpMock.expectOne(`${baseUrl}/account/assignments`).flush([assignment(7, 2, 6)]);
+    httpMock.expectOne(`${baseUrl}/account/preferences`).flush([]);
     await refreshed;
 
     expect(store.assignmentsFor('7').map((a) => a.jobName)).toEqual(['Vaisselle']);
@@ -164,7 +164,7 @@ describe(MemberAssignmentsStore.name, () => {
   it('reports an error and keeps an empty index when the load fails', async () => {
     const loaded = store.load();
     // forkJoin fails as soon as one leg does; the others are cancelled.
-    httpMock.expectOne(`${baseUrl}/events`).error(new ProgressEvent('failed'));
+    httpMock.expectOne(`${baseUrl}/account/assignments`).error(new ProgressEvent('failed'));
     await loaded;
 
     expect(store.error()).toBeTruthy();

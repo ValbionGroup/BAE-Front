@@ -56,6 +56,32 @@ export interface ApiAssignment {
    *  `POST /events/:id/matching` on it answers 409 `E_EVENT_ALREADY_SETTLED`. */
   settledAt: string | null;
 }
+
+/** Un coéquipier sur un poste que je tiens. Rien de plus n'est exposé. */
+export interface ApiTeammate {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
+
+/**
+ * Un de mes postes, déjà résolu par le back.
+ *
+ * `loadAll()` ne peut pas servir cet écran : quatre de ses sept requêtes sont
+ * derrière `job:read`, une permission d'administration du catalogue qu'un
+ * membre ordinaire n'a pas — et un `forkJoin` échoue en bloc au premier 403.
+ */
+export interface ApiMyAssignment {
+  eventId: number;
+  jobId: number;
+  jobName: string;
+  jobType: JobPeriod;
+  pointsDelta: number;
+  /** Effectif attendu sur le poste, ou `null` quand il n'a pas été fixé. */
+  needed: number | null;
+  teammates: readonly ApiTeammate[];
+}
+
 /**
  * `job_eligible_members` narrows which members the matching engine may put on
  * a job. A job with NO row here is unrestricted — absence means "open to
@@ -132,6 +158,15 @@ export class CoordinationService {
       responses: this.http.get<ApiAvailability[]>(`${this.baseUrl}/responses`),
       preferences: this.http.get<ApiPreference[]>(`${this.baseUrl}/preferences`),
     });
+  }
+
+  /**
+   * Mes postes seuls, résolus côté serveur. Délibérément hors de `loadAll()` :
+   * celui-ci sert les écrans de coordination et exige `job:read` sur quatre de
+   * ses sept requêtes.
+   */
+  loadMyAssignments(): Observable<ApiMyAssignment[]> {
+    return this.http.get<ApiMyAssignment[]>(`${this.baseUrl}/account/assignments`);
   }
 
   /**

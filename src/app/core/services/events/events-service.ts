@@ -53,6 +53,7 @@ export class EventsService {
       description: dto.description,
       duration: dto.duration,
       status: dto.status,
+      assigneeCount: dto.assigneeCount,
     };
   }
 

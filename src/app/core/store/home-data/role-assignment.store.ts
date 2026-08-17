@@ -11,7 +11,7 @@ import {
   LucideWallet,
   type LucideIconInput,
 } from '@lucide/angular';
-import type { ApiMember } from '#core/services/coordination/coordination-service';
+import type { ApiTeammate } from '#core/services/coordination/coordination-service';
 import { EventsStore } from '#core/store/events.store';
 import { MemberAssignmentsStore } from '#core/store/member-assignments.store';
 import { selectMember } from '#core/store/auth/auth.selector';
@@ -21,12 +21,16 @@ import { RoleAssignment, RoleMeta } from './models';
 /**
  * "Votre rôle ce soir-là" panel.
  *
- * Presentation only: the coordination payload it reads is owned by
- * `MemberAssignmentsStore`, which performs the single
- * `CoordinationService.loadAll()` round-trip. This store used to hold that
- * payload itself, for every soirée, while exposing only the next one — so "mes
- * présences" would have had to either import a `home-data/` store or open a
- * second loading path. The state moved out; the panel stayed here.
+ * Presentation only: the payload it reads is owned by `MemberAssignmentsStore`.
+ * This store used to hold that payload itself, for every soirée, while exposing
+ * only the next one — so "mes présences" would have had to either import a
+ * `home-data/` store or open a second loading path. The state moved out; the
+ * panel stayed here.
+ *
+ * L'effectif du poste et les coéquipiers arrivent désormais résolus par le back
+ * (`GET /v1/account/assignments`) : ce panneau les reconstituait à partir de
+ * `/assignments`, `/event-jobs` et `/members`, dont deux exigent `job:read` —
+ * une permission qu'un membre ordinaire n'a pas.
  *
  * The mockup showed an invented "algo score /100". What the API really knows is
  * which of the member's OWN choices this poste was — `member_job_preferences`
@@ -54,9 +58,9 @@ function iconFor(jobName: string): LucideIconInput {
   return ICON_BY_KEYWORD.find(([keyword]) => needle.includes(keyword))?.[1] ?? LucideBriefcase;
 }
 
-function shortName(member: ApiMember): string {
-  const last = member.lastName ? ` ${member.lastName.charAt(0)}.` : '';
-  return `${member.firstName}${last}`;
+function shortName(teammate: ApiTeammate): string {
+  const last = teammate.lastName ? ` ${teammate.lastName.charAt(0)}.` : '';
+  return `${teammate.firstName}${last}`;
 }
 
 export const RoleAssignmentStore = signalStore(
@@ -101,24 +105,15 @@ export const RoleAssignmentStore = signalStore(
         const mine = store.assignmentsFor(eventId);
 
         return mine.map((assignment): RoleAssignment => {
-          const onSameJob = store
-            .assignments()
-            .filter((a) => a.eventId === eventId && a.jobId === assignment.jobId);
-          const needed =
-            store.eventJobs().find((ej) => ej.eventId === eventId && ej.jobId === assignment.jobId)
-              ?.count ?? null;
-
-          const teammates = onSameJob
-            .filter((a) => a.memberId !== memberId)
-            .map((a) => store.members().find((m) => m.id === a.memberId))
-            .filter((m): m is ApiMember => m !== undefined)
-            .map(shortName);
+          const needed = assignment.needed;
+          const teammates = assignment.teammates.map(shortName);
+          // Moi comprise : le back ne renvoie que les autres.
+          const onPoste = teammates.length + 1;
 
           // Which of the member's own choices this poste was. Absent from
           // their ranking means the engine placed them there as a last resort.
           const preferenceRank =
-            store.preferences().find((p) => p.memberId === memberId && p.jobId === assignment.jobId)
-              ?.preferenceRank ?? null;
+            store.preferences().find((p) => p.jobId === assignment.jobId)?.preferenceRank ?? null;
 
           // D5: a good rank COSTS priority credit — this is often negative,
           // and that is normal. Never hide it behind a `·` or a conditional.
@@ -126,7 +121,7 @@ export const RoleAssignmentStore = signalStore(
             { label: 'Soirée', value: event.name },
             {
               label: 'Effectif du poste',
-              value: needed === null ? String(onSameJob.length) : `${onSameJob.length}/${needed}`,
+              value: needed === null ? String(onPoste) : `${onPoste}/${needed}`,
             },
             { label: 'Coéquipiers', value: teammates.length > 0 ? teammates.join(', ') : 'Aucun' },
             {
@@ -147,18 +142,18 @@ export const RoleAssignmentStore = signalStore(
       }),
 
       /**
-       * Job the member ranked first in `/v1/preferences`. Null when they never
-       * expressed a preference — the hero then renders "—" rather than a guess.
+       * Job the member ranked first in `/v1/account/preferences`. Null when they
+       * never expressed a preference — the hero then renders "—" rather than a
+       * guess.
+       *
+       * Plus besoin de résoudre l'identifiant contre le catalogue des postes :
+       * la route personnelle porte déjà le nom.
        */
       preferredPoste: computed<string | null>(() => {
-        const memberId = member()?.id;
-        if (memberId === undefined) return null;
-        const best = store
-          .preferences()
-          .filter((p) => p.memberId === memberId)
-          .sort((a, b) => a.preferenceRank - b.preferenceRank)[0];
-        if (!best) return null;
-        return store.jobs().find((j) => j.id === best.jobId)?.name ?? null;
+        const best = [...store.preferences()].sort(
+          (a, b) => a.preferenceRank - b.preferenceRank,
+        )[0];
+        return best?.name ?? null;
       }),
     };
   }),

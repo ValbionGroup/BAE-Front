@@ -132,14 +132,9 @@ export class Home implements OnInit {
    */
   protected readonly nextEventAssignees = computed<number | null>(() => {
     const event = this.responseEvent();
-    if (!event || this.role.loading()) return null;
-    const eventId = Number(event.id);
-    return new Set(
-      this.memberAssignments
-        .assignments()
-        .filter((a) => a.eventId === eventId)
-        .map((a) => a.memberId),
-    ).size;
+    // `GET /events` porte le compte : le déduire de `/assignments` exigeait
+    // `job:read`, et rendait donc « 0 » à tout membre hors coordination.
+    return event?.assigneeCount ?? null;
   });
 
   /**

@@ -9,6 +9,7 @@ import { addDays } from 'date-fns';
 import { Home, presenceErrorView, presenceLockExplanation } from './home';
 import { EventsService } from '#core/services/events/events-service';
 import { CoordinationService } from '#core/services/coordination/coordination-service';
+import { PreferencesService } from '#core/services/preferences/preferences-service';
 import { StocksService } from '#core/services/stocks/stocks-service';
 import { TransactionsService } from '#core/services/transactions/transactions-service';
 import { ToastService } from '#shared/components/toast/toast.service';
@@ -86,6 +87,8 @@ function poste(period: JobPeriod, jobName: string, pointsDelta = 0): MemberAssig
     periodLabel: labels[period],
     shortPeriodLabel: labels[period],
     pointsDelta,
+    needed: null,
+    teammates: [],
   };
 }
 
@@ -139,8 +142,23 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     { id: 3, name: 'Vaisselle', type: 'after' as JobPeriod },
   ];
 
-  function assignment(jobId: number, pointsDelta: number, memberId = 1) {
-    return { memberId, eventId: 7, jobId, locked: false, pointsDelta, settledAt: null };
+  /**
+   * Le back résout le poste et ne renvoie que les affectations de l'appelant :
+   * `GET /account/assignments` remplace la reconstitution côté client depuis
+   * `/assignments` + `/jobs` + `/event-jobs` + `/members`, dont trois exigent
+   * `job:read`.
+   */
+  function assignment(jobId: number, pointsDelta: number) {
+    const job = JOBS.find((candidate) => candidate.id === jobId);
+    return {
+      eventId: 7,
+      jobId,
+      jobName: job?.name ?? 'Inconnu',
+      jobType: job?.type ?? 'during',
+      pointsDelta,
+      needed: null,
+      teammates: [],
+    };
   }
 
   interface SetupOptions {
@@ -166,17 +184,7 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
   }
 
   function coordinationPayload(assignments: unknown[] = [], preferences: unknown[] = []) {
-    return {
-      events: [],
-      members: [
-        { id: 1, firstName: 'Lucas', lastName: 'ESPIET', roleId: null, role: null, points: 0 },
-      ],
-      jobs: JOBS,
-      eventJobs: [],
-      assignments,
-      responses: [],
-      preferences,
-    };
+    return { assignments, preferences };
   }
 
   async function setup(options: SetupOptions = {}): Promise<void> {
@@ -193,13 +201,20 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
       updatePresenceForEvent: updatePresence,
     };
 
-    const payloads = options.coordination ?? [
+    const payloads = (options.coordination ?? [
       coordinationPayload(options.assignments ?? [], options.preferences ?? []),
-    ];
-    let call = 0;
-    const coordinationService = {
-      loadAll: () => of(payloads[Math.min(call++, payloads.length - 1)]),
+    ]) as { assignments: unknown[]; preferences: unknown[] }[];
+    // Le store charge deux routes par passe. Le curseur n'avance qu'une fois
+    // les deux lues, sans dépendre de l'ordre dans lequel le `forkJoin` les
+    // souscrit — sinon un `refresh()` mélangerait deux charges.
+    let reads = 0;
+    const take = () => {
+      const payload = payloads[Math.min(Math.floor(reads / 2), payloads.length - 1)];
+      reads += 1;
+      return payload;
     };
+    const coordinationService = { loadMyAssignments: () => of(take().assignments) };
+    const preferencesService = { getMine: () => of(take().preferences) };
 
     await TestBed.configureTestingModule({
       imports: [Home],
@@ -208,6 +223,7 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
         provideMockStore({ initialState: { auth: { member: MEMBER } } }),
         { provide: EventsService, useValue: eventsService },
         { provide: CoordinationService, useValue: coordinationService },
+        { provide: PreferencesService, useValue: preferencesService },
         { provide: StocksService, useValue: { getAll: () => of([]) } },
         { provide: TransactionsService, useValue: { getAll: () => of([]) } },
       ],
@@ -227,7 +243,7 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     it('shows every poste held, ordered before → during → after', async () => {
       await setup({
         assignments: [assignment(3, 6), assignment(1, 4), assignment(2, -4)],
-        preferences: [{ memberId: 1, jobId: 2, preferenceRank: 1 }],
+        preferences: [{ jobId: 2, name: 'Service', preferenceRank: 1 }],
       });
 
       const cards = Array.from(
@@ -254,7 +270,7 @@ describe(Home.name + ' — rôle multi-poste, signe des points, verrou de prése
     it('gives each poste its own rank, null when unranked', async () => {
       await setup({
         assignments: [assignment(2, -4), assignment(1, 4)],
-        preferences: [{ memberId: 1, jobId: 2, preferenceRank: 1 }],
+        preferences: [{ jobId: 2, name: 'Service', preferenceRank: 1 }],
       });
 
       const text = fixture.nativeElement.textContent as string;
