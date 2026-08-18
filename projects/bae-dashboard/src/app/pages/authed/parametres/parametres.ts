@@ -9,7 +9,6 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ThemeService, Btn, Field, Input, Avatar } from '@bae/ui';
-import { MyQrCard } from '#shared/components/my-qr-card/my-qr-card';
 import { ParametresSideNav } from './side-nav/side-nav';
 
 interface Module {
@@ -21,7 +20,7 @@ interface Module {
 
 @Component({
   selector: 'bfd-parametres',
-  imports: [Btn, Field, Input, Avatar, ParametresSideNav, LucideDynamicIcon, MyQrCard],
+  imports: [Btn, Field, Input, Avatar, ParametresSideNav, LucideDynamicIcon],
   templateUrl: './parametres.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
