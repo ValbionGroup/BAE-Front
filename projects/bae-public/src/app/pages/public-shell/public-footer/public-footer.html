@@ -1,0 +1,23 @@
+<footer
+  class="flex flex-col gap-4 border-t border-border-s px-6 py-8 text-[11.5px] text-muted md:flex-row md:items-center md:gap-[18px] md:px-14"
+>
+  <bae-logo [size]="22" [showText]="false" />
+
+  <div class="hidden flex-1 md:block"></div>
+
+  <div class="flex flex-wrap items-center gap-x-2.5 gap-y-2">
+    <span>© BAE · {{ year }}</span>
+    <span aria-hidden="true">·</span>
+    <a
+      routerLink="/faq"
+      class="rounded-sm transition-colors hover:text-text-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+      >FAQ</a
+    >
+    <span aria-hidden="true">·</span>
+    <a
+      routerLink="/contact"
+      class="rounded-sm transition-colors hover:text-text-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+      >Contact</a
+    >
+  </div>
+</footer>

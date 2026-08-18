@@ -1,0 +1,140 @@
+<section class="px-6 pt-14 pb-3 text-center md:px-14">
+  <div class="flex justify-center">
+    <bae-badge kind="blue" [dot]="true">FastPass BAE</bae-badge>
+  </div>
+  <h1
+    class="mx-auto mt-4 mb-3.5 text-[34px] leading-[1.06] font-semibold tracking-[-1px] md:text-5xl"
+  >
+    Ne fais plus la queue.<br />
+    <span class="text-muted">Passe devant, à chaque soirée.</span>
+  </h1>
+  <p class="mx-auto max-w-140 text-[15.5px] leading-[1.6] text-text-2">
+    Le FastPass est votre adhésion au BAE : il donne un accès prioritaire à toutes les soirées
+    pendant toute sa durée. Plus l’engagement est long, moins le tarif annuel est élevé.
+  </p>
+</section>
+
+<section class="mx-auto max-w-260 px-6 pt-7 pb-5 md:px-14 lg:pt-11">
+  @switch (store.passesStatus()) {
+    @case ('loading') {
+      <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        @for (placeholder of [1, 2, 3]; track placeholder) {
+          <bae-skeleton width="100%" height="340px" rounded="md" />
+        }
+      </div>
+    }
+    @case ('error') {
+      <p class="m-0 text-center text-sm text-danger" role="alert">{{ store.error() }}</p>
+    }
+    @default {
+      @if (plans().length === 0) {
+        <bae-card [padding]="24">
+          <p class="m-0 text-center text-sm text-muted">
+            Aucune formule n’est proposée pour le moment.
+          </p>
+        </bae-card>
+      } @else {
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          @for (plan of plans(); track plan.id) {
+            <bae-card
+              [padding]="0"
+              [class]="plan.highlight ? 'relative lg:-translate-y-2.5' : 'relative'"
+            >
+              @if (plan.highlight) {
+                <div
+                  class="absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-blue px-3.5 py-[5px] text-[10.5px] font-semibold tracking-[0.6px] whitespace-nowrap text-white uppercase"
+                >
+                  Meilleure offre
+                </div>
+              }
+
+              <div
+                class="rounded-lg px-6 pt-7 pb-6"
+                [class]="
+                  plan.highlight ? 'border-2 border-blue shadow-[0_20px_44px_rgba(0,0,0,.12)]' : ''
+                "
+              >
+                <h2 class="m-0 text-[13.5px] font-semibold tracking-[0.6px] text-muted uppercase">
+                  {{ plan.label }}
+                </h2>
+
+                <div class="mt-2.5 flex items-baseline gap-1.5">
+                  <span class="tnum text-[40px] font-semibold -tracking-[1px] text-text">
+                    {{ euros(plan.priceCents) }}
+                  </span>
+                  <span class="text-base text-muted">€</span>
+                </div>
+                <div class="tnum mt-0.75 text-[12.5px] text-muted">
+                  soit {{ euros(plan.perYearCents) }} €/an
+                  @if (plan.save; as save) {
+                    <span class="ml-1.5 font-semibold text-ok">−{{ save }} %</span>
+                  }
+                </div>
+
+                <div class="my-5 h-px bg-border-s"></div>
+
+                <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
+                  @for (perk of perks(); track perk) {
+                    <li class="flex items-start gap-2 text-[12.5px] text-text-2">
+                      <svg
+                        [lucideIcon]="icCheck"
+                        [size]="14"
+                        class="mt-0.5 shrink-0 text-ok"
+                        aria-hidden="true"
+                      ></svg>
+                      <span>{{ perk }}</span>
+                    </li>
+                  }
+                </ul>
+
+                <bae-btn
+                  [kind]="plan.highlight ? 'primary' : 'secondary'"
+                  size="lg"
+                  [full]="true"
+                  [disabled]="true"
+                  ariaDescribedby="fastpass-indispo"
+                  class="mt-6 block"
+                >
+                  Choisir {{ plan.label }}
+                </bae-btn>
+              </div>
+            </bae-card>
+          }
+        </div>
+      }
+    }
+  }
+</section>
+
+<section class="mx-auto max-w-260 px-6 pt-7 pb-3 md:px-14">
+  <p id="fastpass-indispo" class="mb-6 text-center text-xs text-muted">
+    La souscription en ligne ouvrira avec le paiement Lydia. En attendant, passez au local du BAE ou
+    écrivez-nous depuis <a routerLink="/contact" class="text-text-2 underline">la page contact</a>.
+  </p>
+
+  <div class="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-4">
+    @for (benefit of benefits; track benefit.title) {
+      <div>
+        <div
+          class="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md bg-blue-soft text-blue"
+        >
+          <svg [lucideIcon]="benefit.icon" [size]="17" aria-hidden="true"></svg>
+        </div>
+        <h3 class="m-0 mb-1.5 text-sm font-semibold text-text">{{ benefit.title }}</h3>
+        <p class="m-0 text-xs leading-[1.55] text-muted">{{ benefit.description }}</p>
+      </div>
+    }
+  </div>
+</section>
+
+<section class="mx-auto max-w-190 px-6 pt-8 pb-14 md:px-14">
+  <h2 class="m-0 mb-4 text-center text-lg font-semibold">Questions fréquentes</h2>
+  <div class="flex flex-col gap-px overflow-hidden rounded-md bg-border-s">
+    @for (entry of faq; track entry[0]) {
+      <div class="bg-surface px-4.5 py-3.5">
+        <h3 class="m-0 text-[13.5px] font-semibold text-text">{{ entry[0] }}</h3>
+        <p class="m-0 mt-1 text-[12.5px] leading-normal text-muted">{{ entry[1] }}</p>
+      </div>
+    }
+  </div>
+</section>

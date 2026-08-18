@@ -1,0 +1,117 @@
+<section class="mx-auto max-w-190 px-6 pt-12 pb-2 md:px-14">
+  <h1 class="m-0 mb-1.5 text-[30px] font-semibold -tracking-[0.6px]">Mes commandes</h1>
+  <p class="m-0 text-[13.5px] text-muted">Historique de vos précommandes et de vos cotisations.</p>
+</section>
+
+<section class="mx-auto flex max-w-190 flex-col gap-6 px-6 pt-6 pb-16 md:px-14">
+  @switch (store.status()) {
+    @case ('loading') {
+      <bae-skeleton width="100%" height="200px" rounded="md" />
+    }
+    @case ('error') {
+      <p class="m-0 text-sm text-danger" role="alert">{{ store.error() }}</p>
+    }
+    @default {
+      @if (hasNothing()) {
+        <bae-card [padding]="32">
+          <p class="m-0 text-center text-sm text-muted">
+            Vous n’avez encore ni précommande ni cotisation. Elles apparaîtront ici.
+          </p>
+        </bae-card>
+      }
+
+      @if (store.preOrders().length > 0) {
+        <div>
+          <h2 class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+            Précommandes
+          </h2>
+          <bae-card [padding]="0">
+            <ul class="m-0 flex list-none flex-col p-0">
+              @for (preOrder of store.preOrders(); track preOrder.id; let first = $first) {
+                <li
+                  class="flex flex-wrap items-center gap-3.5 px-4.5 py-4"
+                  [class.border-t]="!first"
+                  [class.border-border-s]="!first"
+                >
+                  <div
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-2 text-text-2"
+                  >
+                    <svg [lucideIcon]="icQr" [size]="16" aria-hidden="true"></svg>
+                  </div>
+
+                  <div class="min-w-40 flex-1">
+                    <h3 class="m-0 text-[13.5px] font-semibold text-text">
+                      {{ preOrder.eventName }}
+                    </h3>
+                    <p class="mono m-0 mt-0.5 text-[11.5px] text-muted">
+                      {{ preOrder.reference }} · {{ dateOf(preOrder.createdAt) }}
+                    </p>
+                  </div>
+
+                  <span class="tnum text-[13.5px] font-medium text-text">
+                    {{ price(preOrder.totalCents) }} €
+                  </span>
+
+                  @if (!preOrder.paid) {
+                    <bae-badge kind="warn">À payer au retrait</bae-badge>
+                  }
+                  <bae-badge [kind]="statusKind(preOrder)">{{ statusLabel(preOrder) }}</bae-badge>
+
+                  <bae-btn kind="ghost" size="sm" [routerLink]="['/commande', preOrder.id]">
+                    Détail
+                  </bae-btn>
+                </li>
+              }
+            </ul>
+          </bae-card>
+        </div>
+      }
+
+      @if (store.subscriptions().length > 0) {
+        <div>
+          <h2 class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+            Cotisations
+          </h2>
+          <bae-card [padding]="0">
+            <ul class="m-0 flex list-none flex-col p-0">
+              @for (
+                subscription of store.subscriptions();
+                track subscription.fastPassId + subscription.subscribedAt;
+                let first = $first
+              ) {
+                <li
+                  class="flex flex-wrap items-center gap-3.5 px-4.5 py-4"
+                  [class.border-t]="!first"
+                  [class.border-border-s]="!first"
+                >
+                  <div
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-soft text-blue"
+                  >
+                    <svg [lucideIcon]="icZap" [size]="16" aria-hidden="true"></svg>
+                  </div>
+
+                  <div class="min-w-40 flex-1">
+                    <h3 class="m-0 text-[13.5px] font-semibold text-text">
+                      FastPass {{ subscription.label }}
+                    </h3>
+                    <p class="m-0 mt-0.5 text-[11.5px] text-muted">
+                      Souscrit le {{ dateOf(subscription.subscribedAt) }}
+                    </p>
+                  </div>
+
+                  <span class="tnum text-[13.5px] font-medium text-text">
+                    {{ euros(subscription.amount) }} €
+                  </span>
+
+                  <bae-badge [kind]="subscriptionKind(subscription)">
+                    {{ subscriptionLabel(subscription) }}
+                  </bae-badge>
+                </li>
+              }
+            </ul>
+          </bae-card>
+        </div>
+      }
+    }
+  }
+</section>

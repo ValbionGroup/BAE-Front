@@ -1,18 +1,55 @@
 import { Routes } from '@angular/router';
 
+import { sessionGuard } from './core/session.guard';
+import { guestGuard } from './core/guest.guard';
+
 export const routes: Routes = [
   {
     path: '',
-    pathMatch: 'full',
-    loadComponent: () => import('./pages/precommandes/precommandes').then((m) => m.Precommandes),
+    loadComponent: () => import('./pages/public-shell/public-shell').then((m) => m.PublicShell),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        title: 'BAE — Précommandes',
+        loadComponent: () =>
+          import('./pages/precommandes/precommandes').then((m) => m.Precommandes),
+      },
+      {
+        path: 'fastpass',
+        title: 'BAE — FastPass',
+        loadComponent: () => import('./pages/fastpass/fastpass').then((m) => m.Fastpass),
+      },
+      {
+        path: 'faq',
+        title: 'BAE — Questions fréquentes',
+        loadComponent: () => import('./pages/faq/faq').then((m) => m.Faq),
+      },
+      {
+        path: 'contact',
+        title: 'BAE — Contact',
+        loadComponent: () => import('./pages/contact/contact').then((m) => m.Contact),
+      },
+      {
+        path: 'mes-commandes',
+        title: 'BAE — Mes commandes',
+        canActivate: [sessionGuard],
+        loadComponent: () =>
+          import('./pages/mes-commandes/mes-commandes').then((m) => m.MesCommandes),
+      },
+      {
+        path: 'commande/:id',
+        title: 'BAE — Détail de la commande',
+        canActivate: [sessionGuard],
+        loadComponent: () => import('./pages/commande/commande').then((m) => m.Commande),
+      },
+      {
+        path: 'login',
+        title: 'BAE — Connexion',
+        canActivate: [guestGuard],
+        loadComponent: () => import('./pages/login/login').then((m) => m.Login),
+      },
+      { path: '**', redirectTo: '' },
+    ],
   },
-  {
-    /**
-     * Route **obligatoire** : en cas d'échec du SSO, le back redirige vers
-     * `${PUBLIC_APP_URL}/login?sso_error=<code>`.
-     */
-    path: 'login',
-    loadComponent: () => import('./pages/login/login').then((m) => m.Login),
-  },
-  { path: '**', redirectTo: '' },
 ];

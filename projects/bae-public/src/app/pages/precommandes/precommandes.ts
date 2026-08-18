@@ -1,151 +1,177 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   LucideArrowRight,
   LucideClock,
   LucideDynamicIcon,
+  LucideMinus,
+  LucidePlus,
   LucideQrCode,
   LucideShield,
-  LucideUser,
 } from '@lucide/angular';
-import { Logo, Btn, Badge, Card } from '@bae/ui';
-import { RouterLink } from '@angular/router';
+import { Badge, Btn, Card, Skeleton, formatCents } from '@bae/ui';
 
-import { APP_VERSION } from '../../app-version';
-
-interface EventCard {
-  readonly d: string;
-  readonly m: string;
-  readonly n: string;
-  readonly s: string;
-  readonly avail: number;
-  readonly total: number;
-  readonly hot: boolean;
-  readonly soon: boolean;
-}
-
-interface MenuItem {
-  readonly name: string;
-  readonly desc: string;
-  readonly priceOriginal: number;
-  readonly priceAdh: number;
-  readonly qty: number;
-}
+import { CatalogStore } from '../../core/catalog.store';
+import type { PublicEvent, PublicMenuLine } from '../../core/catalog.models';
 
 interface MenuSection {
-  readonly c: string;
-  readonly items: readonly MenuItem[];
+  readonly category: string;
+  readonly items: readonly PublicMenuLine[];
+}
+
+interface CartLine {
+  readonly item: PublicMenuLine;
+  readonly qty: number;
 }
 
 @Component({
   selector: 'bfp-precommandes',
-  imports: [Logo, Btn, Badge, Card, LucideDynamicIcon, RouterLink],
+  imports: [RouterLink, Btn, Badge, Card, Skeleton, LucideDynamicIcon],
   templateUrl: './precommandes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Precommandes {
-  protected readonly appVersion = APP_VERSION;
+  protected readonly store = inject(CatalogStore);
 
   protected readonly icArrowRight = LucideArrowRight;
   protected readonly icShield = LucideShield;
   protected readonly icQr = LucideQrCode;
   protected readonly icClock = LucideClock;
-  protected readonly icUser = LucideUser;
-  protected readonly publicNav = ['Soirées', 'Menus', 'FAQ', 'Contact'];
+  protected readonly icPlus = LucidePlus;
+  protected readonly icMinus = LucideMinus;
 
-  protected readonly events: readonly EventCard[] = [
-    {
-      d: '14',
-      m: 'FÉV',
-      n: 'Soirée Hivernale',
-      s: 'Hot-dogs, bières, crêpes',
-      avail: 83,
-      total: 150,
-      hot: true,
-      soon: false,
-    },
-    {
-      d: '07',
-      m: 'MAR',
-      n: 'Carnaval BAE',
-      s: 'Tapas & sangria',
-      avail: 120,
-      total: 120,
-      hot: false,
-      soon: true,
-    },
-    {
-      d: '28',
-      m: 'MAR',
-      n: 'Repas Alternants',
-      s: 'Pâtes carbonara',
-      avail: 0,
-      total: 80,
-      hot: false,
-      soon: false,
-    },
-  ];
+  private readonly picked = signal<number | null>(null);
 
-  protected readonly menu: readonly MenuSection[] = [
-    {
-      c: 'Hot-dogs',
-      items: [
-        {
-          name: 'Hot-dog classique',
-          desc: 'Saucisse Strasbourg · oignons · moutarde',
-          priceOriginal: 3.5,
-          priceAdh: 3.0,
-          qty: 2,
-        },
-        {
-          name: 'Hot-dog fromage',
-          desc: 'Saucisse Strasbourg · cheddar · oignons',
-          priceOriginal: 4.0,
-          priceAdh: 3.5,
-          qty: 0,
-        },
-        {
-          name: 'Hot-dog veggie',
-          desc: 'Saucisse végétale · oignons · ketchup',
-          priceOriginal: 4.0,
-          priceAdh: 3.5,
-          qty: 0,
-        },
-      ],
-    },
-    {
-      c: 'Boissons',
-      items: [
-        {
-          name: 'Heineken 33cl',
-          desc: 'Bière blonde · 5%',
-          priceOriginal: 2.5,
-          priceAdh: 2.0,
-          qty: 3,
-        },
-        {
-          name: 'Kronenbourg 50cl',
-          desc: 'Bière blonde · 4,2%',
-          priceOriginal: 3.5,
-          priceAdh: 3.0,
-          qty: 0,
-        },
-        { name: 'Coca-Cola 33cl', desc: 'Canette', priceOriginal: 1.5, priceAdh: 1.5, qty: 0 },
-      ],
-    },
-  ];
+  protected readonly selected = computed<PublicEvent | null>(() => {
+    const id = this.picked();
+    if (id === null) return this.store.featured();
+    return this.store.events().find((event) => event.id === id) ?? this.store.featured();
+  });
 
-  protected readonly subtotal = signal(12.0);
-  protected readonly remise = signal(2.0);
+  constructor() {
+    this.store.loadEvents();
 
-  protected formatPrice(n: number): string {
-    return n.toFixed(2).replace('.', ',');
+    effect(() => {
+      const event = this.selected();
+      if (event !== null) this.store.loadMenu(event.id);
+    });
   }
 
-  protected total(): number {
-    return this.subtotal() - this.remise();
+  protected readonly sections = computed<readonly MenuSection[]>(() => {
+    const grouped = new Map<string, PublicMenuLine[]>();
+
+    for (const line of this.store.menu()?.lines ?? []) {
+      const key = line.category ?? 'Autres';
+      const bucket = grouped.get(key);
+      if (bucket === undefined) grouped.set(key, [line]);
+      else bucket.push(line);
+    }
+
+    return [...grouped].map(([category, items]) => ({ category, items }));
+  });
+
+  protected readonly itemCount = computed(() => this.store.menu()?.lines.length ?? 0);
+  protected readonly discountPercent = computed(() => this.store.menu()?.discountPercent ?? 0);
+  protected readonly closeLeadHours = computed(() => this.store.menu()?.closeLeadHours ?? 0);
+  private readonly quantities = signal<ReadonlyMap<number, number>>(new Map());
+
+  private readonly resetOnEventChange = effect(() => {
+    void this.selected()?.id;
+    this.quantities.set(new Map());
+  });
+
+  private readonly itemsById = computed(
+    () => new Map((this.store.menu()?.lines ?? []).map((line) => [line.productId, line])),
+  );
+
+  protected readonly cartLines = computed<readonly CartLine[]>(() => {
+    const items = this.itemsById();
+    return [...this.quantities().entries()]
+      .map(([productId, qty]) => ({ item: items.get(productId), qty }))
+      .filter((line): line is CartLine => line.item !== undefined);
+  });
+
+  protected readonly subtotal = computed(() =>
+    this.cartLines().reduce((total, line) => total + line.item.price * line.qty, 0),
+  );
+
+  protected readonly discount = computed(() =>
+    Math.round((this.subtotal() * this.discountPercent()) / 100),
+  );
+
+  protected readonly total = computed(() => this.subtotal() - this.discount());
+
+  protected readonly isEmpty = computed(() => this.cartLines().length === 0);
+
+  protected pick(eventId: number): void {
+    this.picked.set(eventId);
+    this.scrollToMenu();
   }
 
-  protected availPct(e: EventCard): number {
-    return e.total > 0 ? (e.avail / e.total) * 100 : 0;
+  protected qtyOf(productId: number): number {
+    return this.quantities().get(productId) ?? 0;
+  }
+
+  protected increment(productId: number): void {
+    this.quantities.update((current) => {
+      const next = new Map(current);
+      next.set(productId, (next.get(productId) ?? 0) + 1);
+      return next;
+    });
+  }
+
+  protected decrement(productId: number): void {
+    this.quantities.update((current) => {
+      const next = new Map(current);
+      const qty = (next.get(productId) ?? 0) - 1;
+      if (qty <= 0) next.delete(productId);
+      else next.set(productId, qty);
+      return next;
+    });
+  }
+
+  protected price(cents: number): string {
+    return formatCents(cents);
+  }
+
+  protected lineTotal(line: CartLine): number {
+    return line.item.price * line.qty;
+  }
+
+  protected dayOf(event: PublicEvent): string {
+    return format(new Date(event.startsAt), 'dd', { locale: fr });
+  }
+
+  protected monthOf(event: PublicEvent): string {
+    return format(new Date(event.startsAt), 'LLL', { locale: fr }).replace('.', '').toUpperCase();
+  }
+
+  protected longDateOf(event: PublicEvent): string {
+    return format(new Date(event.startsAt), 'EEEE d MMMM · HH:mm', { locale: fr }).toUpperCase();
+  }
+
+  protected closingOf(event: PublicEvent): string {
+    return format(new Date(event.preOrdersCloseAt), 'dd/MM · HH:mm', { locale: fr });
+  }
+
+  protected availabilityPct(event: PublicEvent): number {
+    return event.capacity > 0 ? (event.remaining / event.capacity) * 100 : 0;
+  }
+
+  protected scrollToMenu(): void {
+    const menu = document.getElementById('menu');
+    if (menu === null) return;
+
+    menu.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    menu.focus({ preventScroll: true });
   }
 }

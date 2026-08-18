@@ -1,0 +1,126 @@
+<div class="flex items-center justify-center px-6 py-10 md:py-16">
+  @switch (status()) {
+    @case ('loading') {
+      <bae-skeleton width="480px" height="420px" rounded="md" />
+    }
+    @case ('error') {
+      <bae-card [padding]="32" class="w-full max-w-120">
+        <p class="m-0 text-center text-sm text-danger" role="alert">{{ error() }}</p>
+        <bae-btn
+          kind="ghost"
+          size="md"
+          [full]="true"
+          routerLink="/mes-commandes"
+          class="mt-4 block"
+        >
+          Retour à mes commandes
+        </bae-btn>
+      </bae-card>
+    }
+    @default {
+      @if (preOrder(); as order) {
+        <bae-card [padding]="32" class="w-full max-w-120">
+          <div class="text-center">
+            <div
+              class="inline-flex h-14 w-14 items-center justify-center rounded-full"
+              [class]="order.paid ? 'bg-ok-soft text-ok' : 'bg-warn-soft text-warn'"
+            >
+              <svg
+                [lucideIcon]="order.paid ? icCheck : icClock"
+                [size]="28"
+                aria-hidden="true"
+              ></svg>
+            </div>
+            <h1 class="mt-4 mb-1.5 text-[26px] font-semibold -tracking-[0.4px]">
+              {{ order.paid ? 'Précommande payée' : 'Précommande enregistrée' }}
+            </h1>
+            <p class="m-0 text-[13.5px] text-muted">
+              {{ order.eventName }} · {{ dateOf(order.eventDate) }}
+              @if (!order.paid) {
+                <br />Le règlement se fait au stand, au moment du retrait.
+              }
+            </p>
+
+            @if (order.status !== 'cancelled') {
+              <div class="mx-auto mt-6 mb-3 w-50 rounded-md bg-white p-4">
+                @if (qrDataUrl(); as url) {
+                  <img
+                    [src]="url"
+                    class="block w-full"
+                    [alt]="'QR code de retrait de la précommande ' + order.reference"
+                  />
+                } @else {
+                  <div
+                    class="flex aspect-square items-center justify-center px-2 text-center text-xs text-[#1a1a1a]"
+                  >
+                    {{ qrError() ?? 'Génération du QR…' }}
+                  </div>
+                }
+              </div>
+
+              <p class="mono m-0 text-[11px] tracking-[1.5px] text-muted">{{ order.reference }}</p>
+              <p class="m-0 mt-1.5 text-[11px] text-muted">
+                Ce QR se renouvelle automatiquement : présentez l’écran, pas une capture.
+              </p>
+
+              @if (qrError(); as failure) {
+                <div class="mt-2 flex flex-col items-center gap-2">
+                  <p class="m-0 text-[11.5px] text-danger" role="alert">{{ failure }}</p>
+                  <bae-btn kind="secondary" size="sm" (clicked)="refreshQr()">Réessayer</bae-btn>
+                </div>
+              }
+            } @else {
+              <p class="mono m-0 mt-6 text-[11px] tracking-[1.5px] text-muted">
+                {{ order.reference }}
+              </p>
+            }
+          </div>
+
+          <div class="mt-4.5 rounded-md bg-surface-2 p-3.5 text-left">
+            <h2 class="m-0 mb-2 text-[11px] font-normal tracking-[0.6px] text-muted uppercase">
+              @if (pending(order) === 0) {
+                Tout a été retiré
+              } @else {
+                {{ pending(order) }} article{{ pending(order) > 1 ? 's' : '' }} à retirer
+              }
+            </h2>
+            <ul class="m-0 flex list-none flex-col p-0">
+              @for (line of order.lines; track line.productId) {
+                <li class="flex items-center gap-2 py-1 text-[13px]">
+                  <span class="tnum w-7 text-muted">×{{ line.quantity }}</span>
+                  <span
+                    class="flex-1"
+                    [class]="isCollected(line) ? 'text-muted line-through' : 'text-text'"
+                  >
+                    {{ line.productName }}
+                  </span>
+                  <span class="tnum text-muted">{{ price(line.unitPrice * line.quantity) }} €</span>
+                  @if (isCollected(line)) {
+                    <bae-badge kind="ok">Retiré</bae-badge>
+                  }
+                </li>
+              }
+            </ul>
+
+            <div
+              class="mt-2 flex items-baseline justify-between border-t border-border-s pt-2 text-[13px]"
+            >
+              <span class="text-text-2">Total</span>
+              <span class="tnum font-semibold text-text">{{ price(order.totalCents) }} €</span>
+            </div>
+          </div>
+
+          <bae-btn
+            kind="ghost"
+            size="md"
+            [full]="true"
+            routerLink="/mes-commandes"
+            class="mt-4.5 block"
+          >
+            Retour à mes commandes
+          </bae-btn>
+        </bae-card>
+      }
+    }
+  }
+</div>

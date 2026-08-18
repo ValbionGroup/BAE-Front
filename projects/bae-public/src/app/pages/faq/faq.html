@@ -1,0 +1,40 @@
+<section class="px-6 pt-14 pb-3 text-center md:px-14">
+  <div class="flex justify-center">
+    <bae-badge kind="blue" [dot]="true">Questions fréquentes</bae-badge>
+  </div>
+  <h1 class="mt-4 mb-2.5 text-[32px] leading-[1.08] font-semibold -tracking-[0.9px] md:text-[40px]">
+    Une question ?
+  </h1>
+  <p class="mx-auto max-w-130 text-[15px] leading-[1.6] text-text-2">
+    Tout ce qu’il faut savoir sur les précommandes, le FastPass et votre compte.
+  </p>
+</section>
+
+<section class="mx-auto flex max-w-190 flex-col gap-8 px-6 pt-7 pb-16 md:px-14">
+  @for (group of groups; track group.category) {
+    <div>
+      <h2 class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+        {{ group.category }}
+      </h2>
+
+      <div class="flex flex-col gap-px overflow-hidden rounded-md bg-border-s">
+        @for (entry of group.entries; track entry.question) {
+          <details class="group bg-surface">
+            <summary
+              class="flex cursor-pointer list-none items-center gap-3 px-4.5 py-3.5 text-[13.5px] font-semibold text-text focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+            >
+              <span class="flex-1">{{ entry.question }}</span>
+              <svg
+                [lucideIcon]="icChevron"
+                [size]="16"
+                class="shrink-0 text-muted transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              ></svg>
+            </summary>
+            <p class="m-0 px-4.5 pb-4 text-[12.5px] leading-[1.6] text-muted">{{ entry.answer }}</p>
+          </details>
+        }
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,129 @@
+<header class="border-b border-border-s bg-bg">
+  <div class="flex items-center gap-7 px-6 py-[18px] md:px-14">
+    <a
+      routerLink="/"
+      class="rounded-md focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+      aria-label="BAE — accueil"
+    >
+      <bae-logo [size]="28" [version]="appVersion" />
+    </a>
+
+    <div class="flex-1"></div>
+
+    <nav
+      class="hidden items-center gap-[22px] text-[13.5px] text-text-2 md:flex"
+      aria-label="Navigation principale"
+    >
+      @for (link of links; track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="text-text font-medium"
+          [routerLinkActiveOptions]="{ exact: link.exact }"
+          class="rounded-sm transition-colors hover:text-text focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+          >{{ link.label }}</a
+        >
+      }
+    </nav>
+
+    <span class="hidden h-[18px] w-px bg-border md:block" aria-hidden="true"></span>
+
+    <button
+      type="button"
+      class="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-surface text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+      [attr.aria-label]="themeLabel()"
+      [title]="themeLabel()"
+      (click)="theme.toggle()"
+    >
+      <svg
+        [lucideIcon]="theme.resolved() === 'dark' ? icSun : icMoon"
+        [size]="15"
+        aria-hidden="true"
+      ></svg>
+    </button>
+
+    <div class="hidden items-center gap-3 md:flex">
+      <bae-btn kind="ghost" size="sm" routerLink="/mes-commandes">Mes commandes</bae-btn>
+
+      @switch (session.status()) {
+        @case ('unknown') {
+          <bae-skeleton width="104px" height="28px" rounded="md" />
+        }
+        @case ('authenticated') {
+          <button
+            type="button"
+            class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-transparent py-1 pr-2.5 pl-1 text-[13px] text-text transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+            aria-haspopup="menu"
+            (click)="openAccountMenu($event)"
+          >
+            <bae-avatar [name]="displayName()" [size]="22" />
+            <span class="max-w-32 truncate">{{ displayName() }}</span>
+          </button>
+        }
+        @default {
+          <bae-btn kind="outline" size="sm" [icon]="icUser" routerLink="/login">Connexion</bae-btn>
+        }
+      }
+    </div>
+
+    <button
+      type="button"
+      class="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-surface text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none md:hidden"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="menu-public"
+      [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+      (click)="toggleMenu()"
+    >
+      <svg [lucideIcon]="menuOpen() ? icClose : icMenu" [size]="16" aria-hidden="true"></svg>
+    </button>
+  </div>
+
+  @if (menuOpen()) {
+    <div id="menu-public" class="border-t border-border-s px-6 pt-3 pb-5 md:hidden">
+      <nav class="flex flex-col" aria-label="Navigation principale">
+        @for (link of links; track link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="text-text font-medium"
+            [routerLinkActiveOptions]="{ exact: link.exact }"
+            (click)="closeMenu()"
+            class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+            >{{ link.label }}</a
+          >
+        }
+        <a
+          routerLink="/mes-commandes"
+          routerLinkActive="text-text font-medium"
+          (click)="closeMenu()"
+          class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+          >Mes commandes</a
+        >
+      </nav>
+
+      <div class="mt-3 border-t border-border-s pt-3">
+        @switch (session.status()) {
+          @case ('unknown') {
+            <bae-skeleton width="100%" height="34px" rounded="md" />
+          }
+          @case ('authenticated') {
+            <div class="flex items-center gap-2.5 px-2 py-1">
+              <bae-avatar [name]="displayName()" [size]="26" />
+              <span class="min-w-0 flex-1 truncate text-[13px] text-text">{{ displayName() }}</span>
+            </div>
+            <bae-btn kind="ghost" size="sm" [full]="true" (clicked)="logout()">Déconnexion</bae-btn>
+          }
+          @default {
+            <bae-btn
+              kind="outline"
+              size="sm"
+              [full]="true"
+              [icon]="icUser"
+              routerLink="/login"
+              (clicked)="closeMenu()"
+              >Connexion</bae-btn
+            >
+          }
+        }
+      </div>
+    </div>
+  }
+</header>

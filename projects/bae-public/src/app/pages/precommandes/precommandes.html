@@ -1,267 +1,360 @@
-<div class="flex h-screen flex-col overflow-hidden bg-bg text-text font-sans">
-  <!-- Public top nav -->
-  <header class="flex shrink-0 items-center gap-7 border-b border-border-s px-14 py-4">
-    <bae-logo [version]="appVersion" />
-    <div class="flex-1"></div>
-    <nav class="flex gap-5 text-[13.5px] text-text-2">
-      @for (item of publicNav; track item; let i = $index) {
-        <a [class]="'cursor-pointer ' + (i === 0 ? 'text-text' : '')">{{ item }}</a>
+<section
+  class="grid grid-cols-1 items-center gap-10 px-6 pt-10 pb-8 md:px-14 md:pt-14 lg:grid-cols-[1.2fr_1fr] lg:gap-15"
+>
+  <div>
+    <bae-badge [kind]="store.openCount() > 0 ? 'red' : 'neutral'" [dot]="true">
+      {{ store.openCount() > 0 ? 'Précommandes ouvertes' : 'Précommandes fermées' }}
+    </bae-badge>
+    <h1
+      class="mt-3.5 mb-4 text-[40px] leading-[1.02] font-semibold -tracking-[1.2px] text-text md:text-[56px]"
+    >
+      Mangez sans la queue.<br />
+      <span class="text-muted">Récupérez avec un QR code.</span>
+    </h1>
+    <p class="m-0 max-w-135 text-base leading-[1.55] text-text-2">
+      Commandez vos hot-dogs, bières et crêpes pour la prochaine soirée du BAE.
+      @if (discountPercent() > 0) {
+        Commander à l’avance vous fait économiser {{ discountPercent() }} % sur toute la commande.
       }
-    </nav>
-    <span class="h-4.5 w-px bg-border" aria-hidden="true"></span>
-    <bae-btn kind="ghost" size="sm">Mes commandes</bae-btn>
-    <a routerLink="/login" class="contents">
-      <bae-btn kind="outline" size="sm" [icon]="icUser">Connexion</bae-btn>
-    </a>
-  </header>
+    </p>
 
-  <div class="flex-1 overflow-y-auto">
-    <!-- Hero -->
-    <section class="grid grid-cols-[1.2fr_1fr] items-center gap-14 px-14 pt-14 pb-8">
-      <div>
-        <bae-badge kind="red" [dot]="true">Précommandes ouvertes</bae-badge>
-        <h1
-          class="my-3.5 mb-4 text-[56px] font-semibold leading-[1.02] -tracking-[1.2px] text-text"
-        >
-          Mangez sans la queue.<br />
-          <span class="text-muted">Récupérez avec un QR code.</span>
-        </h1>
-        <p class="m-0 max-w-135 text-base leading-relaxed text-text-2">
-          Commandez vos hot-dogs, bières et crêpes pour la prochaine soirée du BAE. Paiement
-          sécurisé, retrait article par article au stand. Économisez 0,50 € sur chaque hot-dog.
-        </p>
-        <div class="mt-6 flex gap-3">
-          <bae-btn kind="primary" size="lg" [iconRight]="icArrowRight"
-            >Commencer ma commande</bae-btn
+    <div class="mt-6 flex flex-wrap gap-3">
+      <bae-btn kind="primary" size="lg" [iconRight]="icArrowRight" (clicked)="scrollToMenu()">
+        Commencer ma commande
+      </bae-btn>
+      <bae-btn kind="ghost" size="lg" (clicked)="scrollToMenu()">Voir le menu</bae-btn>
+    </div>
+
+    <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2.5 p-0 text-xs text-muted">
+      <li class="inline-flex items-center gap-1.5">
+        <svg [lucideIcon]="icShield" [size]="14" class="text-ok" aria-hidden="true"></svg>
+        Paiement au retrait
+      </li>
+      <li class="inline-flex items-center gap-1.5">
+        <svg [lucideIcon]="icQr" [size]="14" class="text-blue" aria-hidden="true"></svg>
+        Retrait par QR code
+      </li>
+      @if (closeLeadHours() > 0) {
+        <li class="inline-flex items-center gap-1.5">
+          <svg [lucideIcon]="icClock" [size]="14" class="text-warn" aria-hidden="true"></svg>
+          Jusqu’à {{ closeLeadHours() }}h avant
+        </li>
+      }
+    </ul>
+  </div>
+
+  @if (selected(); as star) {
+    <bae-card [padding]="0" class="overflow-hidden rounded-lg">
+      <div
+        class="relative h-35"
+        style="background: linear-gradient(135deg, var(--bae-red) 0%, var(--bae-blue) 100%)"
+      >
+        <div
+          class="absolute inset-0 opacity-15"
+          style="
+            background-image: repeating-linear-gradient(45deg, white 0 1px, transparent 1px 14px);
+          "
+          aria-hidden="true"
+        ></div>
+        <div class="absolute top-3.5 left-3.5">
+          <span
+            class="inline-flex items-center rounded-full border border-white/30 bg-black/30 px-2 py-[3px] text-[11px] font-medium text-white"
+            >À LA UNE</span
           >
-          <bae-btn kind="ghost" size="lg">Voir le menu</bae-btn>
         </div>
-        <div class="mt-8 flex gap-6 text-xs text-muted">
-          <span class="inline-flex items-center gap-1.5">
-            <svg [lucideIcon]="icShield" [size]="14" class="text-ok" aria-hidden="true"></svg>
-            Paiement sécurisé Lydia
-          </span>
-          <span class="inline-flex items-center gap-1.5">
-            <svg [lucideIcon]="icQr" [size]="14" class="text-blue" aria-hidden="true"></svg>
-            Retrait par QR code
-          </span>
-          <span class="inline-flex items-center gap-1.5">
-            <svg [lucideIcon]="icClock" [size]="14" class="text-warn" aria-hidden="true"></svg>
-            Jusqu'à 1h avant
-          </span>
+        <div class="absolute bottom-3.5 left-4 text-white">
+          <div class="mono text-[11px] tracking-[1px] opacity-85">{{ longDateOf(star) }}</div>
+          <div class="text-2xl font-semibold -tracking-[0.5px]">{{ star.name }}</div>
         </div>
       </div>
 
-      <!-- Hero card: featured event -->
-      <bae-card [padding]="0" class="block overflow-hidden">
+      <div class="flex flex-col gap-3 p-4.5">
+        <div class="flex justify-between text-xs text-muted">
+          <span>Précommandes restantes</span>
+          <span class="tnum text-text">{{ star.remaining }} / {{ star.capacity }}</span>
+        </div>
         <div
-          class="relative h-35"
-          style="background: linear-gradient(135deg, var(--bae-red) 0%, var(--bae-blue) 100%)"
+          class="h-1.5 overflow-hidden rounded-[3px] bg-border"
+          role="progressbar"
+          [attr.aria-valuenow]="star.remaining"
+          [attr.aria-valuemin]="0"
+          [attr.aria-valuemax]="star.capacity"
+          [attr.aria-label]="'Précommandes restantes pour ' + star.name"
         >
           <div
-            class="absolute inset-0 opacity-15"
-            style="
-              background-image: repeating-linear-gradient(45deg, white 0 1px, transparent 1px 14px);
-            "
+            class="h-full"
+            [style.width.%]="availabilityPct(star)"
+            style="background: linear-gradient(90deg, var(--bae-red), var(--bae-blue))"
           ></div>
-          <div class="absolute top-3.5 left-3.5">
-            <span
-              class="inline-flex items-center rounded-full border border-white/30 bg-black/30 px-2 py-px text-[11px] font-medium text-white"
-              >À LA UNE</span
-            >
-          </div>
-          <div class="absolute bottom-3.5 left-4 text-white">
-            <div class="mono text-[11px] tracking-widest opacity-85">
-              VENDREDI 14 FÉVRIER · 19:30
-            </div>
-            <div class="text-2xl font-semibold -tracking-[0.5px]">Soirée Hivernale</div>
-          </div>
         </div>
-        <div class="flex flex-col gap-3 p-4">
-          <div class="flex justify-between text-xs text-muted">
-            <span>Précommandes restantes</span>
-            <span class="tnum text-text">83 / 150</span>
+        <div class="mt-1 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[11px] text-muted">Clôture des précommandes</div>
+            <div class="mono text-sm font-semibold text-text">{{ closingOf(star) }}</div>
           </div>
-          <div class="h-1.5 overflow-hidden rounded-sm bg-border">
-            <div
-              class="h-full"
-              style="
-                width: 55%;
-                background: linear-gradient(90deg, var(--bae-red), var(--bae-blue));
-              "
-            ></div>
-          </div>
-          <div class="mt-1 flex items-center justify-between">
-            <div>
-              <div class="text-[11px] text-muted">Clôture des précommandes</div>
-              <div class="mono text-sm font-semibold text-text">14/02 · 18:30</div>
-            </div>
-            <bae-btn kind="primary" size="md" [iconRight]="icArrowRight">Commander</bae-btn>
-          </div>
+          <bae-btn
+            kind="primary"
+            size="md"
+            [iconRight]="icArrowRight"
+            [disabled]="!star.open"
+            (clicked)="scrollToMenu()"
+          >
+            {{ star.open ? 'Commander' : 'Fermée' }}
+          </bae-btn>
         </div>
-      </bae-card>
-    </section>
-
-    <!-- Upcoming events -->
-    <section class="px-14 pt-2 pb-8">
-      <div class="mb-3.5 flex items-baseline">
-        <h2 class="m-0 text-[22px] font-semibold -tracking-[0.4px] text-text">Soirées à venir</h2>
-        <span class="ml-2.5 text-xs text-muted">4 événements ouverts à la précommande</span>
-        <div class="flex-1"></div>
-        <a class="cursor-pointer text-[13px] text-blue">Voir tout l'agenda →</a>
       </div>
+    </bae-card>
+  } @else if (store.eventsStatus() === 'loading') {
+    <bae-skeleton width="100%" height="280px" rounded="md" />
+  }
+</section>
 
-      <div class="grid grid-cols-3 gap-3.5">
-        @for (e of events; track e.n) {
-          <bae-card [padding]="16">
-            <div class="flex items-start gap-3.5">
-              <div
-                [class]="
-                  'w-14 rounded-md py-1.5 text-center ' +
-                  (e.hot
-                    ? 'bg-red-soft text-red border border-red'
-                    : 'bg-surface-2 text-text-2 border border-border-s')
-                "
-              >
-                <div class="tnum text-xl font-semibold leading-none">{{ e.d }}</div>
-                <div class="mono mt-0.5 text-[9.5px] tracking-widest">{{ e.m }}</div>
-              </div>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[15px] font-semibold text-text">{{ e.n }}</span>
-                  @if (e.soon) {
-                    <bae-badge kind="warn">Bientôt</bae-badge>
-                  }
-                </div>
-                <div class="mt-1 text-xs text-muted">{{ e.s }}</div>
-                <div class="mt-3 flex justify-between text-[11px] text-muted">
-                  @if (e.avail === 0) {
-                    <span class="text-red">Complet</span>
-                    <a class="text-muted">Liste d'attente</a>
-                  } @else {
-                    <span
-                      ><span class="tnum text-text">{{ e.avail }}</span> précommandes dispo.</span
-                    >
-                    <a class="cursor-pointer text-blue">Commander →</a>
-                  }
-                </div>
-              </div>
-            </div>
-          </bae-card>
+<section class="px-6 pt-2 pb-8 md:px-14">
+  <div class="mb-3.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+    <h2 class="m-0 text-[22px] font-semibold -tracking-[0.4px] text-text">Soirées à venir</h2>
+    @if (store.eventsStatus() === 'loaded') {
+      <span class="text-xs text-muted">
+        {{ store.openCount() }} événement{{ store.openCount() > 1 ? 's' : '' }} ouvert{{
+          store.openCount() > 1 ? 's' : ''
+        }}
+        à la précommande
+      </span>
+    }
+  </div>
+
+  @switch (store.eventsStatus()) {
+    @case ('loading') {
+      <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+        @for (placeholder of [1, 2, 3]; track placeholder) {
+          <bae-skeleton width="100%" height="104px" rounded="md" />
         }
       </div>
-    </section>
+    }
+    @case ('error') {
+      <p class="m-0 text-sm text-danger" role="alert">{{ store.error() }}</p>
+    }
+    @default {
+      @if (store.events().length === 0) {
+        <bae-card [padding]="24">
+          <p class="m-0 text-center text-sm text-muted">
+            Aucune soirée n’est ouverte à la précommande pour le moment. Revenez bientôt.
+          </p>
+        </bae-card>
+      } @else {
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          @for (event of store.events(); track event.id) {
+            <bae-card [padding]="16">
+              <div class="flex items-start gap-3.5">
+                <div
+                  class="w-14 shrink-0 rounded-md border py-1.5 text-center"
+                  [class]="
+                    event.id === selected()?.id
+                      ? 'bg-red-soft text-red border-red'
+                      : 'bg-surface-2 text-text-2 border-border-s'
+                  "
+                >
+                  <div class="tnum text-xl leading-none font-semibold">{{ dayOf(event) }}</div>
+                  <div class="mono mt-0.75 text-[9.5px] tracking-[1px]">{{ monthOf(event) }}</div>
+                </div>
 
-    <!-- Menu + cart -->
-    <section class="px-14 pt-6 pb-14">
-      <div class="mb-3.5 flex items-baseline">
-        <h2 class="m-0 text-[22px] font-semibold -tracking-[0.4px] text-text">
-          Menu · Soirée Hivernale
-        </h2>
-        <span class="ml-2.5 text-xs text-muted">13 articles · prix adhérent affichés</span>
-      </div>
-
-      <div class="grid grid-cols-[1fr_360px] gap-6">
-        <bae-card [padding]="0">
-          @for (sec of menu; track sec.c; let si = $index) {
-            <div [class]="si > 0 ? 'border-t border-border-s' : ''">
-              <div
-                class="px-4 pt-3.5 pb-2 text-[11px] font-semibold uppercase tracking-widest text-muted"
-              >
-                {{ sec.c }}
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[15px] font-semibold text-text">{{ event.name }}</span>
+                    @if (!event.open) {
+                      <bae-badge kind="warn">Fermée</bae-badge>
+                    }
+                  </div>
+                  @if (event.description) {
+                    <div class="mt-0.75 text-xs text-muted">{{ event.description }}</div>
+                  }
+                  <div class="mt-3 flex items-center justify-between gap-2 text-[11px] text-muted">
+                    @if (event.remaining === 0) {
+                      <span class="text-red">Complet</span>
+                    } @else {
+                      <span>
+                        <span class="tnum text-text">{{ event.remaining }}</span> précommandes
+                        dispo.
+                      </span>
+                    }
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded-sm text-blue focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-default disabled:text-muted"
+                      [disabled]="!event.open"
+                      (click)="pick(event.id)"
+                    >
+                      {{ event.open ? 'Voir le menu →' : 'Indisponible' }}
+                    </button>
+                  </div>
+                </div>
               </div>
-              @for (it of sec.items; track it.name) {
-                <div class="flex items-center gap-3 border-t border-border-s px-4 py-3">
-                  <div class="flex-1">
-                    <div class="text-sm font-medium text-text">{{ it.name }}</div>
-                    <div class="mt-0.5 text-[11.5px] text-muted">{{ it.desc }}</div>
+            </bae-card>
+          }
+        </div>
+      }
+    }
+  }
+</section>
+
+<section id="menu" class="px-6 pt-6 pb-14 md:px-14" tabindex="-1">
+  <div class="mb-3.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+    <h2 class="m-0 text-[22px] font-semibold -tracking-[0.4px] text-text">
+      Menu
+      @if (selected(); as star) {
+        · {{ star.name }}
+      }
+    </h2>
+    @if (store.menuStatus() === 'loaded') {
+      <span class="text-xs text-muted">
+        {{ itemCount() }} article{{ itemCount() > 1 ? 's' : '' }}
+        @if (discountPercent() > 0) {
+          · −{{ discountPercent() }} % en précommande
+        }
+      </span>
+    }
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+    <bae-card [padding]="0">
+      @switch (store.menuStatus()) {
+        @case ('loading') {
+          <div class="flex flex-col gap-3 p-4.5">
+            @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+              <bae-skeleton width="100%" height="44px" rounded="md" />
+            }
+          </div>
+        }
+        @case ('error') {
+          <p class="m-0 p-4.5 text-sm text-danger" role="alert">{{ store.error() }}</p>
+        }
+        @default {
+          @if (itemCount() === 0) {
+            <p class="m-0 px-4.5 py-10 text-center text-sm text-muted">
+              Le menu de cette soirée n’est pas encore publié.
+            </p>
+          }
+          @for (section of sections(); track section.category; let first = $first) {
+            <div>
+              <h3
+                class="m-0 px-4.5 pt-3.5 pb-2 text-[11px] font-semibold tracking-[1px] text-muted uppercase"
+                [class.border-t]="!first"
+                [class.border-border-s]="!first"
+              >
+                {{ section.category }}
+              </h3>
+
+              @for (item of section.items; track item.productId) {
+                <div class="flex flex-wrap items-center gap-3 border-t border-border-s px-4.5 py-3">
+                  <div class="min-w-40 flex-1">
+                    <div class="text-sm font-medium text-text">{{ item.name }}</div>
+                    @if (item.description) {
+                      <div class="mt-0.5 text-[11.5px] text-muted">{{ item.description }}</div>
+                    }
                   </div>
-                  <div class="text-right">
-                    <div class="tnum text-sm font-semibold text-text">
-                      {{ formatPrice(it.priceAdh) }} €
-                    </div>
-                    <div class="tnum text-[11px] text-muted line-through">
-                      {{ formatPrice(it.priceOriginal) }} €
-                    </div>
+
+                  <div class="tnum text-right text-sm font-semibold text-text">
+                    {{ price(item.price) }} €
                   </div>
+
                   <div
                     class="inline-flex items-center rounded-md border border-border bg-surface-2 p-0.5"
                   >
                     <button
                       type="button"
-                      class="h-[26px] w-7 cursor-pointer border-none bg-transparent text-muted"
+                      class="inline-flex h-6.5 w-7 cursor-pointer items-center justify-center rounded-sm text-muted transition-colors hover:text-text focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                      [disabled]="qtyOf(item.productId) === 0"
+                      [attr.aria-label]="'Retirer un ' + item.name"
+                      (click)="decrement(item.productId)"
                     >
-                      −
+                      <svg [lucideIcon]="icMinus" [size]="13" aria-hidden="true"></svg>
                     </button>
-                    <span class="tnum w-6 text-center text-[13px] text-text">{{ it.qty }}</span>
+                    <span
+                      class="tnum w-6 text-center text-[13px] text-text"
+                      aria-live="polite"
+                      [attr.aria-label]="qtyOf(item.productId) + ' × ' + item.name"
+                      >{{ qtyOf(item.productId) }}</span
+                    >
                     <button
                       type="button"
-                      class="h-[26px] w-7 cursor-pointer rounded-sm border-none bg-blue text-white"
+                      class="inline-flex h-6.5 w-7 cursor-pointer items-center justify-center rounded-sm bg-blue text-white transition-colors hover:bg-blue-deep focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                      [disabled]="!selected()?.open"
+                      [attr.aria-label]="'Ajouter un ' + item.name"
+                      (click)="increment(item.productId)"
                     >
-                      +
+                      <svg [lucideIcon]="icPlus" [size]="13" aria-hidden="true"></svg>
                     </button>
                   </div>
                 </div>
               }
             </div>
           }
-        </bae-card>
+        }
+      }
+    </bae-card>
 
-        <!-- Cart summary -->
-        <bae-card [padding]="0" class="self-start">
-          <div class="border-b border-border-s p-4">
-            <div class="text-sm font-semibold text-text">Votre précommande</div>
-            <div class="mt-0.5 text-[11.5px] text-muted">Soirée Hivernale · 14/02</div>
+    <bae-card [padding]="0" class="self-start lg:sticky lg:top-6">
+      <div class="border-b border-border-s p-4">
+        <h3 class="m-0 text-sm font-semibold text-text">Votre précommande</h3>
+        @if (selected(); as star) {
+          <div class="mt-0.5 text-[11.5px] text-muted">
+            {{ star.name }} · clôture {{ closingOf(star) }}
           </div>
-          <div class="flex flex-col gap-2 p-3.5">
-            <div class="flex items-center text-[12.5px]">
-              <span class="tnum w-6 text-muted">×2</span>
-              <span class="flex-1 text-text">Hot-dog classique</span>
-              <span class="tnum font-medium text-text">6,00 €</span>
-            </div>
-            <div class="flex items-center text-[12.5px]">
-              <span class="tnum w-6 text-muted">×3</span>
-              <span class="flex-1 text-text">Heineken 33cl</span>
-              <span class="tnum font-medium text-text">6,00 €</span>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1 border-t border-border-s px-3.5 py-3 text-xs">
-            <div class="flex justify-between text-text-2">
-              <span>Sous-total</span><span class="tnum">{{ formatPrice(subtotal()) }} €</span>
-            </div>
-            <div class="flex justify-between text-ok">
-              <span>Remise adhérent</span><span class="tnum">−{{ formatPrice(remise()) }} €</span>
-            </div>
-          </div>
-          <div
-            class="flex items-baseline justify-between border-t border-dashed border-border p-3.5"
-          >
-            <span class="text-[13px] text-text-2">Total</span>
-            <span class="tnum text-2xl font-semibold -tracking-[0.4px] text-text"
-              >{{ formatPrice(total()) }} €</span
-            >
-          </div>
-          <div class="px-3.5 pb-3.5">
-            <bae-btn kind="primary" size="lg" [full]="true" [iconRight]="icArrowRight"
-              >Payer avec Lydia</bae-btn
-            >
-            <div class="mt-2 text-center text-[10.5px] leading-relaxed text-muted">
-              En commandant vous acceptez les <a class="text-text-2">CGV</a>. QR code envoyé par
-              email après paiement.
-            </div>
-          </div>
-        </bae-card>
+        }
       </div>
-    </section>
 
-    <footer
-      class="flex items-center gap-4 border-t border-border-s px-14 py-8 text-[11.5px] text-muted"
-    >
-      <bae-logo [size]="22" [version]="appVersion" />
-      <div class="flex-1"></div>
-      <span>© BAE ENSEIRB-MATMECA · 2026</span>
-      <span>·</span><span>CGV</span> <span>·</span><span>Confidentialité</span> <span>·</span
-      ><span>Contact</span>
-    </footer>
+      @if (isEmpty()) {
+        <p class="m-0 px-4 py-8 text-center text-xs text-muted">
+          Votre panier est vide. Ajoutez des articles depuis le menu.
+        </p>
+      } @else {
+        <ul class="m-0 flex list-none flex-col gap-2 p-3.5">
+          @for (line of cartLines(); track line.item.productId) {
+            <li class="flex items-center text-[12.5px]">
+              <span class="tnum w-6 text-muted">×{{ line.qty }}</span>
+              <span class="min-w-0 flex-1 truncate text-text">{{ line.item.name }}</span>
+              <span class="tnum font-medium text-text">{{ price(lineTotal(line)) }} €</span>
+            </li>
+          }
+        </ul>
+
+        <div class="flex flex-col gap-1 border-t border-border-s px-3.5 py-3 text-xs">
+          <div class="flex justify-between text-text-2">
+            <span>Sous-total</span><span class="tnum">{{ price(subtotal()) }} €</span>
+          </div>
+          @if (discount() > 0) {
+            <div class="flex justify-between text-ok">
+              <span>Remise précommande ({{ discountPercent() }} %)</span>
+              <span class="tnum">−{{ price(discount()) }} €</span>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="flex items-baseline justify-between border-t border-dashed border-border p-3.5">
+        <span class="text-[13px] text-text-2">Total</span>
+        <span class="tnum text-2xl font-semibold -tracking-[0.4px] text-text">
+          {{ price(total()) }} €
+        </span>
+      </div>
+
+      <div class="px-3.5 pb-3.5">
+        <bae-btn
+          kind="primary"
+          size="lg"
+          [full]="true"
+          [iconRight]="icArrowRight"
+          [disabled]="true"
+          ariaDescribedby="paiement-indispo"
+        >
+          Valider ma précommande
+        </bae-btn>
+        <p
+          id="paiement-indispo"
+          class="mt-2 mb-0 text-center text-[10.5px] leading-[1.5] text-muted"
+        >
+          La validation en ligne ouvrira avec le paiement Lydia. En attendant, écrivez-nous depuis
+          <a routerLink="/contact" class="text-text-2 underline">la page contact</a>.
+        </p>
+      </div>
+    </bae-card>
   </div>
-</div>
+</section>

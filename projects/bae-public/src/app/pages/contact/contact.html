@@ -1,0 +1,80 @@
+<section class="px-6 pt-14 pb-3 text-center md:px-14">
+  <div class="flex justify-center">
+    <bae-badge kind="blue" [dot]="true">Contact</bae-badge>
+  </div>
+  <h1 class="mt-4 mb-2.5 text-[30px] leading-[1.08] font-semibold -tracking-[0.9px] md:text-[40px]">
+    Une question, un souci de commande ?
+  </h1>
+  <p class="mx-auto max-w-130 text-[15px] leading-[1.6] text-text-2">
+    Écrivez-nous, l’équipe du BAE répond sous 48h en période de cours.
+  </p>
+</section>
+
+<section
+  class="mx-auto grid max-w-250 grid-cols-1 gap-6 px-6 pt-7 pb-16 md:px-14 lg:grid-cols-[1fr_1.3fr]"
+>
+  <div class="flex flex-col gap-3.5">
+    @for (channel of channels; track channel.name) {
+      <bae-card [padding]="18">
+        <div class="flex items-start gap-3.5">
+          <div
+            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-soft text-blue"
+          >
+            <svg [lucideIcon]="channel.icon" [size]="17" aria-hidden="true"></svg>
+          </div>
+          <div class="min-w-0">
+            <h2 class="m-0 text-[13px] font-semibold text-text">{{ channel.name }}</h2>
+            <p class="m-0 mt-0.75 text-[12.5px] break-words text-muted">{{ channel.value }}</p>
+          </div>
+        </div>
+      </bae-card>
+    }
+  </div>
+
+  <bae-card [padding]="24">
+    <div class="flex flex-col gap-3.5">
+      <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <bae-field label="Nom">
+          <bae-input placeholder="Prénom Nom" size="lg" [disabled]="true" />
+        </bae-field>
+        <bae-field label="Email">
+          <bae-input
+            [icon]="icMail"
+            placeholder="prenom.nom@enseirb-matmeca.fr"
+            size="lg"
+            [disabled]="true"
+          />
+        </bae-field>
+      </div>
+
+      <bae-field label="Sujet">
+        <bae-input placeholder="Ex. Problème de retrait de commande" size="lg" [disabled]="true" />
+      </bae-field>
+
+      <bae-field label="Message">
+        <textarea
+          placeholder="Décrivez votre demande…"
+          rows="6"
+          disabled
+          class="resize-y rounded-md border border-border bg-surface-2 px-3 py-2.5 font-sans text-[13px] text-text disabled:cursor-not-allowed disabled:opacity-40"
+        ></textarea>
+      </bae-field>
+
+      <bae-btn
+        kind="primary"
+        size="lg"
+        [full]="true"
+        [disabled]="true"
+        ariaDescribedby="contact-indispo"
+        class="mt-1 block"
+      >
+        Envoyer le message
+      </bae-btn>
+
+      <p id="contact-indispo" class="m-0 text-center text-[11.5px] leading-[1.5] text-muted">
+        Le formulaire n’est pas encore branché. En attendant, écrivez directement à l’adresse email
+        ci-contre.
+      </p>
+    </div>
+  </bae-card>
+</section>

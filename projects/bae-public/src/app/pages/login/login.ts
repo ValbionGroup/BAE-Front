@@ -1,16 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
-import {
-  LucideArrowRight,
-  LucideDynamicIcon,
-  LucideShield,
-  LucideTriangleAlert,
-} from '@lucide/angular';
-import { API_BASE_URL, Badge, Btn, Card, Logo } from '@bae/ui';
-
-import { APP_VERSION } from '../../app-version';
+import { LucideDynamicIcon, LucideShield, LucideTriangleAlert } from '@lucide/angular';
+import { API_BASE_URL, Btn, Card } from '@bae/ui';
 
 /**
  * Messages d'échec du retour SSO. `not_a_member` en est **absent à dessein** :
@@ -27,7 +20,7 @@ const SSO_ERRORS: Readonly<Record<string, string>> = {
 
 @Component({
   selector: 'bfp-login',
-  imports: [Logo, Btn, Badge, Card, LucideDynamicIcon],
+  imports: [RouterLink, Btn, Card, LucideDynamicIcon],
   templateUrl: './login.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,11 +32,8 @@ export class Login {
     { initialValue: null },
   );
 
-  protected readonly appVersion = APP_VERSION;
-  protected readonly icArrowRight = LucideArrowRight;
   protected readonly icAlert = LucideTriangleAlert;
   protected readonly icShield = LucideShield;
-  protected readonly year = computed(() => new Date().getFullYear());
 
   protected readonly ssoError = computed(() => {
     const code = this.ssoErrorCode();
