@@ -147,6 +147,56 @@ export const EventsStore = signalStore(
       });
     }
 
+    /** Remplace une seule ligne, relue de l'état vivant au moment de l'écriture. */
+    function replaceLine(eventId: string, productId: number, line: MenuItem): void {
+      patchMenu(
+        eventId,
+        (store.events()[eventId]?.menu ?? []).map((entry) =>
+          entry.productId === productId ? line : entry,
+        ),
+      );
+    }
+
+    /**
+     * Écriture optimiste d'une ligne de menu, partagée par la quantité et le
+     * prix. En cas de refus, seule la ligne fautive est restaurée, fusionnée
+     * dans l'état vivant — un instantané global annulerait aussi une écriture
+     * concurrente aboutie pendant que celle-ci était en vol.
+     *
+     * ⚠️ La clé de garde est `"<eventId>:<productId>"` : quantité et prix de la
+     * même ligne s'excluent le temps d'un vol, le back renvoyant la ligne
+     * entière.
+     */
+    async function saveMenuLine(
+      eventId: string,
+      productId: number,
+      patch: Partial<MenuItem>,
+      write: () => Promise<MenuItem>,
+      failure: string,
+    ): Promise<void> {
+      const key = `${eventId}:${productId}`;
+      if (store.savingMenuKeys().includes(key)) return;
+
+      const previous = (store.events()[eventId]?.menu ?? []).find(
+        (line) => line.productId === productId,
+      );
+      if (!previous) return;
+
+      patchState(store, { menuError: null, savingMenuKeys: [...store.savingMenuKeys(), key] });
+      replaceLine(eventId, productId, { ...previous, ...patch });
+
+      try {
+        replaceLine(eventId, productId, await write());
+      } catch (error) {
+        replaceLine(eventId, productId, previous);
+        patchState(store, { menuError: messageOf(error, failure) });
+      } finally {
+        patchState(store, {
+          savingMenuKeys: store.savingMenuKeys().filter((entry) => entry !== key),
+        });
+      }
+    }
+
     return {
       getEventById(id: string): EventDetail | undefined {
         return store.events()[id];
@@ -316,13 +366,23 @@ export const EventsStore = signalStore(
       },
 
       /**
-       * Non optimiste : il n'y a ni coût dérivé ni prix de vente avant la
-       * réponse, et les inventer afficherait deux fois des chiffres différents.
+       * Non optimiste : il n'y a pas de coût dérivé avant la réponse, et
+       * l'inventer afficherait deux fois des chiffres différents.
+       *
+       * ⚠️ `priceCents` omis, le back reporte le dernier prix de vente connu —
+       * donc 0 pour une recette jamais vendue.
        */
-      async addMenuLine(eventId: string, productId: number, quantity = 10): Promise<void> {
+      async addMenuLine(
+        eventId: string,
+        productId: number,
+        quantity = 10,
+        priceCents?: number,
+      ): Promise<void> {
         patchState(store, { menuError: null });
         try {
-          const line = await lastValueFrom(menu.addMenuLine(eventId, productId, quantity));
+          const line = await lastValueFrom(
+            menu.addMenuLine(eventId, productId, quantity, priceCents),
+          );
           const current = store.events()[eventId];
           patchMenu(eventId, [...(current?.menu ?? []), line]);
         } catch (error) {
@@ -332,54 +392,27 @@ export const EventsStore = signalStore(
         }
       },
 
-      /**
-       * Optimiste : la quantité doit suivre le clic, pas le réseau.
-       *
-       * En cas de refus, seule la ligne fautive est restaurée, fusionnée dans
-       * l'état vivant — un instantané global annulerait aussi une écriture
-       * concurrente aboutie pendant que celle-ci était en vol.
-       */
-      async setMenuLineQuantity(
-        eventId: string,
-        productId: number,
-        quantity: number,
-      ): Promise<void> {
-        const key = `${eventId}:${productId}`;
-        if (store.savingMenuKeys().includes(key)) return;
-
-        const lines = store.events()[eventId]?.menu ?? [];
-        const previous = lines.find((line) => line.productId === productId);
-        if (!previous) return;
-
-        patchState(store, { menuError: null, savingMenuKeys: [...store.savingMenuKeys(), key] });
-        patchMenu(
+      /** Optimiste : la quantité doit suivre le clic, pas le réseau. */
+      setMenuLineQuantity(eventId: string, productId: number, quantity: number): Promise<void> {
+        return saveMenuLine(
           eventId,
-          lines.map((line) => (line.productId === productId ? { ...line, quantity } : line)),
+          productId,
+          { quantity },
+          () => lastValueFrom(menu.setMenuLineQuantity(eventId, productId, quantity)),
+          'Impossible de modifier cette quantité.',
         );
+      },
 
-        try {
-          const saved = await lastValueFrom(menu.setMenuLineQuantity(eventId, productId, quantity));
-          patchMenu(
-            eventId,
-            (store.events()[eventId]?.menu ?? []).map((line) =>
-              line.productId === productId ? saved : line,
-            ),
-          );
-        } catch (error) {
-          patchMenu(
-            eventId,
-            (store.events()[eventId]?.menu ?? []).map((line) =>
-              line.productId === productId ? previous : line,
-            ),
-          );
-          patchState(store, {
-            menuError: messageOf(error, 'Impossible de modifier cette quantité.'),
-          });
-        } finally {
-          patchState(store, {
-            savingMenuKeys: store.savingMenuKeys().filter((entry) => entry !== key),
-          });
-        }
+      /** ⚠️ `priceCents` est en centimes ; la conversion depuis les euros
+       *  saisis appartient à l'écran. */
+      setMenuLinePrice(eventId: string, productId: number, priceCents: number): Promise<void> {
+        return saveMenuLine(
+          eventId,
+          productId,
+          { price: priceCents },
+          () => lastValueFrom(menu.setMenuLinePrice(eventId, productId, priceCents)),
+          'Impossible de modifier ce prix de vente.',
+        );
       },
 
       async removeMenuLine(eventId: string, productId: number): Promise<void> {

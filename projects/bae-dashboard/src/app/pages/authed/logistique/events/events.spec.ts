@@ -91,28 +91,77 @@ describe(LogistiqueEvents.name, () => {
     expect(downloadSpy).toHaveBeenCalledWith('/events/42/shopping-list/pdf', expect.any(String));
   });
 
+  /** Peuple le store par le réseau — c'est la seule porte d'entrée qu'il
+   *  expose, comme dans events.store.spec.ts. */
+  async function seedLine(overrides: Partial<MenuItem> = {}): Promise<MenuItem> {
+    const loaded = store.load();
+    http.expectOne(`${baseUrl}/events`).flush([
+      {
+        id: '1',
+        name: 'Soirée test',
+        location: 'Foyer',
+        date: new Date('2026-02-14T19:00:00Z').toISOString(),
+      },
+    ]);
+    await loaded;
+
+    const menuLoaded = store.loadEventMenu('1');
+    http.expectOne(`${baseUrl}/events/1/products`).flush([menuLine(overrides)]);
+    await menuLoaded;
+
+    return store.getEventById('1')!.menu![0];
+  }
+
+  describe('prix de vente de la ligne de menu', () => {
+    it('affiche les centimes du serveur en euros, et un champ vide quand rien n’est fixé', async () => {
+      const line = await seedLine();
+      expect(component['priceOf']('1', line)).toBe('3,50');
+      expect(component['priceOf']('1', menuLine({ price: 0 }))).toBe('');
+    });
+
+    it('enregistre la saisie en euros convertie en centimes entiers', async () => {
+      const line = await seedLine();
+
+      const saved = component['commitPrice']('1', line, '4,20');
+
+      const req = http.expectOne(`${baseUrl}/events/1/products/3`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ price: 420 });
+      req.flush(menuLine({ price: 420 }));
+      await saved;
+
+      expect(store.getEventById('1')!.menu![0].price).toBe(420);
+    });
+
+    it('n’envoie rien quand la saisie est illisible, négative ou inchangée', async () => {
+      const line = await seedLine();
+
+      await component['commitPrice']('1', line, 'quatre euros');
+      await component['commitPrice']('1', line, '-2');
+      await component['commitPrice']('1', line, '');
+      await component['commitPrice']('1', line, '3,50');
+
+      http.expectNone(`${baseUrl}/events/1/products/3`);
+    });
+
+    it('rend la valeur d’avant quand le serveur refuse', async () => {
+      const line = await seedLine();
+
+      const saved = component['commitPrice']('1', line, '9,99');
+      http
+        .expectOne(`${baseUrl}/events/1/products/3`)
+        .flush({ code: 'E_NOPE', message: 'Non' }, { status: 422, statusText: 'Unprocessable' });
+      await saved;
+
+      expect(store.getEventById('1')!.menu![0].price).toBe(350);
+    });
+
+    it('compte les recettes sans prix, qui partiraient gratuitement en caisse', () => {
+      expect(component['unpricedCount']([menuLine(), menuLine({ price: 0 })])).toBe(1);
+    });
+  });
+
   describe('pas-à-pas de quantité, débouncé par ligne', () => {
-    /** Peuple le store par le réseau — c'est la seule porte d'entrée qu'il
-     *  expose, comme dans events.store.spec.ts. */
-    async function seedLine(): Promise<MenuItem> {
-      const loaded = store.load();
-      http.expectOne(`${baseUrl}/events`).flush([
-        {
-          id: '1',
-          name: 'Soirée test',
-          location: 'Foyer',
-          date: new Date('2026-02-14T19:00:00Z').toISOString(),
-        },
-      ]);
-      await loaded;
-
-      const menuLoaded = store.loadEventMenu('1');
-      http.expectOne(`${baseUrl}/events/1/products`).flush([menuLine()]);
-      await menuLoaded;
-
-      return store.getEventById('1')!.menu![0];
-    }
-
     beforeEach(() => {
       vi.useFakeTimers();
     });

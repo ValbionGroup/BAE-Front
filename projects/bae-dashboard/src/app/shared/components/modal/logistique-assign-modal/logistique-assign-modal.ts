@@ -31,17 +31,21 @@ import { ModalShell } from '../modal-shell/modal-shell';
  * la conversion de la maquette : ils sont conservés tels quels pour que le
  * gabarit n'ait pas à changer, seule la **source** des données devient réelle.
  *
- * `marge` est la marge unitaire — dernier prix de vente connu moins le coût des
- * denrées. Elle vaut 0 quand l'un des deux est inconnu, plutôt qu'un chiffre
- * inventé.
+ * ⚠️ `cost` est en **euros** (prix fournisseurs, `decimal`) et `price` en
+ * **centimes** (`event_products.price`, `integer`). Les soustraire directement
+ * donnait une marge fausse d'un facteur 100.
  */
 interface Recipe {
   /** Clé réelle pour les écritures. Le gabarit, lui, piste par `n`. */
   readonly productId: number;
   readonly n: string;
   readonly c: string;
+  /** Euros. */
   readonly cost: number;
-  readonly marge: number;
+  /** Centimes. Prix de vente pour cette soirée, éditable ici. */
+  price: number;
+  /** Saisie en cours, texte brut ; `null` hors édition. */
+  priceDraft: string | null;
   sel: boolean;
   q: number;
   readonly star: boolean;
@@ -91,7 +95,9 @@ export class LogistiqueAssignModal {
    * différences. Sans cette référence il faudrait tout réécrire à chaque
    * enregistrement, y compris les lignes intactes.
    */
-  private readonly initialMenu = signal<ReadonlyMap<number, number>>(new Map());
+  private readonly initialMenu = signal<
+    ReadonlyMap<number, { readonly quantity: number; readonly price: number }>
+  >(new Map());
 
   constructor() {
     void this.recipesStore.load();
@@ -113,32 +119,58 @@ export class LogistiqueAssignModal {
       if (this.allRecipes().length > 0) return;
 
       const menu = event.menu ?? [];
-      this.initialMenu.set(new Map(menu.map((line) => [line.productId, line.quantity])));
+      this.initialMenu.set(
+        new Map(
+          menu.map((line) => [line.productId, { quantity: line.quantity, price: line.price }]),
+        ),
+      );
       this.allRecipes.set(catalog.map((product) => this.toRecipe(product, menu)));
     });
   }
 
   private toRecipe(product: RecipeProduct, menu: readonly MenuItem[]): Recipe {
     const line = menu.find((entry) => entry.productId === product.id);
-    const cost = product.cost ?? 0;
-    // Marge unitaire : prix de vente connu − coût des denrées. Les deux peuvent
-    // manquer (une recette jamais vendue, une denrée sans fournisseur), et dans
-    // ce cas 0 est plus honnête qu'une estimation.
-    const marge =
-      product.lastPrice !== null && product.cost !== null ? product.lastPrice - product.cost : 0;
 
     return {
       productId: product.id,
       n: product.name,
       c: product.category ?? 'Autres',
-      cost,
-      marge,
+      cost: product.cost ?? 0,
+      // Le prix de la soirée fait foi ; à défaut, le dernier prix connu sert de
+      // proposition, et 0 signale qu'il reste à fixer.
+      price: line?.price ?? product.lastPrice ?? 0,
+      priceDraft: null,
       sel: line !== undefined,
       q: line?.quantity ?? 0,
       // Aucune colonne « vedette » en base — le champ existe dans la maquette,
       // pas dans le schéma.
       star: false,
     };
+  }
+
+  /** Marge unitaire en euros. `cost` est en euros, `price` en centimes. */
+  protected marginOf(recipe: Recipe): number {
+    return recipe.price / 100 - recipe.cost;
+  }
+
+  protected priceOf(recipe: Recipe): string {
+    if (recipe.priceDraft !== null) return recipe.priceDraft;
+    return recipe.price === 0 ? '' : this.fmt(recipe.price / 100);
+  }
+
+  protected onPriceInput(n: string, value: string): void {
+    this.update(n, (r) => ({ ...r, priceDraft: value }));
+  }
+
+  /** Une saisie illisible rend la valeur d'avant, comme sur la page Soirées. */
+  protected commitPrice(n: string, value: string): void {
+    const euros = Number(value.trim().replace(',', '.'));
+    const valid = value.trim() !== '' && Number.isFinite(euros) && euros >= 0;
+    this.update(n, (r) => ({
+      ...r,
+      price: valid ? Math.round(euros * 100) : r.price,
+      priceDraft: null,
+    }));
   }
 
   /**
@@ -175,7 +207,11 @@ export class LogistiqueAssignModal {
     Math.round(this.selected().reduce((s, r) => s + r.q * r.cost, 0)),
   );
   protected readonly totalRev = computed(() =>
-    Math.round(this.selected().reduce((s, r) => s + r.q * (r.cost + r.marge), 0)),
+    Math.round(this.selected().reduce((s, r) => s + (r.q * r.price) / 100, 0)),
+  );
+  /** Une recette cochée sans prix se vendrait gratuitement en caisse. */
+  protected readonly unpricedSelected = computed(
+    () => this.selected().filter((r) => r.price === 0).length,
   );
 
   private update(name: string, change: (recipe: Recipe) => Recipe): void {
@@ -231,9 +267,16 @@ export class LogistiqueAssignModal {
         const quantity = Math.max(1, recipe.q);
 
         if (before === undefined) {
-          await this.events.addMenuLine(eventId, recipe.productId, quantity);
-        } else if (before !== quantity) {
+          await this.events.addMenuLine(eventId, recipe.productId, quantity, recipe.price);
+          continue;
+        }
+        // Deux `PATCH` distincts et non un seul : la garde du store est posée
+        // par ligne, donc une écriture combinée ne passerait pas les deux.
+        if (before.quantity !== quantity) {
           await this.events.setMenuLineQuantity(eventId, recipe.productId, quantity);
+        }
+        if (before.price !== recipe.price) {
+          await this.events.setMenuLinePrice(eventId, recipe.productId, recipe.price);
         }
       }
 

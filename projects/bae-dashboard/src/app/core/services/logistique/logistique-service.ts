@@ -77,14 +77,23 @@ export class LogistiqueService {
   }
 
   /**
-   * Ajoute une recette au menu. `price` est omis volontairement : le back
-   * reporte le dernier prix de vente connu de cet article, ce qu'aucun écran ne
-   * saurait faire aussi bien.
+   * `priceCents` omis laisse le back reporter le dernier prix de vente connu —
+   * bon défaut, mais seulement un défaut : une recette jamais vendue n'en a
+   * aucun et partirait à 0.
+   *
+   * ⚠️ En **centimes entiers** : `event_products.price` est un `integer`, donc
+   * un `4.5` transmis tel quel vaut quatre centimes et demi.
    */
-  addMenuLine(eventId: string, productId: number, quantity: number): Observable<MenuItem> {
+  addMenuLine(
+    eventId: string,
+    productId: number,
+    quantity: number,
+    priceCents?: number,
+  ): Observable<MenuItem> {
     return this.http.post<MenuItem>(`${this.baseUrl}/events/${eventId}/products`, {
       productId,
       quantity,
+      ...(priceCents === undefined ? {} : { price: priceCents }),
     });
   }
 
@@ -97,6 +106,13 @@ export class LogistiqueService {
   setMenuLineQuantity(eventId: string, productId: number, quantity: number): Observable<MenuItem> {
     return this.http.patch<MenuItem>(`${this.baseUrl}/events/${eventId}/products/${productId}`, {
       quantity,
+    });
+  }
+
+  /** ⚠️ `priceCents` en centimes entiers, comme pour `addMenuLine`. */
+  setMenuLinePrice(eventId: string, productId: number, priceCents: number): Observable<MenuItem> {
+    return this.http.patch<MenuItem>(`${this.baseUrl}/events/${eventId}/products/${productId}`, {
+      price: priceCents,
     });
   }
 

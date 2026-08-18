@@ -108,13 +108,28 @@
             </div>
           </div>
         } @else {
+          @let unpriced = unpricedCount(menu);
+          @if (unpriced > 0) {
+            <p
+              data-testid="unpriced-menu-banner"
+              class="m-0 border-t border-warn/40 bg-warn-soft px-4 py-2 text-[12px] text-warn"
+              role="status"
+            >
+              {{ unpriced }} recette{{ unpriced > 1 ? 's' : '' }} sans prix de vente — elle{{
+                unpriced > 1 ? 's' : ''
+              }}
+              partira{{ unpriced > 1 ? 'ient' : '' }} gratuitement en caisse.
+            </p>
+          }
+
           <!-- Recipe table header -->
           <div
-            class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+            class="grid grid-cols-[24px_1.4fr_100px_92px_90px_110px_60px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
           >
             <span></span>
             <span>Recette</span>
             <span class="text-right">Quantité</span>
+            <span class="text-right">Prix vente</span>
             <span class="text-right">Coût/u.</span>
             <span class="text-right">Coût total</span>
             <span></span>
@@ -127,7 +142,7 @@
           <div class="max-h-76 overflow-y-auto">
             @for (line of menu; track line.productId) {
               <div
-                class="grid grid-cols-[24px_1.6fr_100px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
+                class="grid grid-cols-[24px_1.4fr_100px_92px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
               >
                 <span
                   class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-surface-3 text-text-2"
@@ -158,6 +173,30 @@
                   >
                     +
                   </button>
+                </div>
+
+                <div class="justify-self-end">
+                  <label class="sr-only" [attr.for]="'price-' + event.id + '-' + line.productId">
+                    Prix de vente de {{ line.name }}, en euros
+                  </label>
+                  <div
+                    [class]="
+                      'flex items-center rounded-md border bg-surface-2 pr-1.5 ' +
+                      (line.price === 0 ? 'border-warn' : 'border-border')
+                    "
+                  >
+                    <input
+                      [id]="'price-' + event.id + '-' + line.productId"
+                      type="text"
+                      inputmode="decimal"
+                      placeholder="—"
+                      [value]="priceOf(event.id, line)"
+                      (input)="onPriceInput(event.id, line, $any($event.target).value)"
+                      (change)="commitPrice(event.id, line, $any($event.target).value)"
+                      class="mono tnum w-13 border-none bg-transparent py-1 pl-1.5 text-right text-[12px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                    />
+                    <span class="text-[11px] text-muted" aria-hidden="true">€</span>
+                  </div>
                 </div>
 
                 <span class="mono tnum text-right text-muted">

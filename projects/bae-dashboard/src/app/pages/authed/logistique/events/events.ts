@@ -218,6 +218,17 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
     return n.toFixed(2).replace('.', ',');
   }
 
+  /** ⚠️ `line.price` est en centimes, `unitCost` de la même ligne en euros. */
+  protected priceOf(eventId: string, line: MenuItem): string {
+    const draft = this.pendingPrices().get(`${eventId}:${line.productId}`);
+    if (draft !== undefined) return draft;
+    return line.price === 0 ? '' : this.formatPrice(line.price / 100);
+  }
+
+  protected unpricedCount(menu: readonly MenuItem[]): number {
+    return menu.filter((line) => line.price === 0).length;
+  }
+
   protected formatPriceInt(n: number): string {
     return n.toFixed(0);
   }
@@ -333,8 +344,55 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
   private readonly pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private static readonly DEBOUNCE_MS = 400;
 
+  /**
+   * Prix en cours de saisie, texte brut : « 4, » est un état de frappe
+   * légitime qu'aucun `number` ne représente.
+   *
+   * ⚠️ Non débouncé, contrairement aux quantités : le prix part à la
+   * validation, jamais pendant la frappe. « 45 » tapé en route vers « 4,50 »
+   * ne doit pas être enregistré, même une fraction de seconde.
+   */
+  private readonly pendingPrices = signal<ReadonlyMap<string, string>>(new Map());
+
   protected quantityOf(eventId: string, line: MenuItem): number {
     return this.pendingQuantities().get(`${eventId}:${line.productId}`) ?? line.quantity;
+  }
+
+  protected onPriceInput(eventId: string, line: MenuItem, value: string): void {
+    this.pendingPrices.update((map) => new Map(map).set(`${eventId}:${line.productId}`, value));
+  }
+
+  /** Saisie en euros, enregistrée en centimes. Une entrée illisible est une
+   *  frappe abandonnée, pas une erreur : on rend la valeur d'avant sans bruit. */
+  protected async commitPrice(eventId: string, line: MenuItem, value: string): Promise<void> {
+    const key = `${eventId}:${line.productId}`;
+    const clear = () =>
+      this.pendingPrices.update((map) => {
+        if (!map.has(key)) return map;
+        const copy = new Map(map);
+        copy.delete(key);
+        return copy;
+      });
+
+    const euros = Number(value.trim().replace(',', '.'));
+    if (value.trim() === '' || !Number.isFinite(euros) || euros < 0) {
+      clear();
+      return;
+    }
+
+    const cents = Math.round(euros * 100);
+    if (cents === line.price) {
+      clear();
+      return;
+    }
+
+    await this.store.setMenuLinePrice(eventId, line.productId, cents);
+    clear();
+
+    const error = this.store.menuError();
+    if (error) {
+      this.toast.show({ type: 'error', title: 'Prix refusé', message: error });
+    }
   }
 
   /**

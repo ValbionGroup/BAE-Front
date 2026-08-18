@@ -29,17 +29,18 @@
 
   <div class="bg-surface-2 border border-border-s rounded-md overflow-hidden">
     <div
-      class="grid grid-cols-[20px_1.5fr_100px_80px_70px_110px] gap-2.5 px-3 py-2 text-[10px] font-semibold text-muted tracking-wider uppercase"
+      class="grid grid-cols-[20px_1.3fr_92px_74px_92px_74px_104px] gap-2.5 px-3 py-2 text-[10px] font-semibold text-muted tracking-wider uppercase"
     >
       <span></span><span>Recette</span><span>Catégorie</span>
       <span class="text-right">Coût</span>
+      <span class="text-right">Prix vente</span>
       <span class="text-right">Marge</span>
       <span class="text-right">Quantité</span>
     </div>
     @for (r of recipes(); track r.n) {
       <div
         [class]="
-          'grid grid-cols-[20px_1.5fr_100px_80px_70px_110px] gap-2.5 px-3 py-2 items-center border-t border-border-s text-[12.5px] ' +
+          'grid grid-cols-[20px_1.3fr_92px_74px_92px_74px_104px] gap-2.5 px-3 py-2 items-center border-t border-border-s text-[12.5px] ' +
           (r.sel ? 'bg-blue/[0.05]' : '')
         "
       >
@@ -69,7 +70,34 @@
         </div>
         <bae-badge kind="ghost">{{ r.c }}</bae-badge>
         <span class="mono tnum text-muted text-right">{{ fmt(r.cost) }} €</span>
-        <span class="mono tnum text-ok text-right">+{{ fmt(r.marge) }} €</span>
+
+        <div class="justify-self-end">
+          <label class="sr-only" [attr.for]="'assign-price-' + r.productId">
+            Prix de vente de {{ r.n }}, en euros
+          </label>
+          <div
+            [class]="
+              'flex items-center rounded-md border bg-surface pr-1.5 ' +
+              (r.sel && r.price === 0 ? 'border-warn' : 'border-border')
+            "
+          >
+            <input
+              [id]="'assign-price-' + r.productId"
+              type="text"
+              inputmode="decimal"
+              placeholder="—"
+              [value]="priceOf(r)"
+              (input)="onPriceInput(r.n, $any($event.target).value)"
+              (change)="commitPrice(r.n, $any($event.target).value)"
+              class="mono tnum w-13 border-none bg-transparent py-1 pl-1.5 text-right text-[12px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue"
+            />
+            <span class="text-[11px] text-muted" aria-hidden="true">€</span>
+          </div>
+        </div>
+
+        <span [class]="'mono tnum text-right ' + (marginOf(r) < 0 ? 'text-red' : 'text-ok')"
+          >{{ marginOf(r) >= 0 ? '+' : '' }}{{ fmt(marginOf(r)) }} €</span
+        >
         @if (r.sel) {
           <div
             class="inline-flex items-center justify-self-end bg-surface border border-border rounded-md p-0.5"
@@ -122,6 +150,12 @@
           {{ totalCost() }} € · <span class="text-ok">{{ totalRev() }} €</span>
         </div>
       </div>
+      @if (unpricedSelected() > 0) {
+        <div class="w-px h-[26px] bg-border"></div>
+        <div data-testid="unpriced-selected" class="text-[12px] text-warn max-w-52">
+          {{ unpricedSelected() }} recette{{ unpricedSelected() > 1 ? 's' : '' }} sans prix de vente
+        </div>
+      }
     </div>
     <bae-btn kind="ghost" (clicked)="close()">Annuler</bae-btn>
     <bae-btn kind="primary" [icon]="icCheck" [disabled]="saving()" (clicked)="save()"

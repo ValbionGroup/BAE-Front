@@ -56,6 +56,59 @@ describe(LogistiqueAssignModal.name, () => {
     for (const request of requests) request.flush([]);
   });
 
+  describe('prix de vente', () => {
+    /** `cost` en euros, `price` en centimes — c'est tout l'objet de ces tests. */
+    function recipe(overrides: Record<string, unknown> = {}) {
+      return {
+        productId: 3,
+        n: 'Hot-dog',
+        c: 'Plats',
+        cost: 1.12,
+        price: 350,
+        priceDraft: null,
+        sel: true,
+        q: 100,
+        star: false,
+        ...overrides,
+      } as never;
+    }
+
+    it('calcule la marge en euros, sans mélanger centimes et euros', () => {
+      // Le calcul d'avant faisait 350 − 1,12 et affichait « +348,88 € ».
+      expect(component['marginOf'](recipe())).toBeCloseTo(2.38, 5);
+      expect(component['marginOf'](recipe({ price: 50 }))).toBeCloseTo(-0.62, 5);
+    });
+
+    it('affiche le prix en euros, et vide quand il reste à fixer', () => {
+      expect(component['priceOf'](recipe())).toBe('3,50');
+      expect(component['priceOf'](recipe({ price: 0 }))).toBe('');
+      expect(component['priceOf'](recipe({ priceDraft: '4,' }))).toBe('4,');
+    });
+
+    it('convertit la saisie en centimes, et ignore une saisie illisible', () => {
+      component['allRecipes'].set([recipe()]);
+
+      component['commitPrice']('Hot-dog', '4,20');
+      expect(component['allRecipes']()[0].price).toBe(420);
+
+      component['commitPrice']('Hot-dog', 'gratuit');
+      expect(component['allRecipes']()[0].price).toBe(420);
+
+      component['commitPrice']('Hot-dog', '-1');
+      expect(component['allRecipes']()[0].price).toBe(420);
+    });
+
+    it('dérive le revenu prévu du prix saisi, et compte les recettes sans prix', () => {
+      component['allRecipes'].set([
+        recipe({ price: 350, q: 100 }),
+        recipe({ n: 'Frites', productId: 4, price: 0, q: 50 }),
+      ]);
+
+      expect(component['totalRev']()).toBe(350);
+      expect(component['unpricedSelected']()).toBe(1);
+    });
+  });
+
   afterEach(() => {
     // Les requêtes de menu partent selon l'état du store partagé : on les vide
     // sans les asserter, seul le catalogue est le sujet de ce spec.

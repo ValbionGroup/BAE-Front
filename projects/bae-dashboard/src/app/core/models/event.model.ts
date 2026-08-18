@@ -39,13 +39,22 @@ export interface RosterRow {
   late: boolean;
 }
 
+/**
+ * ⚠️ **Deux unités cohabitent sur cette ligne.** `price` vient de
+ * `event_products.price`, un `integer` en centimes ; `unitCost` et `totalCost`
+ * sont dérivés des prix fournisseurs (`decimal`), donc en euros. Les formater
+ * pareil affiche « 450,00 € » pour un burger à 4,50 €.
+ */
 export interface MenuItem {
   readonly productId: number;
   readonly name: string;
   readonly isVegetarian: boolean;
   readonly quantity: number;
+  /** Centimes. `0` = aucun prix fixé. */
   readonly price: number;
+  /** Euros. */
   readonly unitCost: number | null;
+  /** Euros. */
   readonly totalCost: number | null;
   readonly category: string | null;
 }
