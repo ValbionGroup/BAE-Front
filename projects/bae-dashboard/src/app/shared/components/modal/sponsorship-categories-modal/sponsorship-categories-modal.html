@@ -70,7 +70,7 @@
 
         @if (qrToken(); as token) {
           <div class="mb-3 rounded-md border border-border-s bg-surface-2 p-3 text-center">
-            <bae-qr-code [value]="token" [size]="200" />
+            <bae-qr-code class="mx-auto block w-52" [value]="token" />
             <div class="mt-2 text-[11px] text-muted">
               À imprimer et remettre à l'association. Un seul QR par catégorie.
             </div>

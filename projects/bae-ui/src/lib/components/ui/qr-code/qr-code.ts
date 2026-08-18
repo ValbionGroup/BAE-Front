@@ -10,7 +10,13 @@ import { toString as qrToString } from 'qrcode';
   selector: 'bae-qr-code',
   template: `
     @if (dataUrl(); as url) {
-      <img [src]="url" [width]="size()" [height]="size()" [alt]="alt()" />
+      <img
+        [src]="url"
+        [width]="size()"
+        [height]="size()"
+        [alt]="alt()"
+        class="block h-auto w-full"
+      />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +24,7 @@ import { toString as qrToString } from 'qrcode';
 })
 export class QrCode {
   readonly value = input.required<string>();
+  /** Dimensions intrinsèques : l'image remplit son hôte, ceci fixe le ratio. */
   readonly size = input<number>(220);
   readonly alt = input<string>('Code QR');
 

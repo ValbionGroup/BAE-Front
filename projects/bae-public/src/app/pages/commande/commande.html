@@ -43,11 +43,12 @@
 
             @if (order.status !== 'cancelled') {
               <div class="mx-auto mt-6 mb-3 w-64 rounded-md bg-white p-3 sm:w-80">
-                @if (qrDataUrl(); as url) {
-                  <img
-                    [src]="url"
+                @if (qrToken(); as token) {
+                  <bae-qr-code
                     class="block w-full"
+                    [value]="token"
                     [alt]="'QR code de retrait de la précommande ' + order.reference"
+                    (failed)="qrError.set('Le QR n’a pas pu être dessiné.')"
                   />
                 } @else {
                   <div

@@ -11,22 +11,11 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { toString as qrToString } from 'qrcode';
 import { LucideCheck, LucideClock, LucideDynamicIcon } from '@lucide/angular';
-import { API_BASE_URL, Badge, Btn, Card, Skeleton, formatCents, messageOf } from '@bae/ui';
+import { API_BASE_URL, Badge, Btn, Card, QrCode, Skeleton, formatCents, messageOf } from '@bae/ui';
 
 import type { LoadingStatus } from '../../core/catalog.models';
 import type { MyPreOrder } from '../../core/purchases.store';
-
-/**
- * ⚠️ SVG et non PNG : le jeton fait ~490 caractères, donc un QR de version 17
- * (85×85 modules). Rastérisé à 220 px, chaque module tombait sous 3 px et se
- * brouillait encore sur un écran à forte densité. Le vecteur reste net quelle
- * que soit la taille d'affichage.
- */
-function svgDataUrl(svg: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
 
 interface PreOrderQr {
   readonly token: string;
@@ -36,7 +25,7 @@ interface PreOrderQr {
 
 @Component({
   selector: 'bfp-commande',
-  imports: [RouterLink, Btn, Badge, Card, Skeleton, LucideDynamicIcon],
+  imports: [RouterLink, Btn, Badge, Card, QrCode, Skeleton, LucideDynamicIcon],
   templateUrl: './commande.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,7 +43,7 @@ export class Commande implements OnInit {
   protected readonly preOrder = signal<MyPreOrder | null>(null);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly qrDataUrl = signal<string | null>(null);
+  protected readonly qrToken = signal<string | null>(null);
   protected readonly qrError = signal<string | null>(null);
 
   private timer?: ReturnType<typeof setTimeout>;
@@ -82,10 +71,7 @@ export class Commande implements OnInit {
 
     this.http.get<PreOrderQr>(`${this.baseUrl}/account/pre-orders/${this.id()}/qr`).subscribe({
       next: (qr) => {
-        void qrToString(qr.token, { type: 'svg', margin: 1 }).then(
-          (svg) => this.qrDataUrl.set(svgDataUrl(svg)),
-          () => this.qrError.set('Le QR n’a pas pu être dessiné.'),
-        );
+        this.qrToken.set(qr.token);
 
         clearTimeout(this.timer);
         this.timer = setTimeout(
@@ -94,7 +80,7 @@ export class Commande implements OnInit {
         );
       },
       error: (error: unknown) => {
-        this.qrDataUrl.set(null);
+        this.qrToken.set(null);
         this.qrError.set(messageOf(error, 'Le QR de retrait n’a pas pu être émis.'));
       },
     });
