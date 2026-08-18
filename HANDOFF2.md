@@ -963,8 +963,9 @@ et les adhérents.
    PKCE, résolution en trois temps et gardes d'audience, vérifié contre un Keycloak réel.
    `@adonisjs/ally` reste **inutilisé** : il n'implémente pas PKCE (§9.3), c'est `openid-client`
    qui porte le flux. ~~Restent le CSRF (§9.7), le CORS (§9.8), la bascule du front sur le
-   cookie (§9.10)~~ — ✅ **faits le 2026-08-16** (§0 octodecies). Reste le **front public**
-   lui-même (§4.3) et le logout global SSO.
+   cookie (§9.10)~~ — ✅ **faits le 2026-08-16** (§0 octodecies). ~~Reste le **front public**
+   lui-même (§4.3)~~ — ✅ **fait le 2026-08-17** : structure au §34, écrans et données au §36.
+   Reste le **logout global SSO**.
 6. ~~**Les cinq pages factices restantes**~~ — ✅ **fait le 2026-08-16** (§0 septdecies). Les cinq
    sont branchées, et le §26 (tickets) est tranché : le domaine a été construit, pas externalisé.
 
@@ -977,7 +978,9 @@ et les adhérents.
 - ⚠️ **`soiree/live` attend `orders`** — non, elle l'a. Et la diffusion se fait en **SSE
   (`@adonisjs/transmit`)**, pas par le websocket que le §4 du `HANDOFF.md` annonçait.
 - ⚠️ **Lydia** — `paymentMethod` accepte `'lydia'` depuis le §0 terdecies, mais **rien n'encaisse**.
-  C'est un libellé enregistré. Tout le §10 reste ouvert.
+  C'est un libellé enregistré. Tout le §10 reste ouvert — et depuis le §36, c'est **le maillon
+  bloquant** : sans lui, ni précommande ni cotisation ne peut être créée depuis la zone publique,
+  et les deux remises restent affichées sans jamais s'appliquer.
 
 ---
 
@@ -1142,3 +1145,173 @@ le §35.1 second point : **si EirbConnect est derrière un proxy qui n'honore pa
 ses métadonnées annonceront des hôtes internes et le flux cassera exactement de la même façon. Le
 symptôme à reconnaître : une redirection vers un nom d'hôte que le navigateur ne résout pas, ou un
 `iss` qui ne correspond pas à l'issuer configuré.
+
+---
+
+## 36. Zone commandes — écrans, catalogue public et QR de retrait — ✅ livré le 2026-08-17
+
+**Ferme le chantier annoncé au §34.7** (« le back n'expose aucune route client […] c'est le
+chantier suivant »). Front **148 fichiers de test / 742 tests**, back **485 tests**, typecheck,
+lint et format verts des deux côtés.
+
+### 36.1 Les sept écrans publics
+
+Les maquettes Claude Design (§14) contiennent trois écrans absents de la liste d'origine :
+`screen-public.jsx` (FAQ, Contact, Mes commandes, Connexion), `screen-fastpass.jsx` et
+`screen-documents.jsx`. Les sept écrans intégrés sont Précommandes, Fastpass, FAQ, Contact,
+Mes commandes, Connexion et le détail d'une commande (`ScreenQRConfirm`).
+
+`PublicHeader` / `PublicFooter` vivent dans `bae-public`, **pas dans `bae-ui`** : l'en-tête lit
+`SessionStore` pour basculer entre « Connexion » et le menu de compte, et la règle d'admission de
+`public-api.ts` exige qu'un élément partagé soit indépendant du métier. Ils sont montés en **route
+parente sans chemin** (`PublicShell`), donc l'en-tête ne se démonte pas à chaque navigation — sinon
+son squelette de session clignoterait à chaque clic.
+
+`sessionGuard` existait depuis le §34 mais **n'était branché nulle part** ; il garde désormais
+`/mes-commandes` et `/commande/:id`. Son symétrique `guestGuard` referme `/login` dès que la session
+est connue. Chaque route porte son `title` : `index.html` n'en fixe qu'un, et sept pages partageant
+« BAE — Précommandes » rendent l'historique illisible.
+
+### 36.2 La zone client, côté back
+
+Migration `add_capacity_to_events_table` : `capacity` est le nombre de **précommandes acceptées**,
+pas une jauge de fréquentation. Défaut `0`, et `0` **ferme** la soirée — le défaut est donc un
+refus, ce qui évite que l'ajout de la colonne publie d'un coup le menu de toutes les soirées jamais
+créées.
+
+| Route                               | Garde      | Rend                                  |
+| ----------------------------------- | ---------- | ------------------------------------- |
+| `GET /v1/public/events`             | **aucune** | soirées ouvertes, restant, clôture    |
+| `GET /v1/public/events/:id/menu`    | **aucune** | menu, prix en centimes, remise, délai |
+| `GET /v1/public/fast-passes`        | **aucune** | formules + réduction adhérent         |
+| `GET /v1/account/pre-orders`        | `auth`     | les siennes                           |
+| `GET /v1/account/pre-orders/:id`    | `auth`     | 404 sur celle d'un autre              |
+| `GET /v1/account/pre-orders/:id/qr` | `auth`     | QR de retrait signé                   |
+| `GET /v1/account/subscriptions`     | `auth`     | ses cotisations                       |
+
+⚠️ `start/routes/public.ts` porte le **seul groupe du dépôt sans `middleware.auth()`**. La
+contrepartie est stricte : `public_catalog_service` ne lit jamais `auth` et ne rend rien de
+nominatif. Le groupe `/account` est, lui, **hors garde d'audience** — même raison que les
+notifications : ce sont ses achats, et un membre en a autant qu'un client. Le contrôle d'accès est
+le `where user_id`, placé **dans la requête** et non dans un test après coup : charger puis comparer
+laisserait un 404 et un 403 se distinguer, et cette différence dit à un curieux qu'une précommande
+existe.
+
+Trois valeurs sont réglables par l'environnement, parce qu'elles ont déjà changé trois fois :
+`PRE_ORDER_DISCOUNT_PERCENT` (10), `FAST_PASS_PRE_ORDER_BONUS_PERCENT` (5) et
+`PRE_ORDER_CLOSE_LEAD_HOURS` (12). Toutes trois **voyagent dans les réponses** — le front n'en code
+aucune en dur, sinon un réglage serveur laisserait la page mentir.
+
+### 36.3 ⚠️ `fast_passes.duration` est en années, et le code le lisait en jours
+
+La migration d'origine annote `// Duration in days`, les tests écrivaient `duration: 365`, la
+fabrique tirait un entier entre 1 et 12 — et les lignes réelles portent `1`, `2`, `3`. Quatre
+sources, quatre conventions.
+
+Conséquence mesurée : `expiryOf()` faisait `plus({ days: duration })`, donc **une adhésion d'un an
+expirait le lendemain**. Le bug survivait parce que les tests écrivaient `365`, ce qui le
+transformait en « n'expire jamais » : vert, et faux. Pire, `buyer_service.ts` **dupliquait** le
+calcul à deux endroits, donc corriger `expiryOf` seul n'aurait rien changé au comptoir. Les deux
+passent désormais par la même fonction.
+
+`fast_passes` **est** la table des cotisations : `SubscriptionsController` parle d'« adhérent » et
+de « cotisation » pour ces mêmes lignes. Souscrire une formule _est_ l'adhésion — la FAQ de la
+maquette affirmait l'inverse (« il vient en plus de la cotisation annuelle »), c'est corrigé.
+
+⚠️ **Trois unités monétaires coexistent**, et rien ne les signale au type :
+`event_products.price` est un entier en **centimes**, `fast_passes.price` un décimal en **euros**,
+`transactions.amount` un décimal en euros transporté en **string**. L'API publique convertit tout en
+centimes (`priceCents`) pour n'en exposer qu'une. Nommer l'unité dans le champ est la seule
+protection : `totalCents` et `amount` s'affichent côte à côte dans « Mes commandes », et les
+confondre montrerait 0,42 € pour une cotisation de 42 €.
+
+### 36.4 Le QR de retrait : le back savait le lire, personne ne l'émettait
+
+`QrTokenPayload` définissait `{ type: 'pre_order', userId, preOrderId, eventId }` et
+`POST /v1/qr/verify` le traitait en appelant `pickupFor()` — mais **aucun code ne produisait ce type
+de jeton**. Le comptoir attendait un scan qui ne pouvait pas exister. Il ne manquait que l'émetteur.
+
+Le jeton porte `userId` **et** `preOrderId` : signer la seule précommande suffirait à l'ouvrir, et
+`pickupFor()` refuse justement la paire incohérente. TTL de 180 s, aligné sur `/account/qr`, avec
+renouvellement automatique 15 s avant l'échéance — un code mort affiché en silence est le mode de
+panne le plus probable au stand.
+
+⚠️ **Le QR est rendu en SVG, pas en PNG.** Le jeton fait ~490 caractères, donc un QR de
+**version 17, 85×85 modules**. Rastérisé à 220 px, chaque module tombait à 2,35 px et se brouillait
+sur un écran à forte densité. Le vecteur (`toString`, `shape-rendering="crispEdges"`) reste net à
+toute taille, et la boîte est passée à 256/320 px — soit 3,7 px par module. Le levier structurel
+restant serait de raccourcir la charge utile : une référence courte tiendrait en 21×21 modules, mais
+il faudrait qu'elle soit aléatoire, stockée et expirante, sinon elle devient devinable.
+
+### 36.5 Écarts assumés par rapport à la maquette
+
+| Maquette                           | Livré                                     | Pourquoi                                                                                           |
+| ---------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| « compte Bordeaux INP »            | EirbConnect                               | tout le dépôt dit EirbConnect ; deux noms pour la même porte perdent l'utilisateur                 |
+| Prix public barré + prix adhérent  | prix unique, remise de 10 % à la commande | `event_products.price` est unique ; un `member_price` toucherait caisse, bilan et liste de courses |
+| « Précommandes en avant-première » | « −5 % supplémentaires »                  | rien n'implémente une ouverture anticipée, et aucune colonne ne la porterait                       |
+| « ferment 1h avant »               | 12 h                                      | délai de production réel de la cuisine                                                             |
+| Damier CSS en guise de QR          | vrai QR signé                             | un faux code se scanne — mal — et laisse croire qu'un retrait est possible                         |
+| Footer « CGV · Confidentialité »   | FAQ · Contact                             | ces pages n'existent pas ; des liens morts sont pires qu'absents                                   |
+| Canevas fixe                       | points de rupture ajoutés                 | contrainte WCAG AA du `CLAUDE.md`                                                                  |
+
+Tous les boutons sans endpoint (Valider ma précommande, Choisir X ans, Envoyer le message) sont
+**désactivés avec un `aria-describedby` qui explique pourquoi**, plutôt qu'actifs et silencieusement
+perdus.
+
+### 36.6 Pièges rencontrés, qui resserviront
+
+- ⚠️ **`node ace migration:run` réécrit `database/schema.ts` sans Prettier.** Le diff brut affichait
+  `22 insertions, 195 deletions` pour **une seule** colonne ajoutée, parce que le générateur écrit
+  `$columns` sur une ligne. Un `prettier --write` ramène le diff à ses 3 vraies lignes. Le seul
+  contrôle qui vaille est de **compter les classes** avant/après (40 → 40), jamais les lignes.
+- ⚠️ **`make:controller` crée le fichier mais ne rafraîchit pas `#generated/controllers`.** La
+  registry ne se régénère qu'au **boot de `node ace serve`** (« codegen: created 5 file(s) »). Et le
+  port 3333 étant pris par `bae-api-dev`, il faut `PORT=3999 node ace serve` — sinon le bind échoue
+  avant la codegen. Complète le §34 et la note du `.adonisjs`.
+- ⚠️ **Les tests fonctionnels tournent sur la base de dev partagée** : deux d'entre eux supposaient
+  une table `events` vide et lisaient `data[0]`. Ils ont cassé dès qu'une soirée ouverte a été créée
+  à la main. Désigner sa propre ligne **par identifiant**, et vérifier l'inclusion plutôt que
+  l'égalité de la liste.
+- ⚠️ **`docker restart` ne relit pas le `.env`** : Docker fige l'environnement à la création du
+  conteneur. Le redémarrage réussit, l'API répond, et elle sert toujours les anciennes URL. Il faut
+  `docker compose up -d` pour recréer. Piège coûteux parce que tout _semble_ fonctionner.
+- ⚠️ **La caméra exige un contexte sécurisé.** `navigator.mediaDevices` n'existe pas sur
+  `http://192.168.x.x` : la spécification réserve l'accès aux origines dignes de confiance — HTTPS,
+  plus une exception codée en dur pour `localhost` et `127.0.0.1`. Une IP privée n'en bénéficie pas.
+  `BarcodeScannerService.unavailability()` distingue désormais `insecure-context` de `browser`, et
+  teste le contexte **en premier** : c'est le seul cas qui se corrige côté serveur.
+- Pour atteindre les fronts depuis un téléphone du réseau local, il faut donc changer quatre
+  variables du `.env`, `environment.apiUrl`, l'attribut `frontendUrl` du realm (posé sur `localhost`
+  par `setup-dev-keycloak.sh`, cf. §35.2) et la liste des URI de callback du client `bae-back` —
+  puis recréer le conteneur. Le scan de code-barres, lui, restera bloqué sans HTTPS.
+
+### 36.7 Vérifié, pas supposé
+
+- Chaîne complète en direct contre l'API : `/public/events` rend la clôture à −12 h et la jauge
+  passe à `placed: 1 / remaining: 149` dès qu'une précommande est insérée ; `/public/fast-passes`
+  rend `bonus_percent: 5` et des tarifs de 12, 11 et 10 €/an ; `/account/pre-orders` rend **401**
+  sans session.
+- Le test du QR ferme la boucle **émission → vérification** : il décode le jeton reçu et contrôle
+  `type`, `userId`, `preOrderId` et `eventId`. Côté front, le test compare l'image rendue au SVG de
+  référence — il échouerait si la page encodait autre chose que le jeton du serveur.
+- `bae-public` passe de **4 fichiers de test / 13 tests à 11 / 71**. Dashboard (102 / 593) et
+  `bae-ui` (35 / 78) intacts.
+- Paquet de production de `bae-public` : **442,72 Ko** initial (99,39 Ko transférés), contre 424 Ko
+  au §34.6 — les ~19 Ko sont le shell public. `qrcode` reste confiné au chunk paresseux `commande`.
+
+### 36.8 Ce que ce lot **n'a pas** fait
+
+- **Aucune création de précommande.** `POST /pre-orders` n'existe pas : figer maintenant la
+  sémantique d'une précommande sans paiement obligerait à la défaire le jour où Lydia arrive. Le
+  bouton de validation est désactivé et le dit.
+- **La réduction de 5 % n'est appliquée nulle part** — elle est affichée et déjà chiffrée côté
+  serveur, mais il n'y a rien à quoi l'appliquer tant que rien ne crée de précommande.
+- **Le formulaire de contact reste inerte.** `POST /v1/tickets` est pourtant déjà accessible à un
+  client authentifié (`system.ts`, hors garde d'audience) : c'est le branchement le moins cher qui
+  reste.
+- **Aucune vérification visuelle.** Les sept écrans ne sont validés que par le compilateur de
+  gabarits et les tests DOM, pas par un œil.
+
+Le chantier suivant est le paiement Lydia, et il commande tout le reste : création de précommande,
+souscription de formule, et l'application réelle des deux remises.
