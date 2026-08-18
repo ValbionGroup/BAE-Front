@@ -24,6 +24,8 @@ export const QR_FORMATS = ['qr_code'];
  */
 export const SCAN_COOLDOWN_MS = 1500;
 
+export type ScannerUnavailability = 'insecure-context' | 'browser';
+
 /**
  * Caméra et décodage, isolés de la page.
  *
@@ -38,13 +40,23 @@ export class BarcodeScannerService {
   private stopped = false;
   private readonly lastEmitted = new Map<string, number>();
 
+  /**
+   * ⚠️ `insecure-context` se corrige côté serveur, `browser` non — les fusionner
+   * fait lire « changez de navigateur » à quelqu'un dont le seul tort est
+   * d'ouvrir la page sur `http://192.168.x.x`. La caméra n'est exposée qu'aux
+   * origines dignes de confiance : HTTPS, plus une exception pour `localhost`
+   * et `127.0.0.1`. Une IP privée n'en bénéficie pas.
+   */
+  unavailability(): ScannerUnavailability | null {
+    if (typeof globalThis === 'undefined' || typeof navigator === 'undefined') return 'browser';
+    if (globalThis.isSecureContext === false) return 'insecure-context';
+    if (!('BarcodeDetector' in globalThis)) return 'browser';
+    if (navigator.mediaDevices?.getUserMedia === undefined) return 'browser';
+    return null;
+  }
+
   isSupported(): boolean {
-    return (
-      typeof globalThis !== 'undefined' &&
-      'BarcodeDetector' in globalThis &&
-      typeof navigator !== 'undefined' &&
-      navigator.mediaDevices?.getUserMedia !== undefined
-    );
+    return this.unavailability() === null;
   }
 
   /**

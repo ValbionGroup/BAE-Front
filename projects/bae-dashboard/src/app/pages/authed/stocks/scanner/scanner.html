@@ -47,7 +47,10 @@
         <div class="mono mt-1 text-[11px] opacity-70">
           @if (cameraLive()) {
             EAN-13, EAN-8, CODE-128 · lecture continue
-          } @else if (!cameraSupported) {
+          } @else if (cameraBlockedBy === 'insecure-context') {
+            Caméra bloquée : cette page n’est pas servie en HTTPS. Ouvrez-la sur localhost, passez
+            en HTTPS, ou saisissez le code.
+          } @else if (cameraBlockedBy === 'browser') {
             Ce navigateur ne sait pas décoder de code-barres — utilisez Chrome, ou saisissez le
             code.
           } @else {

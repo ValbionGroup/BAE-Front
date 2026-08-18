@@ -101,6 +101,7 @@ export class StocksScanner {
   private readonly cameraStarted = signal(false);
   protected readonly cameraLive = signal(false);
   protected readonly cameraSupported = this.camera.isSupported();
+  protected readonly cameraBlockedBy = this.camera.unavailability();
 
   protected readonly lines = signal<readonly ScanLine[]>([]);
   protected readonly manualCode = signal('');
