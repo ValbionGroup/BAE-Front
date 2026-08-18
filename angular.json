@@ -98,7 +98,7 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "projects/bae-public/public"
+                "input": "public"
               }
             ],
             "styles": ["projects/bae-public/src/styles.css"]

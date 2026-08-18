@@ -23,9 +23,17 @@ describe(Logo.name, () => {
     expect(component.showText()).toBe(true);
 
     const host = fixture.nativeElement as HTMLElement;
-    const svg = host.querySelector('svg');
-    expect(svg?.getAttribute('width')).toBe('28');
-    expect(svg?.getAttribute('height')).toBe('28');
+    const img = host.querySelector('img');
+    expect(img?.style.height).toBe('28px');
     expect(host.textContent).toContain("BA'ERP");
+  });
+
+  it('should resize without breaking the NgOptimizedImage post-init contract', () => {
+    fixture.componentRef.setInput('size', 64);
+    fixture.detectChanges();
+
+    const img = fixture.nativeElement.querySelector('img') as HTMLImageElement;
+    expect(img.style.height).toBe('64px');
+    expect(img.getAttribute('width')).toBe('350');
   });
 });

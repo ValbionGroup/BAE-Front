@@ -1,11 +1,18 @@
+import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'bae-logo',
   templateUrl: './logo.html',
+  imports: [NgOptimizedImage],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Logo {
+  /**
+   * Hauteur rendue de la marque, en pixels ; la largeur suit le ratio de
+   * l'image. Elle est appliquée en CSS et non via les attributs `width` /
+   * `height` : `NgOptimizedImage` fige ces derniers après l'initialisation.
+   */
   readonly size = input<number>(28);
   readonly showText = input<boolean>(true);
 
