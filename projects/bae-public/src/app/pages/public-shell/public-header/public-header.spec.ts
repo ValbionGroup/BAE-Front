@@ -72,6 +72,22 @@ describe(PublicHeader.name, () => {
     expect(host.querySelector('bae-avatar')).toBeNull();
   });
 
+  it('cache « Mes commandes » à un visiteur anonyme', async () => {
+    await goAnonymous();
+
+    expect(host.textContent).not.toContain('Mes commandes');
+  });
+
+  it('cache « Mes commandes » tant que la session est inconnue', () => {
+    expect(host.textContent).not.toContain('Mes commandes');
+  });
+
+  it('affiche « Mes commandes » une fois connecté', async () => {
+    await settle({ firstName: 'Léa', lastName: 'Marchand' });
+
+    expect(host.textContent).toContain('Mes commandes');
+  });
+
   it('affiche le nom quand le compte est aussi membre', async () => {
     await settle({ firstName: 'Léa', lastName: 'Marchand' });
 

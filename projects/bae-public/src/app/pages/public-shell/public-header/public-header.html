@@ -42,7 +42,9 @@
     </button>
 
     <div class="hidden items-center gap-3 md:flex">
-      <bae-btn kind="ghost" size="sm" routerLink="/mes-commandes">Mes commandes</bae-btn>
+      @if (session.isAuthenticated()) {
+        <bae-btn kind="ghost" size="sm" routerLink="/mes-commandes">Mes commandes</bae-btn>
+      }
 
       @switch (session.status()) {
         @case ('unknown') {
@@ -90,13 +92,15 @@
             >{{ link.label }}</a
           >
         }
-        <a
-          routerLink="/mes-commandes"
-          routerLinkActive="text-text font-medium"
-          (click)="closeMenu()"
-          class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
-          >Mes commandes</a
-        >
+        @if (session.isAuthenticated()) {
+          <a
+            routerLink="/mes-commandes"
+            routerLinkActive="text-text font-medium"
+            (click)="closeMenu()"
+            class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+            >Mes commandes</a
+          >
+        }
       </nav>
 
       <div class="mt-3 border-t border-border-s pt-3">
