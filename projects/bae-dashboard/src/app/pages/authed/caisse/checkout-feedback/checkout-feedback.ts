@@ -33,6 +33,8 @@ export type Pickup = { buyer: Buyer; preOrder: PreOrderPickup };
 export class CheckoutFeedback {
   readonly order = input<Order | null>(null);
   readonly error = input<string | null>(null);
+  /** Un refus de scan n'est pas un encaissement refusé : le titre s'adapte. */
+  readonly errorTitle = input<string | null>(null);
   /** Retrait de précommande lu au scanner : rien à encaisser, on laisse passer. */
   readonly pickup = input<Pickup | null>(null);
   readonly dismissed = output<void>();

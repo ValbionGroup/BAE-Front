@@ -77,11 +77,13 @@ export class OrdersService {
     lines: readonly CheckoutLine[],
     clientId?: number | null,
     paymentMethod: 'cash' | 'lydia' = 'cash',
+    sponsorshipCategoryId?: number | null,
   ): Observable<ApiOrder> {
     return this.http.post<ApiOrder>(`${this.baseUrl}/events/${eventId}/orders`, {
       lines,
       paymentMethod,
       ...(clientId ? { clientId } : {}),
+      ...(sponsorshipCategoryId ? { sponsorshipCategoryId } : {}),
     });
   }
 

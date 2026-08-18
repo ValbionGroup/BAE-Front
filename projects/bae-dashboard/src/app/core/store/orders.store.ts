@@ -239,10 +239,13 @@ export const OrdersStore = signalStore(
         lines: readonly CheckoutLine[],
         clientId?: number | null,
         paymentMethod: 'cash' | 'lydia' = 'cash',
+        sponsorshipCategoryId?: number | null,
       ): Promise<Order | null> {
         try {
           const order = toOrder(
-            await lastValueFrom(svc.checkout(eventId, lines, clientId, paymentMethod)),
+            await lastValueFrom(
+              svc.checkout(eventId, lines, clientId, paymentMethod, sponsorshipCategoryId),
+            ),
           );
           upsert(order);
           return order;

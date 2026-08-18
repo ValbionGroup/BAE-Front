@@ -12,8 +12,11 @@ import { Router } from '@angular/router';
 import {
   LucideArrowRight,
   LucideCalendarPlus,
+  LucideChevronDown,
+  LucideChevronUp,
   LucideDynamicIcon,
   LucideEuro,
+  LucideHandCoins,
   LucideLock,
   LucideQrCode,
   LucideScanLine,
@@ -35,7 +38,7 @@ import {
 } from '#shared/components/modal/payment-modal/payment-modal';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
-import type { Buyer } from '#core/services/buyers/buyers-service';
+import type { Buyer, ScannedCategory } from '#core/services/buyers/buyers-service';
 
 @Component({
   selector: 'bfd-caisse',
@@ -90,6 +93,15 @@ export class Caisse implements OnInit {
 
   protected readonly pickingBuyer = signal(false);
 
+  /** Feuille du ticket, sous `md` uniquement : repliée, elle laisse voir la grille. */
+  protected readonly ticketOpen = signal(false);
+
+  /** Depuis la barre repliée, ouvrir le tiroir en même temps que le sélecteur. */
+  protected openBuyerPicker(): void {
+    this.ticketOpen.set(true);
+    this.pickingBuyer.set(true);
+  }
+
   /** Retrait de précommande lu au scanner, affiché comme une confirmation. */
   protected readonly pickup = signal<Pickup | null>(null);
 
@@ -108,15 +120,31 @@ export class Caisse implements OnInit {
     this.pickingBuyer.set(false);
   }
 
+  protected onCategoryPicked(category: ScannedCategory): void {
+    // Le refus passe par le grand bandeau, pas par un toast : en plein rush, il
+    // doit se voir sans être cherché.
+    if (!this.store.applyCategory(category)) return;
+    this.pickingBuyer.set(false);
+  }
+
   /** Le choix du moyen de paiement précède l'encaissement, il ne le suit pas. */
   protected openPayment(): void {
     if (this.store.itemCount() === 0) return;
+
+    // Une commande entièrement prise en charge ne fait entrer aucun argent :
+    // demander « espèces ou Lydia ? » pour zéro euro est un geste de plus qui
+    // n'arbitre rien. La commande part quand même — c'est elle qui porte la
+    // créance du payeur.
+    if (this.store.chargedTotal() === 0) {
+      void this.checkout('cash');
+      return;
+    }
 
     this.modalService.open({
       type: 'component',
       component: PaymentModal,
       inputs: {
-        totalCents: this.store.subtotal(),
+        totalCents: this.store.chargedTotal(),
         clientName: this.store.selectedBuyer()?.name ?? 'Anonyme',
         onConfirm: (method: PaymentMethod) => this.checkout(method),
       },
@@ -214,8 +242,11 @@ export class Caisse implements OnInit {
   protected readonly formatCents = formatCents;
 
   protected readonly icScan = LucideScanLine;
+  protected readonly icHand = LucideHandCoins;
   protected readonly icSearch = LucideSearch;
   protected readonly icCart = LucideShoppingCart;
+  protected readonly icChevronUp = LucideChevronUp;
+  protected readonly icChevronDown = LucideChevronDown;
   protected readonly icX = LucideX;
   protected readonly icCheck = LucideCheck;
   protected readonly icUser = LucideUser;

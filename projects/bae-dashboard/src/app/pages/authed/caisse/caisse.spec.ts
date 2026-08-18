@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -213,12 +214,163 @@ describe(Caisse.name, () => {
       return store;
     }
 
+    /** Le QR d'une catégorie ne désigne personne : il ne porte qu'une grille. */
+    const staffCategory = (overrides: Record<string, unknown> = {}) => ({
+      id: 3,
+      eventId: 7,
+      label: 'Staff BDE',
+      payerName: 'BDE',
+      prices: [{ productId: 1, priceCents: 100 }],
+      ...overrides,
+    });
+
+    it('retarife les lignes déjà au panier quand une catégorie est appliquée', async () => {
+      const store = await withCart();
+      store.incrementItem(1);
+      expect(store.chargedTotal()).toBe(500);
+
+      // Appliquée APRÈS la composition du panier : c'est le cas qui casserait si
+      // le prix était figé à l'ajout.
+      store.applyCategory(staffCategory() as never);
+
+      expect(store.chargedTotal()).toBe(200);
+      expect(store.publicTotal()).toBe(500);
+      expect(store.receivableTotal()).toBe(300);
+    });
+
+    it('restaure les prix publics quand la catégorie est retirée', async () => {
+      const store = await withCart();
+      store.applyCategory(staffCategory() as never);
+      store.clearCategory();
+
+      expect(store.chargedTotal()).toBe(250);
+      expect(store.receivableTotal()).toBe(0);
+    });
+
+    it('laisse au prix public un article absent de la grille', async () => {
+      const store = await withCart();
+      store.applyCategory(staffCategory({ prices: [] }) as never);
+
+      expect(store.chargedTotal()).toBe(250);
+      expect(store.receivableTotal()).toBe(0);
+    });
+
+    it('refuse une catégorie appartenant à une autre soirée, et le montre en grand', async () => {
+      const store = await withCart();
+      const applied = store.applyCategory(staffCategory({ eventId: 99 }) as never);
+
+      expect(applied).toBe(false);
+      expect(store.category()).toBeNull();
+      expect(store.chargedTotal()).toBe(250);
+      // Le bandeau plein écran, pas un toast : en rush il doit sauter aux yeux.
+      expect(store.checkoutError()).toBe('Ce QR appartient à une autre soirée.');
+      // …mais rien n'a été encaissé, donc le titre ne doit pas le prétendre.
+      expect(store.errorTitle()).toBe('QR refusé');
+    });
+
+    it('accepte un identifiant de soirée numérique, comme l’API le renvoie', async () => {
+      const store = await withCart();
+      // ⚠️ `EventApiDto.id` est typé `string` mais l'API renvoie un nombre : la
+      // session porte donc un nombre. Comparer les chaînes refusait tout QR valide.
+      store.startSession(7 as never);
+      http.expectOne((r) => r.url.includes('/events/7/products')).flush([]);
+      http.expectOne((r) => r.method === 'GET' && r.url.includes('/events/7/orders')).flush([]);
+      http.expectOne((r) => r.url.includes('/events/7/sellable')).flush([]);
+      await settle();
+      http.match((r) => r.url.includes('/pre-orders')).forEach((r) => r.flush([]));
+
+      expect(store.applyCategory(staffCategory({ eventId: 7 }) as never)).toBe(true);
+    });
+
+    it('transmet la catégorie à l’encaissement, sans aucun prix', async () => {
+      const store = await withCart();
+      store.applyCategory(staffCategory() as never);
+
+      const done = component['checkout']('cash');
+      const request = http.expectOne(
+        (r) => r.method === 'POST' && r.url.includes('/events/7/orders'),
+      );
+
+      expect(request.request.body.sponsorshipCategoryId).toBe(3);
+      expect(request.request.body.lines[0].price).toBeUndefined();
+
+      request.flush({
+        id: 43,
+        number: 1,
+        eventId: 7,
+        status: 'pending',
+        clientName: 'Anonyme',
+        lines: [],
+        discounts: [],
+        sponsorship: null,
+        grossCents: 500,
+        discountCents: 0,
+        sponsoredCents: 300,
+        totalCents: 200,
+        createdAt: null,
+        updatedAt: null,
+      });
+      await done;
+      await settle();
+
+      // Le QR est rescanné à chaque commande : la suivante repart au tarif public.
+      expect(store.category()).toBeNull();
+    });
+
+    it('encaisse directement une commande à 0 €, sans demander le moyen de paiement', async () => {
+      const store = await withCart();
+      const modals = TestBed.inject(ModalService);
+      const open = vi.spyOn(modals, 'open');
+
+      // Prise en charge intégrale : rien n'entre en caisse, donc « espèces ou
+      // Lydia ? » n'arbitre rien.
+      store.applyCategory(staffCategory({ prices: [{ productId: 1, priceCents: 0 }] }) as never);
+      expect(store.chargedTotal()).toBe(0);
+
+      component['openPayment']();
+
+      expect(open).not.toHaveBeenCalled();
+      const request = http.expectOne(
+        (r) => r.method === 'POST' && r.url.includes('/events/7/orders'),
+      );
+      expect(request.request.body.paymentMethod).toBe('cash');
+      request.flush({
+        id: 44,
+        number: 1,
+        eventId: 7,
+        status: 'pending',
+        clientName: 'Anonyme',
+        lines: [],
+        discounts: [],
+        sponsorship: null,
+        grossCents: 250,
+        discountCents: 0,
+        sponsoredCents: 250,
+        totalCents: 0,
+        createdAt: null,
+        updatedAt: null,
+      });
+      await settle();
+    });
+
+    it('demande le moyen de paiement dès qu’il y a quelque chose à encaisser', async () => {
+      const store = await withCart();
+      const modals = TestBed.inject(ModalService);
+      const open = vi.spyOn(modals, 'open').mockReturnValue('modal-id');
+
+      expect(store.chargedTotal()).toBe(250);
+      component['openPayment']();
+
+      expect(open).toHaveBeenCalled();
+      http.expectNone((r) => r.method === 'POST' && r.url.includes('/events/7/orders'));
+    });
+
     it('affiche le total en euros, pas en centimes', async () => {
       const store = await withCart();
       store.incrementItem(1);
 
       // 2 x 250 centimes = 5,00 EUR, et surtout pas 500,00.
-      expect(component['formatCents'](store.subtotal())).toBe('5,00');
+      expect(component['formatCents'](store.chargedTotal())).toBe('5,00');
     });
 
     it('vide le panier une fois la commande enregistree', async () => {

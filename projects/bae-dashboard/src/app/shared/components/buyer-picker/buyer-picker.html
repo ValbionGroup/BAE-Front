@@ -44,31 +44,55 @@
   <!-- Un seul <video>, toujours monté : le masquer par une classe et non par un
        @if est ce qui garantit que la caméra écrit dans l'élément visible. -->
   <div class="mt-2.5">
-    <div [class]="camera() === 'idle' ? 'hidden' : 'relative overflow-hidden rounded-md bg-black'">
-      <video
-        #video
-        class="block h-40 w-full object-cover"
-        muted
-        autoplay
-        playsinline
-        aria-label="Aperçu de la caméra"
-      ></video>
-
-      <!-- Réticule : sans repère visuel, un aperçu sombre ne dit pas s'il cherche. -->
-      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div
-          class="h-24 w-24 rounded-lg border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
-        ></div>
+    <!-- Sur téléphone l'aperçu occupe l'écran : dans un encart de 160 px on ne
+         voit pas assez pour viser un QR. Le <video> reste le même élément, seule
+         sa boîte change — le masquer par un @if couperait le flux. -->
+    <div
+      [class]="
+        camera() === 'idle'
+          ? 'hidden'
+          : 'fixed inset-0 z-50 flex flex-col bg-black md:relative md:inset-auto md:z-auto md:block md:overflow-hidden md:rounded-md'
+      "
+    >
+      <div class="flex items-center gap-2 px-4 py-3 text-white md:hidden">
+        <span class="flex-1 text-[14px] font-medium">Scanner un QR</span>
+        <bae-btn kind="ghost" size="sm" [icon]="icClose" (clicked)="stopCamera()"></bae-btn>
       </div>
 
-      <div
-        class="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-center text-[11px] font-medium text-white"
-      >
-        @if (camera() === 'starting') {
-          Ouverture de la caméra…
-        } @else {
-          Présentez le QR dans le cadre
-        }
+      <div class="relative flex-1 md:flex-none">
+        <video
+          #video
+          class="block h-full w-full object-cover md:h-40"
+          muted
+          autoplay
+          playsinline
+          aria-label="Aperçu de la caméra"
+        ></video>
+
+        <!-- Réticule : sans repère visuel, un aperçu sombre ne dit pas s'il cherche. -->
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            class="h-56 w-56 rounded-lg border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)] md:h-24 md:w-24"
+          ></div>
+        </div>
+
+        <div
+          class="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-2 py-2 text-center text-[13px] font-medium text-white md:py-1 md:text-[11px]"
+        >
+          @if (camera() === 'starting') {
+            Ouverture de la caméra…
+          } @else {
+            Présentez le QR dans le cadre
+          }
+        </div>
+      </div>
+
+      @if (error(); as message) {
+        <p class="px-4 py-2 text-center text-[12.5px] text-danger md:hidden">{{ message }}</p>
+      }
+
+      <div class="px-4 pb-6 pt-3 md:hidden">
+        <bae-btn kind="secondary" [full]="true" (clicked)="stopCamera()">Arrêter la caméra</bae-btn>
       </div>
     </div>
 
@@ -78,7 +102,7 @@
         size="sm"
         [full]="true"
         [icon]="icCamera"
-        [class]="camera() === 'idle' ? '' : 'mt-2 block'"
+        [class]="camera() === 'idle' ? '' : 'mt-2 hidden md:block'"
         (clicked)="toggleCamera()"
       >
         {{ camera() === 'idle' ? 'Scanner un QR' : 'Arrêter la caméra' }}

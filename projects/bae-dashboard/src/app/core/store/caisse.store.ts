@@ -7,14 +7,28 @@ import { LoadingStatus } from '#core/models/global.model';
 import { OrdersStore } from '#core/store/orders.store';
 import { blocksSale, stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
 import type { Buyer } from '#core/services/buyers/buyers-service';
+import type { ScannedCategory } from '#core/services/buyers/buyers-service';
 import type { Order } from '#core/models/order.model';
 import type { PaymentMethod } from '#shared/components/modal/payment-modal/payment-modal';
 
 export interface CaisseCartItem {
   readonly productId: number;
   readonly name: string;
+  /**
+   * ⚠️ Toujours le **prix public**, jamais le prix de catégorie. Y figer un
+   * tarif préférentiel laisserait les lignes ajoutées avant le scan au prix
+   * public et les suivantes au tarif — le prix effectif est dérivé.
+   */
   readonly price: number;
   readonly quantity: number;
+}
+
+export interface AppliedCategory {
+  readonly id: number;
+  readonly label: string;
+  readonly eventId: string;
+  readonly payerName: string | null;
+  readonly priceByProduct: ReadonlyMap<number, number>;
 }
 
 /**
@@ -40,8 +54,12 @@ interface CaisseState {
   readonly activeCategory: string | null;
   /** Acheteur désigné pour la prochaine commande ; `null` = anonyme. */
   readonly selectedBuyer: Buyer | null;
+  /** Catégorie de prise en charge appliquée à la commande en cours. */
+  readonly category: AppliedCategory | null;
   readonly checkingOut: boolean;
   readonly checkoutError: string | null;
+  /** Titre du bandeau de refus ; `null` = « Encaissement refusé ». */
+  readonly errorTitle: string | null;
   /** Dernière commande encaissée — alimente la confirmation à l'écran. */
   readonly lastOrder: Order | null;
   /** Ligne du panier que `+` / `−` ajustent. */
@@ -53,8 +71,10 @@ const initialState: CaisseState = {
   cart: [],
   activeCategory: null,
   selectedBuyer: null,
+  category: null,
   checkingOut: false,
   checkoutError: null,
+  errorTitle: null,
   lastOrder: null,
   activeProductId: null,
 };
@@ -64,7 +84,7 @@ export const CaisseStore = signalStore(
   withState<CaisseState>(initialState),
   withComputed(
     (
-      { sessionEventId, cart, activeCategory, activeProductId },
+      { sessionEventId, cart, activeCategory, activeProductId, category },
       eventsStore = inject(EventsStore),
       eventsService = inject(EventsService),
       ordersStore = inject(OrdersStore),
@@ -126,9 +146,20 @@ export const CaisseStore = signalStore(
         return lines.find((line) => line.productId === id) ?? lines.at(-1) ?? null;
       });
 
-      const subtotal = computed(() =>
+      const unitPriceOf = (line: CaisseCartItem): number =>
+        category()?.priceByProduct.get(line.productId) ?? line.price;
+
+      /** Ce que le comptoir encaisse maintenant. */
+      const chargedTotal = computed(() =>
+        cart().reduce((sum, line) => sum + unitPriceOf(line) * line.quantity, 0),
+      );
+
+      /** La valeur au prix public — ce que le BAE touchera au total. */
+      const publicTotal = computed(() =>
         cart().reduce((sum, line) => sum + line.price * line.quantity, 0),
       );
+
+      const receivableTotal = computed(() => publicTotal() - chargedTotal());
 
       const totalQuantity = computed(() => cart().reduce((sum, line) => sum + line.quantity, 0));
 
@@ -154,7 +185,9 @@ export const CaisseStore = signalStore(
         visibleItems,
         activeLine,
         stockByProduct,
-        subtotal,
+        chargedTotal,
+        publicTotal,
+        receivableTotal,
         totalQuantity,
         itemCount: computed(() => cart().length),
       };
@@ -173,8 +206,14 @@ export const CaisseStore = signalStore(
       return inCart(productId) < stock.remainingQty;
     }
 
+    /** Le prix effectif est dérivé : appliquer une catégorie retarife tout le panier. */
+    function unitPriceOf(line: CaisseCartItem): number {
+      return store.category()?.priceByProduct.get(line.productId) ?? line.price;
+    }
+
     return {
       canAdd,
+      unitPriceOf,
 
       /**
        * Ouvre la caisse sur une soirée.
@@ -196,16 +235,52 @@ export const CaisseStore = signalStore(
           cart: [],
           activeCategory: null,
           selectedBuyer: null,
+          // Le store est `providedIn: 'root'` : sans ça, une catégorie fuiterait
+          // d'une session — et d'un test — à la suivante.
+          category: null,
           checkoutError: null,
           activeProductId: null,
         });
       },
       /** Referme la confirmation (ou le refus) affichée après un encaissement. */
       dismissFeedback(): void {
-        patchState(store, { lastOrder: null, checkoutError: null });
+        patchState(store, { lastOrder: null, checkoutError: null, errorTitle: null });
       },
       setBuyer(buyer: Buyer | null): void {
         patchState(store, { selectedBuyer: buyer });
+      },
+      /**
+       * Le serveur revérifie, mais refuser ici évite d'afficher des prix qui
+       * seront rejetés à l'encaissement.
+       *
+       * ⚠️ Comparaison **numérique** : `EventApiDto.id` est typé `string` alors
+       * que l'API renvoie un nombre, donc `sessionEventId` porte un nombre à
+       * l'exécution. Comparer les chaînes refusait tous les QR valides.
+       */
+      applyCategory(scanned: ScannedCategory): boolean {
+        if (Number(scanned.eventId) !== Number(store.sessionEventId())) {
+          patchState(store, {
+            checkoutError: 'Ce QR appartient à une autre soirée.',
+            errorTitle: 'QR refusé',
+          });
+          return false;
+        }
+
+        patchState(store, {
+          checkoutError: null,
+          errorTitle: null,
+          category: {
+            id: scanned.id,
+            label: scanned.label,
+            eventId: String(scanned.eventId),
+            payerName: scanned.payerName,
+            priceByProduct: new Map(scanned.prices.map((p) => [p.productId, p.priceCents])),
+          },
+        });
+        return true;
+      },
+      clearCategory(): void {
+        patchState(store, { category: null });
       },
       setActiveCategory(category: string | null): void {
         patchState(store, { activeCategory: category });
@@ -301,19 +376,23 @@ export const CaisseStore = signalStore(
         const lines = store.cart();
         if (!eventId || lines.length === 0) return null;
 
-        patchState(store, { checkingOut: true, checkoutError: null });
+        patchState(store, { checkingOut: true, checkoutError: null, errorTitle: null });
 
         const order = await ordersStore.checkout(
           eventId,
           lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
           store.selectedBuyer()?.userId ?? null,
           method,
+          store.category()?.id ?? null,
         );
 
         if (order) {
           patchState(store, {
             cart: [],
             selectedBuyer: null,
+            // Le QR est rescanné à chaque commande : la catégorie ne survit pas
+            // au ticket. Elle survit en revanche à un échec, comme le panier.
+            category: null,
             checkingOut: false,
             lastOrder: order,
           });
@@ -325,6 +404,7 @@ export const CaisseStore = signalStore(
           patchState(store, {
             checkingOut: false,
             checkoutError: ordersStore.loadError() ?? 'L’encaissement a échoué.',
+            errorTitle: null,
           });
         }
 

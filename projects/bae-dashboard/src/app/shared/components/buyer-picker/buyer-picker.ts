@@ -15,6 +15,7 @@ import {
   BuyersService,
   type Buyer,
   type PreOrderPickup,
+  type ScannedCategory,
 } from '#core/services/buyers/buyers-service';
 import { BarcodeScannerService, QR_FORMATS } from '#core/services/barcode/barcode-scanner-service';
 
@@ -38,6 +39,8 @@ export class BuyerPicker implements OnDestroy {
   /** Un QR de précommande : ce n'est pas un client à rattacher, c'est une
    *  commande à remettre — la caisse l'affiche en pleine page. */
   readonly pickedUp = output<{ buyer: Buyer; preOrder: PreOrderPickup }>();
+  /** Un QR de catégorie ne désigne personne : il retarife le panier. */
+  readonly categoryPicked = output<ScannedCategory>();
   readonly dismissed = output<void>();
 
   private readonly buyers = inject(BuyersService);
@@ -119,6 +122,12 @@ export class BuyerPicker implements OnDestroy {
       if (scan.kind === 'pre_order') {
         this.stopCamera();
         this.pickedUp.emit({ buyer: scan.buyer, preOrder: scan.preOrder });
+        return;
+      }
+
+      if (scan.kind === 'sponsorship_category') {
+        this.stopCamera();
+        this.categoryPicked.emit(scan.category);
         return;
       }
 

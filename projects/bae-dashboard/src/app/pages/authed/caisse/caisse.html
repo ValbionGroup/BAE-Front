@@ -37,7 +37,7 @@
 } @else {
   <div class="h-full overflow-y-auto md:grid md:grid-cols-[1fr_360px] md:overflow-hidden">
     <!-- LEFT: products -->
-    <div class="flex min-w-0 flex-col gap-3.5 p-4 md:overflow-hidden md:p-5">
+    <div class="flex min-w-0 flex-col gap-3.5 p-4 pb-44 md:overflow-hidden md:p-5 md:pb-5">
       <!-- Category tabs -->
       <div class="flex items-center gap-2 overflow-x-auto md:flex-wrap">
         @for (c of store.categories(); track c) {
@@ -127,148 +127,231 @@
     </div>
 
     <!-- RIGHT: cart -->
+    <!-- Sous `md`, le ticket est une feuille ancrée en bas : le panier n'a pas de
+         colonne à lui, et le laisser défiler sous la grille le rendait
+         inatteignable en plein service. Repliée, seule la barre d'encaissement
+         dépasse. -->
     <aside
-      class="flex flex-col border-t border-border-s bg-surface pb-28 md:min-h-0 md:overflow-hidden md:border-l md:border-t-0 md:pb-0"
+      [class]="
+        'flex flex-col border-t border-border-s bg-surface md:static md:min-h-0 md:max-h-none md:overflow-hidden md:border-l md:border-t-0 md:shadow-none ' +
+        'fixed inset-x-0 bottom-0 z-30 max-h-[85vh] shadow-[0_-4px_16px_rgba(0,0,0,0.18)]'
+      "
     >
       <bfd-checkout-feedback
         [order]="store.lastOrder()"
         [error]="store.checkoutError()"
         [pickup]="pickup()"
+        [errorTitle]="store.errorTitle()"
         (dismissed)="dismissFeedback()"
       />
 
-      <!-- Header -->
-      <div class="flex items-center gap-2.5 border-b border-border-s p-4">
-        <div
-          class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
-        >
-          <svg [lucideIcon]="icCart" [size]="18" aria-hidden="true"></svg>
-        </div>
-        <div class="flex-1">
-          <div class="text-sm font-semibold text-text">Ticket en cours</div>
-          <div class="text-[11px] text-muted">
-            {{ store.itemCount() }} article{{ store.itemCount() > 1 ? 's' : '' }} ·
-            {{ store.totalQuantity() }} quantité{{ store.totalQuantity() > 1 ? 's' : '' }}
-          </div>
-        </div>
-        <bae-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bae-btn>
-      </div>
+      <button
+        type="button"
+        class="flex w-full items-center gap-2.5 border-b border-border-s px-4 py-3 text-left md:hidden"
+        [attr.aria-expanded]="ticketOpen()"
+        (click)="ticketOpen.set(!ticketOpen())"
+      >
+        <span class="flex-1 text-[12.5px] font-medium text-text">
+          Ticket · {{ store.totalQuantity() }} article{{ store.totalQuantity() > 1 ? 's' : '' }}
+        </span>
+        <svg
+          [lucideIcon]="ticketOpen() ? icChevronDown : icChevronUp"
+          [size]="16"
+          class="text-muted"
+          aria-hidden="true"
+        ></svg>
+      </button>
 
-      <!-- Client -->
-      @if (store.selectedBuyer(); as buyer) {
-        <div
-          class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3 md:mt-4"
-        >
-          <span
-            class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ok-soft text-ok"
+      <div
+        [class]="
+          (ticketOpen() ? 'flex' : 'hidden') + ' min-h-0 flex-1 flex-col overflow-y-auto md:flex'
+        "
+      >
+        <!-- Header -->
+        <div class="flex items-center gap-2.5 border-b border-border-s p-4">
+          <div
+            class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
           >
-            <svg [lucideIcon]="icCheck" [size]="16" aria-hidden="true"></svg>
-          </span>
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-[12.5px] font-medium text-text">{{ buyer.name }}</div>
-            <div class="text-[10.5px] text-muted">
-              {{ fastPassLabel(buyer) ?? 'Sans fast pass' }}
+            <svg [lucideIcon]="icCart" [size]="18" aria-hidden="true"></svg>
+          </div>
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-text">Ticket en cours</div>
+            <div class="text-[11px] text-muted">
+              {{ store.itemCount() }} article{{ store.itemCount() > 1 ? 's' : '' }} ·
+              {{ store.totalQuantity() }} quantité{{ store.totalQuantity() > 1 ? 's' : '' }}
             </div>
           </div>
-          <bae-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bae-btn>
+          <bae-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bae-btn>
         </div>
-      } @else if (pickingBuyer()) {
-        <div class="m-4">
-          <bfd-buyer-picker
-            (picked)="onBuyerPicked($event)"
-            (pickedUp)="onPickedUp($event)"
-            (dismissed)="pickingBuyer.set(false)"
-          />
-        </div>
-      } @else {
-        <div
-          class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3 md:mt-4"
-        >
-          <span
-            class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-surface-3 text-muted"
-          >
-            <svg [lucideIcon]="icUser" [size]="16" aria-hidden="true"></svg>
-          </span>
-          <div class="min-w-0 flex-1">
-            <div class="text-[12.5px] font-medium text-text">Client anonyme</div>
-            <div class="text-[10.5px] text-muted">Facultatif — QR ou recherche par nom.</div>
-          </div>
-          <bae-btn kind="ghost" size="sm" (clicked)="pickingBuyer.set(true)">Identifier</bae-btn>
-        </div>
-      }
 
-      <!-- Items -->
-      <div class="flex-1 px-4 md:overflow-y-auto">
-        @if (store.itemCount() === 0) {
-          <div class="py-10 text-center text-[12px] text-muted">
-            Sélectionnez un produit pour commencer le ticket.
+        <!-- Client, ou tranche : une commande prise en charge n'a personne à
+             identifier, la tranche occupe donc la même place. -->
+        @if (store.category(); as tier) {
+          <div
+            class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-warn bg-warn-soft p-3 md:mt-4"
+          >
+            <span
+              class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-warn text-white"
+            >
+              <svg [lucideIcon]="icHand" [size]="16" aria-hidden="true"></svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-[12.5px] font-medium text-warn">{{ tier.label }}</div>
+              <div class="text-[10.5px] text-text-2">
+                Remboursé par {{ tier.payerName ?? 'payeur non renseigné' }}
+              </div>
+            </div>
+            <bae-btn kind="ghost" size="sm" (clicked)="store.clearCategory()">Retirer</bae-btn>
+          </div>
+        } @else if (store.selectedBuyer(); as buyer) {
+          <div
+            class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-ok bg-surface-2 p-3 md:mt-4"
+          >
+            <span
+              class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ok-soft text-ok"
+            >
+              <svg [lucideIcon]="icCheck" [size]="16" aria-hidden="true"></svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-[12.5px] font-medium text-text">{{ buyer.name }}</div>
+              <div class="text-[10.5px] text-muted">
+                {{ fastPassLabel(buyer) ?? 'Sans fast pass' }}
+              </div>
+            </div>
+            <bae-btn kind="ghost" size="sm" (clicked)="store.setBuyer(null)">Retirer</bae-btn>
+          </div>
+        } @else if (pickingBuyer()) {
+          <div class="m-4">
+            <bfd-buyer-picker
+              (picked)="onBuyerPicked($event)"
+              (pickedUp)="onPickedUp($event)"
+              (categoryPicked)="onCategoryPicked($event)"
+              (dismissed)="pickingBuyer.set(false)"
+            />
           </div>
         } @else {
-          @for (it of store.cart(); track it.productId; let last = $last) {
-            @let active = store.activeLine()?.productId === it.productId;
-            <div
-              [class]="
-                'flex items-center gap-2.5 py-2.5 ' +
-                (last ? '' : 'border-b border-border-s') +
-                (active ? ' -mx-2 rounded-sm bg-surface-2 px-2' : '')
-              "
+          <div
+            class="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-border-s bg-surface-2 p-3 md:mt-4"
+          >
+            <span
+              class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-surface-3 text-muted"
             >
-              <button
-                type="button"
-                class="tnum inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-sm border border-border bg-surface-2 text-[13px] font-semibold text-text hover:bg-surface-3"
-                (click)="store.incrementItem(it.productId)"
-                aria-label="Augmenter la quantité"
-              >
-                {{ it.quantity }}
-              </button>
-              <button
-                type="button"
-                class="min-w-0 flex-1 cursor-pointer text-left"
-                [attr.aria-pressed]="active"
-                (click)="store.focusLine(it.productId)"
-              >
-                <div
-                  class="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
-                >
-                  {{ it.name }}
-                </div>
-                <div class="tnum text-[11px] text-muted">
-                  {{ formatCents(it.price) }} € × {{ it.quantity }}
-                </div>
-              </button>
-              <span class="tnum text-[13px] font-semibold text-text"
-                >{{ formatCents(it.price * it.quantity) }} €</span
-              >
-              <bae-btn
-                kind="ghost"
-                size="sm"
-                [icon]="icX"
-                (clicked)="store.removeFromCart(it.productId)"
-              ></bae-btn>
+              <svg [lucideIcon]="icUser" [size]="16" aria-hidden="true"></svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[12.5px] font-medium text-text">Client anonyme</div>
+              <div class="text-[10.5px] text-muted">Facultatif — QR ou recherche par nom.</div>
             </div>
-          }
+            <bae-btn kind="ghost" size="sm" (clicked)="pickingBuyer.set(true)">Identifier</bae-btn>
+          </div>
         }
+
+        <!-- Items -->
+        <div class="flex-1 px-4 md:overflow-y-auto">
+          @if (store.itemCount() === 0) {
+            <div class="py-10 text-center text-[12px] text-muted">
+              Sélectionnez un produit pour commencer le ticket.
+            </div>
+          } @else {
+            @for (it of store.cart(); track it.productId; let last = $last) {
+              @let active = store.activeLine()?.productId === it.productId;
+              <div
+                [class]="
+                  'flex items-center gap-2.5 py-2.5 ' +
+                  (last ? '' : 'border-b border-border-s') +
+                  (active ? ' -mx-2 rounded-sm bg-surface-2 px-2' : '')
+                "
+              >
+                <button
+                  type="button"
+                  class="tnum inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-sm border border-border bg-surface-2 text-[13px] font-semibold text-text hover:bg-surface-3"
+                  (click)="store.incrementItem(it.productId)"
+                  aria-label="Augmenter la quantité"
+                >
+                  {{ it.quantity }}
+                </button>
+                <button
+                  type="button"
+                  class="min-w-0 flex-1 cursor-pointer text-left"
+                  [attr.aria-pressed]="active"
+                  (click)="store.focusLine(it.productId)"
+                >
+                  <div
+                    class="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                  >
+                    {{ it.name }}
+                  </div>
+                  <div class="tnum whitespace-nowrap text-[11px] text-muted">
+                    @if (store.unitPriceOf(it) !== it.price) {
+                      <span class="line-through opacity-60">{{ formatCents(it.price) }} €</span>
+                      {{ formatCents(store.unitPriceOf(it)) }} € × {{ it.quantity }}
+                    } @else {
+                      {{ formatCents(it.price) }} € × {{ it.quantity }}
+                    }
+                  </div>
+                </button>
+                <span class="tnum shrink-0 whitespace-nowrap text-[13px] font-semibold text-text"
+                  >{{ formatCents(store.unitPriceOf(it) * it.quantity) }} €</span
+                >
+                <bae-btn
+                  class="shrink-0"
+                  kind="ghost"
+                  size="sm"
+                  [icon]="icX"
+                  (clicked)="store.removeFromCart(it.productId)"
+                ></bae-btn>
+              </div>
+            }
+          }
+        </div>
       </div>
 
-      <!-- Totals + payment. Sur mobile, une barre ancrée : le panier n'a pas de
-           colonne à lui, c'est le geste d'encaissement qui doit rester sous le
-           pouce. -->
-      <div
-        class="fixed inset-x-0 bottom-0 z-30 border-t border-border-s bg-bg p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.18)] md:static md:z-auto md:shadow-none"
-      >
+      <!-- Toujours visible, repli ou non : c'est le geste d'encaissement qui doit
+           rester sous le pouce. -->
+      <div class="shrink-0 border-t border-border-s bg-bg p-4">
+        <!-- Identification joignable sans déplier : replié, le sélecteur d'acheteur
+             est hors d'atteinte, or c'est le geste qui précède l'encaissement. -->
+        <button
+          type="button"
+          class="mb-2.5 flex w-full items-center gap-2.5 rounded-md border border-border-s bg-surface-2 px-3 py-2 text-left md:hidden"
+          (click)="openBuyerPicker()"
+        >
+          <span
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-3 text-muted"
+          >
+            <svg [lucideIcon]="icScan" [size]="14" aria-hidden="true"></svg>
+          </span>
+          <span class="min-w-0 flex-1 truncate text-[12px] text-text-2">
+            @if (store.category(); as tier) {
+              <span class="font-medium text-warn">{{ tier.label }}</span>
+            } @else if (store.selectedBuyer(); as buyer) {
+              <span class="font-medium text-text">{{ buyer.name }}</span>
+            } @else {
+              Scanner un QR · client anonyme
+            }
+          </span>
+          <span class="shrink-0 text-[11px] text-muted">Modifier</span>
+        </button>
+
         <div class="hidden md:block">
           <div class="mb-2.5 flex flex-col gap-1.5 text-[12.5px]">
             <div class="flex justify-between text-text-2">
-              <span>Sous-total</span>
-              <span class="tnum">{{ formatCents(store.subtotal()) }} €</span>
+              <span>{{ store.category() ? 'Prix public' : 'Sous-total' }}</span>
+              <span class="tnum">{{ formatCents(store.publicTotal()) }} €</span>
             </div>
+            @if (store.receivableTotal() > 0) {
+              <div class="flex justify-between text-warn">
+                <span>Pris en charge</span>
+                <span class="tnum">−{{ formatCents(store.receivableTotal()) }} €</span>
+              </div>
+            }
           </div>
           <div
             class="flex items-baseline justify-between border-t border-dashed border-border py-3"
           >
             <span class="text-sm text-text-2">À encaisser</span>
             <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
-              >{{ formatCents(store.subtotal()) }} €</span
+              >{{ formatCents(store.chargedTotal()) }} €</span
             >
           </div>
         </div>
@@ -285,30 +368,35 @@
               >
             }
           </div>
-          <div class="min-w-0 flex-1 md:hidden">
+          <div class="shrink-0 whitespace-nowrap md:hidden">
             <div class="text-[11px] text-muted">À encaisser</div>
             <div class="tnum text-[19px] font-semibold tracking-[-0.3px] text-text">
-              {{ formatCents(store.subtotal()) }} €
+              {{ formatCents(store.chargedTotal()) }} €
             </div>
           </div>
 
-          <bae-btn
-            kind="primary"
-            size="xl"
-            [full]="true"
-            [iconRight]="icArrowRight"
-            [disabled]="store.itemCount() === 0 || store.checkingOut()"
-            (clicked)="openPayment()"
-          >
-            @if (store.checkingOut()) {
-              Encaissement…
-            } @else {
-              <span class="md:hidden">Encaisser</span>
-              <span class="hidden md:inline"
-                >Encaisser · {{ formatCents(store.subtotal()) }} €</span
-              >
-            }
-          </bae-btn>
+          <!-- `full` pose `w-full` sur l'hôte : dans une ligne flex il réclamerait
+               100 % de la largeur et écraserait le montant. Ce conteneur borne
+               ce à quoi les 100 % se rapportent. -->
+          <div class="min-w-0 flex-1">
+            <bae-btn
+              kind="primary"
+              size="xl"
+              [full]="true"
+              [iconRight]="icArrowRight"
+              [disabled]="store.itemCount() === 0 || store.checkingOut()"
+              (clicked)="openPayment()"
+            >
+              @if (store.checkingOut()) {
+                Encaissement…
+              } @else {
+                <span class="md:hidden">Encaisser</span>
+                <span class="hidden md:inline"
+                  >Encaisser · {{ formatCents(store.chargedTotal()) }} €</span
+                >
+              }
+            </bae-btn>
+          </div>
         </div>
       </div>
     </aside>
