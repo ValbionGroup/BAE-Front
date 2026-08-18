@@ -1315,3 +1315,590 @@ perdus.
 
 Le chantier suivant est le paiement Lydia, et il commande tout le reste : création de précommande,
 souscription de formule, et l'application réelle des deux remises.
+
+---
+
+## 37. Tarification différenciée — le prix n'est pas le même pour tout le monde
+
+Chantier **non commencé**, ouvert le 2026-08-18. Rien de ce qui suit n'est implémenté : c'est
+l'analyse préalable et la liste des questions qui la débloquent. ⚠️ **Ne pas implémenter avant
+d'avoir les réponses du §37.10** — trois des quatre modèles possibles se distinguent uniquement sur
+ces réponses, et se rétrofiter l'un dans l'autre coûte une migration de données de vente.
+
+### 37.1 L'état réel, vérifié dans le code le 2026-08-18
+
+| Fait                                                                                | Où                                                                        |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Un seul prix de vente** par (soirée, produit) : `event_products.price`            | `1773849329521_create_event_products_table.ts`                            |
+| Ce prix est un **entier en centimes**, pas un décimal en euros                      | `table.integer('price')` ; cf. commentaire `order_service.ts:70`          |
+| `order_products` ne porte **que** `orderId`, `productId`, `quantity`                | `database/schema.ts:440`                                                  |
+| Le total est donc **recalculé** depuis le menu à chaque encaissement                | `order_service.checkout()`, « rien de ce que le client annonce n'est lu » |
+| Seul `transactions.amount` (euros, string) garde la trace de l'argent encaissé      | `database/schema.ts:813`                                                  |
+| Les −10 % préco et −5 % adhérent sont **deux fonctions lisant des variables d'env** | `public_catalog_service.ts:25` et `:47`                                   |
+| …et ne sont **appliquées nulle part** — il n'existe pas de `POST /pre-orders`       | §36.8                                                                     |
+| La caisse sait déjà **qui** achète : `Buyer { userId, name, fastPass }`             | `buyer_service.describeBuyer()`, `caisse.store.ts`                        |
+| Le staff d'une soirée est déjà interrogeable                                        | `member_event_assigned_jobs (event_id, member_id, job_id)`                |
+| Il n'existe **aucune entité « association partenaire »** (BDE, BDS…)                | `ROLES` ne contient que des rôles internes BAE                            |
+| Il n'existe **aucun « type de soirée »**                                            | §27, déjà signalé comme question ouverte                                  |
+
+Deux conséquences qui commandent tout le reste :
+
+1. ⚠️ **Un prix qui varie par personne rend le recalcul faux.** Aujourd'hui, réafficher une commande
+   de la semaine dernière relit `event_products.price` — c'est correct tant qu'il n'y a qu'un prix.
+   Dès qu'une remise dépend de l'acheteur et d'une règle qui peut changer, la seule façon de savoir
+   ce qui a été payé est de **l'avoir écrit au moment de la vente**. Le §37.6 en fait le préalable
+   non négociable, quel que soit le modèle retenu.
+2. **Rien ne se perd si on commence par le prix de base.** Les −10 %/−5 % ne sont encore que des
+   nombres affichés : les faire migrer vers le moteur du §37.5 ne casse aucune vente existante.
+   C'est la dernière fenêtre où ce chantier est bon marché.
+
+### 37.2 Le trou immédiat : aucun écran ne fixe le prix de vente
+
+Le back **accepte déjà** un prix à l'ajout d'une recette au menu :
+
+```ts
+// app/validators/event_product.ts
+export const eventProductValidator = vine.create({
+  productId: vine.number().positive(),
+  quantity: vine.number().withoutDecimals().min(1),
+  price: vine.number().min(0).optional(), // ← accepté, jamais envoyé
+});
+```
+
+Et le front l'omet **volontairement** :
+
+```ts
+// core/services/logistique/logistique-service.ts:80
+/**
+ * Ajoute une recette au menu. `price` est omis volontairement : le back
+ * reporte le dernier prix de vente connu de cet article, ce qu'aucun écran ne
+ * saurait faire aussi bien.
+ */
+addMenuLine(eventId, productId, quantity) { … }   // pas de price
+```
+
+Le report du dernier prix (`lastSalePrice()`) est un bon **défaut**, pas une politique tarifaire :
+il n'existe aucun moyen de fixer le prix d'une nouveauté, ni de le corriger après coup —
+`setMenuLineQuantity()` n'envoie jamais `price`, et le `PATCH` traite l'absence de clé comme « ne
+touche pas ». Une recette jamais vendue part donc à **0 centime**, silencieusement.
+
+**C'est le seul lot de ce chantier qui est indépendant de toutes les questions ouvertes**, et il en
+est le préalable : sans prix de base maîtrisé, un prix dérivé n'a pas de sens. Périmètre :
+
+- champ prix (en euros à la saisie, converti en centimes à l'envoi) dans le formulaire d'ajout de
+  `pages/authed/logistique/events/events.ts`, pré-rempli par `lastSalePrice` quand il existe ;
+- cellule prix éditable sur la ligne de menu, sur le modèle de `pendingQuantities` déjà en place ;
+- `addMenuLine(eventId, productId, quantity, price?)` et `setMenuLinePrice(eventId, productId, price)`
+  dans `logistique-service.ts` ;
+- ⚠️ **piège d'unité** : `event_products.price` est en **centimes entiers**. Un `4.5` envoyé tel quel
+  devient 4,5 centimes. La conversion doit être faite au bord (le service), pas dans le gabarit,
+  et l'inverse `formatCents` existe déjà dans `@bae/ui`.
+- ⚠️ marquer visuellement les lignes à 0 € : aujourd'hui elles se vendent gratuitement sans que rien
+  ne le signale. `logistique.html` a déjà le motif (`unpriced-banner`) pour la liste de courses.
+
+### 37.3 Ce que la demande recouvre vraiment — quatre cas, trois formes
+
+Les exemples donnés ne sont pas quatre variantes du même mécanisme :
+
+| Cas                                         | Forme                          | Portée         | Bénéficiaire                  |
+| ------------------------------------------- | ------------------------------ | -------------- | ----------------------------- |
+| Précommande −10 %                           | pourcentage                    | commande       | tout le monde, canal préco    |
+| Adhérent −5 % supplémentaires               | pourcentage                    | commande       | porteur d'un fast pass valide |
+| Staff : burger à 3,50 € au lieu de 4 €      | **prix de substitution**       | **un produit** | staff **de cette soirée**     |
+| Staff BDE : −50 % pris en charge par l'asso | pourcentage + **tiers payeur** | commande       | staff, **d'une association**  |
+
+Trois observations qui décident du modèle :
+
+- **« Burger à 3,50 » n'est pas un pourcentage.** Encoder −12,5 % marche une fois, puis dérive dès
+  que le prix public bouge : le jour où le burger passe à 4,20 €, le staff paie 3,675 €, ce que
+  personne n'a décidé. Le moteur doit savoir exprimer **un prix**, pas seulement une réduction.
+- **« −50 % pris en charge » n'est pas une remise.** Une remise détruit du chiffre d'affaires ; une
+  prise en charge le déplace vers un tiers qui doit ensuite le régler. Les deux se ressemblent au
+  comptoir et **s'opposent au bilan**. Cf. §37.9 — c'est la question la plus lourde du chantier.
+- **La notion d'association n'existe pas en base.** « Staff BDE » suppose de savoir qu'une personne
+  relève du BDE, ce que ni `roles` (rôles internes BAE) ni `clients` ne portent. Deux issues, très
+  différentes en coût, et la question du §37.10-Q1 tranche entre elles.
+
+### 37.4 Prix alternatifs ou remises ? — ⚠️ recommandation révisée au §37.14
+
+**Modèle A — grille de tarifs.** Un catalogue `tariffs` (public, adhérent, staff, staff pris en
+charge) et une table `event_product_prices (event_id, product_id, tariff_id, price)`. Chaque prix
+est explicite, rien n'est calculé, la carte se lit comme une carte.
+_Contre_ : explosion combinatoire — 15 recettes × 4 tarifs = 60 cases à remplir par soirée, alors
+qu'une seule diffère en pratique. Et **ne sait pas exprimer −50 % sur la commande entière** : ce
+n'est pas un prix de produit. Il faudrait un second mécanisme à côté, donc deux moteurs.
+
+**Modèle B — remises uniquement.** Une table de règles, tout est une dérivation du prix de base.
+Compact, exprime naturellement le niveau commande.
+_Contre_ : « burger à 3,50 » n'est représentable qu'approximativement (§37.3), et le prix affiché au
+staff devient le résultat d'un calcul que personne ne relit.
+
+**Modèle C — un moteur, trois formes d'effet. ← recommandé**
+Une seule table `price_rules`, dont l'effet est `percent`, `amount` (montant fixe retiré) ou
+`override` (prix de substitution). L'`override` donne la grille du modèle A **là où on en veut une**,
+sans avoir à remplir les 59 autres cases ; le `percent` donne le niveau commande du modèle B. Un
+seul chemin d'évaluation, une seule trace, un seul endroit à relire quand un prix surprend.
+
+C'est aussi le seul des trois qui absorbe les −10 %/−5 % existants **sans les dupliquer** : ils
+deviennent deux règles globales, et les deux fonctions d'env du §37.1 disparaissent au profit de
+lignes en base, éditables sans redéploiement.
+
+⚠️ **YAGNI assumé** : pas de DSL de conditions, pas de happy hour, pas de « 2 achetés 1 offert » tant
+que le §37.10-Q9 n'a pas dit que ça existe. Les trois formes d'effet, en revanche, sont toutes les
+trois déjà décrites par la demande — les poser maintenant coûte une colonne, les rétrofiter coûte une
+migration des ventes.
+
+### 37.5 Le schéma proposé (modèle C) — ⚠️ PÉRIMÉ, voir §37.14
+
+```
+price_rules
+  id
+  label            text        -- lu tel quel sur le ticket : « Staff BDE −50 % »
+  event_id         FK nullable -- null = toutes les soirées
+  product_id       FK nullable -- null = toute la commande
+  audience         enum        -- 'all' | 'fast_pass' | 'member' | 'event_staff' | 'manual'
+  channel          enum        -- 'all' | 'counter' | 'pre_order'
+  effect           enum        -- 'percent' | 'amount' | 'override'
+  value            integer     -- centimes pour amount/override ; points de base pour percent
+  priority         integer
+  stackable        boolean
+  sponsor_id       FK nullable -- §37.9 : qui règle la part non payée, si tiers payeur
+  starts_at / ends_at  nullable
+```
+
+Ce que chaque cas devient, sans colonne supplémentaire :
+
+| Cas                       | `event_id` | `product_id` | `audience`    | `effect`   | `value` |
+| ------------------------- | ---------- | ------------ | ------------- | ---------- | ------- |
+| Préco −10 %               | null       | null         | `all`         | `percent`  | 1000    |
+| Adhérent −5 %             | null       | null         | `fast_pass`   | `percent`  | 500     |
+| Burger staff à 3,50 €     | 12         | 7            | `event_staff` | `override` | 350     |
+| Staff BDE −50 %           | 12         | null         | `event_staff` | `percent`  | 5000    |
+| Geste commercial ponctuel | 12         | null         | `manual`      | `amount`   | 200     |
+
+`audience: 'event_staff'` se résout par une jointure sur `member_event_assigned_jobs (event_id,
+member_id)` — la table existe et est déjà interrogée quatre fois dans `events_controller.ts`. Aucun
+nouveau lien à créer pour le cas staff **tant qu'on n'a pas besoin de distinguer les associations**
+(§37.10-Q1).
+
+### 37.6 La traçabilité — le préalable, quel que soit le modèle
+
+⚠️ **À faire avant toute règle, et indépendamment du modèle retenu.**
+
+```
+order_products  += unit_price_cents   -- prix effectivement facturé, figé à la vente
+                += list_price_cents   -- prix public au moment de la vente (pour l'écart)
+
+order_discounts (nouvelle table)
+  order_id, order_product_id nullable, rule_id nullable,
+  label, amount_cents, sponsor_id nullable, applied_by_user_id nullable
+```
+
+Trois raisons, dans l'ordre d'importance :
+
+1. **Sans ça, une commande passée n'est plus relisible.** Modifier une règle en octobre changerait
+   le total affiché des commandes de septembre. C'est déjà vrai aujourd'hui pour `event_products.price`,
+   mais avec un prix unique l'écart reste théorique ; avec des règles, il devient quotidien.
+2. **Le bilan a besoin de l'écart, pas du net.** « CA brut / remises consenties / pris en charge /
+   CA net » est le tableau qui permet de piloter ; `transactions.amount` seul ne le donne jamais.
+   `soiree/bilan` et la page `analyse` sont les consommateurs.
+3. **Une remise manuelle sans auteur est une caisse qui fuit.** `applied_by_user_id` n'est pas de la
+   défiance : c'est ce qui permet de répondre « qui a accordé ça » sans accuser personne.
+
+⚠️ `transactions.amount` reste **l'argent qui a bougé**, et rien d'autre. Il ne doit jamais porter la
+remise : `Σ order_products.unit_price × quantity − Σ order_discounts` doit lui être égal, et cette
+égalité est le test qui protège tout le reste.
+
+### 37.7 Cumul, arrondi, plancher — les trois pièges arithmétiques
+
+- **Cumul.** « −10 % puis −5 % supplémentaires » se lit de deux façons : multiplicatif (0,9 × 0,95 =
+  **−14,5 %**) ou additif (**−15 %**). Sur un panier de 20 €, l'écart est de 10 centimes — assez pour
+  qu'un adhérent le remarque, et pas assez pour qu'on s'en aperçoive en recette. À trancher (Q13).
+- **Cumul entre familles.** Un adhérent qui est aussi staff : les deux règles s'appliquent-elles, ou
+  la meilleure gagne-t-elle ? Le champ `stackable` permet les deux, mais **la valeur par défaut est
+  une décision de gestion**, pas un détail (Q2).
+- **Arrondi.** −5 % sur 3,50 € = 3,325 €. Au centime le plus proche (3,33 €) le comptoir rend la
+  monnaie en pièces de 1 centime, ce qu'aucune caisse de soirée n'a. **Recommandation : arrondir à
+  10 centimes**, sur le **total** et non ligne à ligne — arrondir chaque ligne fait dériver le total
+  de plusieurs centimes sur un gros panier (Q14).
+- **Plancher.** Une règle `override` ou un cumul mal réglé peut passer sous le coût de revient, voire
+  sous zéro. Le coût de revient est **déjà calculable** (`product_goods` × prix fournisseur, cf.
+  §16/§17). Recommandation : ne pas bloquer, mais **avertir** à l'enregistrement de la règle — un
+  produit d'appel vendu à perte est une décision légitime, la faire sans le savoir ne l'est pas.
+
+### 37.8 Caisse — automatique au scan, manuel à la main
+
+Le scan du QR résout déjà un `Buyer { userId, name, fastPass }` (`buyer_service.describeBuyer`), et
+`caisse.store` le garde dans `selectedBuyer`. Les règles `fast_pass` et `event_staff` s'appliquent
+donc **sans rien demander au caissier** dès que l'acheteur est identifié.
+
+⚠️ **Le prix ne doit jamais être calculé côté front.** C'est la règle déjà posée pour les −10 %/−5 %
+(« une seconde définition côté front finirait par diverger, et l'écart se lirait en euros ») et pour
+le total (`checkout` : « rien de ce que le client annonce n'est lu »). Deux façons de la tenir :
+
+- **Devis serveur** — `POST /events/:id/quote { lines, buyerId }` → lignes tarifées, règles
+  appliquées, total. Une seule définition, mais un aller-retour à chaque modification du panier,
+  un soir de soirée, sur un réseau de salle des fêtes. Débounce indispensable.
+- **Règles poussées à l'ouverture de session** — le front calcule un **affichage**, le serveur
+  retranche à l'encaissement. Zéro latence, mais deux implémentations du même calcul, exactement ce
+  que le dépôt a refusé deux fois.
+
+**Recommandation : devis serveur, débouncé, avec repli optimiste sur le prix public.** Le WebSocket
+existe déjà (§21) si la latence se révèle gênante. Et dans tous les cas, `checkout()` **recalcule et
+ne fait confiance à rien** — le devis n'est qu'un affichage, jamais une autorité.
+
+Application manuelle, demandée explicitement :
+
+- un bouton **Remise** dans le panier, listant les règles applicables à la soirée (y compris celles
+  dont l'acheteur ne remplit pas la condition — le caissier voit alors pourquoi elle est grisée) ;
+- une remise **libre** (pourcentage ou montant, avec motif), derrière une permission dédiée — le
+  catalogue RBAC (`rbac_catalog.ts`) est le bon endroit, et `Tresorier` le titulaire naturel ;
+- ⚠️ **recalcul au changement d'acheteur** : scanner un QR après avoir composé le panier doit
+  retarifer, et scanner un autre QR doit **retirer** les règles du précédent. C'est le bug le plus
+  probable de tout le lot.
+- affichage : prix public **barré** + prix appliqué + libellé de la règle. La maquette le demandait
+  déjà et le §36.5 l'avait écarté faute de `member_price` — cette section lève l'obstacle.
+
+### 37.9 Prise en charge ≠ remise — ⚠️ tranché par Q3, voir §37.14
+
+« Les staffs BDE sont pris en charge à 50 % par l'asso BDE » décrit **un tiers payeur**, pas une
+réduction. Deux lectures, qui donnent le même prix au comptoir et deux comptabilités opposées :
+
+| Lecture                     | Encaissé | CA de la soirée | Conséquence                                      |
+| --------------------------- | -------- | --------------- | ------------------------------------------------ |
+| **Remise de 50 %**          | 2 €      | 2 €             | Rien à faire. Le manque à gagner est absorbé.    |
+| **Prise en charge de 50 %** | 2 €      | 4 €             | Le BDE doit 2 €. Il faut une créance et un état. |
+
+Si c'est la seconde — et « pris en charge par l'asso BDE » le suggère fortement — il faut :
+
+- une entité **organisation partenaire** (BDE, BDS, clubs…), qui n'existe pas ; `suppliers` ne
+  convient pas, c'est l'autre sens du flux ;
+- `price_rules.sponsor_id` et `order_discounts.sponsor_id` (déjà prévus au §37.5) ;
+- un **état de fin de soirée « ce que le BDE nous doit »**, par organisation, avec le détail des
+  commandes — c'est ce document qui se transmet au trésorier d'en face ;
+- et probablement un **plafond** : les prises en charge réelles sont presque toujours bornées, soit
+  par personne (« 50 %, dans la limite de 10 € »), soit par enveloppe globale (« 300 € pour la
+  soirée »). Un plafond par enveloppe est **beaucoup** plus coûteux : il rend le prix du 31ᵉ client
+  dépendant des 30 précédents, donc dépendant de l'ordre de passage, donc non reproductible à la
+  relecture. À ne construire que si la réponse à Q3 le confirme.
+
+### 37.10 Questions à poser — mises en situation
+
+À poser en une fois, comme le §28. Les cinq premières bloquent le modèle ; les suivantes bloquent
+l'ergonomie.
+
+| #   | Mise en situation                                                                                                                                                                                        | Ce qu'elle décide                                                                                                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | **Soirée BDE. Un staff BDE et un staff BAE achètent chacun un burger.** Paient-ils la même chose ?                                                                                                       | Si oui : rien à créer, la règle est portée par la soirée. Si non : il faut une entité organisation **et** l'appartenance des personnes (§37.9) |
+| Q2  | **Un staff, adhérent, qui a précommandé.** Il paie quoi ? Les trois remises s'empilent-elles, ou la meilleure l'emporte-t-elle ?                                                                         | La valeur par défaut de `stackable` et tout le §37.7                                                                                           |
+| Q3  | **Fin de soirée BDE.** Le BDE vous rembourse-t-il la moitié encaissée en moins ? Sous quelle forme, et à partir de quel document ? Y a-t-il un plafond — par personne, ou une enveloppe pour la soirée ? | Remise ou tiers payeur (§37.9) — la question la plus lourde du chantier                                                                        |
+| Q4  | **Le burger à 3,50 € pour le staff** : décidé pour cette soirée-là, ou tarif staff permanent valable partout ?                                                                                           | `event_id` nullable suffit-il, ou faut-il un jeu de règles par défaut hérité par chaque soirée ?                                               |
+| Q5  | **Un staff passe au comptoir.** Paie-t-il vraiment, ou consomme-t-il et on compte après ? Existe-t-il un cas 100 % offert ?                                                                              | Si « on compte après » : ce n'est pas une remise, c'est une commande à 0 € avec une contrepartie à suivre — un tout autre écran                |
+| Q6  | **Un staff qui a fini son créneau et reste à la soirée.** Toujours au tarif staff ?                                                                                                                      | Si non, la condition n'est plus « affecté à la soirée » mais « en service maintenant » — `jobs.type` (before/during/after) devient tarifaire   |
+| Q7  | **Soirée BAE ordinaire.** Le staff BAE a-t-il un tarif ? Le même à chaque soirée ?                                                                                                                       | Confirme ou infirme Q4 par l'autre bout                                                                                                        |
+| Q8  | **Quelqu'un se présente sans QR et dit être staff.** Le caissier peut-il appliquer la remise à la main ? Qui en a le droit ? Faut-il pouvoir savoir après coup qui l'a accordée ?                        | La permission RBAC et `applied_by_user_id` (§37.8)                                                                                             |
+| Q9  | **Y a-t-il des remises qui ne dépendent pas de la personne** — happy hour, formule burger + boisson, déstockage de la dernière demi-heure ?                                                              | Décide s'il faut des conditions temps/quantité. **Si non, on ne les construit pas** (§37.4)                                                    |
+| Q10 | **Un client mécontent, un produit raté, un geste commercial.** Ça arrive ? Ça se note quelque part aujourd'hui ?                                                                                         | Justifie (ou non) la remise libre avec motif                                                                                                   |
+| Q11 | **Un produit offert à un partenaire ou à un prestataire.** Même mécanisme à −100 %, ou notion « offert » distincte ?                                                                                     | À −100 % le bilan compte une vente à 0 € ; en « offert » il compte une charge. Pas le même chiffre                                             |
+| Q12 | **Au bilan de soirée**, voulez-vous lire « remises consenties » et « pris en charge » comme des lignes à part entière, ou seulement le net encaissé ?                                                    | Si oui, le §37.6 n'est pas optionnel — et `soiree/bilan` gagne deux colonnes                                                                   |
+
+### 37.11 Questions techniques, à trancher entre nous
+
+| #   | Question                                                                                       | Recommandation                                                                                  |
+| --- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Q13 | Cumul multiplicatif (−14,5 %) ou additif (−15 %) ?                                             | **Multiplicatif** : chaque remise s'applique au prix effectif, ce qui reste vrai à trois règles |
+| Q14 | Arrondi au centime ou aux 10 centimes ? Par ligne ou sur le total ?                            | **10 centimes, sur le total** — le comptoir n'a pas de pièces de 1 centime (§37.7)              |
+| Q15 | Les −10 %/−5 % restent-ils en variables d'env, ou deviennent-ils des lignes de `price_rules` ? | **Des lignes.** Deux moteurs de remise, c'est deux vérités                                      |
+| Q16 | Le devis serveur, ou les règles poussées au front ?                                            | **Devis serveur débouncé** (§37.8)                                                              |
+| Q17 | Une règle modifiée doit-elle affecter les commandes déjà passées ?                             | **Non**, et c'est précisément ce que le §37.6 garantit                                          |
+
+### 37.12 Ordre proposé
+
+1. ✅ **Prix de vente à l'ajout au menu** (§37.2, livré §37.13) — indépendant de toutes les questions, préalable à
+   tout le reste, front seul. **Peut partir immédiatement.**
+2. ✅ **Traçabilité** (§37.6, livré §37.13) — `order_products.unit_price_cents`, `order_discounts`,
+   `checkout()` qui les écrit. Indépendant du modèle de règles. À faire **avant** la première règle.
+3. **Moteur `price_rules`** (§37.5) + reprise des −10 %/−5 % (Q15) — après réponses Q1–Q4, Q13–Q14.
+4. **Caisse** : tarification au scan, bouton Remise, remise libre permissionnée (§37.8) — après 3.
+5. **Prise en charge et organisations** (§37.9) — **uniquement si Q3 dit « tiers payeur »**.
+6. **Bilan** : colonnes remises / prises en charge (Q12) — après 2, indépendant de 3.
+
+⚠️ Les étapes 1 et 2 sont utiles **quelle que soit** la réponse aux questions du §37.10, et 2 devient
+plus coûteuse à chaque commande enregistrée sans prix. C'est l'argument pour ne pas attendre les
+réponses avant de les faire — et pour attendre avant de faire 3.
+
+### 37.13 Étapes 1 et 2 — ✅ livrées le 2026-08-18
+
+Les étapes 3 à 6 du §37.12 restent **en attente des réponses au §37.10**.
+
+**Étape 1 — le prix de vente est saisissable (front).**
+
+| Où                        | Ce qui change                                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `logistique-service.ts`   | `addMenuLine(…, priceCents?)` et `setMenuLinePrice()` — le `PATCH` prix existait côté back, aucun écran ne l'appelait  |
+| `events.store.ts`         | `setMenuLinePrice()`, et un `saveMenuLine()` partagé avec la quantité (même protocole optimiste, même garde par ligne) |
+| `logistique/events`       | colonne « Prix vente » éditable, bandeau des recettes sans prix                                                        |
+| `logistique-assign-modal` | colonne « Prix vente » par recette, marge et revenu prévu recalculés dessus                                            |
+| `event.model.ts`          | l'unité de chaque champ de `MenuItem` est écrite noir sur blanc                                                        |
+
+⚠️ **Bug d'unité corrigé au passage, dans la modale d'assignation.** `marge` valait
+`product.lastPrice − product.cost`, or `lastPrice` est en **centimes** et `cost` en **euros** : un
+hot-dog à 3,50 € coûtant 1,12 € affichait « **+348,88 €** » de marge, et le « Revenu prévu » du pied
+était gonflé d'un facteur ~100. Le calcul passe désormais par `price / 100 − cost`, et la marge
+négative s'affiche en rouge au lieu de porter un `+`.
+
+La saisie est en euros, l'enregistrement en centimes, et la conversion vit à un seul endroit par
+écran. ⚠️ Elle n'est **pas** débouncée comme la quantité : le prix part à la validation du champ,
+jamais pendant la frappe — « 45 » tapé en route vers « 4,50 » ne doit pas être enregistré.
+
+**Étape 2 — le prix est figé à la vente (back).**
+
+- `1787600000000_add_price_snapshot_to_order_products_table` : `unit_price_cents` et
+  `list_price_cents` sur `order_products`, **avec reprise** des lignes existantes depuis le menu de
+  leur soirée (sans quoi tout l'historique tombait à 0).
+  ⚠️ Postgres interdit de référencer l'alias de la table mise à jour depuis un `JOIN … ON` du
+  `FROM` : les jointures du backfill passent par le `WHERE`.
+- `1787600000001_create_order_discounts_table` : `order_id`, `product_id` nullable (nul = remise sur
+  toute la commande), `label` recopié, `amount_cents`, `applied_by_user_id`.
+- `order_service` : `checkout()` écrit l'instantané ; `listForEvent()` et `payloadOf()` **relisent
+  l'instantané** au lieu du menu courant. La note « le prix unitaire est relu du menu actuel —
+  assumé » disparaît, l'hypothèse qu'elle assumait n'étant plus tenable.
+- `OrderPayload` expose désormais `grossCents`, `discountCents`, `totalCents` et `discounts[]`, avec
+  l'invariant **`gross − discount = total`**. `discountCents` compte les deux formes : l'écart de
+  ligne (`listPrice − unitPrice`, ce qu'écrira une règle `override`) **et** les remises de commande.
+- 40 → 41 classes dans `database/schema.ts`, diff de 41 lignes après `prettier` (cf. §36.6).
+
+**Vérifié** : dashboard 593 → **602 tests** (102 fichiers), back 489 → **494 tests**. Le nouveau
+`order_price_snapshot.spec.ts` éprouve le cas qui motivait tout le lot : une commande encaissée à
+2,50 €, le prix de la soirée doublé après coup, et la commande qui **vaut toujours 500 centimes**.
+
+**Écarts assumés par rapport au §37.5/§37.6 :**
+
+- `order_discounts` n'a **ni `rule_id` ni `sponsor_id`** : les deux tables qu'elles référenceraient
+  (`price_rules`, organisations partenaires) n'existent pas, et `sponsor_id` dépend de Q3. Les
+  ajouter tiendra en une migration le jour où elles existeront.
+- **Rien n'écrit encore dans `order_discounts`** : aucune règle ne les produit. La lecture est
+  branchée et testée ; il ne manquera que l'écriture.
+- **Les précommandes n'ont pas d'instantané.** `account_purchase_service.buildView()` recalcule
+  toujours depuis le menu courant, et `pre_order_items` n'a pas de colonne de prix. Volontaire :
+  `POST /pre-orders` n'existe pas (§36.8), donc cette table n'a aucun écrivain à instrumenter. À
+  faire **en même temps** que la création de précommande, pas avant.
+
+### 37.14 Réponses Q1 et Q3 — ⚠️ PÉRIMÉ, voir §38
+
+Reçues le 2026-08-18. Elles **remplacent** le §37.5 et le §37.9, qui raisonnaient sur des hypothèses
+plus lourdes que la réalité.
+
+**Q1 — « Les staff BAE ne mangent pas nos produits ou payent plein tarif. Le prix est le même pour
+toutes les associations qui staffent, et tout est pris uniquement par le BDE. Un QR par soirée,
+scanné en caisse, applique la réduction ; ajout manuel possible. Un seul QR, pas de rotation — si le
+BDE le fait tourner, c'est son problème. »**
+
+**Q3 — « Facture en fin de soirée de ce qu'ils nous doivent pour atteindre nos tarifs classiques.
+Les gens sur place ne payent qu'une partie ; le BDE paie le reste plus tard, en une fois. »**
+
+#### Ce que ça supprime
+
+| Ce que le §37 prévoyait                                           | Pourquoi ça tombe                                                          |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Entité « organisation partenaire », appartenance des personnes    | Un seul payeur, le BDE. Un nom sur la politique suffit ; aucune table      |
+| `audience: 'event_staff'` résolu par `member_event_assigned_jobs` | **La remise n'est plus liée à une personne.** Elle est liée à un jeton     |
+| Q6 (staff hors créneau) et Q7 (tarif staff BAE)                   | Sans identité ni rôle dans la règle, les deux questions n'ont plus d'objet |
+| Le moteur générique `price_rules` (§37.5)                         | Voir ci-dessous — il ne reste plus rien de générique à porter              |
+
+⚠️ **Recommandation révisée : ne pas construire le moteur de règles.** Après Q1, il ne reste que
+trois choses concrètes — les −10 % préco et −5 % adhérent (deux constantes globales déjà écrites), et
+**un** tarif staff par soirée. Une table de règles avec `audience`, `priority` et `stackable` pour
+trois cas dont aucun ne varie serait de l'abstraction sans emploi. Le §37.4 recommandait le moteur
+parce que la demande semblait ouverte ; elle ne l'est plus.
+
+#### Le modèle qui reste
+
+```
+event_staff_tariffs                -- zéro ou une ligne par soirée
+  event_id      PK/FK
+  label                            -- « Staff BDE » : lu sur le ticket et la facture
+  payer_name                       -- à qui part la facture
+  percent_off   nullable           -- points de base, sur toute la commande
+  token_version integer            -- incrémenté = ancien QR mort (cf. Q-D)
+  created_at / updated_at
+
+event_products.staff_price_cents   -- nullable : prix de substitution par article
+```
+
+Une colonne de plus sur `event_products` plutôt qu'une table de prix staff : la ligne (soirée,
+produit) existe déjà, l'écran de menu la montre déjà, et le prix staff s'y saisit à côté du prix
+public. C'est le §37.2 étendu d'un champ, pas un nouvel écran.
+
+**Le QR n'a rien à inventer.** `QrTokenPayload` (`jwt_service.ts`) est une union à trois membres
+(`fast_pass`, `pre_order`, `identity`) ; il en gagne un quatrième,
+`{ type: 'event_staff_tariff', eventId, version }`. `qrs_controller` sait déjà vérifier et router.
+⚠️ Deux différences avec les jetons existants : celui-ci **ne porte pas d'utilisateur**, et il **ne
+doit pas expirer** dans la soirée — `generateQrToken` a un TTL de 60 s par défaut, il faudra passer
+par `sign()` ou un TTL couvrant l'événement. Et il est rendu **en SVG**, pas en PNG (§36.4).
+
+#### Ce que Q3 change dans le §37.6 — remise ≠ créance
+
+C'est le point à ne pas rater. Le §37.6 ne connaît qu'une sorte de retranchement, et Q3 en crée une
+seconde, de sens opposé :
+
+| Forme                    | Encaissé au comptoir | CA de la soirée | Ce qu'il reste à faire |
+| ------------------------ | -------------------- | --------------- | ---------------------- |
+| Remise consentie         | réduit               | réduit          | rien                   |
+| **Part prise en charge** | réduit               | **intact**      | **facturer le BDE**    |
+
+`order_discounts` gagne donc un `payer_name` **nullable** : nul = remise (manque à gagner), renseigné
+= créance à facturer. Sans cette distinction, le bilan compterait les commandes staff comme du CA
+perdu alors que l'argent arrive plus tard, et la facture serait impossible à établir.
+
+La facture de fin de soirée est alors une somme, pas un calcul :
+`Σ order_discounts.amount_cents WHERE payer_name IS NOT NULL` sur la soirée. Le PDF réutilise
+`pdfService` et `print_layout` (§31), qui portent déjà huit gabarits.
+
+#### Ordre révisé, en remplacement des étapes 3 à 6 du §37.12
+
+3. **Prix staff + politique de soirée** — `event_staff_tariffs`, `event_products.staff_price_cents`,
+   saisie sur l'écran de menu à côté du prix public.
+4. **Le QR de soirée** — quatrième membre de `QrTokenPayload`, émission côté logistique, rendu SVG.
+5. **Caisse** — scan du QR qui retarife le panier, application manuelle équivalente, prix public
+   barré. `payer_name` écrit dans `order_discounts` à l'encaissement.
+6. **Facture BDE** — PDF de fin de soirée, et les colonnes du bilan (remises consenties vs créances).
+
+Les étapes 3 et 4 sont indépendantes ; 5 les suppose toutes deux ; 6 ne suppose que 5.
+
+#### Questions rouvertes par ces réponses
+
+| #   | Question                                                                                                                                                                                     | Ce qu'elle décide                                                                                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-A | **Le tarif staff, c'est un pourcentage sur la commande, des prix par article, ou les deux ?** Vos deux exemples d'origine étaient l'un et l'autre (burger à 3,50 ; −50 % global)             | Si le pourcentage suffit toujours, `staff_price_cents` ne sert à rien et disparaît                                                                       |
+| Q-B | **La facture BDE : détaillée par personne ?** Le QR ne portant aucune identité, c'est **impossible** — on peut détailler par commande et par article (« 12 burgers, 8 bières »), pas par nom | Attente à cadrer maintenant, pas à la livraison du PDF                                                                                                   |
+| Q-C | **Un staff adhérent cumule-t-il les −5 % ?** Si oui, la personne paie moins — mais le BDE paie-t-il l'écart, ou est-ce nous qui l'absorbons ?                                                | Le tarif staff est-il exclusif ou combinable (§37.7)                                                                                                     |
+| Q-D | **Le QR se rescanne-t-il à chaque commande ?** L'alternative, un « mode staff » qui reste armé sur la caisse, tarifierait par erreur la commande suivante                                    | Recommandation : **par commande**. Et un bouton « régénérer le QR » (`token_version`) est-il utile, ou inutile puisque la fuite est le problème du BDE ? |
+| Q-E | **« Facture » au sens légal ?** Numérotation séquentielle, identité de l'émetteur, TVA, mentions obligatoires — ou un simple récapitulatif à régler ?                                        | Une vraie facture impose une séquence de numéros que rien ne porte aujourd'hui                                                                           |
+| Q-F | **Suivez-vous le payé / impayé de ces factures ?** Deux soirées BDE non réglées, ça se voit où ?                                                                                             | Un échéancier de créances, ou rien du tout                                                                                                               |
+| Q-G | **Le tarif staff s'applique-t-il aux précommandes ?**                                                                                                                                        | Si oui, il faut le jeton hors caisse, ce qui rouvre l'identité                                                                                           |
+
+---
+
+## 38. Réglages de soirée : précommandes et prise en charge — ✅ livré le 2026-08-18
+
+Remplace le §37.14, qui raisonnait encore sur un « payeur par tranche » et sur une écriture dans
+`order_discounts`. Les réponses de l'auteur ont réduit le chantier, et l'implémentation a corrigé
+deux erreurs de conception au passage.
+
+### 38.1 Les règles, telles qu'arrêtées
+
+- **Le BAE encaisse toujours le prix public.** Une catégorie ne fait que déplacer qui paie.
+- Une soirée porte **0 à N catégories** (« Staff BDE », « Assos partenaires »), chacune étant **une
+  grille de prix par article** — pas de pourcentage stocké. « 100 % de prise en charge » = un prix à
+  0 €, « 50 % » = un prix à la moitié.
+- **Un article absent de la grille se vend au prix public**, et l'entité ne doit rien dessus.
+- Le **payeur est une propriété de la soirée** : toutes les catégories sont remboursées par la même
+  entité, qui change d'une soirée à l'autre.
+- QR **signé** (pas chiffré), sans échéance, sans identité, rescanné à chaque commande.
+- Comptoir uniquement. Pas de cumul avec la remise adhérent.
+- Précommandes : `capacity` est le plafond **en nombre de précommandes**, et `0` ferme la soirée —
+  **il n'y a pas de mise en pause**.
+
+### 38.2 Ce que l'exploration a corrigé, et qui change la lecture du dépôt
+
+⚠️ **`events.capacity` était déjà le quota de précommandes**, pas une jauge de fréquentation : la
+migration `1787400000000` le dit mot pour mot. Toute la mécanique existait et était testée
+(`public_catalog_service.ts` : `placed`, `remaining`, `open`, annulées exclues) et le front public la
+consommait déjà — **mais aucun écran ni validateur ne l'écrivait**. En base réelle toutes les soirées
+valaient 0, donc `GET /v1/public/events` rendait une liste vide et la page publique était
+structurellement morte. Ce lot ne construit pas la jauge, **il la branche**.
+
+### 38.3 Schéma
+
+`events` gagne `expected_attendees` et `payer_name` (non nul = prise en charge active).
+`sponsorship_categories` (`event_id`, `label`, `qr_nonce`, unique par soirée) et
+`sponsorship_prices` (`category_id`, `product_id`, `price_cents`, `CHECK >= 0`).
+`orders` gagne `sponsorship_category_id` (SET NULL), plus `sponsorship_category_label` et
+`payer_name` **recopiés** : la catégorie peut disparaître et le payeur être renommé, or un
+justificatif réédité ne doit pas changer de débiteur. 41 → 43 classes.
+
+**L'absence de ligne dans `sponsorship_prices` est signifiante** — ne jamais pré-remplir la grille
+avec les prix publics.
+
+### 38.4 L'écart est porté par la ligne, jamais par `order_discounts`
+
+Le §37.14 prévoyait d'écrire la créance dans `order_discounts`. **C'était faux** :
+`order_products` porte déjà `unit_price_cents` et `list_price_cents`, et `buildPayload()` calcule
+`total = Σ unit×qty − Σ remises`. Une ligne de remise en plus aurait compté l'écart **deux fois**.
+
+La règle retenue :
+
+> Un écart `list − unit` est une **créance** si la commande porte une catégorie, une **remise
+> consentie** sinon.
+
+D'où `gross = total + discount + sponsored`, généralisation de l'invariant posé le matin même.
+`order_discounts` reste vide et réservée aux remises manuelles à venir.
+
+### 38.5 Deux bugs trouvés par les tests écrits pour l'occasion
+
+- ⚠️ **`order.sponsorshipCategoryLabel !== null`** classait **toute commande ordinaire** comme prise
+  en charge : une commande fraîchement créée porte `undefined`, jamais `null`. `!= null` corrige.
+- ⚠️ **`summaryForEvent()` calculait la recette depuis `event_products.price`** — le menu **courant**
+  — donc changer un prix réécrivait le bilan des soirées passées, exactement ce que les colonnes
+  d'instantané avaient été posées pour empêcher. Basculé sur `order_products`. Le test qui a cassé le
+  prouve : sa fixture insérait des lignes sans prix figé, ce qu'aucun encaissement réel ne fait.
+- Côté front, la modale de catégories lisait `eventId()` (une `input.required`) **dans le
+  constructeur** : elle aurait levé à la première ouverture réelle. Passée par un `effect`.
+
+### 38.6 Le QR
+
+`QrTokenPayload` gagne un quatrième membre `{ type: 'sponsorship_category', categoryId, nonce }` —
+**le premier jeton du dépôt qui ne désigne personne**. `generateQrToken(data, ttlSeconds)` accepte
+désormais `null` pour supprimer l'échéance.
+
+⚠️ **Passer par `generateQrToken` et non `sign()`** bien que le jeton produit soit identique : seule
+cette porte contraint la charge utile à l'union sur laquelle `verify` aiguille.
+⚠️ **Ne jamais passer `0`** : `0 !== undefined`, donc `setExpirationTime(0)` daterait le jeton de
+janvier 1970.
+⚠️ Sans `exp`, `qr_nonce` est la **seule** révocation, et la branche `E_QR_EXPIRED` n'est jamais
+atteinte pour ce type.
+
+`POST /v1/qr/verify` renvoie la grille **avec** la réponse : le comptoir doit barrer les prix publics
+dès le scan. Aucune route ni permission nouvelle.
+
+### 38.7 Le panier ne stocke que le prix public
+
+`CaisseCartItem.price` fige le prix à l'ajout. Y écrire le prix de catégorie aurait laissé les lignes
+ajoutées **avant** le scan au prix public et les suivantes au tarif préférentiel. Le prix effectif est
+donc **dérivé** (`unitPriceOf`), et appliquer, changer ou retirer une catégorie retarife tout le
+panier gratuitement — il n'y a aucun code de re-tarification, donc aucun à oublier.
+
+⚠️ `subtotal` est renommé `chargedTotal` (lu quatre fois dans `caisse.html` et par `payment-modal`) ;
+`publicTotal` et `receivableTotal` s'y ajoutent. La catégorie est remise à `null` **après un
+encaissement réussi seulement**, et dans `endSession()` — le store est `providedIn: 'root'`.
+
+### 38.8 Le scan en plein écran sur téléphone
+
+L'aperçu caméra passe en `fixed inset-0` sous `md` : en-tête, vidéo plein cadre, réticule à 224 px
+au lieu de 96, et un bouton d'arrêt pleine largeur. ⚠️ Le `<video>` reste **le même élément monté** —
+le masquer par un `@if` couperait le flux ; seule sa boîte change.
+
+### 38.9 Vérifié
+
+Back **494 → 523** tests, dashboard **602 → 617**, `bae-ui` 79, `bae-public` 71. Les deux
+applications compilent.
+
+⚠️ **`node ace test` ne rend pas la main** dès qu'un test PDF s'exécute : Puppeteer garde le
+navigateur vivant. Lancer en arrière-plan et lire le log — sinon la commande semble bloquée alors que
+les tests sont passés en deux secondes.
+
+### 38.10 Ce que ce lot n'a **pas** fait
+
+- **`POST /pre-orders` n'existe toujours pas** : `placed` reste à 0, le plafond n'a rien à brider, et
+  le contrôle atomique de `remaining > 0` sous verrou devra être écrit **avec** la création.
+- `pre_order_items` n'a toujours pas d'instantané de prix, pour la même raison.
+- `preOrderCloseLeadHours` et `preOrderDiscountPercent` restent des variables d'environnement
+  globales ; le premier est le candidat évident au passage par soirée.
+- Rien ne consomme `expected_attendees` : c'est un champ d'information.
+- **`my-qr-card` est encore en PNG 220 px**, donc brouillé. Le composant `bae-qr-code` extrait dans
+  `bae-ui` rend en SVG et attend qu'on l'y branche, ainsi que dans `bae-public/commande`.
+- `pages/authed/caisse/cloture/` reste entièrement maquette : second emplacement naturel du bouton de
+  justificatif.
+- Aucune contrainte d'unicité `(user_id, event_id)` sur `pre_orders` : un même compte pourrait
+  consommer tout le plafond.
