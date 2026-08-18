@@ -999,13 +999,16 @@ du §4.4. ⚠️ **Ne pas rejouer** : `feat/orders` n'était pas mergée au mome
 2. **Client ≠ adhérent.** Le compte permet déjà de se présenter à la caisse ; la personne peut
    ensuite cotiser, précommander, les deux, ou rien. D'où le troisième état `none` sur la fiche,
    et le compteur `withoutSubscription` (et non « externes », qui décrivait une provenance).
-3. **`users.cas_id` est la preuve de provenance CAS** disponible aujourd'hui — c'est le claim `uid`
-   (§9.2). Le seeder le renseigne pour simuler ce que fera le callback.
+3. **`users.cas_id` est la preuve de provenance CAS** disponible aujourd'hui — c'est le claim
+   `preferred_username` (§9.2). Le seeder le renseigne pour simuler ce que fera le callback.
 
 ### Points ouverts laissés par ce lot
 
-- **Le claim de promotion reste une question ouverte à EirbWare** (§9.2, point 4) : la colonne est
-  saisie à la main en attendant, et **changera de nature** si le claim existe.
+- ~~**Le claim de promotion reste une question ouverte à EirbWare**~~ — ✅ **tranchée le
+  2026-08-18.** La DSI transmet `diplome`, qui alimente `clients.promotion`, et `ecole`, qui
+  alimente la colonne `clients.school` créée pour l'occasion. Les deux sont donc **dérivées de
+  l'IdP** : elles ont quitté le validateur `client` et `ClientWritePayload`, et sont réécrites à
+  chaque connexion. Le bureau ne saisit plus que le téléphone et la note.
 - Non branchés côté front, boutons désactivés avec un `title` explicite : enregistrer une
   cotisation, modifier une fiche, renouveler, export CSV, import, « Contacter », tri.
 - Les tuiles Précommandes / Dépensé / Solde affichent `—` : `transactions` n'a aucun lien vers une
@@ -1278,11 +1281,13 @@ passer en production ne demandera que de changer les variables `KEYCLOAK_*`.
 
 ⚠️ **Le piège qui a coûté trois itérations, et qui resservira face à EirbWare :** depuis
 Keycloak 24, le **profil utilisateur déclaratif supprime silencieusement tout attribut non
-déclaré**. `uid`, `prenom` et `nom` étaient écrits par l'API admin, acceptés avec un `204`, et
-jetés — aucune erreur nulle part, juste un claim absent en bout de chaîne. Comme EirbConnect repose
-entièrement sur ces trois claims **non standards**, c'est exactement la panne qu'on découvrirait en
-production. **Si `uid` n'arrive pas, interroger la politique de profil du realm avant de suspecter
-notre code.**
+déclaré**. Les attributs étaient écrits par l'API admin, acceptés avec un `204`, et jetés — aucune
+erreur nulle part, juste un claim absent en bout de chaîne. **Si un claim n'arrive pas, interroger
+la politique de profil du realm avant de suspecter notre code.**
+
+Depuis la correction du 2026-08-18, seuls `ecole` et `diplome` sont concernés : ce sont les deux
+seuls attributs libres. `username`, `firstName`, `lastName` et `email` sont des champs du modèle
+utilisateur, que la politique de profil ne jette pas.
 
 ⚠️ Deux autres pièges mesurés :
 
@@ -1779,8 +1784,8 @@ est déjà correctement tracée.
 ~~**Décision à prendre — où vit l'identité ?**~~ — ✅ **tranchée le 2026-08-16, et livrée**
 (§0 undecies). `first_name` / `last_name` ont été **remontés de `members` vers `users`**, nullables ;
 `clients` ne porte que le spécifique public (téléphone, promotion, date d'inscription, note).
-Une personne membre _et_ cliente a donc un seul nom, par construction. Les claims `prenom` / `nom`
-alimenteront `users`, pas `clients`.
+Une personne membre _et_ cliente a donc un seul nom, par construction. Les claims `given_name` /
+`family_name` alimentent `users`, pas `clients`.
 
 **Conséquences côté back :**
 
@@ -2241,7 +2246,7 @@ Ce que la doc donne :
 | Type de client | **Confidential** (`CLIENT_ID` + `CLIENT_SECRET`) — exactement ce qu'exige le mode BFF                     |
 | Scopes         | `openid profile email`                                                                                    |
 | PKCE           | **Exigé**, `code_challenge_method: S256`                                                                  |
-| Claims exposés | `uid`, `prenom`, `nom`                                                                                    |
+| Attributs DSI  | `email`, `firstName`, `lastName`, `username`, `ecole`, `diplome` (voir la correspondance ci-dessous)      |
 
 **À demander à EirbWare :**
 
@@ -2253,23 +2258,30 @@ Ce que la doc donne :
    de retour. La doc mentionne le port 8080 en local — préciser qu'ici c'est 3333.
 3. Les **post logout redirect URIs** (`https://dashboard.bae.eirb.fr`,
    `https://order.bae.eirb.fr`) si l'on veut le logout global (§9.5).
-4. ⚠️ **Un claim de promotion**, s'il existe. La doc n'en liste aucun, or la maquette `adherents`
-   affiche « Promotion » (§4.4). Deux issues : EirbWare l'expose, ou on le demande à l'utilisateur
-   à la première précommande. À trancher **avant** d'écrire la table `clients`, c'est une colonne
-   qui change de nature (dérivée de l'IdP vs saisie).
+4. ~~⚠️ **Un claim de promotion**, s'il existe.~~ — ✅ **obtenu le 2026-08-18** : la DSI transmet
+   `diplome` et `ecole`. `clients.promotion` est donc dérivée de l'IdP et non saisie, et
+   `clients.school` a été ajoutée pour la seconde.
 
-**Correspondance des claims — ils ne sont pas standards, et c'est structurant :**
+**Correspondance des claims — corrigée le 2026-08-18 :**
 
-| Claim EirbConnect | Colonne                | Rôle                                                                                                                                 |
-| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `uid`             | **`users.cas_id`**     | Le login école. C'est **lui** la correspondance annuaire cherchée au §9.4, et la clé de réconciliation du §9.5                       |
-| `prenom`          | **`users.first_name`** | Pas `given_name`. ⚠️ **Corrigé le 2026-08-16** : plus `clients.first_name`, la colonne a été remontée sur `users` (voir §0 undecies) |
-| `nom`             | **`users.last_name`**  | Pas `family_name`. Même correction                                                                                                   |
-| `sub`             | `users.keycloak_sub`   | UUID interne du realm                                                                                                                |
+⚠️ Ce tableau a longtemps annoncé des claims `uid`, `prenom`, `nom`, présentés comme « non
+standards, et c'est structurant ». **C'était faux.** Les quatre premiers attributs de la DSI
+alimentent le modèle utilisateur du realm, qui les ré-expose sous les claims **standards** du scope
+`profile` ; seuls `ecole` et `diplome`, sans équivalent standard, sont des claims custom.
 
-Autrement dit, **la question du §9.4 est résolue** : `uid` alimente `cas_id`, la réconciliation des
-comptes existants est possible, et aucun mapper supplémentaire n'est à demander pour ça. En
-revanche, écrire `given_name` / `family_name` par réflexe donnerait `undefined` partout.
+| Attribut DSI | Claim reçu           | Colonne                | Rôle                                                                                              |
+| ------------ | -------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `username`   | `preferred_username` | **`users.cas_id`**     | Le login école, après filtrage par le _username template importer_. Clé de réconciliation du §9.5 |
+| `firstName`  | `given_name`         | **`users.first_name`** | ⚠️ Sur `users`, plus `clients.first_name` (corrigé le 2026-08-16, voir §0 undecies)               |
+| `lastName`   | `family_name`        | **`users.last_name`**  | Même correction                                                                                   |
+| `email`      | `email`              | `users.email`          | Mis à jour au passage, mais **jamais** clé de recherche : il change                               |
+| `ecole`      | `ecole`              | `clients.school`       | Claim custom. Dérivé, non éditable au bureau                                                      |
+| `diplome`    | `diplome`            | `clients.promotion`    | Claim custom. Dérivé, non éditable — c'est ce qui a refermé le point ouvert ci-dessus             |
+| —            | `sub`                | `users.keycloak_sub`   | UUID interne du realm. Change à un ré-import, d'où `cas_id` comme identité métier                 |
+
+Autrement dit, **la question du §9.4 est résolue** : `preferred_username` alimente `cas_id`, la
+réconciliation des comptes existants est possible, et les seuls mappers à demander sont ceux de
+`ecole` et `diplome`.
 
 ⚠️ **Deux points d'infrastructure à vérifier avant de promettre une date :**
 
@@ -2342,15 +2354,22 @@ Points qui coûtent du temps si on les découvre en route :
 
 - **`openid` doit figurer dans les scopes** (`openid profile email`). Sans lui, la réponse est de
   l'OAuth2 pur : pas de `sub`, et `/userinfo` refuse.
-- **Les claims d'EirbConnect ne sont pas les claims standards** : `uid`, `prenom`, `nom` — pas
-  `preferred_username`, `given_name`, `family_name` (§9.2). Écrire les noms standards par réflexe
-  donne `undefined` partout, sans erreur.
+- ⚠️ **Ce document a longtemps affirmé l'inverse** — que les claims étaient `uid`, `prenom`, `nom`
+  « et pas les standards ». Les claims sont bien `preferred_username`, `given_name`, `family_name`
+  (§9.2) ; seuls `ecole` et `diplome` sont custom. Le symptôme d'un tel contresens est **silencieux**
+  : un claim mal nommé vaut `undefined`, sans la moindre erreur. Pire, `scripts/setup-dev-keycloak.sh`
+  fabriquait un realm de dev conforme au code plutôt qu'à l'IdP — toute la suite passait au vert
+  contre un IdP imaginaire. Les deux se corrigent ensemble.
 - **L'identifiant stable est `sub`, pas l'email.** Un utilisateur peut changer d'adresse ; s'il
   sert de clé, on crée un doublon au prochain login. C'est `sub` qui va dans `keycloak_sub`, et
-  `uid` dans `cas_id`.
-- **`uid` peut être absent des claims si le scope `profile` manque** — et son absence n'est pas une
-  erreur visible, juste une réconciliation qui ne se fait plus (§9.5). Traiter un `uid` manquant
-  comme un échec explicite du callback plutôt que comme un `null` qu'on écrit en base.
+  `preferred_username` dans `cas_id`.
+- **`preferred_username` peut être absent des claims si le scope `profile` manque** — et son absence
+  n'est pas une erreur visible, juste une réconciliation qui ne se fait plus (§9.5). Traiter un
+  `preferred_username` manquant comme un échec explicite du callback plutôt que comme un `null`
+  qu'on écrit en base.
+- **Un claim absent n'est pas un ordre d'effacement.** `firstName`, `lastName`, `ecole` et `diplome`
+  ne sont écrits que s'ils arrivent renseignés : un mapper muet côté DSI viderait sinon la fiche
+  sans laisser de trace.
 
 ### 9.4 Migration
 
@@ -2428,8 +2447,8 @@ maxAge: '10m', httpOnly: true, sameSite: 'lax' })`), génère `state` et `code_v
    avec un code explicite — sans quoi l'utilisateur tombe sur une page blanche :
    l'utilisateur a refusé le consentement ; `state` ne correspond pas (session perdue, ou
    tentative) ; l'IdP a renvoyé une erreur.
-2. Échanger le code avec le `code_verifier`, puis lire les claims :
-   `sub`, `uid`, `prenom`, `nom`, `email` (§9.2 — **pas** `given_name` / `family_name`).
+2. Échanger le code avec le `code_verifier`, puis lire les claims : `sub`, `preferred_username`,
+   `given_name`, `family_name`, `email`, plus les deux customs `ecole` et `diplome` (§9.2).
 3. **Résolution de l'utilisateur — en trois temps, pas un `firstOrCreate`.** C'est le point le
    plus facile à rater, et le rater crée des doublons sur des comptes existants :
 
