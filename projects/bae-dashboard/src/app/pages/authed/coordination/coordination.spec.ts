@@ -48,6 +48,7 @@ interface CoordinationInternals {
   availableMembersFor(period: JobPeriod): { id: number }[];
   membres(): {
     id: number;
+    name: string;
     hasAssignment: boolean;
     assignments: { period: JobPeriod; jobId: number; jobName: string; lock: boolean }[];
   }[];
@@ -77,21 +78,26 @@ function baseData(overrides: Partial<CoordinationApiData> = {}): CoordinationApi
   return {
     events: [{ id: 1, name: 'Soiree Test', date: new Date().toISOString(), duration: 3600 }],
     members: [
+      // ⚠️ L'identité vit sous `user` : `GET /members` ne la renvoie pas à plat.
+      // Des fixtures à plat laissaient les tests verts sur un écran qui
+      // affichait « undefined undefined ».
       {
         id: 1,
-        firstName: 'Test',
-        lastName: 'User',
+        user: { id: 1, email: 'test@bae.fr', firstName: 'Test', lastName: 'User' },
         roleId: 3,
-        role: { id: 3, name: 'member' },
+        role: { id: 3, name: 'member', createdAt: null, updatedAt: null },
         points: 80,
+        createdAt: null,
+        updatedAt: null,
       },
       {
         id: 2,
-        firstName: 'Autre',
-        lastName: 'Membre',
+        user: { id: 2, email: 'autre@bae.fr', firstName: 'Autre', lastName: 'Membre' },
         roleId: 3,
-        role: { id: 3, name: 'member' },
+        role: { id: 3, name: 'member', createdAt: null, updatedAt: null },
         points: 40,
+        createdAt: null,
+        updatedAt: null,
       },
     ],
     jobs: [
@@ -446,6 +452,37 @@ describe(Coordination.name, () => {
   });
 
   describe('member assignments', () => {
+    it('assemble le nom depuis `user`, où vit l’identité', async () => {
+      await setup();
+      const member = internals(component)
+        .membres()
+        .find((m) => m.id === 1)!;
+
+      // Lire `firstName` à plat sur le membre rendait « undefined undefined » :
+      // les noms ont été remontés de `members` vers `users`.
+      expect(member.name).toBe('Test User');
+    });
+
+    it('replie sur l’email puis l’identifiant quand le nom manque', async () => {
+      await setup(
+        baseData({
+          members: [
+            {
+              id: 1,
+              user: { id: 1, email: 'sans.nom@bae.fr', firstName: null, lastName: null },
+              roleId: 3,
+              role: { id: 3, name: 'member', createdAt: null, updatedAt: null },
+              points: 80,
+              createdAt: null,
+              updatedAt: null,
+            },
+          ],
+        }),
+      );
+
+      expect(internals(component).membres()[0].name).toBe('sans.nom@bae.fr');
+    });
+
     it('lists every poste a member holds, one per moment', async () => {
       await setup();
       const member = internals(component)

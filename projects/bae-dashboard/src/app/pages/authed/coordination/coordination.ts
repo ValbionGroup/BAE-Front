@@ -56,11 +56,12 @@ import type { RoleModalRole } from '#shared/components/modal/modal.models';
 import { PageHeaderService } from '#core/services/page-header/page-header-service.js';
 import { PrintService } from '#core/services/print/print-service';
 import { formatPointsDelta as sharedFormatPointsDelta } from '#shared/utils/points-delta';
+import { teamMemberName } from '#core/services/team/team-service';
 
 interface Member {
   id: number;
-  firstName: string;
-  lastName: string;
+  /** Déjà assemblé par `teamMemberName` : l'identité vit sous `user` côté API. */
+  name: string;
   role: string;
   points: number;
 }
@@ -609,7 +610,7 @@ export class Coordination implements OnInit {
         const member = members.get(a.memberId);
         return {
           id: a.memberId,
-          name: member ? `${member.firstName} ${member.lastName}` : `#${a.memberId}`,
+          name: member?.name ?? `#${a.memberId}`,
           lock: a.locked,
           lockPending: pending.has(assignmentKey(eventData.event.id, role.id, a.memberId)),
           score: member?.points ?? 0,
@@ -683,7 +684,7 @@ export class Coordination implements OnInit {
 
       return {
         id: member.id,
-        name: `${member.firstName} ${member.lastName}`,
+        name: member.name,
         assignments,
         hasAssignment: assignments.length > 0,
         assignedJobNames: assignments.map((a) => a.jobName),
@@ -785,7 +786,7 @@ export class Coordination implements OnInit {
     const members = this.availableMembersFor(poste.period);
     const items: DropdownItemAction[] = members.map((m) => ({
       type: 'action',
-      label: `${m.firstName} ${m.lastName}`,
+      label: m.name,
       description: m.role,
       onClick: () => this.assignMember(m.id, poste.id),
     }));
@@ -1178,8 +1179,7 @@ export class Coordination implements OnInit {
     this.allMembers.set(
       raw.members.map((m) => ({
         id: m.id,
-        firstName: m.firstName,
-        lastName: m.lastName,
+        name: teamMemberName(m),
         // `GET /members` returns the role as the related record, not a string.
         role: m.role?.name ?? '—',
         points: m.points,
