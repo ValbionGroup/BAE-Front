@@ -60,6 +60,7 @@ const SUMMARY: ClientsSummary = {
 
 const DETAIL: ClientDetail = {
   ...CLIENTS[0],
+  school: 'ENSEIRB-MATMECA',
   phone: '06 24 31 88 02',
   registeredAt: '2025-09-12',
   note: 'Allergie noix.',

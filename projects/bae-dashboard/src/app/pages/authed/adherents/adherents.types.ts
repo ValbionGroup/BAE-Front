@@ -25,6 +25,8 @@ export interface SubscriptionRow {
 }
 
 export interface ClientDetail extends ClientRow {
+  /** Dérivée du claim `ecole`. Absente de la liste : le détail suffit. */
+  readonly school: string | null;
   readonly phone: string | null;
   readonly registeredAt: string;
   readonly note: string | null;
@@ -47,12 +49,13 @@ export interface ClientsSummary {
 }
 
 /**
- * Delta d'édition. Ni email ni nom : ils viennent des claims EirbConnect, et le
- * bureau ne fabrique pas d'identité. Il n'existe pas de charge utile de
- * création — aucune route ne crée de compte client.
+ * Delta d'édition. Ni email, ni nom, ni promotion, ni école : tous viennent des
+ * claims EirbConnect (`diplome` alimente la promotion), et le bureau ne fabrique
+ * pas d'identité — la prochaine connexion écraserait sa saisie. Le back les
+ * refuse d'ailleurs, ils sont absents de son validateur. Il n'existe pas non
+ * plus de charge utile de création : aucune route ne crée de compte client.
  */
 export interface ClientWritePayload {
   readonly phone?: string | null;
-  readonly promotion?: string | null;
   readonly note?: string | null;
 }

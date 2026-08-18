@@ -180,6 +180,7 @@ export class Adherents implements OnInit {
       { k: 'Email', v: detail.email },
       { k: 'Téléphone', v: detail.phone ?? '—' },
       { k: 'Promotion', v: detail.promotion ?? '—' },
+      { k: 'École', v: detail.school ?? '—' },
       { k: 'Inscription', v: this.formatDate(detail.registeredAt) },
       { k: 'Expire le', v: detail.expiresAt ? this.formatDate(detail.expiresAt) : '—' },
     ];
