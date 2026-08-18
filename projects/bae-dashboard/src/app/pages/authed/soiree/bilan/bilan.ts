@@ -9,14 +9,20 @@ import {
   untracked,
 } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
-import { LucideDynamicIcon, LucideTicket, LucideTriangleAlert } from '@lucide/angular';
+import {
+  LucideDownload,
+  LucideDynamicIcon,
+  LucideTicket,
+  LucideTriangleAlert,
+} from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import {
   EventSummaryService,
   type EventSummary,
 } from '#core/services/summary/event-summary-service';
 import { EventsStore } from '#core/store/events.store';
-import { Badge, Card } from '@bae/ui';
+import { Badge, Btn, Card } from '@bae/ui';
+import { PrintService } from '#core/services/print/print-service';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 
@@ -24,7 +30,7 @@ const METHOD_LABEL: Record<string, string> = { cash: 'Espèces', lydia: 'Lydia' 
 
 @Component({
   selector: 'bfd-soiree-bilan',
-  imports: [Badge, Card, LucideDynamicIcon],
+  imports: [Badge, Btn, Card, LucideDynamicIcon],
   templateUrl: './bilan.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
@@ -33,9 +39,11 @@ export class SoireeBilan implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly summaryService = inject(EventSummaryService);
   private readonly events = inject(EventsStore);
+  private readonly printService = inject(PrintService);
 
   protected readonly icTicket = LucideTicket;
   protected readonly icAlert = LucideTriangleAlert;
+  protected readonly icDownload = LucideDownload;
 
   protected readonly loadState = signal<LoadState>('init');
   protected readonly loadError = signal<string | null>(null);
@@ -80,8 +88,14 @@ export class SoireeBilan implements OnInit {
     const revenue = summary.revenueCents / 100;
     const average = summary.orderCount > 0 ? revenue / summary.orderCount : 0;
 
+    const sponsored = summary.sponsoredCents / 100;
+
     return [
-      { label: 'Recette', value: `${money(revenue)} €`, detail: 'valeur des commandes' },
+      {
+        label: 'Recette',
+        value: `${money(revenue)} €`,
+        detail: sponsored > 0 ? `dont ${money(sponsored)} € à recouvrer` : 'valeur au prix public',
+      },
       {
         label: 'Commandes',
         value: String(summary.orderCount),
@@ -114,6 +128,28 @@ export class SoireeBilan implements OnInit {
     if (summary === null) return 0;
     return this.cashedTotal() - summary.revenueCents / 100;
   });
+
+  /** Non nul = une association doit de l'argent au BAE sur cette soirée. */
+  protected readonly receivable = computed(() => {
+    const summary = this.summary();
+    if (summary === null || summary.sponsoredCents === 0) return null;
+
+    return {
+      payerName: summary.payerName ?? 'payeur non renseigné',
+      total: money(summary.sponsoredCents / 100),
+      cashed: money(summary.cashedCents / 100),
+      categories: summary.receivableByCategory.map((entry) => ({
+        label: entry.label,
+        due: money(entry.dueCents / 100),
+      })),
+    };
+  });
+
+  protected downloadStatement(): void {
+    const event = this.target();
+    if (!event) return;
+    this.printService.download(`/events/${event.id}/receivables/pdf`, 'justificatif.pdf');
+  }
 
   protected readonly products = computed(() =>
     [...(this.summary()?.lines ?? [])]
