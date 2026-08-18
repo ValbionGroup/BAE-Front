@@ -17,6 +17,11 @@ export interface EventData {
   duration?: number;
   status?: EventStatus;
   assigneeCount?: number;
+  /** Plafond de précommandes ; `0` ferme la soirée. */
+  capacity?: number;
+  expectedAttendees?: number | null;
+  /** Non nul = la prise en charge est active sur cette soirée. */
+  payerName?: string | null;
 }
 
 export interface EventDetail extends EventData {
@@ -68,6 +73,9 @@ export interface EventApiDto {
   duration?: number;
   status?: EventStatus;
   assigneeCount?: number;
+  capacity?: number;
+  expectedAttendees?: number | null;
+  payerName?: string | null;
 }
 
 export interface RosterRowApiDto {

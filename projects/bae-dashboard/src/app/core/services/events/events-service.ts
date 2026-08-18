@@ -46,7 +46,10 @@ export class EventsService {
 
   private toEventData(dto: EventApiDto): EventData {
     return {
-      id: dto.id,
+      // ⚠️ L'API renvoie un **nombre** là où le type annonce une chaîne. Sans
+      // cette normalisation, `EventData.id` mentait et toute comparaison stricte
+      // avec un identifiant venu d'ailleurs échouait en silence.
+      id: String(dto.id),
       name: dto.name,
       location: dto.location,
       date: new Date(dto.date),
@@ -54,6 +57,9 @@ export class EventsService {
       duration: dto.duration,
       status: dto.status,
       assigneeCount: dto.assigneeCount,
+      capacity: dto.capacity,
+      expectedAttendees: dto.expectedAttendees,
+      payerName: dto.payerName,
     };
   }
 

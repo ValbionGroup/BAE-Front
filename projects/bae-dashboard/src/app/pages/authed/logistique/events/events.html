@@ -70,9 +70,14 @@
 
           <div class="flex items-center gap-5">
             <div class="text-right">
-              <!-- Aucune colonne derrière : `events` ne porte ni capacité ni
-                   inscriptions, comme « Emplacement » sur la page Stocks. -->
-              <div class="mono tnum text-[16px] font-semibold text-muted">—</div>
+              <div
+                [class]="
+                  'mono tnum text-[16px] font-semibold ' +
+                  (event.expectedAttendees ? 'text-text' : 'text-muted')
+                "
+              >
+                {{ event.expectedAttendees ?? '—' }}
+              </div>
               <div class="text-[10px] text-muted">attendus</div>
             </div>
             <div class="h-6.5 w-px bg-border"></div>
