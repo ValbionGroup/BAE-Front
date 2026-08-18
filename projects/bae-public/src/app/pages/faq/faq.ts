@@ -33,7 +33,7 @@ export class Faq {
         {
           question: 'Comment je récupère ma commande ?',
           answer:
-            'Un QR code est envoyé par email après paiement. Présentez-le au stand, les articles sont pointés un par un.',
+            'Un QR code est envoyé par email après paiement. Présentez-le au stand pour recevoir vos articles.',
         },
         {
           question: 'Puis-je me faire rembourser ?',
@@ -52,7 +52,8 @@ export class Faq {
       entries: [
         {
           question: 'Le FastPass remplace-t-il l’adhésion ?',
-          answer: 'Non, il vient en plus de la cotisation annuelle et suppose une adhésion valide.',
+          answer:
+            'Oui, il correspond à l’adhésion annuelle. Il s’agit uniquement d’un nom commercial.',
         },
         {
           question: 'Puis-je l’offrir à quelqu’un d’autre ?',
@@ -74,8 +75,7 @@ export class Faq {
         },
         {
           question: 'Je ne suis pas adhérent, puis-je commander ?',
-          answer:
-            'Non, les précommandes et le FastPass sont réservés aux adhérent·es à jour de cotisation.',
+          answer: 'Oui, les précommandes sont ouvertes à tous.',
         },
       ],
     },
