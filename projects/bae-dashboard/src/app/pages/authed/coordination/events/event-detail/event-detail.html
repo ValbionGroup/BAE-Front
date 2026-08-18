@@ -77,16 +77,67 @@
         </div>
       </bae-field>
 
+      <bae-field label="Personnes attendues">
+        <bae-input
+          type="number"
+          placeholder="—"
+          [value]="attendeesText(s)"
+          (valueChange)="updateAttendees($event)"
+        />
+      </bae-field>
+
       <div class="rounded-md border border-border-s bg-surface p-1">
-        @for (o of s.options; track o.key; let i = $index) {
-          <div
-            [class]="'flex items-center gap-3 px-3 py-2.5 ' + (i ? 'border-t border-border-s' : '')"
-          >
-            <div class="flex-1">
-              <div class="text-[12.5px] text-text">{{ o.label }}</div>
-              <div class="mt-0.5 text-[11px] text-muted">{{ o.hint }}</div>
+        <div class="flex items-center gap-3 px-3 py-2.5">
+          <div class="flex-1">
+            <div class="text-[12.5px] text-text">Précommandes en ligne</div>
+            <div class="mt-0.5 text-[11px] text-muted">
+              Ouvre la soirée sur la page publique jusqu'à la clôture
             </div>
-            <bae-toggle [on]="o.enabled" (change)="toggleOption(o.key, $event)" />
+          </div>
+          <bae-toggle [on]="s.capacity > 0" (change)="togglePreOrders($event)" />
+        </div>
+
+        @if (s.capacity > 0) {
+          <div class="flex items-center gap-3 border-t border-border-s px-3 py-2.5">
+            <label class="flex-1 text-[12px] text-text-2" for="preorder-capacity">
+              Nombre maximum de précommandes
+            </label>
+            <input
+              id="preorder-capacity"
+              type="number"
+              min="1"
+              [value]="s.capacity"
+              (change)="updateCapacity($any($event.target).value)"
+              class="mono tnum w-20 rounded-md border border-border bg-surface-2 px-2 py-1 text-right text-[12px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue"
+            />
+          </div>
+        }
+
+        <div class="flex items-center gap-3 border-t border-border-s px-3 py-2.5">
+          <div class="flex-1">
+            <div class="text-[12.5px] text-text">Prise en charge par un tiers</div>
+            <div class="mt-0.5 text-[11px] text-muted">
+              Tarifs préférentiels remboursés par une association
+            </div>
+          </div>
+          <bae-toggle [on]="s.payerName !== null" (change)="toggleSponsorship($event)" />
+        </div>
+
+        @if (s.payerName !== null) {
+          <div class="flex items-center gap-3 border-t border-border-s px-3 py-2.5">
+            <label class="flex-1 text-[12px] text-text-2" for="payer-name">Remboursé par</label>
+            <input
+              id="payer-name"
+              type="text"
+              placeholder="BDE"
+              [value]="s.payerName"
+              (change)="updatePayer($any($event.target).value)"
+              class="w-32 rounded-md border border-border bg-surface-2 px-2 py-1 text-[12px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue"
+            />
+          </div>
+          <div class="flex items-center gap-3 border-t border-border-s px-3 py-2.5">
+            <div class="flex-1 text-[12px] text-text-2">Catégories de prise en charge</div>
+            <bae-btn kind="secondary" size="sm" (clicked)="openCategories()">Gérer</bae-btn>
           </div>
         }
       </div>

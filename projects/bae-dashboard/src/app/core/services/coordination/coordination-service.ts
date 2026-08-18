@@ -3,25 +3,43 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
 import type { JobPeriod } from '#core/models/job-period.model';
+import type { ApiTeamMember } from '#core/services/team/team-service';
 
 export interface ApiEvent {
   id: number;
   name: string;
   date: string;
   duration: number | null;
+  description?: string | null;
+  /** Plafond de précommandes. `0` ferme la soirée. */
+  capacity?: number;
+  expectedAttendees?: number | null;
+  /** Non nul = la prise en charge est active. */
+  payerName?: string | null;
 }
+
+/** Seules les clés présentes sont écrites : le back ignore les absentes. */
+export type EventPatch = Partial<{
+  name: string;
+  date: string;
+  duration: number | null;
+  description: string | null;
+  capacity: number;
+  expectedAttendees: number | null;
+  payerName: string | null;
+}>;
 export interface ApiRole {
   id: number;
   name: string;
 }
-export interface ApiMember {
-  id: number;
-  firstName: string;
-  lastName: string;
-  roleId: number | null;
-  role: ApiRole | null;
-  points: number;
-}
+/**
+ * ⚠️ Même endpoint que la page Équipe, donc **même forme** : `firstName` et
+ * `lastName` vivent sous `user`, pas à plat. Les redéclarer ici a fait afficher
+ * « undefined undefined » sur les affectations, sans erreur — `http.get<T>()`
+ * est une affirmation de type, pas une vérification. Passer par
+ * `teamMemberName()`.
+ */
+export type ApiMember = ApiTeamMember;
 export interface ApiJob {
   id: number;
   name: string;
@@ -166,13 +184,8 @@ export class CoordinationService {
     return this.http.post<ApiEvent>(`${this.baseUrl}/events`, { name, date, duration });
   }
 
-  updateEvent(
-    id: number,
-    name: string,
-    date: string,
-    duration: number | null,
-  ): Observable<ApiEvent> {
-    return this.http.put<ApiEvent>(`${this.baseUrl}/events/${id}`, { name, date, duration });
+  updateEvent(id: number, patch: EventPatch): Observable<ApiEvent> {
+    return this.http.patch<ApiEvent>(`${this.baseUrl}/events/${id}`, patch);
   }
 
   updateJob(id: number, name: string, type: JobPeriod): Observable<ApiJob> {

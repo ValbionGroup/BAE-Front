@@ -1,0 +1,147 @@
+<bfd-modal-shell
+  tone="blue"
+  [icon]="icHand"
+  title="Catégories de prise en charge"
+  [subtitle]="eventLabel()"
+  [width]="820"
+  (close)="close()"
+>
+  @if (error()) {
+    <div
+      class="mb-3 rounded-md border border-danger bg-danger-soft px-3 py-2 text-[12.5px] text-danger"
+    >
+      {{ error() }}
+    </div>
+  }
+
+  <div class="grid grid-cols-[240px_1fr] gap-4">
+    <div class="flex flex-col gap-2">
+      @for (category of categories(); track category.id) {
+        <button
+          type="button"
+          (click)="select(category.id)"
+          [class]="
+            'cursor-pointer rounded-md border px-3 py-2 text-left text-[12.5px] ' +
+            (category.id === selectedId()
+              ? 'border-blue bg-blue/[0.06] text-text'
+              : 'border-border-s bg-surface-2 text-text-2 hover:bg-surface-3')
+          "
+        >
+          <div class="font-medium">{{ category.label }}</div>
+          <div class="mt-0.5 text-[11px] text-muted">
+            {{ category.prices.length }} article{{ category.prices.length > 1 ? 's' : '' }} tarifé{{
+              category.prices.length > 1 ? 's' : ''
+            }}
+          </div>
+        </button>
+      } @empty {
+        <div
+          class="rounded-md border border-dashed border-border px-3 py-4 text-center text-[12px] text-muted"
+        >
+          Aucune catégorie
+        </div>
+      }
+
+      <div class="mt-1 flex gap-1.5">
+        <bae-input
+          placeholder="Staff BDE"
+          size="sm"
+          [value]="newLabel()"
+          (valueChange)="newLabel.set($event)"
+        />
+        <bae-btn
+          kind="secondary"
+          size="sm"
+          [icon]="icPlus"
+          [disabled]="busy()"
+          (clicked)="addCategory()"
+        />
+      </div>
+    </div>
+
+    <div>
+      @if (selected(); as category) {
+        <div class="mb-2.5 flex items-center gap-2">
+          <div class="flex-1 text-[13px] font-semibold text-text">{{ category.label }}</div>
+          <bae-btn kind="ghost" size="sm" [icon]="icQr" (clicked)="showQr()">QR</bae-btn>
+          <bae-btn kind="ghost" size="sm" (clicked)="rotateQr()">Régénérer</bae-btn>
+          <bae-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="removeCategory()" />
+        </div>
+
+        @if (qrToken(); as token) {
+          <div class="mb-3 rounded-md border border-border-s bg-surface-2 p-3 text-center">
+            <bae-qr-code [value]="token" [size]="200" />
+            <div class="mt-2 text-[11px] text-muted">
+              À imprimer et remettre à l'association. Un seul QR par catégorie.
+            </div>
+          </div>
+        }
+
+        <div class="mb-2 flex items-center gap-2 text-[11.5px] text-muted">
+          <span class="flex-1">Un champ vide laisse l'article au prix public</span>
+          <bae-btn kind="ghost" size="sm" (clicked)="fillAll(0)">Tout à 0 €</bae-btn>
+          <bae-btn kind="ghost" size="sm" (clicked)="fillAll(0.5)">Moitié du public</bae-btn>
+        </div>
+
+        <div class="overflow-hidden rounded-md border border-border-s bg-surface-2">
+          <div
+            class="grid grid-cols-[1fr_110px_130px] gap-3 bg-surface-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+          >
+            <span>Recette</span>
+            <span class="text-right">Prix public</span>
+            <span class="text-right">Prix catégorie</span>
+          </div>
+
+          <div class="max-h-80 overflow-y-auto">
+            @for (row of rows(); track row.productId) {
+              <div
+                class="grid grid-cols-[1fr_110px_130px] items-center gap-3 border-t border-border-s px-3 py-2 text-[12.5px]"
+              >
+                <span class="text-text">{{ row.name }}</span>
+                <span class="mono tnum text-right text-muted"
+                  >{{ fmt(row.listPrice / 100) }} €</span
+                >
+                <div class="flex items-center justify-end gap-1.5">
+                  @if (row.price === 0) {
+                    <span class="rounded-full bg-ok-soft px-1.5 py-px text-[10px] text-ok"
+                      >gratuit</span
+                    >
+                  }
+                  <label class="sr-only" [attr.for]="'cat-price-' + row.productId">
+                    Prix de {{ row.name }} pour cette catégorie, en euros
+                  </label>
+                  <input
+                    [id]="'cat-price-' + row.productId"
+                    type="text"
+                    inputmode="decimal"
+                    [placeholder]="fmt(row.listPrice / 100) + ' — public'"
+                    [value]="priceText(row)"
+                    (input)="onPriceInput(row.productId, $any($event.target).value)"
+                    (change)="commitPrice(row.productId, $any($event.target).value)"
+                    class="mono tnum w-24 rounded-md border border-border bg-surface px-2 py-1 text-right text-[12px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                  />
+                </div>
+              </div>
+            } @empty {
+              <div class="px-3 py-5 text-center text-[12px] text-muted">
+                Cette soirée n'a aucune recette au menu.
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="flex h-full items-center justify-center text-[12.5px] text-muted">
+          Sélectionnez ou créez une catégorie
+        </div>
+      }
+    </div>
+  </div>
+
+  <div modal-footer class="contents">
+    <div class="flex-1"></div>
+    <bae-btn kind="ghost" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="primary" [disabled]="busy() || !selected()" (clicked)="save()"
+      >Enregistrer</bae-btn
+    >
+  </div>
+</bfd-modal-shell>

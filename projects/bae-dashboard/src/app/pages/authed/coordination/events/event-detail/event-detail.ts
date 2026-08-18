@@ -23,7 +23,8 @@ import { Router } from '@angular/router';
 import { CoordinationStore } from '#core/store/coordination.store';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
-import type { CoordinationEvent, EditState, OptionRow } from '../events.types';
+import { SponsorshipCategoriesModal } from '#shared/components/modal/sponsorship-categories-modal/sponsorship-categories-modal';
+import type { CoordinationEvent, EditState } from '../events.types';
 
 function calcDuration(startHHMM: string, endHHMM: string): number {
   const [sh, sm] = startHHMM.split(':').map(Number);
@@ -42,32 +43,8 @@ function calcEndTime(startHHMM: string, durationSeconds: number): string {
     .padStart(2, '0')}:${(endMin % 60).toString().padStart(2, '0')}`;
 }
 
-const DEFAULT_OPTIONS: ReadonlyArray<Readonly<OptionRow>> = [
-  {
-    key: 'precommandes',
-    label: 'Précommandes en ligne',
-    hint: "Page publique active jusqu'à J-1 18:30",
-    enabled: false,
-  },
-  {
-    key: 'inscription',
-    label: 'Inscription obligatoire',
-    hint: 'Limite à 22 membres BAE pour le service',
-    enabled: false,
-  },
-  {
-    key: 'public',
-    label: 'Soirée publique',
-    hint: "Visible sur la page d'accueil publique",
-    enabled: false,
-  },
-  {
-    key: 'lock',
-    label: 'Verrouiller le menu',
-    hint: 'Empêche modification après J-2',
-    enabled: false,
-  },
-];
+/** Proposé en ouvrant les précommandes : enregistrer 0 les rouvrirait fermées. */
+const DEFAULT_CAPACITY = 100;
 
 @Component({
   selector: 'bfd-coordination-event-detail',
@@ -124,10 +101,45 @@ export class CoordinationEventDetail {
     this.state.update((s) => (s ? { ...s, description: v } : s));
   }
 
-  protected toggleOption(key: string, enabled: boolean): void {
-    this.state.update((s) =>
-      s ? { ...s, options: s.options.map((o) => (o.key === key ? { ...o, enabled } : o)) } : s,
-    );
+  protected togglePreOrders(enabled: boolean): void {
+    this.state.update((s) => (s ? { ...s, capacity: enabled ? DEFAULT_CAPACITY : 0 } : s));
+  }
+
+  protected updateCapacity(value: string): void {
+    const parsed = Number(value.trim());
+    if (!Number.isFinite(parsed) || parsed < 0) return;
+    this.state.update((s) => (s ? { ...s, capacity: Math.trunc(parsed) } : s));
+  }
+
+  protected attendeesText(s: EditState): string {
+    return s.expectedAttendees === null ? '' : String(s.expectedAttendees);
+  }
+
+  protected updateAttendees(value: string): void {
+    const trimmed = value.trim();
+    const parsed = Number(trimmed);
+    const next =
+      trimmed === '' || !Number.isFinite(parsed) || parsed < 0 ? null : Math.trunc(parsed);
+    this.state.update((s) => (s ? { ...s, expectedAttendees: next } : s));
+  }
+
+  /** Éteindre efface le payeur, jamais les catégories déjà saisies. */
+  protected toggleSponsorship(enabled: boolean): void {
+    this.state.update((s) => (s ? { ...s, payerName: enabled ? (s.payerName ?? '') : null } : s));
+  }
+
+  protected updatePayer(value: string): void {
+    this.state.update((s) => (s ? { ...s, payerName: value } : s));
+  }
+
+  protected openCategories(): void {
+    const s = this.state();
+    if (!s) return;
+    this.modals.open({
+      type: 'component',
+      component: SponsorshipCategoriesModal,
+      inputs: { eventId: s.id, eventLabel: s.name },
+    });
   }
 
   protected removeRecipe(name: string): void {
@@ -163,7 +175,15 @@ export class CoordinationEventDetail {
 
     this.saving.set(true);
     this.store
-      .updateEvent(Number(s.id), s.name, isoDate, duration)
+      .updateEvent(Number(s.id), {
+        name: s.name,
+        date: isoDate,
+        duration,
+        description: s.description.trim() || null,
+        capacity: s.capacity,
+        expectedAttendees: s.expectedAttendees,
+        payerName: s.payerName?.trim() || null,
+      })
       .finally(() => this.saving.set(false));
   }
 
@@ -186,9 +206,11 @@ export class CoordinationEventDetail {
       date: datePart,
       time: timePart,
       endTime,
-      description: '',
+      description: event.description ?? '',
       recipes: [],
-      options: DEFAULT_OPTIONS.map((o) => ({ ...o })),
+      capacity: event.capacity,
+      expectedAttendees: event.expectedAttendees,
+      payerName: event.payerName,
     };
   }
 }

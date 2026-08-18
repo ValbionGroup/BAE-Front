@@ -6,6 +6,7 @@ import {
   type ApiAssignment,
   type ApiEvent,
   type ApiEventJob,
+  type EventPatch,
 } from '#core/services/coordination/coordination-service';
 import type { LoadingStatus } from '#core/models/global.model';
 import type {
@@ -44,6 +45,10 @@ function toCoordinationEvent(
     maxMembers,
     recipes: 0,
     duration: apiEvent.duration,
+    description: apiEvent.description ?? null,
+    capacity: apiEvent.capacity ?? 0,
+    expectedAttendees: apiEvent.expectedAttendees ?? null,
+    payerName: apiEvent.payerName ?? null,
   };
 }
 
@@ -117,13 +122,8 @@ export const CoordinationStore = signalStore(
         return ev;
       },
 
-      async updateEvent(
-        id: number,
-        name: string,
-        date: string,
-        duration: number | null,
-      ): Promise<ApiEvent> {
-        const ev = await lastValueFrom(svc.updateEvent(id, name, date, duration));
+      async updateEvent(id: number, patch: EventPatch): Promise<ApiEvent> {
+        const ev = await lastValueFrom(svc.updateEvent(id, patch));
         const updated = toCoordinationEvent(ev, store.assignments(), store.eventJobs());
         patchState(store, {
           events: store.events().map((e) => (e.id === id ? updated : e)),

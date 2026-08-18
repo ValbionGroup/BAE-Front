@@ -15,13 +15,11 @@ export interface CoordinationEvent {
   readonly maxMembers: number;
   readonly recipes: number;
   readonly duration: number | null;
-}
-
-export interface OptionRow {
-  readonly key: string;
-  readonly label: string;
-  readonly hint: string;
-  enabled: boolean;
+  readonly description: string | null;
+  /** Plafond de précommandes ; `0` = fermées. */
+  readonly capacity: number;
+  readonly expectedAttendees: number | null;
+  readonly payerName: string | null;
 }
 
 export interface EditState {
@@ -35,5 +33,8 @@ export interface EditState {
   endTime: string;
   description: string;
   recipes: string[];
-  readonly options: OptionRow[];
+  /** Plafond de précommandes ; `0` = fermées. Il n'y a pas de pause. */
+  capacity: number;
+  expectedAttendees: number | null;
+  payerName: string | null;
 }
