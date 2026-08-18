@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { toDataURL } from 'qrcode';
+import { toString as qrToString } from 'qrcode';
 
 import { Commande } from './commande';
 import type { MyPreOrder } from '../../core/purchases.store';
@@ -107,13 +107,13 @@ describe(Commande.name, () => {
     await mount();
     const img = await waitForQr();
 
-    expect(img.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
+    expect(img.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
     expect(img.getAttribute('alt')).toContain('BAE-2026-0188');
 
-    // Le rendu du même jeton doit être reproductible : on compare au QR de
-    // référence, ce qui échouerait si la page encodait autre chose.
-    const expected = await toDataURL(QR_TOKEN, { margin: 1, width: 220 });
-    expect(img.getAttribute('src')).toBe(expected);
+    const svg = await qrToString(QR_TOKEN, { type: 'svg', margin: 1 });
+    expect(img.getAttribute('src')).toBe(
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+    );
   });
 
   it('propose de réessayer quand l’émission du jeton échoue', async () => {

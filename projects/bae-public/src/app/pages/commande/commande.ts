@@ -11,12 +11,22 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { toDataURL } from 'qrcode';
+import { toString as qrToString } from 'qrcode';
 import { LucideCheck, LucideClock, LucideDynamicIcon } from '@lucide/angular';
 import { API_BASE_URL, Badge, Btn, Card, Skeleton, formatCents, messageOf } from '@bae/ui';
 
 import type { LoadingStatus } from '../../core/catalog.models';
 import type { MyPreOrder } from '../../core/purchases.store';
+
+/**
+ * ⚠️ SVG et non PNG : le jeton fait ~490 caractères, donc un QR de version 17
+ * (85×85 modules). Rastérisé à 220 px, chaque module tombait sous 3 px et se
+ * brouillait encore sur un écran à forte densité. Le vecteur reste net quelle
+ * que soit la taille d'affichage.
+ */
+function svgDataUrl(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
 
 interface PreOrderQr {
   readonly token: string;
@@ -72,8 +82,8 @@ export class Commande implements OnInit {
 
     this.http.get<PreOrderQr>(`${this.baseUrl}/account/pre-orders/${this.id()}/qr`).subscribe({
       next: (qr) => {
-        void toDataURL(qr.token, { margin: 1, width: 220 }).then(
-          (url) => this.qrDataUrl.set(url),
+        void qrToString(qr.token, { type: 'svg', margin: 1 }).then(
+          (svg) => this.qrDataUrl.set(svgDataUrl(svg)),
           () => this.qrError.set('Le QR n’a pas pu être dessiné.'),
         );
 
