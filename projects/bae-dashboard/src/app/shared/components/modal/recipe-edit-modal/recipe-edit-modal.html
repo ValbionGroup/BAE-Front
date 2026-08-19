@@ -87,7 +87,7 @@
         } @else {
           <div class="flex flex-col gap-1.5">
             <div
-              class="grid grid-cols-[1fr_104px_1fr_92px] gap-2 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+              class="hidden md:grid md:grid-cols-[1fr_104px_1fr_92px] gap-2 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
             >
               <span>Produit</span>
               <span>Quantité</span>
@@ -96,7 +96,9 @@
             </div>
 
             @for (line of lines(); track line.key; let i = $index; let last = $last) {
-              <div class="grid grid-cols-[1fr_104px_1fr_92px] items-center gap-2">
+              <div
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1fr_104px_1fr_92px] items-center gap-2"
+              >
                 <select
                   aria-label="Produit"
                   [attr.aria-invalid]="

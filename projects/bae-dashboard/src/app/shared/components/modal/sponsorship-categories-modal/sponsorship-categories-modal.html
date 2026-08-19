@@ -14,7 +14,7 @@
     </div>
   }
 
-  <div class="grid grid-cols-[240px_1fr] gap-4">
+  <div class="flex flex-col gap-4 md:grid md:grid-cols-[240px_1fr]">
     <div class="flex flex-col gap-2">
       @for (category of categories(); track category.id) {
         <button
@@ -85,7 +85,7 @@
 
         <div class="overflow-hidden rounded-md border border-border-s bg-surface-2">
           <div
-            class="grid grid-cols-[1fr_110px_130px] gap-3 bg-surface-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+            class="hidden md:grid md:grid-cols-[1fr_110px_130px] gap-3 bg-surface-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
           >
             <span>Recette</span>
             <span class="text-right">Prix public</span>
@@ -95,7 +95,7 @@
           <div class="max-h-80 overflow-y-auto">
             @for (row of rows(); track row.productId) {
               <div
-                class="grid grid-cols-[1fr_110px_130px] items-center gap-3 border-t border-border-s px-3 py-2 text-[12.5px]"
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1fr_110px_130px] items-center gap-3 border-t border-border-s px-3 py-2 text-[12.5px]"
               >
                 <span class="text-text">{{ row.name }}</span>
                 <span class="mono tnum text-right text-muted"
