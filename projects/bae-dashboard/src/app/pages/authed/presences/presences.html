@@ -54,7 +54,9 @@
     </div>
 
     <!-- Days grid -->
-    <div class="grid flex-1 grid-cols-7 auto-rows-fr border-l border-border-s">
+    <div
+      class="grid flex-1 grid-cols-7 auto-rows-fr border-t border-border-s md:border-l md:border-t-0"
+    >
       @for (d of days(); track $index) {
         @let ev = eventFor(d);
         @let im = inMonth(d);

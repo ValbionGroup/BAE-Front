@@ -145,7 +145,7 @@
             Postes » si la soirée en a besoin.
           </p>
         } @else {
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             @for (p of group.postes; track p.id) {
               @let full = isFull(p);
               <div class="rounded-md border border-border-s bg-surface p-3.5">

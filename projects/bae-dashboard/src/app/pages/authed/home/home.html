@@ -1,8 +1,8 @@
 <div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   <!-- Greeting strip + KPI row -->
-  <div class="mb-4.5 flex items-baseline justify-between gap-6">
+  <div class="mb-4.5 flex flex-col gap-2 md:flex-row md:items-baseline md:justify-between md:gap-6">
     <div>
-      <h2 class="m-0 text-[26px] font-semibold -tracking-[0.5px] text-text">
+      <h2 class="m-0 text-[20px] font-semibold -tracking-[0.5px] text-text md:text-[26px]">
         Salut {{ firstName() }}, <span class="text-muted">tout est sous contrôle.</span>
       </h2>
       <p class="m-0 mt-1 text-[13px] text-muted">
@@ -234,7 +234,7 @@
       }
 
       <!-- Agenda + Alerts -->
-      <div class="grid grid-cols-2 gap-4.5">
+      <div class="grid grid-cols-1 gap-4.5 md:grid-cols-2">
         <!-- AGENDA -->
         <bae-card [padding]="0">
           <div class="flex items-center border-b border-border-s px-4 py-3.5">

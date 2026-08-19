@@ -1,12 +1,12 @@
-<div class="flex h-full overflow-hidden">
+<div class="flex h-full flex-col overflow-hidden md:flex-row">
   <bfd-parametres-side-nav />
 
-  <div class="flex-1 overflow-y-auto px-8 pt-6 pb-8">
+  <div class="flex-1 overflow-y-auto px-4 pt-4 pb-6 md:px-8 md:pt-6 md:pb-8">
     <h2 class="m-0 mb-1 text-[19px] font-semibold -tracking-[0.2px] text-text">Profil</h2>
     <p class="m-0 mb-5 text-[12.5px] text-muted">Mets à jour tes infos et tes préférences.</p>
 
     <!-- Avatar row -->
-    <div class="mb-5 flex items-center gap-4">
+    <div class="mb-5 flex flex-wrap items-center gap-4">
       <bae-avatar name="Léa Marchand" [size]="64" />
       <div>
         <div class="text-sm font-semibold text-text">Léa Marchand</div>
@@ -16,7 +16,7 @@
       <bae-btn kind="ghost" size="sm" [icon]="icUpload">Changer la photo</bae-btn>
     </div>
 
-    <div class="mb-5 grid grid-cols-2 gap-3.5">
+    <div class="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
       <bae-field label="Prénom"><bae-input value="Léa" /></bae-field>
       <bae-field label="Nom"><bae-input value="Marchand" /></bae-field>
       <bae-field label="Email"
@@ -26,7 +26,7 @@
     </div>
 
     <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Affichage</h3>
-    <div class="mb-5 grid grid-cols-3 gap-2.5">
+    <div class="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
       @for (opt of themeOptions; track opt.id) {
         @let active = activeTheme() === opt.id;
         <div

@@ -298,7 +298,7 @@
   </div>
 
   @if (loading() === 'init' || loading() === 'loading') {
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       @for (placeholder of [1, 2, 3]; track placeholder) {
         <div class="rounded-md border border-dashed border-border bg-surface p-3.5">
           <bae-skeleton width="50%" height="14px" />
@@ -332,7 +332,7 @@
       Aucun bon d'achat enregistré.
     </div>
   } @else {
-    <ul class="m-0 grid list-none grid-cols-3 gap-3 p-0">
+    <ul class="m-0 grid list-none grid-cols-1 sm:grid-cols-3 gap-3 p-0">
       @for (voucher of vouchers(); track voucher.id) {
         <li
           [class]="
