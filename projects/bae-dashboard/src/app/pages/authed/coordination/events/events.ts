@@ -37,6 +37,9 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
   imports: [Badge, Input, LucideDynamicIcon, CoordinationEventDetail, PageActions, DetailSheet],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout pas : la grille n'a plus de
+  // hauteur définie, sa ligne `minmax(0,1fr)` ne plafonne rien et le panneau déborde.
+  host: { class: 'block h-full' },
 })
 export class CoordinationEvents implements OnInit {
   protected readonly pageActions = computed<readonly PageAction[]>(() => [
@@ -92,6 +95,9 @@ export class CoordinationEvents implements OnInit {
 
   protected readonly activeTab = signal<TabKey>('upcoming');
   protected readonly selectedId = signal<number | null>(null);
+  /** Distinct de `selectedId` : la soirée présélectionnée au chargement remplit la colonne
+   *  de droite en desktop sans déployer la feuille mobile. */
+  protected readonly sheetOpen = signal(false);
   protected readonly searchQuery = signal<string>('');
 
   protected readonly tabs = computed(() => {
@@ -121,7 +127,7 @@ export class CoordinationEvents implements OnInit {
     this.modals.open({
       type: 'component',
       component: CoordinationNewModal,
-      inputs: { onCreated: (ev: ApiEvent) => this.selectedId.set(ev.id) },
+      inputs: { onCreated: (ev: ApiEvent) => this.select(ev.id) },
     });
   }
 
@@ -142,10 +148,12 @@ export class CoordinationEvents implements OnInit {
 
   protected select(id: number): void {
     this.selectedId.set(id);
+    this.sheetOpen.set(true);
   }
 
   protected deselect(): void {
     this.selectedId.set(null);
+    this.sheetOpen.set(false);
   }
 
   protected setTab(key: TabKey): void {

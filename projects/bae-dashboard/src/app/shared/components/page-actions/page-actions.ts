@@ -26,6 +26,9 @@ export interface PageAction {
   imports: [Btn, LucideEllipsis],
   templateUrl: './page-actions.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Le `gap` de la topbar ne sépare que ses propres enfants ; sans conteneur flex ici,
+  // les boutons projetés se touchent (Angular supprime les blancs entre balises).
+  host: { class: 'flex shrink-0 items-center gap-2' },
 })
 export class PageActions {
   readonly actions = input.required<readonly PageAction[]>();

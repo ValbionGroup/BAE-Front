@@ -34,6 +34,9 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
   imports: [Btn, Skeleton, RosterAside, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Voir `CoordinationEvents` : la grille a besoin d'une hauteur définie pour que sa ligne
+  // `minmax(0,1fr)` plafonne le calendrier et la feuille de présence.
+  host: { class: 'block h-full' },
 })
 export class Presences implements OnInit {
   protected readonly pageActions = computed<readonly PageAction[]>(() => [

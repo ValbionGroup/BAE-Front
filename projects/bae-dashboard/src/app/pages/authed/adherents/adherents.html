@@ -2,7 +2,9 @@
   <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1fr_420px]">
+<div
+  class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1fr_420px] md:grid-rows-[minmax(0,1fr)]"
+>
   <!-- LIST -->
   <div class="flex flex-col min-h-0 overflow-hidden border-r border-border-s">
     <!-- Filter bar -->
@@ -61,8 +63,8 @@
       } @else {
         @for (a of visibleClients(); track a.id) {
           <div
-            (click)="selectedId.set(a.id)"
-            (keydown.enter)="selectedId.set(a.id)"
+            (click)="select(a.id)"
+            (keydown.enter)="select(a.id)"
             tabindex="0"
             role="button"
             [attr.aria-current]="a.id === selectedId()"
@@ -119,9 +121,9 @@
 
   <!-- DETAIL -->
   <bae-detail-sheet
-    [open]="selectedId() !== null"
+    [open]="sheetOpen()"
     [title]="detail() ? displayName(detail()!) : ''"
-    (closed)="selectedId.set(null)"
+    (closed)="sheetOpen.set(false)"
   >
     <div class="bg-bg md:h-full md:overflow-y-auto">
       @if (detail(); as d) {

@@ -1,7 +1,9 @@
-<div class="flex gap-6">
+<div class="flex h-full flex-col overflow-hidden md:flex-row">
   <bfd-parametres-side-nav />
 
-  <div class="flex min-w-0 flex-1 flex-col gap-4">
+  <div
+    class="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 pb-6 md:px-8 md:pt-6 md:pb-8"
+  >
     <bae-card [padding]="22">
       <div class="flex flex-col gap-1">
         <h2 class="text-[15px] font-semibold text-text">Mes préférences de postes</h2>
