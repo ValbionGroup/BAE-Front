@@ -167,13 +167,13 @@
                  son bloc conteneur devient le bloc conteneur initial, il échappe donc
                  à ce défilement et étend la hauteur du document. -->
             <div class="relative overflow-x-auto">
-              <table class="block md:table w-full border-collapse text-[12.5px]">
+              <table class="w-full border-collapse text-[12.5px]">
                 <caption class="sr-only">
                   Permissions par rôle.
                 </caption>
-                <thead class="hidden md:table-header-group">
+                <thead>
                   <tr
-                    class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s text-[10px] font-semibold text-muted uppercase tracking-wider"
+                    class="border-b border-border-s text-[10px] font-semibold text-muted uppercase tracking-wider"
                   >
                     <th scope="col" class="text-left px-4 py-2.5 min-w-[160px]">Permission</th>
                     @for (r of perms().roles; track r.id) {
@@ -186,16 +186,14 @@
                     }
                   </tr>
                 </thead>
-                <tbody class="block md:table-row-group">
+                <tbody>
                   @for (p of perms().rows; track p.permission) {
-                    <tr
-                      class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s last:border-b-0"
-                    >
+                    <tr class="border-b border-border-s last:border-b-0">
                       <th scope="row" class="text-left px-4 py-2 font-medium text-text mono">
                         {{ p.permission }}
                       </th>
                       @for (cell of p.cells; track $index) {
-                        <td class="md:table-cell text-center px-2 py-2">
+                        <td class="text-center px-2 py-2">
                           <bae-checkbox
                             [checked]="cell === 'granted'"
                             [disabled]="cellDisabled(perms().roles[$index].id, p.permission)"

@@ -118,14 +118,14 @@
           DENRÉES
         </div>
         <div class="overflow-x-auto">
-          <table class="block md:table w-full border-collapse text-[12.5px]">
+          <table class="w-full border-collapse text-[12.5px]">
             <caption class="sr-only">
               Denrées manquantes pour la soirée, prix par enseigne, avec l'enseigne la moins chère
               mise en avant. Un tiret indique que l'enseigne ne référence pas l'article.
             </caption>
-            <thead class="hidden md:table-header-group">
+            <thead>
               <tr
-                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
+                class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
               >
                 <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">Produit</th>
                 <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
@@ -137,25 +137,20 @@
                 <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Optimum</th>
               </tr>
             </thead>
-            <tbody class="block md:table-row-group">
+            <tbody>
               @for (row of goodRows(); track row.id) {
-                <tr
-                  class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-t border-border-s"
-                >
+                <tr class="border-t border-border-s">
                   <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
                     {{ row.name }}
                     @if (row.brand) {
                       <span class="text-muted"> · {{ row.brand }}</span>
                     }
                   </th>
-                  <td class="md:table-cell mono tnum px-3.5 py-2.5 text-right text-text-2">
+                  <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
                     {{ row.missingQty }} {{ row.unit }}
                   </td>
                   @for (cell of row.cells; track cell.supplierId) {
-                    <td
-                      class="md:table-cell"
-                      [class]="'mono tnum px-3.5 py-2.5 text-right ' + cellClass(cell)"
-                    >
+                    <td [class]="'mono tnum px-3.5 py-2.5 text-right ' + cellClass(cell)">
                       @if (cell.price === null) {
                         <span aria-label="Non référencé">—</span>
                       } @else {
@@ -163,7 +158,7 @@
                       }
                     </td>
                   }
-                  <td class="md:table-cell px-3.5 py-2.5 text-right">
+                  <td class="px-3.5 py-2.5 text-right">
                     @if (row.bestSupplierName) {
                       <bae-badge kind="ok">{{ row.bestSupplierName }}</bae-badge>
                     } @else {
@@ -174,18 +169,13 @@
               }
             </tbody>
             <tfoot>
-              <tr
-                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-t-2 border-border bg-surface-2"
-              >
+              <tr class="border-t-2 border-border bg-surface-2">
                 <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
                   Total enseigne
                 </th>
-                <td class="md:table-cell px-3.5 py-3"></td>
+                <td class="px-3.5 py-3"></td>
                 @for (total of supplierTotals(); track total.id) {
-                  <td
-                    class="md:table-cell"
-                    [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)"
-                  >
+                  <td [class]="'mono tnum px-3.5 py-3 text-right text-[13px] ' + totalClass(total)">
                     {{ formatPrice(total.total) }} €
                     @if (!isComparable(total)) {
                       <span class="text-[10px]" aria-hidden="true">*</span>
@@ -195,9 +185,7 @@
                     }
                   </td>
                 }
-                <td
-                  class="md:table-cell mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text"
-                >
+                <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
                   {{ optimumGoodsTotalLabel() }}
                 </td>
               </tr>
@@ -225,60 +213,56 @@
         >
           NON-ALIMENTAIRE
         </div>
-        <table class="block md:table w-full border-collapse text-[12.5px]">
-          <caption class="sr-only">
-            Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes :
-            ces articles n'ont aucun fournisseur rattaché.
-          </caption>
-          <thead class="hidden md:table-header-group">
-            <tr
-              class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
-            >
-              <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">Produit</th>
-              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
-              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Prix</th>
-            </tr>
-          </thead>
-          <tbody class="block md:table-row-group">
-            @for (line of furnitureRows(); track line.id) {
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-[12.5px]">
+            <caption class="sr-only">
+              Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes :
+              ces articles n'ont aucun fournisseur rattaché.
+            </caption>
+            <thead>
               <tr
-                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-t border-border-s"
+                class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
               >
-                <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
-                  {{ line.name }}
-                  @if (line.brand) {
-                    <span class="text-muted"> · {{ line.brand }}</span>
-                  }
+                <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">Produit</th>
+                <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
+                <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Prix</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of furnitureRows(); track line.id) {
+                <tr class="border-t border-border-s">
+                  <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
+                    {{ line.name }}
+                    @if (line.brand) {
+                      <span class="text-muted"> · {{ line.brand }}</span>
+                    }
+                  </th>
+                  <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
+                    {{ line.missingQty }} {{ line.unit }}
+                  </td>
+                  <td class="mono tnum px-3.5 py-2.5 text-right text-text">
+                    @if (line.bestPrice === null) {
+                      <span aria-label="Prix inconnu">—</span>
+                    } @else {
+                      {{ formatPrice(line.bestPrice) }} €
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="border-t-2 border-border bg-surface-2">
+                <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
+                  Total
                 </th>
-                <td class="md:table-cell mono tnum px-3.5 py-2.5 text-right text-text-2">
-                  {{ line.missingQty }} {{ line.unit }}
-                </td>
-                <td class="md:table-cell mono tnum px-3.5 py-2.5 text-right text-text">
-                  @if (line.bestPrice === null) {
-                    <span aria-label="Prix inconnu">—</span>
-                  } @else {
-                    {{ formatPrice(line.bestPrice) }} €
-                  }
+                <td class="px-3.5 py-3"></td>
+                <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
+                  {{ furnitureTotalLabel() }}
                 </td>
               </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr
-              class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-t-2 border-border bg-surface-2"
-            >
-              <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
-                Total
-              </th>
-              <td class="md:table-cell px-3.5 py-3"></td>
-              <td
-                class="md:table-cell mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text"
-              >
-                {{ furnitureTotalLabel() }}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+            </tfoot>
+          </table>
+        </div>
       </div>
     }
   }

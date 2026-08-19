@@ -21,7 +21,7 @@ import {
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RecipesStore } from '#core/store/recipes.store';
 import { PrintService } from '#core/services/print/print-service';
-import { Btn, Badge, Input, Skeleton, ToastService } from '@bae/ui';
+import { Btn, Badge, Input, Skeleton, ToastService, DetailSheet } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { RecipeEditModal } from '#shared/components/modal/recipe-edit-modal/recipe-edit-modal';
 import type { RecipeIngredient, RecipeProduct } from './recipes.types';
@@ -55,7 +55,7 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
 
 @Component({
   selector: 'bfd-recettes',
-  imports: [Btn, Badge, Input, Skeleton, LucideDynamicIcon, PageActions],
+  imports: [Btn, Badge, Input, Skeleton, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './recettes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est

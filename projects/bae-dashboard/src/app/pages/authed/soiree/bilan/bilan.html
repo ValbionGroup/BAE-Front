@@ -114,76 +114,70 @@
         @if (products().length === 0) {
           <div class="px-4 py-6 text-xs text-muted">Aucun menu défini pour cette soirée.</div>
         } @else {
-          <table class="block md:table w-full border-collapse text-sm">
-            <thead class="hidden md:table-header-group">
-              <tr
-                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s text-left"
-              >
-                <th
-                  class="px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-                >
-                  Produit
-                </th>
-                <th
-                  class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-                >
-                  Prévu
-                </th>
-                <th
-                  class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-                >
-                  Produit
-                </th>
-                <th
-                  class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-                >
-                  Vendu
-                </th>
-                <th
-                  class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-                >
-                  Invendu
-                </th>
-                <th
-                  class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-                >
-                  Recette
-                </th>
-              </tr>
-            </thead>
-            <tbody class="block md:table-row-group">
-              @for (p of products(); track p.name) {
-                <tr
-                  class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s last:border-0"
-                >
-                  <td class="md:table-cell px-4 py-2.5 text-text">{{ p.name }}</td>
-                  <td class="md:table-cell mono tnum px-3 py-2.5 text-right text-muted">
-                    {{ p.planned }}
-                  </td>
-                  <td class="md:table-cell mono tnum px-3 py-2.5 text-right text-text-2">
-                    {{ p.produced }}
-                  </td>
-                  <td
-                    class="md:table-cell mono tnum px-3 py-2.5 text-right font-semibold text-text"
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-border-s text-left">
+                  <th
+                    class="px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
                   >
-                    {{ p.sold }}
-                  </td>
-                  <td
-                    class="md:table-cell mono tnum px-3 py-2.5 text-right"
-                    [class.text-warn]="p.unsold > 0"
-                    [class.text-muted]="p.unsold === 0"
+                    Produit
+                  </th>
+                  <th
+                    class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
                   >
-                    {{ p.unsold }}
-                  </td>
-                  <td
-                    class="md:table-cell mono tnum px-4 py-2.5 text-right font-semibold text-text"
+                    Prévu
+                  </th>
+                  <th
+                    class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
                   >
-                    {{ p.revenue }} €
-                  </td>
+                    Produit
+                  </th>
+                  <th
+                    class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+                  >
+                    Vendu
+                  </th>
+                  <th
+                    class="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+                  >
+                    Invendu
+                  </th>
+                  <th
+                    class="px-4 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+                  >
+                    Recette
+                  </th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (p of products(); track p.name) {
+                  <tr class="border-b border-border-s last:border-0">
+                    <td class="px-4 py-2.5 text-text">{{ p.name }}</td>
+                    <td class="mono tnum px-3 py-2.5 text-right text-muted">
+                      {{ p.planned }}
+                    </td>
+                    <td class="mono tnum px-3 py-2.5 text-right text-text-2">
+                      {{ p.produced }}
+                    </td>
+                    <td class="mono tnum px-3 py-2.5 text-right font-semibold text-text">
+                      {{ p.sold }}
+                    </td>
+                    <td
+                      class="mono tnum px-3 py-2.5 text-right"
+                      [class.text-warn]="p.unsold > 0"
+                      [class.text-muted]="p.unsold === 0"
+                    >
+                      {{ p.unsold }}
+                    </td>
+                    <td class="mono tnum px-4 py-2.5 text-right font-semibold text-text">
+                      {{ p.revenue }} €
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         }
       </bae-card>
 

@@ -26,7 +26,7 @@ import {
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ClientsStore } from '#core/store/clients.store';
-import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton } from '@bae/ui';
+import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton, DetailSheet } from '@bae/ui';
 import type { ClientDetail, ClientRow, MembershipStatus } from './adherents.types';
 
 interface InfoRow {
@@ -52,7 +52,7 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
 
 @Component({
   selector: 'bfd-adherents',
-  imports: [Btn, Badge, Avatar, Input, Skeleton, LucideDynamicIcon, PageActions],
+  imports: [Btn, Badge, Avatar, Input, Skeleton, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './adherents.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Sans `block h-full`, le composant n'a pas de hauteur propre : le `h-full`
