@@ -11,6 +11,8 @@ export interface PageAction {
   readonly disabled?: boolean;
   /** Motif de la désactivation, montré tel quel à l'utilisateur. */
   readonly title?: string;
+  /** Reprend un `data-testid` existant quand une spec s'appuie dessus. */
+  readonly testId?: string;
   readonly run: () => void;
 }
 

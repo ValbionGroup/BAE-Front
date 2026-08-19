@@ -1,28 +1,5 @@
 <ng-template #actions>
-  <bae-btn
-    kind="ghost"
-    size="md"
-    [icon]="icDownload"
-    [disabled]="true"
-    title="L'export CSV n'est pas encore branché."
-    >Export CSV</bae-btn
-  >
-  <bae-btn
-    kind="secondary"
-    size="md"
-    [icon]="icUpload"
-    [disabled]="true"
-    title="L'import de liste n'est pas encore branché."
-    >Import liste</bae-btn
-  >
-  <bae-btn
-    kind="primary"
-    size="md"
-    [icon]="icPlus"
-    [disabled]="true"
-    title="Un compte se crée par EirbConnect, jamais ici : ce bouton enregistrera une cotisation."
-    >Enregistrer une cotisation</bae-btn
-  >
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <div class="h-full grid grid-cols-[1fr_420px] overflow-hidden">

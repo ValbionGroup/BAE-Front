@@ -1,22 +1,5 @@
 <ng-template #actions>
-  <bae-btn
-    kind="ghost"
-    size="md"
-    [icon]="icUpload"
-    [disabled]="true"
-    title="Aucun stockage de justificatifs côté API"
-    >Preuve d'achat</bae-btn
-  >
-  <bae-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printFicheLogistique()"
-    >Fiche logistique</bae-btn
-  >
-  @if (!vouchersForbidden()) {
-    <span data-testid="add-voucher">
-      <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateVoucher()">
-        Nouveau bon
-      </bae-btn>
-    </span>
-  }
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">

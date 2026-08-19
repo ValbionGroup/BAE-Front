@@ -1,5 +1,5 @@
 <ng-template #actions>
-  <bae-btn kind="primary" size="md" [icon]="icCheck" (clicked)="markReady()">Marquer prête</bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 @if (activeEvent() === null) {

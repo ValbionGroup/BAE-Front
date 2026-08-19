@@ -26,6 +26,7 @@ import { ModalService } from '#shared/components/modal/modal.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
 import { PrintService } from '#core/services/print/print-service';
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
 import type {
   ApiShoppingLine,
   ApiShoppingSupplierTotal,
@@ -98,7 +99,7 @@ function buildGoodRow(line: ApiShoppingLine, columns: readonly SupplierColumn[])
 
 @Component({
   selector: 'bfd-logistique',
-  imports: [Badge, Btn, Skeleton, LucideDynamicIcon],
+  imports: [Badge, Btn, Skeleton, LucideDynamicIcon, PageActions],
   templateUrl: './logistique.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Voir le commentaire équivalent sur `LogistiqueEvents` : sans hauteur sur
@@ -147,6 +148,35 @@ export class Logistique implements OnInit {
     void this.store.load();
     void this.store.loadShoppingList(this.eventId);
   }
+
+  protected readonly pageActions = computed<readonly PageAction[]>(() => {
+    const actions: PageAction[] = [
+      {
+        label: "Preuve d'achat",
+        icon: this.icUpload,
+        kind: 'ghost',
+        disabled: true,
+        title: 'Aucun stockage de justificatifs côté API',
+        run: () => {},
+      },
+      {
+        label: 'Fiche logistique',
+        icon: this.icDownload,
+        run: () => this.printFicheLogistique(),
+      },
+    ];
+    if (!this.vouchersForbidden()) {
+      actions.push({
+        label: 'Nouveau bon',
+        icon: this.icPlus,
+        kind: 'primary',
+        primary: true,
+        testId: 'add-voucher',
+        run: () => this.openCreateVoucher(),
+      });
+    }
+    return actions;
+  });
 
   protected readonly icTicket = LucideTicket;
   protected readonly icDownload = LucideDownload;

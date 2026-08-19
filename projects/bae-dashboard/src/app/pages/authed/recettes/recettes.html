@@ -1,8 +1,6 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreate()"
-    >Nouvelle recette</bae-btn
-  >
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <div class="flex h-full flex-col overflow-hidden">

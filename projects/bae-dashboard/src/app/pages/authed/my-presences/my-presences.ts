@@ -23,7 +23,7 @@ import {
 } from '@lucide/angular';
 import { Store } from '@ngrx/store';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn, Badge, BadgeKind, Card, Skeleton, ToastService } from '@bae/ui';
+import { Badge, BadgeKind, Card, Skeleton, ToastService } from '@bae/ui';
 import { EventDetail, Presence } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
 import {
@@ -71,13 +71,20 @@ const MONTHS_SHORT_FR = [
   'déc.',
 ] as const;
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-my-presences',
-  imports: [Btn, Badge, Card, Skeleton, LucideDynamicIcon],
+  imports: [Badge, Card, Skeleton, LucideDynamicIcon, PageActions],
   templateUrl: './my-presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MyPresences implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    { label: 'Exporter ICS', icon: this.icDownload, kind: 'ghost', run: () => {} },
+    { label: 'Préférences', icon: this.icSettings, primary: true, run: () => {} },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly store = inject(Store);
   private readonly events = inject(EventsStore);

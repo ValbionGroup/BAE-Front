@@ -1,41 +1,6 @@
 <!-- Topbar actions, projected via PageHeaderService -->
 <ng-template #actions>
-  <bae-btn kind="ghost" size="md" [icon]="icSettings" (clicked)="openRolesModal()">
-    Postes
-  </bae-btn>
-  <bae-btn kind="ghost" size="md" [icon]="icDownload" (clicked)="printAssignments()">
-    Imprimer l'affectation
-  </bae-btn>
-  <!-- Disabled, never hidden: a vanished action reads as a bug. The reason is
-       spelled out in the banner below, which the live region announces. -->
-  <bae-btn
-    kind="secondary"
-    size="md"
-    [icon]="icZap"
-    [disabled]="loading() || algoRunning() || isSettled()"
-    (clicked)="confirmRunMatching()"
-  >
-    @if (isSettled()) {
-      Affectation clôturée
-    } @else {
-      {{ algoRunning() ? 'Affectation en cours…' : "Lancer l'affectation automatique" }}
-    }
-  </bae-btn>
-  <!-- Disabled, never hidden, same convention as the automatic-assignment
-       button above: a vanished action reads as a bug. -->
-  <bae-btn
-    kind="primary"
-    size="md"
-    [icon]="icCheck"
-    [disabled]="isSettled()"
-    (clicked)="validateAssignments()"
-  >
-    @if (isSettled()) {
-      Affectation clôturée
-    } @else {
-      Valider l'affectation
-    }
-  </bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">

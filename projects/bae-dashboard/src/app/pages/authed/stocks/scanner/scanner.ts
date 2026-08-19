@@ -42,14 +42,20 @@ export interface ScanLine {
   readonly expirationDate: string;
 }
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-stocks-scanner',
-  imports: [Btn, Badge, Field, Input, LucideDynamicIcon],
+  imports: [Btn, Badge, Field, Input, LucideDynamicIcon, PageActions],
   templateUrl: './scanner.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
 })
 export class StocksScanner {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    { label: 'Quitter', icon: this.icX, kind: 'ghost', primary: true, run: () => this.quit() },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
   private readonly router = inject(Router);

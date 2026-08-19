@@ -1,10 +1,6 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bae-btn kind="ghost" size="md" [icon]="icCalendar">Calendrier</bae-btn>
-  <bae-btn kind="ghost" size="md" [icon]="icDownload">Exporter</bae-btn>
-  <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openNew()">
-    Nouvelle soirée
-  </bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <div class="grid h-full grid-cols-[1.5fr_1fr] overflow-hidden">

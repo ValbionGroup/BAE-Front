@@ -1,15 +1,5 @@
 <ng-template #actions>
-  <bae-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bae-btn>
-  <!-- Aucune table `invitations` ni endpoint côté back (§3.2) : le bouton reste
-       en place — le manque est côté API — mais cesse de l'être en silence. -->
-  <bae-btn
-    kind="primary"
-    size="md"
-    [icon]="icPlus"
-    [disabled]="true"
-    title="Endpoint d'invitation non disponible"
-    >Inviter un membre</bae-btn
-  >
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <div class="h-full overflow-y-auto px-6 pt-5 pb-8">

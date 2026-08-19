@@ -1,7 +1,7 @@
 @for (action of actions(); track action.label) {
   <span
     [class]="isPrimary(action) ? 'inline-flex' : 'hidden md:inline-flex'"
-    data-testid="action-button"
+    [attr.data-testid]="action.testId ?? 'action-button'"
   >
     <bae-btn
       [kind]="action.kind ?? 'secondary'"

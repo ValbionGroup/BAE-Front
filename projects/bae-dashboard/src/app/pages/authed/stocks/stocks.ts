@@ -29,11 +29,12 @@ import { Btn, Badge, Card, Checkbox, Toggle, Input } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import { PrintService } from '#core/services/print/print-service';
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
   selector: 'bfd-stocks',
-  imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon, PageActions],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est
@@ -87,6 +88,19 @@ export class Stocks implements OnInit {
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
+
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    { label: 'Scanner', icon: this.icScan, run: () => this.openScanner() },
+    { label: 'Inventaire', icon: this.icDownload, run: () => this.printInventory() },
+    {
+      label: 'Produit',
+      icon: this.icPlus,
+      kind: 'primary',
+      primary: true,
+      testId: 'add-good',
+      run: () => this.openCreateGood(),
+    },
+  ]);
 
   protected readonly icScan = LucideScanLine;
   protected readonly icDownload = LucideDownload;

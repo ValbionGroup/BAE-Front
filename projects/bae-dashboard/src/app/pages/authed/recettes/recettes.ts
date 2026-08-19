@@ -51,9 +51,11 @@ interface RecetteDetail extends RecetteRow {
   readonly methode: readonly string[];
 }
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-recettes',
-  imports: [Btn, Badge, Input, Skeleton, LucideDynamicIcon],
+  imports: [Btn, Badge, Input, Skeleton, LucideDynamicIcon, PageActions],
   templateUrl: './recettes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est
@@ -61,6 +63,16 @@ interface RecetteDetail extends RecetteRow {
   host: { class: 'block h-full' },
 })
 export class Recettes {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    {
+      label: 'Nouvelle recette',
+      icon: this.icPlus,
+      kind: 'primary',
+      primary: true,
+      run: () => this.openCreate(),
+    },
+  ]);
+
   protected readonly store = inject(RecipesStore);
   private readonly modal = inject(ModalService);
   private readonly toast = inject(ToastService);

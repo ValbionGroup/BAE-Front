@@ -1,12 +1,6 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bae-btn kind="secondary" size="md" [icon]="icScan" (clicked)="openScanner()">Scanner</bae-btn>
-  <bae-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printInventory()"
-    >Inventaire</bae-btn
-  >
-  <span data-testid="add-good">
-    <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateGood()">Produit</bae-btn>
-  </span>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 <!-- `minmax(0,1fr)` et `min-h-0` : une piste et un item de grille sont en
