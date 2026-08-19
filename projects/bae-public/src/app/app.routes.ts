@@ -44,6 +44,14 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/commande/commande').then((m) => m.Commande),
       },
       {
+        // Cible de `browser_success_url` et `browser_fail_url` chez Lydia.
+        // `withComponentInputBinding()` alimente l'`input.required` du composant.
+        path: 'paiement/:orderRef',
+        title: 'BAE — Paiement',
+        canActivate: [sessionGuard],
+        loadComponent: () => import('./pages/paiement/paiement').then((m) => m.Paiement),
+      },
+      {
         path: 'login',
         title: 'BAE — Connexion',
         canActivate: [guestGuard],
