@@ -1902,3 +1902,159 @@ les tests sont passés en deux secondes.
   justificatif.
 - Aucune contrainte d'unicité `(user_id, event_id)` sur `pre_orders` : un même compte pourrait
   consommer tout le plafond.
+
+---
+
+## 39. Quatre dettes isolées — ✅ livré le 2026-08-18
+
+Lot de rattrapage sans dépendance interne, pris après la clôture du §38. Aucun des quatre n'attend
+Lydia. Deux corrigent une fuite, un supprime plus de code qu'il n'en ajoute.
+
+### 39.1 Logout global SSO — le §33.2 point 5 est clos
+
+Se déconnecter n'informait pas Keycloak : recliquer « EirbConnect » reconnectait **instantanément et
+sans mot de passe**. Sur un poste partagé, la session survivait à la déconnexion.
+
+**Là où vit l'`id_token`, et pourquoi.** `exchange()` le jetait — il ne sortait pas de la fonction.
+Il est désormais conservé sur `auth_access_tokens.sso_id_token` (text, nullable).
+
+⚠️ **Le cookie `bae_token` _est_ un access token** : `session_cookie.ts` y pose la valeur produite
+par `User.accessTokens.create()`, et `bearer_from_cookie_middleware` la recopie en
+`Authorization: Bearer` à chaque requête. « Auth par cookie » et `auth_access_tokens` ne sont pas
+deux mécanismes concurrents mais les deux faces du même objet : **une ligne = une connexion active**,
+celle-là même que la page Sécurité affiche. L'`id_token` y naît et y meurt avec la session, sans une
+ligne de nettoyage.
+
+Écartés : la session Adonis (`SESSION_DRIVER=cookie` — un JWT RS256 pousse le cookie vers la limite
+navigateur de 4 Ko) et le `client_id` seul (Keycloak intercale alors un écran de confirmation).
+
+**La route est un GET.** `GET /v1/auth/keycloak/logout?app=dashboard|public`, sous `middleware.auth()`.
+C'est une **navigation de premier niveau** — le navigateur doit suivre la redirection — et le
+`POST /auth/logout` est de toute façon refusé par le CSRF quand la session n'est portée que par le
+cookie (`session_cookie.spec.ts` garde ce 403). La zone voyage en **mot-clé d'une liste fermée**,
+jamais en URL : même contrat que `redirect()`, sans quoi c'est une redirection ouverte.
+
+⚠️ **Le local part en premier, quoi qu'il arrive** : jeton révoqué et cookie effacé **avant** de
+partir vers l'IdP. Trois replis — pas d'`id_token` (le cas **nominal** d'un compte mot de passe),
+IdP injoignable, zone invalide (400). Une panne de l'IdP ne peut pas retenir une session.
+
+⚠️ **`destroyAll` n'effaçait pas le cookie**, contrairement à `destroy` : le navigateur continuait de
+présenter un jeton révoqué jusqu'au premier 401. Corrigé.
+
+**Front — `ExternalNavigation`, dans `bae-ui`.** Un XHR ne peut pas fermer la session de l'IdP. Les
+deux applications quittent donc la page, symétriquement du bouton EirbConnect. ⚠️ `window.location.href`
+est **intestable** : sous jsdom l'affectation n'avertit que dans les logs. D'où la couture — trois
+lignes, zéro logique. **Les deux pages de login l'attendent aussi** : elles écrivent encore
+`window.location.href` en dur, et ne sont testées sur ce point ni l'une ni l'autre.
+`AuthService.logout$()` a disparu, sans appelant.
+
+⚠️ **Deux tests passaient pour la mauvaise raison.** `env.set(clé, undefined)` stocke la **chaîne**
+`'undefined'`, qui est truthy : `backchannelUrl` tentait donc `new URL('undefined')` et la découverte
+échouait sur une URL invalide au lieu du port fermé que `sso_idp_unavailable.spec.ts` visait. Le test
+était vert et ne mesurait pas ce qu'il annonçait.
+
+**Reste à faire, hors code** : les post-logout URIs de **production**
+(`https://dashboard.bae.eirb.fr`, `https://order.bae.eirb.fr`) sont encore une demande non partie à
+EirbWare. En dev, relancer `scripts/setup-dev-keycloak.sh` suffit (`5c1fd65` les y a déclarées).
+
+⚠️ **Le protocole n'est joué en test nulle part** : `sso_logout.spec.ts` monte un **vrai serveur HTTP**
+qui sert un document de découverte, et non un mock d'`openid-client` — ce qu'on éprouve est justement
+la construction de l'URL par la bibliothèque. Le bout-en-bout se vérifie à la main : se déconnecter,
+recliquer « EirbConnect », et **devoir ressaisir son mot de passe**.
+
+### 39.2 `preOrderCloseLeadHours` par soirée — et pourquoi pas un jsonb
+
+`events.pre_order_close_lead_hours`, **integer unsigned nullable**. `null` est signifiant : « suivre
+`PRE_ORDER_CLOSE_LEAD_HOURS` ». C'est ce qui évite toute reprise sur les soirées existantes.
+
+⚠️ **Le contrat public ne change pas.** `toEventView()` calculait déjà `preOrdersCloseAt` par soirée ;
+seule la **source** du nombre d'heures change. `bae-public` n'a pas une ligne modifiée.
+
+**La question du jsonb `config` a été posée et tranchée en faveur des colonnes**, sur des faits de ce
+dépôt et non en général :
+
+- Colonne : 1 migration + 1 ligne de validateur + **0 ligne de contrôleur** (`event.merge(rest)` la
+  prend gratuitement).
+- jsonb : `app/models/event.ts` étend `EventSchema` **généré**, qui ne sait pas produire
+  `prepare`/`consume` — le modèle devrait quitter son schéma (seul `activity_event.ts` fait ça).
+  Pire, `event.merge({ config })` **écraserait l'objet entier**, cassant l'invariant que `9b04a17`
+  venait d'établir. Et `listOpenEvents()` passerait de `.where('capacity', '>', 0)` à un `whereRaw`
+  non indexable.
+- Précédent du dépôt : le seul réglage riche déjà livré — les tarifs de prise en charge — a été
+  **normalisé en deux tables**, pas mis en JSON.
+
+⚠️ **L'irritant réel est ailleurs, et il reste** : le dashboard porte **deux modélisations
+concurrentes de la soirée** (`ApiEvent`/`CoordinationEvent` dans `coordination/`, et
+`EventApiDto`/`EventData` dans `core/models/`), chacune redéclarant les réglages. Un ajout se paie en
+six déclarations. Les fusionner est un chantier à part, non entrepris ici.
+
+### 39.3 La clôture Z disparaît, la caisse s'ouvre seule
+
+`pages/authed/caisse/cloture/` est **supprimée** (−535 lignes au total sur le lot). Elle promettait
+une clôture Z que le back ne peut pas servir : ni table de session de caisse, ni comptage d'espèces,
+ni fond de caisse, et `transactions` n'a même pas de `member_id`. Sa carte « Carte bleue » n'existe
+nulle part — `checkout()` n'accepte que `'cash' | 'lydia'`. `opening = 80.0` et `expected = 712.8`
+étaient des constantes, et les trois boutons d'en-tête n'avaient aucun `(clicked)`.
+
+**La vraie clôture, celle qui écrit, est dans `soiree/live`** (`POST /v1/events/:id/settle`, gardé par
+`event:settle`) et elle marche déjà. Le bouton de justificatif **reste sur `bilan`** : le §38.10 lui
+prêtait un « second emplacement naturel » dans une page qui n'existe plus.
+
+**L'ouverture est automatique**, portée par un `effect` dans `Caisse` qui suit `activeEvent()` —
+ouverture sur la soirée en cours, **et fermeture** quand elle passe `completed`.
+⚠️ Dans le composant et non dans le store : `startSession()` déclenche deux chargements HTTP, et le
+store est `providedIn: 'root'`.
+
+⚠️ **`startSession()` ne remettait à zéro ni `selectedBuyer` ni `category`.** Inoffensif tant que
+l'ouverture était manuelle et unique ; avec un enchaînement automatique de deux soirées, la remise du
+BDE de la veille se serait appliquée au service du soir. Les deux portes partagent désormais une
+table `clearedSession` — deux listes divergentes, c'est le champ qu'on oublie d'un côté.
+
+⚠️ **Piège de test** : l'ouverture passe par un `effect`, qui ne tourne qu'à la détection de
+changement. Le helper `settle()` du spec (un `setTimeout` nu) ne suffit plus — il faut
+`fixture.detectChanges()`, sans quoi aucune requête de session ne part et l'échec ne dit pas pourquoi.
+
+### 39.4 Le formulaire de contact est branché
+
+`POST /v1/tickets` était accessible aux clients depuis le lot notifications ; le formulaire restait
+grisé avec « pas encore branché ». (⚠️ Le §4.2 de `HANDOFF.md` affirme encore qu'« aucune table ne
+l'appuie » — faux depuis `1787300000000_create_tickets_table`.)
+
+⚠️ **`tickets` n'a ni colonne `name` ni colonne `email`** : l'auteur vient de `users` par `author_id`.
+Nom et email sont donc affichés **en lecture seule** et ne partent pas dans le corps — un champ
+saisissable promettrait le contraire. Le corps se réduit à `{ subject, body }`.
+
+La route `/contact` **reste ouverte aux anonymes** (ses trois canaux doivent être lisibles sans
+compte), avec deux états : anonyme → formulaire désactivé + « Se connecter avec EirbConnect » +
+l'adresse email en repli ; connecté → Sujet et Message actifs. **Aucun endpoint anonyme** n'a été
+ajouté : ce serait une surface de spam à brider.
+
+⚠️ **C'est le contrôle qu'on désactive, pas l'élément** : Angular ignore un `[disabled]` posé sur un
+`formControlName`. Le formulaire naît désactivé et s'ouvre par un `effect` sur `isAuthenticated()`.
+
+⚠️ **Retour utilisateur inline (`role="alert"`), pas en toast** : `bae-public/src/app/app.html` ne rend
+que `<router-outlet />` et `<bae-dropdown-container />` — il n'a **pas** de `<bae-toast-container />`,
+et un `ToastService` sans conteneur ne s'affiche nulle part, silencieusement.
+
+`bae-input` gagne un input `readonly`. ⚠️ `readonly` et non `disabled` quand la valeur est affichée
+mais non modifiable : un champ désactivé sort de l'ordre de tabulation et n'est pas annoncé.
+
+### 39.5 Vérifié
+
+Back **523 → 534** tests, dashboard **622 → 624**, `bae-public` **71 → 74**, `bae-ui` 79 inchangé.
+
+⚠️ Le §38.9 annonçait 617 pour le dashboard : **quatre commits ont suivi sans mettre le compteur à
+jour**. La ligne de base réelle, mesurée avant ce lot, est 622 — même leçon qu'au §0 du `HANDOFF.md`,
+un compteur écrit ne se croit pas sur parole.
+Typecheck vert des deux côtés, et les deux applications compilent.
+
+### 39.6 Ce que ce lot n'a **pas** fait
+
+- **Les deux pages de login écrivent toujours `window.location.href` en dur** et restent non testées
+  sur ce point, alors que `ExternalNavigation` existe désormais pour ça.
+- Les post-logout URIs de production ne sont pas demandées à EirbWare.
+- Les deux modélisations concurrentes de la soirée côté dashboard ne sont pas fusionnées (§39.2).
+- `bae-public` n'a toujours pas de `<bae-toast-container />`.
+- **`POST /pre-orders` n'existe toujours pas** : le plafond n'a rien à brider, et `pre_order_items`
+  n'a pas d'instantané de prix. Le chantier suivant reste **le paiement Lydia**, qui commande la
+  création de précommande, la souscription de formule et l'application réelle des deux remises.
