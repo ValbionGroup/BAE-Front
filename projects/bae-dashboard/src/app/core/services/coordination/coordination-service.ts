@@ -16,6 +16,8 @@ export interface ApiEvent {
   expectedAttendees?: number | null;
   /** Non nul = la prise en charge est active. */
   payerName?: string | null;
+  /** Heures avant le début ; `null` = suivre la valeur globale du serveur. */
+  preOrderCloseLeadHours?: number | null;
 }
 
 /** Seules les clés présentes sont écrites : le back ignore les absentes. */
@@ -27,6 +29,7 @@ export type EventPatch = Partial<{
   capacity: number;
   expectedAttendees: number | null;
   payerName: string | null;
+  preOrderCloseLeadHours: number | null;
 }>;
 export interface ApiRole {
   id: number;

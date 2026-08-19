@@ -123,6 +123,23 @@ export class CoordinationEventDetail {
     this.state.update((s) => (s ? { ...s, expectedAttendees: next } : s));
   }
 
+  protected closeLeadText(s: EditState): string {
+    return s.preOrderCloseLeadHours === null ? '' : String(s.preOrderCloseLeadHours);
+  }
+
+  /**
+   * ⚠️ Champ vide ⇒ `null`, jamais `0` : le serveur lit `null` comme « suivre la
+   * valeur globale », alors que `0` fermerait les précommandes à l'instant même
+   * où la soirée commence.
+   */
+  protected updateCloseLeadHours(value: string): void {
+    const trimmed = value.trim();
+    const parsed = Number(trimmed);
+    const next =
+      trimmed === '' || !Number.isFinite(parsed) || parsed < 0 ? null : Math.trunc(parsed);
+    this.state.update((s) => (s ? { ...s, preOrderCloseLeadHours: next } : s));
+  }
+
   /** Éteindre efface le payeur, jamais les catégories déjà saisies. */
   protected toggleSponsorship(enabled: boolean): void {
     this.state.update((s) => (s ? { ...s, payerName: enabled ? (s.payerName ?? '') : null } : s));
@@ -183,6 +200,7 @@ export class CoordinationEventDetail {
         capacity: s.capacity,
         expectedAttendees: s.expectedAttendees,
         payerName: s.payerName?.trim() || null,
+        preOrderCloseLeadHours: s.preOrderCloseLeadHours,
       })
       .finally(() => this.saving.set(false));
   }
@@ -211,6 +229,7 @@ export class CoordinationEventDetail {
       capacity: event.capacity,
       expectedAttendees: event.expectedAttendees,
       payerName: event.payerName,
+      preOrderCloseLeadHours: event.preOrderCloseLeadHours,
     };
   }
 }

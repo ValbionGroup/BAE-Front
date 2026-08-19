@@ -49,6 +49,7 @@ function toCoordinationEvent(
     capacity: apiEvent.capacity ?? 0,
     expectedAttendees: apiEvent.expectedAttendees ?? null,
     payerName: apiEvent.payerName ?? null,
+    preOrderCloseLeadHours: apiEvent.preOrderCloseLeadHours ?? null,
   };
 }
 

@@ -20,6 +20,8 @@ export interface CoordinationEvent {
   readonly capacity: number;
   readonly expectedAttendees: number | null;
   readonly payerName: string | null;
+  /** Heures avant le début ; `null` = suivre la valeur globale du serveur. */
+  readonly preOrderCloseLeadHours: number | null;
 }
 
 export interface EditState {
@@ -37,4 +39,6 @@ export interface EditState {
   capacity: number;
   expectedAttendees: number | null;
   payerName: string | null;
+  /** Heures avant le début ; `null` = suivre la valeur globale du serveur. */
+  preOrderCloseLeadHours: number | null;
 }
