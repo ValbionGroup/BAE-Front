@@ -87,16 +87,28 @@
                   }
                 </ul>
 
-                <bae-btn
-                  [kind]="plan.highlight ? 'primary' : 'secondary'"
-                  size="lg"
-                  [full]="true"
-                  [disabled]="true"
-                  ariaDescribedby="fastpass-indispo"
-                  class="mt-6 block"
-                >
-                  Choisir {{ plan.label }}
-                </bae-btn>
+                @if (needsLogin()) {
+                  <bae-btn
+                    [kind]="plan.highlight ? 'primary' : 'secondary'"
+                    size="lg"
+                    [full]="true"
+                    routerLink="/login"
+                    class="mt-6 block"
+                  >
+                    Se connecter
+                  </bae-btn>
+                } @else {
+                  <bae-btn
+                    [kind]="plan.highlight ? 'primary' : 'secondary'"
+                    size="lg"
+                    [full]="true"
+                    [disabled]="submitting()"
+                    (clicked)="subscribe(plan.id)"
+                    class="mt-6 block"
+                  >
+                    Choisir {{ plan.label }}
+                  </bae-btn>
+                }
               </div>
             </bae-card>
           }
@@ -107,10 +119,17 @@
 </section>
 
 <section class="mx-auto max-w-260 px-6 pt-7 pb-3 md:px-14">
-  <p id="fastpass-indispo" class="mb-6 text-center text-xs text-muted">
-    La souscription en ligne ouvrira avec le paiement Lydia. En attendant, passez au local du BAE ou
-    écrivez-nous depuis <a routerLink="/contact" class="text-text-2 underline">la page contact</a>.
-  </p>
+  @if (checkoutError(); as error) {
+    <p class="mb-6 text-center text-xs text-red" role="alert">{{ error }}</p>
+  } @else if (needsLogin()) {
+    <p class="mb-6 text-center text-xs text-muted">
+      Connectez-vous avec EirbConnect pour souscrire. Les tarifs restent consultables sans compte.
+    </p>
+  } @else {
+    <p class="mb-6 text-center text-xs text-muted">
+      Paiement sécurisé par Lydia. Votre adhésion prend effet dès la confirmation du paiement.
+    </p>
+  }
 
   <div class="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-4">
     @for (benefit of benefits; track benefit.title) {

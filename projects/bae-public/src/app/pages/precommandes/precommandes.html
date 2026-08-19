@@ -28,7 +28,7 @@
     <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2.5 p-0 text-xs text-muted">
       <li class="inline-flex items-center gap-1.5">
         <svg [lucideIcon]="icShield" [size]="14" class="text-ok" aria-hidden="true"></svg>
-        Paiement au retrait
+        Paiement sécurisé par Lydia
       </li>
       <li class="inline-flex items-center gap-1.5">
         <svg [lucideIcon]="icQr" [size]="14" class="text-blue" aria-hidden="true"></svg>
@@ -337,23 +337,36 @@
       </div>
 
       <div class="px-3.5 pb-3.5">
-        <bae-btn
-          kind="primary"
-          size="lg"
-          [full]="true"
-          [iconRight]="icArrowRight"
-          [disabled]="true"
-          ariaDescribedby="paiement-indispo"
-        >
-          Valider ma précommande
-        </bae-btn>
-        <p
-          id="paiement-indispo"
-          class="mt-2 mb-0 text-center text-[10.5px] leading-[1.5] text-muted"
-        >
-          La validation en ligne ouvrira avec le paiement Lydia. En attendant, écrivez-nous depuis
-          <a routerLink="/contact" class="text-text-2 underline">la page contact</a>.
-        </p>
+        @if (needsLogin()) {
+          <bae-btn kind="primary" size="lg" [full]="true" routerLink="/login">
+            Se connecter pour commander
+          </bae-btn>
+          <p class="mt-2 mb-0 text-center text-[10.5px] leading-[1.5] text-muted">
+            Connectez-vous avec EirbConnect pour valider votre précommande. Le menu reste
+            consultable sans compte.
+          </p>
+        } @else {
+          <bae-btn
+            kind="primary"
+            size="lg"
+            [full]="true"
+            [iconRight]="icArrowRight"
+            [disabled]="!canCheckout()"
+            (clicked)="checkout()"
+          >
+            Valider ma précommande
+          </bae-btn>
+          @if (checkoutError(); as error) {
+            <p class="mt-2 mb-0 text-center text-[10.5px] leading-[1.5] text-red" role="alert">
+              {{ error }}
+            </p>
+          } @else {
+            <p class="mt-2 mb-0 text-center text-[10.5px] leading-[1.5] text-muted">
+              Paiement sécurisé par Lydia. Votre précommande est enregistrée une fois le paiement
+              confirmé.
+            </p>
+          }
+        }
       </div>
     </bae-card>
   </div>

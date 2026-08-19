@@ -1,9 +1,12 @@
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ExternalNavigation } from '@bae/ui';
 
 import { Fastpass } from './fastpass';
+import { SessionStore, type SessionStatus } from '../../core/session.store';
 import type { PublicFastPass } from '../../core/catalog.models';
 
 const PASSES: PublicFastPass[] = [
@@ -29,10 +32,28 @@ describe(Fastpass.name, () => {
     host = fixture.nativeElement as HTMLElement;
   };
 
+  let sessionStatus: ReturnType<typeof signal<SessionStatus>>;
+  let navigation: { go: ReturnType<typeof vi.fn> };
+
   beforeEach(async () => {
+    sessionStatus = signal<SessionStatus>('authenticated');
+    navigation = { go: vi.fn() };
+
     await TestBed.configureTestingModule({
       imports: [Fastpass],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: SessionStore,
+          useValue: {
+            status: sessionStatus.asReadonly(),
+            isAuthenticated: computed(() => sessionStatus() === 'authenticated'),
+          },
+        },
+        { provide: ExternalNavigation, useValue: navigation },
+      ],
     }).compileComponents();
 
     http = TestBed.inject(HttpTestingController);
@@ -94,15 +115,47 @@ describe(Fastpass.name, () => {
     expect(badges.length).toBe(1);
   });
 
-  it('grise la souscription tant que le paiement n’existe pas', async () => {
+  const chooseButtons = (): HTMLButtonElement[] =>
+    [...host.querySelectorAll('button')].filter((b) => b.textContent?.includes('Choisir'));
+
+  /**
+   * Le défaut visé : un bouton « Choisir » inerte, ou qui souscrit sans payer.
+   */
+  it('choisir une formule ouvre le paiement Lydia et y redirige', async () => {
     await mount();
 
-    const choices = [...host.querySelectorAll('button')].filter((b) =>
-      b.textContent?.includes('Choisir'),
-    );
+    expect(chooseButtons()[0].disabled).toBe(false);
 
-    expect(choices.every((b) => b.disabled)).toBe(true);
-    expect(text()).toContain('paiement Lydia');
+    chooseButtons()[0].click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const opened = http.expectOne((r) => r.url.endsWith('/account/subscriptions'));
+    expect(opened.request.body).toEqual({ fastPassId: 1 });
+
+    opened.flush({
+      orderRef: 'ref-2',
+      status: 'pending',
+      amountCents: 2500,
+      mobileUrl: 'https://lydia.test/pay/ref-2',
+      expiresAt: null,
+    });
+    await fixture.whenStable();
+
+    expect(navigation.go).toHaveBeenCalledWith('https://lydia.test/pay/ref-2');
+  });
+
+  /**
+   * Le défaut visé : laisser un visiteur déconnecté souscrire, pour qu'il se
+   * heurte au 401 du serveur. Les tarifs restent consultables.
+   */
+  it('un visiteur déconnecté voit les tarifs mais qu’il faut se connecter', async () => {
+    sessionStatus.set('anonymous');
+    await mount();
+
+    expect(text()).toContain('1 an');
+    expect(text()).toContain('Connectez-vous');
+    expect(chooseButtons()).toHaveLength(0);
   });
 
   /**
