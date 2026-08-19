@@ -3,7 +3,7 @@
   <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+<div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   <!-- Live region: announces the matching run and its outcome -->
   <div role="status" aria-live="polite" class="sr-only">
     @if (algoRunning()) {
@@ -246,7 +246,7 @@
   </div>
   <div class="overflow-hidden rounded-md border border-border-s bg-surface">
     <div
-      class="grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] gap-3 bg-surface-2 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="hidden md:grid md:grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] gap-3 bg-surface-2 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
     >
       <span></span>
       <span>Membre</span>
@@ -274,7 +274,7 @@
       }
       <div
         [class]="
-          'grid grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5 transition-opacity ' +
+          'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5 transition-opacity ' +
           (!m.isPresent ? 'opacity-50' : '')
         "
       >

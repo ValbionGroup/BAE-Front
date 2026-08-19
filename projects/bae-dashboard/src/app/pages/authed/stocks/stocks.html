@@ -123,7 +123,9 @@
             Chargement…
           </div>
         } @else if (loadError()) {
-          <div class="px-6 py-10 text-center text-[12.5px] text-danger">{{ loadError() }}</div>
+          <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
+            {{ loadError() }}
+          </div>
         } @else {
           @for (p of visibleProducts(); track p.id; let last = $last) {
             @let selected = selectedId() === p.id;
@@ -182,7 +184,7 @@
             </div>
           } @empty {
             <div
-              class="flex h-full flex-col items-center justify-center gap-3 px-6 py-16 text-center"
+              class="flex h-full flex-col items-center justify-center gap-3 px-4 md:px-6 py-16 text-center"
             >
               <span
                 class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
@@ -385,7 +387,7 @@
         </div>
       } @else {
         <div
-          class="flex flex-1 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-8 text-center"
+          class="flex flex-1 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-4 md:p-8 text-center"
         >
           <span
             class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"

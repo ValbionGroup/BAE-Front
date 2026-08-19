@@ -39,9 +39,11 @@
     } @else if (rows().length === 0) {
       <div class="p-[22px] text-xs text-muted">Aucune transaction enregistrée.</div>
     } @else {
-      <table class="w-full border-collapse text-sm">
-        <thead>
-          <tr class="border-b border-border-s text-left">
+      <table class="block md:table w-full border-collapse text-sm">
+        <thead class="hidden md:table-header-group">
+          <tr
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s text-left"
+          >
             <th
               class="px-[22px] py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
             >
@@ -63,20 +65,24 @@
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="block md:table-row-group">
           @for (r of rows(); track r.id) {
-            <tr class="border-b border-border-s hover:bg-surface-2/50">
-              <td class="mono px-[22px] py-3 text-xs text-text-2">{{ r.reference }}</td>
-              <td class="mono tnum px-3 py-3 text-xs text-muted">{{ r.when }}</td>
-              <td class="px-3 py-3">
+            <tr
+              class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s hover:bg-surface-2/50"
+            >
+              <td class="md:table-cell mono px-[22px] py-3 text-xs text-text-2">
+                {{ r.reference }}
+              </td>
+              <td class="md:table-cell mono tnum px-3 py-3 text-xs text-muted">{{ r.when }}</td>
+              <td class="md:table-cell px-3 py-3">
                 <bae-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">
                   {{ r.method }}
                 </bae-badge>
               </td>
-              <td class="px-3 py-3 text-xs text-muted">
+              <td class="md:table-cell px-3 py-3 text-xs text-muted">
                 {{ r.orderCount }} {{ r.orderCount > 1 ? 'commandes' : 'commande' }}
               </td>
-              <td class="mono tnum px-[22px] py-3 text-right font-semibold text-text">
+              <td class="md:table-cell mono tnum px-[22px] py-3 text-right font-semibold text-text">
                 {{ formatMoney(r.amount) }} €
               </td>
             </tr>

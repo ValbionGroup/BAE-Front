@@ -2,7 +2,7 @@
   <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="h-full grid grid-cols-[1fr_420px] overflow-hidden">
+<div class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1fr_420px]">
   <!-- LIST -->
   <div class="flex flex-col min-h-0 overflow-hidden border-r border-border-s">
     <!-- Filter bar -->
@@ -40,7 +40,7 @@
     <!-- Table -->
     <div class="flex-1 min-h-0 overflow-y-auto">
       <div
-        class="grid grid-cols-[34px_1fr_130px_130px_110px_110px_28px] px-5 py-2.5 border-b border-border-s text-[10.5px] font-semibold tracking-wider text-muted uppercase"
+        class="hidden md:grid md:grid-cols-[34px_1fr_130px_130px_110px_110px_28px] px-5 py-2.5 border-b border-border-s text-[10.5px] font-semibold tracking-wider text-muted uppercase"
       >
         <span></span><span>Nom · ID</span><span>Promo</span><span>Cotisation</span
         ><span>Expire</span><span class="text-right">Restant</span><span></span>
@@ -67,7 +67,7 @@
             role="button"
             [attr.aria-current]="a.id === selectedId()"
             [class]="
-              'grid grid-cols-[34px_1fr_130px_130px_110px_110px_28px] items-center px-5 py-2.5 border-b border-border-s text-[12.5px] text-text cursor-pointer border-l-2 ' +
+              'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[34px_1fr_130px_130px_110px_110px_28px] items-center px-5 py-2.5 border-b border-border-s text-[12.5px] text-text cursor-pointer border-l-2 ' +
               (a.id === selectedId()
                 ? 'bg-surface-2 border-l-blue'
                 : 'border-l-transparent hover:bg-surface-2/50')

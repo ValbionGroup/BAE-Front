@@ -3,7 +3,7 @@
 </ng-template>
 
 <div class="h-full overflow-y-auto p-5">
-  <div class="grid grid-cols-[1fr_320px] gap-4.5">
+  <div class="flex flex-col gap-4.5 md:grid md:grid-cols-[1fr_320px]">
     <!-- MAIN -->
     <div class="flex flex-col gap-4.5">
       <!-- Upcoming -->
@@ -44,7 +44,7 @@
           </div>
         } @else if (upcomingEvents().length === 0) {
           <div
-            class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-6 py-10 text-center"
+            class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-4 md:px-6 py-10 text-center"
           >
             <svg [lucideIcon]="icCalendar" [size]="22" class="text-muted"></svg>
             <div class="text-[13px] font-medium text-text">Aucune soirée à venir</div>
@@ -196,7 +196,7 @@
             @for (_ of skeletonRows; track $index; let last = $last) {
               <div
                 [class]="
-                  'grid grid-cols-[60px_1fr_130px_90px_90px] items-center gap-3 px-4 py-3 ' +
+                  'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[60px_1fr_130px_90px_90px] items-center gap-3 px-4 py-3 ' +
                   (!last ? 'border-b border-border-s' : '')
                 "
               >
@@ -210,7 +210,7 @@
           </bae-card>
         } @else if (pastEvents().length === 0) {
           <div
-            class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-6 py-10 text-center"
+            class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-s bg-surface px-4 md:px-6 py-10 text-center"
           >
             <svg [lucideIcon]="icCalendar" [size]="22" class="text-muted"></svg>
             <div class="text-[13px] font-medium text-text">Aucun historique</div>
@@ -223,7 +223,7 @@
             @for (p of pastEvents(); track p.id; let last = $last) {
               <div
                 [class]="
-                  'grid grid-cols-[60px_1fr_130px_90px_90px] items-center px-4 py-3 text-[12.5px] ' +
+                  'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[60px_1fr_130px_90px_90px] items-center px-4 py-3 text-[12.5px] ' +
                   (!last ? 'border-b border-border-s' : '')
                 "
               >

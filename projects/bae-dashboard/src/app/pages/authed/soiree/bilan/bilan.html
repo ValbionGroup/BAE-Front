@@ -22,7 +22,7 @@
         <span>{{ loadError() }}</span>
       </div>
     } @else {
-      <div class="grid grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         @for (k of kpis(); track k.label) {
           <div class="rounded-md border border-border-s bg-surface p-3.5">
             <div class="text-[11px] text-muted">{{ k.label }}</div>
@@ -114,9 +114,11 @@
         @if (products().length === 0) {
           <div class="px-4 py-6 text-xs text-muted">Aucun menu défini pour cette soirée.</div>
         } @else {
-          <table class="w-full border-collapse text-sm">
-            <thead>
-              <tr class="border-b border-border-s text-left">
+          <table class="block md:table w-full border-collapse text-sm">
+            <thead class="hidden md:table-header-group">
+              <tr
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s text-left"
+              >
                 <th
                   class="px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
                 >
@@ -149,23 +151,33 @@
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="block md:table-row-group">
               @for (p of products(); track p.name) {
-                <tr class="border-b border-border-s last:border-0">
-                  <td class="px-4 py-2.5 text-text">{{ p.name }}</td>
-                  <td class="mono tnum px-3 py-2.5 text-right text-muted">{{ p.planned }}</td>
-                  <td class="mono tnum px-3 py-2.5 text-right text-text-2">{{ p.produced }}</td>
-                  <td class="mono tnum px-3 py-2.5 text-right font-semibold text-text">
+                <tr
+                  class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 md:table-row md:px-0 md:py-0 border-b border-border-s last:border-0"
+                >
+                  <td class="md:table-cell px-4 py-2.5 text-text">{{ p.name }}</td>
+                  <td class="md:table-cell mono tnum px-3 py-2.5 text-right text-muted">
+                    {{ p.planned }}
+                  </td>
+                  <td class="md:table-cell mono tnum px-3 py-2.5 text-right text-text-2">
+                    {{ p.produced }}
+                  </td>
+                  <td
+                    class="md:table-cell mono tnum px-3 py-2.5 text-right font-semibold text-text"
+                  >
                     {{ p.sold }}
                   </td>
                   <td
-                    class="mono tnum px-3 py-2.5 text-right"
+                    class="md:table-cell mono tnum px-3 py-2.5 text-right"
                     [class.text-warn]="p.unsold > 0"
                     [class.text-muted]="p.unsold === 0"
                   >
                     {{ p.unsold }}
                   </td>
-                  <td class="mono tnum px-4 py-2.5 text-right font-semibold text-text">
+                  <td
+                    class="md:table-cell mono tnum px-4 py-2.5 text-right font-semibold text-text"
+                  >
                     {{ p.revenue }} €
                   </td>
                 </tr>
@@ -188,7 +200,7 @@
     }
   </div>
 } @else {
-  <div class="flex h-full items-center justify-center p-8">
+  <div class="flex h-full items-center justify-center p-4 md:p-8">
     <div class="max-w-md text-center">
       <svg
         [lucideIcon]="icTicket"

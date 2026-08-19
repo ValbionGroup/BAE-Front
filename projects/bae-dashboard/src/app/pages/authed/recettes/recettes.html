@@ -7,7 +7,7 @@
   @if (store.deleteError(); as message) {
     <div
       role="alert"
-      class="flex items-center gap-3 border-b border-border-s bg-danger-soft px-6 py-2.5 text-[12.5px] text-danger"
+      class="flex items-center gap-3 border-b border-border-s bg-danger-soft px-4 md:px-6 py-2.5 text-[12.5px] text-danger"
     >
       <span class="flex-1">{{ message }}</span>
       <bae-btn kind="quiet" size="sm" (clicked)="store.clearDeleteError()">Fermer</bae-btn>
@@ -15,7 +15,7 @@
   }
 
   <!-- Filter bar -->
-  <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
+  <div class="flex items-center gap-2.5 border-b border-border-s px-4 md:px-6 py-3.5">
     <div class="flex gap-1.5">
       @for (f of filterTabs; track f; let i = $index) {
         <button
@@ -44,11 +44,11 @@
   </div>
 
   <!-- Two-column: list + detail -->
-  <div class="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr]">
+  <div class="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[1.4fr_1fr]">
     <!-- LIST -->
     <div class="overflow-y-auto border-r border-border-s">
       <div
-        class="grid grid-cols-[36px_1fr_90px_100px_100px_110px] gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+        class="hidden md:grid md:grid-cols-[36px_1fr_90px_100px_100px_110px] gap-3 border-b border-border-s px-4 md:px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
       >
         <span></span>
         <span>Recette</span>
@@ -61,7 +61,7 @@
       @if (loading() === 'init' || loading() === 'loading') {
         @for (_ of r5; track $index) {
           <div
-            class="grid grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-6 py-3"
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-3"
           >
             <bae-skeleton width="32px" height="32px" rounded="md" variant="surface-3" />
             <div class="flex flex-col gap-1.5">
@@ -75,11 +75,13 @@
           </div>
         }
       } @else if (loading() === 'error') {
-        <div class="px-6 py-10 text-center text-[12.5px] text-danger">
+        <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
           {{ loadError() ?? 'Impossible de charger les recettes.' }}
         </div>
       } @else if (recettes().length === 0) {
-        <div class="flex h-full flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <div
+          class="flex h-full flex-col items-center justify-center gap-3 px-4 md:px-6 py-16 text-center"
+        >
           <span
             class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
           >
@@ -101,7 +103,7 @@
           <div
             (click)="select(r.id)"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+              'flex flex-wrap items-center gap-x-3 gap-y-1 relative md:grid cursor-pointer md:grid-cols-[36px_1fr_90px_100px_100px_110px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-3 ' +
               (selected ? 'bg-surface-2' : '')
             "
           >
@@ -161,7 +163,7 @@
     </div>
 
     <!-- DETAIL -->
-    <div class="overflow-y-auto px-6 pt-5 pb-8">
+    <div class="overflow-y-auto px-4 md:px-6 pt-5 pb-8">
       @if (loading() === 'init' || loading() === 'loading') {
         <div class="mb-4 flex items-start gap-3">
           <bae-skeleton width="48px" height="48px" rounded="md" variant="surface-3" />
@@ -280,7 +282,7 @@
             @for (_ of r5; track $index; let i = $index) {
               <div
                 [class]="
-                  'grid grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 ' +
+                  'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 ' +
                   (i ? 'border-t border-border-s' : '')
                 "
               >
@@ -308,7 +310,7 @@
             @for (g of recipe.ingredients; track g.n; let i = $index) {
               <div
                 [class]="
-                  'grid grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+                  'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1fr_70px_80px_90px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
                   (i ? 'border-t border-border-s' : '')
                 "
               >
@@ -372,7 +374,7 @@
         }
       } @else if (recettes().length === 0) {
         <div
-          class="flex h-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-8 text-center"
+          class="flex h-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-s bg-surface p-4 md:p-8 text-center"
         >
           <span
             class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted"
@@ -388,7 +390,7 @@
         </div>
       } @else {
         <div
-          class="flex h-full items-center justify-center rounded-md border border-dashed border-border-s bg-surface p-8 text-center text-[12.5px] text-muted"
+          class="flex h-full items-center justify-center rounded-md border border-dashed border-border-s bg-surface p-4 md:p-8 text-center text-[12.5px] text-muted"
         >
           Sélectionnez une recette pour voir son détail.
         </div>

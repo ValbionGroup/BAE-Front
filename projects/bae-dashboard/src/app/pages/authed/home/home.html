@@ -1,4 +1,4 @@
-<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+<div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   <!-- Greeting strip + KPI row -->
   <div class="mb-4.5 flex items-baseline justify-between gap-6">
     <div>
@@ -49,7 +49,7 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-[1fr_320px] gap-4.5">
+  <div class="flex flex-col gap-4.5 md:grid md:grid-cols-[1fr_320px]">
     <!-- MAIN column -->
     <div class="flex flex-col gap-4.5">
       <!-- NEXT EVENT hero -->
@@ -65,7 +65,7 @@
             <bae-skeleton width="160px" height="12px" />
             <bae-skeleton width="140px" height="12px" />
           </div>
-          <div class="mt-4.5 grid grid-cols-4 gap-3">
+          <div class="mt-4.5 grid grid-cols-2 lg:grid-cols-4 gap-3">
             @for (_ of r4; track $index) {
               <div class="rounded-md border border-border-s bg-surface-2 p-3">
                 <bae-skeleton width="60px" height="10px" />
@@ -199,7 +199,7 @@
             </div>
           </div>
 
-          <div class="mt-4.5 grid grid-cols-4 gap-3">
+          <div class="mt-4.5 grid grid-cols-2 lg:grid-cols-4 gap-3">
             @for (cell of n.preparation; track cell.label) {
               <div class="rounded-md border border-border-s bg-surface-2 p-3">
                 <div class="mb-1 text-[11px] text-muted">{{ cell.label }}</div>
@@ -225,7 +225,9 @@
           </div>
         </div>
       } @else {
-        <div class="rounded-lg border border-dashed border-border-s bg-surface p-8 text-center">
+        <div
+          class="rounded-lg border border-dashed border-border-s bg-surface p-4 md:p-8 text-center"
+        >
           <div class="mb-1 text-[13px] font-semibold text-text-2">Aucune soirée à venir</div>
           <div class="text-[12px] text-muted">Créez une soirée pour voir le récap ici.</div>
         </div>

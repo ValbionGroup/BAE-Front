@@ -3,11 +3,11 @@
   <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="grid h-full grid-cols-[1.5fr_1fr] overflow-hidden">
+<div class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1.5fr_1fr]">
   <!-- LEFT: table -->
   <div class="flex min-w-0 flex-col overflow-hidden border-r border-border-s">
     <!-- Tabs + search -->
-    <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
+    <div class="flex items-center gap-2.5 border-b border-border-s px-4 md:px-6 py-3.5">
       <div class="flex gap-1.5">
         @for (tab of tabs(); track tab.key) {
           @let isActive = activeTab() === tab.key;
@@ -42,7 +42,7 @@
 
     <!-- Header row -->
     <div
-      class="grid grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="hidden md:grid md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
     >
       <span></span>
       <span>Soirée</span>
@@ -59,7 +59,9 @@
           Chargement…
         </div>
       } @else if (loadError()) {
-        <div class="px-6 py-10 text-center text-[12.5px] text-danger">{{ loadError() }}</div>
+        <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
+          {{ loadError() }}
+        </div>
       } @else {
         @for (e of visibleEvents(); track e.id) {
           @let selected = selectedId() === e.id;
@@ -67,7 +69,7 @@
           <div
             (click)="select(e.id)"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+              'flex flex-wrap items-center gap-x-3 gap-y-1 relative md:grid cursor-pointer md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-3 ' +
               (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50') +
               (e.status === 'past' ? ' opacity-80' : '')
             "
@@ -119,7 +121,7 @@
             </span>
           </div>
         } @empty {
-          <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+          <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-muted">
             Aucune soirée dans cette catégorie.
           </div>
         }
