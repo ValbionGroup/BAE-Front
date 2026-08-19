@@ -1,0 +1,28 @@
+@for (action of actions(); track action.label) {
+  <span
+    [class]="isPrimary(action) ? 'inline-flex' : 'hidden md:inline-flex'"
+    data-testid="action-button"
+  >
+    <bae-btn
+      [kind]="action.kind ?? 'secondary'"
+      size="md"
+      [icon]="action.icon ?? null"
+      [disabled]="action.disabled ?? false"
+      [attr.title]="action.title ?? null"
+      (clicked)="action.run()"
+      >{{ action.label }}</bae-btn
+    >
+  </span>
+}
+
+@if (overflowActions().length > 0) {
+  <button
+    type="button"
+    (click)="openOverflow($event)"
+    aria-label="Plus d'actions"
+    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-2 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 md:hidden"
+    data-testid="action-overflow"
+  >
+    <svg lucideEllipsis [size]="18" aria-hidden="true"></svg>
+  </button>
+}
