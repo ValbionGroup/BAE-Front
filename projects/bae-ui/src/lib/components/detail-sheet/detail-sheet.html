@@ -1,0 +1,29 @@
+@if (open()) {
+  <button
+    type="button"
+    class="fixed inset-0 z-30 bg-black/50 md:hidden"
+    aria-label="Fermer le détail"
+    data-testid="sheet-backdrop"
+    (click)="onClose()"
+  ></button>
+}
+
+<aside [class]="panelClass()" data-testid="sheet-panel">
+  <div
+    class="sticky top-0 z-10 flex items-center gap-2.5 border-b border-border-s bg-surface px-4 py-3 md:hidden"
+    data-testid="sheet-header"
+  >
+    <span class="flex-1 truncate text-[15px] font-semibold text-text">{{ title() }}</span>
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Fermer le détail"
+      class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+      data-testid="sheet-close"
+    >
+      <svg lucideX [size]="18" aria-hidden="true"></svg>
+    </button>
+  </div>
+
+  <div class="min-h-0 flex-1"><ng-content /></div>
+</aside>
