@@ -25,7 +25,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { StocksStore } from '#core/store/stocks.store';
-import { Btn, Badge, Card, Checkbox, Toggle, Input } from '@bae/ui';
+import { Btn, Badge, Card, Checkbox, Toggle, Input, DetailSheet } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import { PrintService } from '#core/services/print/print-service';
@@ -34,7 +34,7 @@ import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from '.
 
 @Component({
   selector: 'bfd-stocks',
-  imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon, PageActions],
+  imports: [Btn, Badge, Card, Checkbox, Toggle, Input, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Sans hauteur sur l'hôte, le `h-full` du gabarit ne résout rien et c'est
