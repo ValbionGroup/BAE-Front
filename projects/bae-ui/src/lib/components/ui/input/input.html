@@ -7,6 +7,7 @@
     [value]="innerValue"
     [placeholder]="placeholder()"
     [disabled]="disabled() || isDisabled"
+    [readOnly]="readonly()"
     [attr.aria-label]="ariaLabel()"
     [attr.aria-invalid]="invalid() ? 'true' : null"
     (input)="onInput($event)"

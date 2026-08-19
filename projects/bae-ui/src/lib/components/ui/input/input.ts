@@ -41,6 +41,15 @@ export class Input implements ControlValueAccessor {
   readonly invalid = input<boolean>(false);
 
   /**
+   * ⚠️ `readonly` et non `disabled` quand la valeur est **affichée mais pas
+   * modifiable** : un champ désactivé sort de l'ordre de tabulation et n'est pas
+   * annoncé par les lecteurs d'écran, alors qu'un champ en lecture seule reste
+   * lisible et sélectionnable. C'est la différence entre « pas votre tour » et
+   * « pas à vous de l'écrire ».
+   */
+  readonly readonly = input<boolean>(false);
+
+  /**
    * Transmis au `<input>` interne, comme `bae-btn` le fait pour son `<button>` :
    * un attribut écrit sur `<bae-input>` atterrit sur l'hôte, qui ne prend pas le
    * focus, et n'est donc jamais annoncé. Nécessaire dès qu'un champ vit hors

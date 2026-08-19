@@ -32,49 +32,87 @@
   </div>
 
   <bae-card [padding]="24">
-    <div class="flex flex-col gap-3.5">
+    <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
       <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <bae-field label="Nom">
-          <bae-input placeholder="Prénom Nom" size="lg" [disabled]="true" />
+          <bae-input
+            placeholder="Prénom Nom"
+            size="lg"
+            [value]="authorName()"
+            [readonly]="true"
+            [disabled]="!isAuthenticated()"
+          />
         </bae-field>
         <bae-field label="Email">
           <bae-input
             [icon]="icMail"
             placeholder="prenom.nom@enseirb-matmeca.fr"
             size="lg"
-            [disabled]="true"
+            [value]="authorEmail()"
+            [readonly]="true"
+            [disabled]="!isAuthenticated()"
           />
         </bae-field>
       </div>
 
       <bae-field label="Sujet">
-        <bae-input placeholder="Ex. Problème de retrait de commande" size="lg" [disabled]="true" />
+        <bae-input
+          formControlName="subject"
+          placeholder="Ex. Problème de retrait de commande"
+          size="lg"
+        />
       </bae-field>
 
       <bae-field label="Message">
         <textarea
+          formControlName="body"
           placeholder="Décrivez votre demande…"
           rows="6"
-          disabled
           class="resize-y rounded-md border border-border bg-surface-2 px-3 py-2.5 font-sans text-[13px] text-text disabled:cursor-not-allowed disabled:opacity-40"
         ></textarea>
       </bae-field>
 
-      <bae-btn
-        kind="primary"
-        size="lg"
-        [full]="true"
-        [disabled]="true"
-        ariaDescribedby="contact-indispo"
-        class="mt-1 block"
-      >
-        Envoyer le message
-      </bae-btn>
+      @if (isAuthenticated()) {
+        <bae-btn
+          kind="primary"
+          size="lg"
+          type="submit"
+          [full]="true"
+          [disabled]="form.invalid || sending()"
+          class="mt-1 block"
+        >
+          {{ sending() ? 'Envoi…' : 'Envoyer le message' }}
+        </bae-btn>
+      } @else {
+        <bae-btn kind="primary" size="lg" [full]="true" (clicked)="signIn()" class="mt-1 block">
+          Se connecter avec EirbConnect
+        </bae-btn>
 
-      <p id="contact-indispo" class="m-0 text-center text-[11.5px] leading-[1.5] text-muted">
-        Le formulaire n’est pas encore branché. En attendant, écrivez directement à l’adresse email
-        ci-contre.
-      </p>
-    </div>
+        <p id="contact-anonyme" class="m-0 text-center text-[11.5px] leading-[1.5] text-muted">
+          Connectez-vous pour écrire au BAE depuis cette page — votre message est rattaché à votre
+          compte. Sinon, écrivez à
+          <a class="text-blue underline" href="mailto:{{ supportEmail }}">{{ supportEmail }}</a
+          >.
+        </p>
+      }
+
+      @if (sent()) {
+        <p
+          role="alert"
+          class="m-0 rounded-md border border-green-600/30 bg-green-600/10 px-3 py-2 text-center text-[12px] leading-[1.5] text-text"
+        >
+          Votre message est parti. L’équipe du BAE répond sous 48h en période de cours.
+        </p>
+      }
+
+      @if (error(); as message) {
+        <p
+          role="alert"
+          class="m-0 rounded-md border border-red-600/30 bg-red-600/10 px-3 py-2 text-center text-[12px] leading-[1.5] text-text"
+        >
+          {{ message }}
+        </p>
+      }
+    </form>
   </bae-card>
 </section>
