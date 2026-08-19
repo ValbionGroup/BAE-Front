@@ -113,11 +113,6 @@ export const routes: Routes = [
             pathMatch: 'full',
             loadComponent: () => import('#pages/authed/caisse/caisse').then((m) => m.Caisse),
           },
-          {
-            path: 'cloture',
-            loadComponent: () =>
-              import('#pages/authed/caisse/cloture/cloture').then((m) => m.CaisseCloture),
-          },
         ],
       },
       {

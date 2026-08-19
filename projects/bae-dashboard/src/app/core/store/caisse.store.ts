@@ -66,6 +66,19 @@ interface CaisseState {
   readonly activeProductId: number | null;
 }
 
+/**
+ * Ce qu'ouvrir **comme** fermer une session remet à zéro. Une seule table pour
+ * les deux : deux listes divergentes, c'est le champ qu'on oublie d'un côté.
+ */
+const clearedSession = {
+  cart: [],
+  activeCategory: null,
+  selectedBuyer: null,
+  category: null,
+  checkoutError: null,
+  activeProductId: null,
+} satisfies Partial<CaisseState>;
+
 const initialState: CaisseState = {
   sessionEventId: null,
   cart: [],
@@ -223,24 +236,19 @@ export const CaisseStore = signalStore(
        * donnait une caisse vide, sans erreur nulle part.
        */
       startSession(eventId: string): void {
-        patchState(store, { sessionEventId: eventId, cart: [], activeCategory: null });
+        // ⚠️ **Tout** le contexte de vente repart de zéro, pas seulement le
+        // panier : le store est `providedIn: 'root'`, et l'ouverture est
+        // désormais automatique. Sans ça, l'acheteur désigné ou la catégorie de
+        // prise en charge de la soirée précédente s'appliqueraient à la
+        // suivante — la remise du BDE d'hier sur la soirée de ce soir.
+        patchState(store, { ...clearedSession, sessionEventId: eventId });
         void eventsStore.loadEventMenu(eventId);
         // Le vendable vient d'ici : sans ce chargement, la grille ne saurait pas
         // ce qui est en rupture et laisserait vendre du vide.
         void ordersStore.load(eventId);
       },
       endSession(): void {
-        patchState(store, {
-          sessionEventId: null,
-          cart: [],
-          activeCategory: null,
-          selectedBuyer: null,
-          // Le store est `providedIn: 'root'` : sans ça, une catégorie fuiterait
-          // d'une session — et d'un test — à la suivante.
-          category: null,
-          checkoutError: null,
-          activeProductId: null,
-        });
+        patchState(store, { ...clearedSession, sessionEventId: null });
       },
       /** Referme la confirmation (ou le refus) affichée après un encaissement. */
       dismissFeedback(): void {

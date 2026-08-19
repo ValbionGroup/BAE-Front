@@ -9,7 +9,6 @@ export const AppRoutes = {
   coordination: 'coordination',
   logistique: 'logistique',
   caisse: 'caisse',
-  caisseCloture: 'caisse/cloture',
   precommandesAdmin: 'precommandes',
   soiree: 'soiree',
   soireeLive: 'soiree/live',

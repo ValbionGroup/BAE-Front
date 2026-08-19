@@ -1,23 +1,11 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  TemplateRef,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, effect, inject, signal } from '@angular/core';
 import {
   LucideArrowRight,
-  LucideCalendarPlus,
   LucideChevronDown,
   LucideChevronUp,
   LucideDynamicIcon,
   LucideEuro,
   LucideHandCoins,
-  LucideLock,
   LucideQrCode,
   LucideScanLine,
   LucideSearch,
@@ -51,14 +39,11 @@ export class Caisse implements OnInit {
   protected readonly store = inject(CaisseStore);
   private readonly events = inject(EventsStore);
   private readonly pageHeader = inject(PageHeaderService);
-  private readonly router = inject(Router);
   private readonly modalService = inject(ModalService);
-  private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   constructor() {
     effect(() => {
       const session = this.store.sessionEvent();
-      const tpl = this.actionsTpl();
 
       this.pageHeader.set({
         title: 'Caisse',
@@ -66,22 +51,34 @@ export class Caisse implements OnInit {
         breadcrumb: ['Soirée', 'Caisse'],
         activeNavId: 'cmd',
       });
-      if (tpl) this.pageHeader.setActions(tpl);
+    });
+
+    /**
+     * La caisse suit la soirée en cours, sans geste d'ouverture : demander de
+     * « lancer la session » alors que la soirée tourne déjà était une formalité
+     * vide, et la seule façon de se tromper de soirée.
+     *
+     * ⚠️ Ici et non dans le store : `startSession()` déclenche deux chargements
+     * HTTP, qu'on ne veut pas voir partir depuis les autres pages — le store est
+     * `providedIn: 'root'`.
+     *
+     * La fermeture compte autant que l'ouverture : une soirée clôturée sort
+     * d'`activeEvent`, et la caisse ne doit pas continuer d'encaisser dessus.
+     */
+    effect(() => {
+      const active = this.events.activeEvent();
+
+      if (active === null) {
+        if (this.store.sessionActive()) this.store.endSession();
+        return;
+      }
+
+      if (this.store.sessionEventId() !== active.id) this.store.startSession(active.id);
     });
   }
 
   ngOnInit(): void {
     void this.events.load();
-  }
-
-  protected startSession(): void {
-    const today = this.store.todayEvent();
-    if (!today) return;
-    this.store.startSession(today.id);
-  }
-
-  protected openCloture(): void {
-    void this.router.navigate(['/caisse/cloture']);
   }
 
   /** « cotisation valide jusqu'au … » de la maquette, alimenté par le fast pass. */
@@ -253,6 +250,4 @@ export class Caisse implements OnInit {
   protected readonly icEuro = LucideEuro;
   protected readonly icQr = LucideQrCode;
   protected readonly icArrowRight = LucideArrowRight;
-  protected readonly icLock = LucideLock;
-  protected readonly icCalendarPlus = LucideCalendarPlus;
 }

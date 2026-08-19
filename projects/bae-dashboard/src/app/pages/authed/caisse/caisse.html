@@ -1,13 +1,3 @@
-<ng-template #actions>
-  @if (store.sessionActive()) {
-    <bae-btn kind="danger" size="md" [icon]="icLock" (clicked)="openCloture()">Clôture Z</bae-btn>
-  } @else if (store.todayEvent()) {
-    <bae-btn kind="primary" size="md" [icon]="icCalendarPlus" (clicked)="startSession()">
-      Lancer la session
-    </bae-btn>
-  }
-</ng-template>
-
 @if (!store.sessionActive()) {
   <div class="flex h-full items-center justify-center p-6">
     <div
@@ -19,19 +9,10 @@
         <svg [lucideIcon]="icCart" [size]="22" aria-hidden="true"></svg>
       </div>
       <div class="text-base font-semibold text-text">Aucune session de caisse active</div>
-      @if (store.todayEvent(); as ev) {
-        <p class="text-[12.5px] text-muted">
-          Une soirée est prévue aujourd'hui : <span class="text-text">{{ ev.name }}</span
-          >{{ ev.location ? ' · ' + ev.location : '' }}.
-        </p>
-        <bae-btn kind="primary" size="lg" [icon]="icCalendarPlus" (clicked)="startSession()">
-          Lancer la session pour {{ ev.name }}
-        </bae-btn>
-      } @else {
-        <p class="text-[12.5px] text-muted">
-          Aucune soirée n'est programmée pour aujourd'hui. La caisse ne peut pas être ouverte.
-        </p>
-      }
+      <p class="text-[12.5px] text-muted">
+        Aucune soirée n'est programmée pour aujourd'hui. La caisse s'ouvrira d'elle-même dès qu'une
+        soirée sera en cours.
+      </p>
     </div>
   </div>
 } @else {

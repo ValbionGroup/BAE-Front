@@ -6,6 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { Caisse } from './caisse';
 import { CaisseStore } from '#core/store/caisse.store';
+import { EventsStore } from '#core/store/events.store';
 import { ModalService } from '#shared/components/modal/modal.service';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
@@ -52,16 +53,63 @@ describe(Caisse.name, () => {
    * en permanence « aucune soirée programmée », quel que soit l'état réel des
    * soirées.
    */
-  it('offers to open on the soirée that is live', async () => {
+  it('ouvre la caisse d’elle-même sur la soirée en cours', async () => {
+    const store = TestBed.inject(CaisseStore);
     http
       .expectOne((r) => r.url.endsWith('/events'))
       .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
     await settle();
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Lancer la session pour Soirée BBQ');
-    expect(text).not.toContain("Aucune soirée n'est programmée");
+    expect(store.sessionActive()).toBe(true);
+    expect(store.sessionEvent()?.name).toBe('Soirée BBQ');
+    // L'écran d'ouverture n'existe plus : demander de « lancer la session »
+    // alors que la soirée tourne déjà était une formalité vide.
+    expect(fixture.nativeElement.textContent as string).not.toContain('Lancer la session');
+  });
+
+  /**
+   * Une soirée clôturée sort d'`activeEvent` : la caisse doit se refermer seule,
+   * sinon elle continue d'encaisser sur une soirée que le bilan a déjà arrêtée.
+   */
+  it('referme la caisse quand la soirée passe clôturée', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    expect(store.sessionActive()).toBe(true);
+
+    void TestBed.inject(EventsStore).refresh();
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'completed' }]);
+    await settle();
+    fixture.detectChanges();
+
+    expect(store.sessionActive()).toBe(false);
+  });
+
+  /**
+   * ⚠️ `startSession` ne remettait à zéro ni l'acheteur ni la catégorie de prise
+   * en charge. Inoffensif tant que l'ouverture était manuelle et unique ; avec
+   * une ouverture automatique qui peut enchaîner deux soirées, la remise du BDE
+   * de la veille s'appliquerait à la soirée du soir.
+   */
+  it('n’hérite ni de l’acheteur ni de la catégorie de la soirée précédente', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+
+    store.setBuyer({ id: 1, name: 'Léa', email: 'lea@enseirb.fr', fastPass: null } as never);
+    store.startSession('8');
+
+    expect(store.selectedBuyer()).toBeNull();
+    expect(store.category()).toBeNull();
   });
 
   it('says the till cannot open when no soirée is running', async () => {
@@ -71,6 +119,7 @@ describe(Caisse.name, () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain("Aucune soirée n'est programmée");
+    expect(text).not.toContain('Lancer la session');
   });
 
   /**
@@ -135,8 +184,9 @@ describe(Caisse.name, () => {
       .expectOne((r) => r.url.endsWith('/events'))
       .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
     await settle();
-
-    store.startSession('7');
+    // ⚠️ L'ouverture passe par un `effect` : sans détection de changement, il ne
+    // tourne pas et aucune requête de session ne part.
+    fixture.detectChanges();
     await settle();
 
     http
@@ -186,8 +236,11 @@ describe(Caisse.name, () => {
         .expectOne((r) => r.url.endsWith('/events'))
         .flush([{ id: '7', name: 'Ce soir', date: atHour(0), status: 'ongoing' }]);
       await settle();
+      // L'ouverture est portée par un `effect` : il faut une détection de
+      // changement pour qu'il parte.
+      fixture.detectChanges();
+      await settle();
 
-      store.startSession('7');
       http
         .expectOne((r) => r.url.includes('/events/7/products'))
         .flush([
