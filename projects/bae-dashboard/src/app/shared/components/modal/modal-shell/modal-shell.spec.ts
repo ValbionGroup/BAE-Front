@@ -37,4 +37,26 @@ describe('ModalShell', () => {
     expect(dialog.className).toContain('max-h-[100dvh]');
     expect(dialog.className).toContain('md:max-h-[90vh]');
   });
+
+  it('capture les clics pour eviter quils ne ferment la modale via le backdrop', () => {
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+
+    expect(dialog.classList.contains('pointer-events-auto')).toBe(true);
+  });
+
+  it('se centre dans un conteneur pleine largeur', () => {
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+
+    expect(dialog.classList.contains('mx-auto')).toBe(true);
+  });
+
+  it('porte un nom accessible via aria-labelledby', () => {
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    const labelledBy = dialog.getAttribute('aria-labelledby');
+
+    expect(labelledBy).toBeTruthy();
+    const heading = fixture.nativeElement.querySelector(`#${labelledBy}`) as HTMLElement;
+    expect(heading.tagName).toBe('H2');
+    expect(heading.textContent?.trim()).toBe('Titre');
+  });
 });

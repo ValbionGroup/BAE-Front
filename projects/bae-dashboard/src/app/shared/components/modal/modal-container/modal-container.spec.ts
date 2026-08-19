@@ -71,4 +71,24 @@ describe('ModalContainer', () => {
     expect(service.modals()).toHaveLength(1);
     expect(service.modals()[0].id).toBe(id1);
   });
+
+  it('wraps modals in a definite-width container for responsive sizing', () => {
+    service.open({ type: 'info', title: 'Test', message: 'Hello' });
+    fixture.detectChanges();
+    const wrapper = fixture.nativeElement.querySelector('[data-modal-id]') as HTMLElement;
+
+    expect(wrapper.classList.contains('absolute')).toBe(true);
+    expect(wrapper.classList.contains('inset-x-0')).toBe(true);
+    expect(wrapper.classList.contains('pointer-events-none')).toBe(true);
+  });
+
+  it('applies pointer-events-auto to the modal itself, not the wrapper', () => {
+    service.open({ type: 'info', title: 'Test', message: 'Hello' });
+    fixture.detectChanges();
+    const wrapper = fixture.nativeElement.querySelector('[data-modal-id]') as HTMLElement;
+    const messageModal = wrapper.querySelector('bfd-message-modal') as HTMLElement;
+
+    expect(wrapper.classList.contains('pointer-events-auto')).toBe(false);
+    expect(messageModal).toBeTruthy();
+  });
 });

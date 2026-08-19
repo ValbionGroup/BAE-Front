@@ -15,7 +15,7 @@
           [attr.data-modal-id]="modal.id"
           [style.transform]="stackTransform(i, total)"
           [style.z-index]="50 + i"
-          class="absolute pointer-events-auto"
+          class="absolute inset-x-0 pointer-events-none"
         >
           @if (modal.type === 'delete') {
             <bfd-delete-modal [config]="asDelete(modal)" (close)="close(modal.id)" />

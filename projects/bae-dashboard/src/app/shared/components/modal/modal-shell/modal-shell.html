@@ -1,8 +1,9 @@
 <div
   role="dialog"
   aria-modal="true"
+  [attr.aria-labelledby]="titleId"
   tabindex="-1"
-  class="bg-surface border border-border rounded-t-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex w-full flex-col max-h-[100dvh] focus:outline-none md:max-h-[90vh] md:rounded-xl"
+  class="bg-surface border border-border rounded-t-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex w-full flex-col max-h-[100dvh] focus:outline-none pointer-events-auto mx-auto md:max-h-[90vh] md:rounded-xl"
   [style.maxWidth.px]="width()"
 >
   <div class="px-5.5 py-4 border-b border-border-s flex items-center gap-3.5">
@@ -19,7 +20,9 @@
       </span>
     }
     <div class="flex-1 min-w-0">
-      <div class="text-[15px] font-semibold text-text tracking-[-0.2px]">{{ title() }}</div>
+      <h2 [id]="titleId" class="text-[15px] font-semibold text-text tracking-[-0.2px] truncate">
+        {{ title() }}
+      </h2>
       @if (subtitle()) {
         <div class="text-xs text-muted mt-0.5">{{ subtitle() }}</div>
       }

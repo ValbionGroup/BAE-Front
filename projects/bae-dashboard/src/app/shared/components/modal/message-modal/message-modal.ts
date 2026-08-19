@@ -2,37 +2,33 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import {
   LucideAlertTriangle,
   LucideCheckCircle,
-  LucideDynamicIcon,
   LucideIconInput,
   LucideInfo,
-  LucideX,
   LucideXCircle,
 } from '@lucide/angular';
 import { Btn } from '@bae/ui';
 import { MessageModalConfig, ModalAction } from '../modal.models';
+import { ModalShell, ModalTone } from '../modal-shell/modal-shell';
 
 const NOOP = () => {};
 
 const TYPE_META: Record<
   MessageModalConfig['type'],
-  { icon: LucideIconInput; iconClass: string; iconBg: string; defaultActions: ModalAction[] }
+  { icon: LucideIconInput; tone: ModalTone; defaultActions: ModalAction[] }
 > = {
   error: {
     icon: LucideXCircle,
-    iconClass: 'text-danger',
-    iconBg: 'bg-danger-soft',
+    tone: 'danger',
     defaultActions: [{ label: 'Dismiss', action: NOOP, variant: 'secondary' }],
   },
   success: {
     icon: LucideCheckCircle,
-    iconClass: 'text-ok',
-    iconBg: 'bg-ok-soft',
+    tone: 'ok',
     defaultActions: [{ label: 'OK', action: NOOP, variant: 'primary' }],
   },
   warning: {
     icon: LucideAlertTriangle,
-    iconClass: 'text-warn',
-    iconBg: 'bg-warn-soft',
+    tone: 'warn',
     defaultActions: [
       { label: 'Cancel', action: NOOP, variant: 'secondary' },
       { label: 'Confirm', action: NOOP, variant: 'primary' },
@@ -40,15 +36,14 @@ const TYPE_META: Record<
   },
   info: {
     icon: LucideInfo,
-    iconClass: 'text-blue',
-    iconBg: 'bg-blue-soft',
+    tone: 'blue',
     defaultActions: [{ label: 'Close', action: NOOP, variant: 'secondary' }],
   },
 };
 
 @Component({
   selector: 'bfd-message-modal',
-  imports: [LucideDynamicIcon, LucideX, Btn],
+  imports: [Btn, ModalShell],
   templateUrl: './message-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

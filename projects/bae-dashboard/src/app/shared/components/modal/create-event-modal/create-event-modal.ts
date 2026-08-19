@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { LucideX } from '@lucide/angular';
 import { Btn } from '@bae/ui';
 import { CreateEventModalConfig } from '../modal.models';
+import { ModalShell } from '../modal-shell/modal-shell';
 
 @Component({
   selector: 'bfd-create-event-modal',
-  imports: [LucideX, Btn],
+  imports: [Btn, ModalShell],
   templateUrl: './create-event-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
