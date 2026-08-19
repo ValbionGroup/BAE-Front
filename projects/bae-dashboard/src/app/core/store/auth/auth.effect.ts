@@ -5,7 +5,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '#core/services/auth/auth-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
-import { ApiError, isApiError } from '@bae/ui';
+import { API_BASE_URL, ApiError, ExternalNavigation, isApiError } from '@bae/ui';
 
 import * as AuthActions from './auth.actions';
 import { AppRoutes } from '#app/app.routes';
@@ -23,6 +23,8 @@ export class AuthEffects {
   private readonly authService = inject(AuthService);
   private readonly websocketService = inject(WebsocketService);
   private readonly router = inject(Router);
+  private readonly navigation = inject(ExternalNavigation);
+  private readonly apiBaseUrl = inject(API_BASE_URL);
 
   /**
    * ⚠️ Plus aucune garde locale préalable : le cookie de session est `httpOnly`,
@@ -101,27 +103,24 @@ export class AuthEffects {
   );
 
   /**
-   * ⚠️ Seul le serveur peut effacer un cookie `httpOnly` : la déconnexion est
-   * une requête, pas un nettoyage local.
+   * ⚠️ Une **navigation**, pas une requête — symétrique du bouton EirbConnect.
    *
-   * Le `localStorage.clear()` a disparu avec le jeton qu'il servait à effacer —
-   * et avec lui le contournement qui préservait la préférence de thème. Rien de
-   * sensible n'y vit plus.
+   * Un XHR révoquerait bien la session BAE, mais ne pourrait pas fermer celle de
+   * l'IdP : le navigateur doit suivre la redirection vers Keycloak. Sans ça,
+   * recliquer « SSO » reconnecte instantanément et sans mot de passe, ce qui
+   * surprend — et expose — sur un poste partagé.
    *
-   * La navigation a lieu **quoi qu'il arrive** : si l'appel échoue, insister
-   * garderait l'utilisateur sur une page qu'il a demandé à quitter. Le cookie
-   * expirera de lui-même.
+   * Le serveur révoque le jeton et efface le cookie **avant** de rediriger, donc
+   * un IdP en panne ne peut pas retenir la session. Rien à nettoyer ici : le
+   * `localStorage` ne porte plus que la préférence de thème, qui doit survivre.
    */
   logout$ = createEffect(
     () =>
       this.actions$.pipe(
         ofType(AuthActions.logout),
-        mergeMap(() => {
+        tap(() => {
           this.websocketService.shutdown();
-          return this.authService.logout$().pipe(
-            catchError(() => of(undefined)),
-            tap(() => void this.router.navigate([AppRoutes.login])),
-          );
+          this.navigation.go(`${this.apiBaseUrl}/auth/keycloak/logout?app=dashboard`);
         }),
       ),
     { dispatch: false },

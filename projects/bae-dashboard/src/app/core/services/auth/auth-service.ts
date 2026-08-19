@@ -24,15 +24,6 @@ export class AuthService {
     return this.http.post<string>(url, { email, password });
   }
 
-  /**
-   * Seul le serveur peut effacer un cookie `httpOnly` : la déconnexion est donc
-   * une requête, et non un nettoyage local. Un `localStorage.clear()` laisserait
-   * la session ouverte côté serveur.
-   */
-  logout$(): Observable<void> {
-    return this.http.post<void>(this.buildUrl(ApiEndPointV1.LOGOUT), {});
-  }
-
   /** @returns User profile */
   public getUserProfile$(): Observable<UserProfileModel> {
     const url = this.buildUrl(ApiEndPointV1.PROFILE);

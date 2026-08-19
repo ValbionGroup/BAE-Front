@@ -2,6 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { API_BASE_URL, ExternalNavigation } from '@bae/ui';
+import { vi } from 'vitest';
+
 import { SessionStore } from './session.store';
 
 describe(SessionStore.name, () => {
@@ -10,13 +13,23 @@ describe(SessionStore.name, () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
+      ],
     });
     store = TestBed.inject(SessionStore);
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    // ⚠️ Les fichiers de test partagent un même environnement : sans cette
+    // remise à zéro, le `TestBed` reste instancié et le fichier suivant échoue
+    // sur « test module has already been instantiated ».
+    TestBed.resetTestingModule();
+  });
 
   it('part de « pas encore su », et non de « déconnecté »', () => {
     expect(store.status()).toBe('unknown');
@@ -71,21 +84,20 @@ describe(SessionStore.name, () => {
     expect(store.user()).toBeNull();
   });
 
-  it('redevient anonyme même si la déconnexion échoue côté serveur', () => {
-    store.load();
-    http
-      .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({
-        user: { id: 7, email: 'client@enseirb.fr' },
-        member: null,
-      });
+  /**
+   * ⚠️ Une **navigation**, pas un XHR : sans elle, la session Keycloak reste
+   * ouverte et recliquer « EirbConnect » reconnecte sans mot de passe. Le
+   * serveur révoque le jeton et efface le cookie avant de rediriger, donc l'état
+   * local n'a rien à nettoyer ici.
+   */
+  it('quitte l’application vers la déconnexion globale', () => {
+    const navigation = TestBed.inject(ExternalNavigation);
+    vi.spyOn(navigation, 'go').mockImplementation(() => undefined);
 
     store.logout();
-    http
-      .expectOne((req) => req.url.endsWith('/auth/logout'))
-      .flush({}, { status: 500, statusText: 'Server Error' });
 
-    expect(store.status()).toBe('anonymous');
-    expect(store.user()).toBeNull();
+    expect(navigation.go).toHaveBeenCalledWith(
+      'http://api.test/v1/auth/keycloak/logout?app=public',
+    );
   });
 });

@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { API_BASE_URL } from '@bae/ui';
+import { API_BASE_URL, ExternalNavigation } from '@bae/ui';
 
 export interface SessionUser {
   readonly id: number;
@@ -32,6 +32,7 @@ interface ProfileResponse {
 export class SessionStore {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
+  private readonly navigation = inject(ExternalNavigation);
 
   private readonly _status = signal<SessionStatus>('unknown');
   private readonly _user = signal<SessionUser | null>(null);
@@ -61,14 +62,15 @@ export class SessionStore {
   }
 
   /**
-   * Le cookie est `httpOnly` : seul le serveur peut l'effacer. Un nettoyage
-   * local laisserait la session ouverte côté API.
+   * ⚠️ Une **navigation**, pas un XHR. Le serveur révoque le jeton et efface le
+   * cookie `httpOnly` — que lui seul peut effacer — puis renvoie le navigateur
+   * vers l'IdP pour qu'il ferme aussi sa session. Sans ce détour, recliquer
+   * « EirbConnect » reconnecte sans mot de passe.
+   *
+   * Rien à remettre à zéro localement : on quitte l'application.
    */
   logout(): void {
-    this.http.post<void>(`${this.baseUrl}/auth/logout`, {}).subscribe({
-      next: () => this.reset(),
-      error: () => this.reset(),
-    });
+    this.navigation.go(`${this.baseUrl}/auth/keycloak/logout?app=public`);
   }
 
   private reset(): void {

@@ -95,9 +95,14 @@ export class PublicHeader {
     });
   }
 
+  /**
+   * Referme le menu avant de partir : `session.logout()` est une navigation de
+   * premier niveau vers l'IdP, et un menu resté ouvert clignoterait le temps que
+   * le navigateur quitte la page. Aucun `router.navigate` — on ne revient pas
+   * dans cette instance de l'application.
+   */
   protected logout(): void {
-    this.session.logout();
     this.closeMenu();
-    void this.router.navigate(['/']);
+    this.session.logout();
   }
 }

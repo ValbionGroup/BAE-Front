@@ -2,7 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { DropdownService } from '@bae/ui';
+import { API_BASE_URL, DropdownService, ExternalNavigation } from '@bae/ui';
+import { vi } from 'vitest';
 
 import { PublicHeader } from './public-header';
 import { SessionStore } from '../../../core/session.store';
@@ -16,7 +17,12 @@ describe(PublicHeader.name, () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [PublicHeader],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
+      ],
     }).compileComponents();
 
     store = TestBed.inject(SessionStore);
@@ -120,7 +126,15 @@ describe(PublicHeader.name, () => {
     expect(labels).toContain('Déconnexion');
   });
 
-  it('appelle le serveur pour se déconnecter, le cookie étant httpOnly', async () => {
+  /**
+   * ⚠️ La déconnexion **quitte l'application** : elle passe par l'IdP pour y
+   * fermer la session, sinon recliquer « EirbConnect » reconnecte sans mot de
+   * passe. Rien n'est donc remis à zéro localement — il n'y a plus de page à
+   * rafraîchir.
+   */
+  it('quitte l’application vers la déconnexion globale', async () => {
+    const navigation = TestBed.inject(ExternalNavigation);
+    vi.spyOn(navigation, 'go').mockImplementation(() => undefined);
     await settle({ firstName: 'Léa', lastName: 'Marchand' });
 
     host.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')?.click();
@@ -133,12 +147,10 @@ describe(PublicHeader.name, () => {
     if (logout?.type !== 'action') throw new Error('entrée de déconnexion absente');
 
     logout.onClick();
-    http.expectOne((req) => req.url.endsWith('/auth/logout')).flush({});
-    await fixture.whenStable();
-    fixture.detectChanges();
 
-    expect(store.status()).toBe('anonymous');
-    expect(host.textContent).toContain('Connexion');
+    expect(navigation.go).toHaveBeenCalledWith(
+      'http://api.test/v1/auth/keycloak/logout?app=public',
+    );
   });
 
   it('replie la navigation derrière un bouton annonçant son état', async () => {

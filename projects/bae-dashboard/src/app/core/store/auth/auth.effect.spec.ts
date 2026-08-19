@@ -9,7 +9,7 @@ import { firstValueFrom, Observable, of, Subject } from 'rxjs';
 import { vi } from 'vitest';
 
 import { AuthEffects } from './auth.effect';
-import { ThemeService } from '@bae/ui';
+import { API_BASE_URL, ExternalNavigation, ThemeService } from '@bae/ui';
 import * as AuthActions from './auth.actions';
 
 // L'environnement de test ne fournit pas de vrai `localStorage` (Node expose un
@@ -51,6 +51,7 @@ describe(AuthEffects.name, () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
       ],
     });
   });
@@ -66,59 +67,52 @@ describe(AuthEffects.name, () => {
   });
 
   /**
-   * ⚠️ Le contrat a changé avec la bascule sur le cookie `httpOnly` : seul le
-   * serveur peut effacer un cookie, donc la déconnexion **est une requête**.
-   *
+   * ⚠️ La déconnexion n'est plus une requête mais une **navigation**, symétrique
+   * du bouton EirbConnect. Un XHR ne peut pas fermer la session de l'IdP : le
+   * navigateur doit suivre la redirection vers Keycloak, sinon recliquer « SSO »
+   * reconnecte sans mot de passe — la fuite que ce lot corrige.
+   */
+  it('quitte l’application vers la déconnexion globale', async () => {
+    const actionsSubject = new Subject<Action>();
+    actions$ = actionsSubject.asObservable();
+    effects = TestBed.inject(AuthEffects);
+    const navigation = TestBed.inject(ExternalNavigation);
+    vi.spyOn(navigation, 'go').mockImplementation(() => undefined);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    const result = firstValueFrom(effects.logout$);
+    actionsSubject.next(AuthActions.logout());
+    await result;
+
+    // La zone voyage en mot-clé, jamais en URL : le serveur seul résout la
+    // destination de retour.
+    expect(navigation.go).toHaveBeenCalledWith(
+      'http://api.test/v1/auth/keycloak/logout?app=dashboard',
+    );
+    httpMock.verify();
+  });
+
+  /**
    * Le `localStorage.clear()` a disparu avec le jeton qu'il servait à effacer —
    * et avec lui le contournement qui préservait la préférence de thème. Ce test
-   * garde désormais le fait que la déconnexion **ne touche plus au stockage
-   * local du tout** : y remettre un `clear()` réinitialiserait le thème à chaque
+   * garde le fait que la déconnexion **ne touche plus au stockage local du
+   * tout** : y remettre un `clear()` réinitialiserait le thème à chaque
    * déconnexion, ce qui était précisément le bug corrigé au §0 decies.
    */
-  it('appelle le serveur et ne touche pas au stockage local', async () => {
+  it('ne touche pas au stockage local', async () => {
     localStorage.setItem(ThemeService.STORAGE_KEY, 'dark');
     localStorage.setItem('une_autre_cle', 'doit-survivre');
 
     const actionsSubject = new Subject<Action>();
     actions$ = actionsSubject.asObservable();
     effects = TestBed.inject(AuthEffects);
-    const router = TestBed.inject(Router);
-    vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    const httpMock = TestBed.inject(HttpTestingController);
+    vi.spyOn(TestBed.inject(ExternalNavigation), 'go').mockImplementation(() => undefined);
 
     const result = firstValueFrom(effects.logout$);
     actionsSubject.next(AuthActions.logout());
-
-    httpMock.expectOne((request) => request.url.endsWith('/auth/logout')).flush(null);
     await result;
 
     expect(localStorage.getItem(ThemeService.STORAGE_KEY)).toBe('dark');
     expect(localStorage.getItem('une_autre_cle')).toBe('doit-survivre');
-    expect(router.navigate).toHaveBeenCalled();
-    httpMock.verify();
-  });
-
-  /**
-   * Insister sur un appel qui échoue garderait l'utilisateur sur une page qu'il a
-   * demandé à quitter. Le cookie expirera de lui-même.
-   */
-  it('redirige même si l’appel de déconnexion échoue', async () => {
-    const actionsSubject = new Subject<Action>();
-    actions$ = actionsSubject.asObservable();
-    effects = TestBed.inject(AuthEffects);
-    const router = TestBed.inject(Router);
-    vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    const httpMock = TestBed.inject(HttpTestingController);
-
-    const result = firstValueFrom(effects.logout$);
-    actionsSubject.next(AuthActions.logout());
-
-    httpMock
-      .expectOne((request) => request.url.endsWith('/auth/logout'))
-      .flush(null, { status: 500, statusText: 'Server Error' });
-    await result;
-
-    expect(router.navigate).toHaveBeenCalled();
-    httpMock.verify();
   });
 });
