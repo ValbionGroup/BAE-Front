@@ -21,7 +21,7 @@ import {
 } from '@lucide/angular';
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Btn, Skeleton } from '@bae/ui';
+import { Btn, Skeleton, DetailSheet } from '@bae/ui';
 import { isSameDay, startOfMonth, startOfToday } from 'date-fns';
 import { EventDetail, Presence } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
@@ -31,7 +31,7 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
 
 @Component({
   selector: 'bfd-presences',
-  imports: [Btn, Skeleton, RosterAside, LucideDynamicIcon, PageActions],
+  imports: [Btn, Skeleton, RosterAside, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './presences.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

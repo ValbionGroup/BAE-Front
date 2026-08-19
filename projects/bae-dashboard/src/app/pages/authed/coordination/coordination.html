@@ -274,11 +274,11 @@
       }
       <div
         [class]="
-          'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] items-center gap-3 border-t border-border-s px-3.5 py-2.5 transition-opacity ' +
+          'grid grid-cols-[28px_1fr_auto] items-center gap-x-2.5 gap-y-1.5 md:grid-cols-[28px_1.6fr_1.3fr_1fr_80px_80px_60px] md:gap-3 border-t border-border-s px-3.5 py-3 md:py-2.5 transition-opacity ' +
           (!m.isPresent ? 'opacity-50' : '')
         "
       >
-        <div class="relative">
+        <div class="relative col-start-1 row-start-1 self-start md:self-auto">
           <bae-avatar [name]="m.name" [size]="22" />
           @if (m.isPresent) {
             <span
@@ -288,11 +288,13 @@
             ></span>
           }
         </div>
-        <div>
+        <div class="col-start-2 row-start-1 min-w-0 md:col-start-auto md:row-start-auto">
           <div class="text-[13px] text-text">{{ m.name }}</div>
           <div class="mt-px text-[11px] text-muted">2A · INFO</div>
         </div>
-        <div class="flex gap-1">
+        <div
+          class="col-start-2 row-start-2 flex flex-wrap gap-1 md:col-start-auto md:row-start-auto md:flex-nowrap"
+        >
           @for (pr of m.preferences; track $index; let j = $index) {
             <span
               [class]="
@@ -309,7 +311,9 @@
         <!-- Three distinct states: no poste at all · no poste on this moment ·
              poste held. Each held row carries its OWN lock — the lock belongs to
              the (membre, soirée, poste) row, not to the member. -->
-        <div class="flex flex-col gap-0.5">
+        <div
+          class="col-start-2 col-span-2 row-start-3 flex flex-col gap-0.5 md:col-start-auto md:col-span-1 md:row-start-auto"
+        >
           @if (!m.hasAssignment) {
             <span class="text-[12.5px] italic text-muted">Non affecté·e sur cette soirée</span>
           } @else {
@@ -342,19 +346,27 @@
             }
           }
         </div>
-        <span [class]="'mono tnum text-right text-[13px] font-semibold ' + scoreClass(m.score)">{{
-          m.score
-        }}</span>
+        <span
+          [class]="
+            'col-start-3 row-start-1 justify-self-end mono tnum text-right text-[13px] font-semibold md:col-start-auto md:row-start-auto md:justify-self-auto ' +
+            scoreClass(m.score)
+          "
+          >{{ m.score }}</span
+        >
         <!-- Sum of the deltas of every poste held. `clampPoints` is gone (D6)
              and being served first costs credit, so this can be negative:
              printing "·" for a −4 would hide a real movement. -->
-        <span [class]="'mono tnum text-right text-[12px] ' + pointsDeltaClass(m.pointsDelta)">{{
-          formatPointsDelta(m.pointsDelta)
-        }}</span>
+        <span
+          [class]="
+            'col-start-3 row-start-2 justify-self-end mono tnum text-right text-[12px] md:col-start-auto md:row-start-auto md:justify-self-auto ' +
+            pointsDeltaClass(m.pointsDelta)
+          "
+          >{{ formatPointsDelta(m.pointsDelta) }}</span
+        >
         <svg
           [lucideIcon]="icMore"
           [size]="14"
-          class="cursor-pointer justify-self-end text-muted"
+          class="hidden cursor-pointer justify-self-end text-muted md:block"
           aria-hidden="true"
         ></svg>
       </div>
