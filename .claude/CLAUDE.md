@@ -36,44 +36,57 @@ Stack : Angular 21, NgRx Signals, Tailwind CSS 4, Lucide Icons, date-fns 4, RxJS
 
 ## Architecture
 
+Workspace Angular à **trois projets**. `bae-ui` n'est pas construite : les deux applications
+en consomment les sources, parce que Tailwind 4 doit scanner les gabarits.
+
 ```
-src/app/
-├── core/
-│   ├── services/      auth, events, stocks, coordination, rsvp, tokens,
-│   │                  orders, recipes, page-header, theme, websocket
-│   ├── store/         auth/ (NgRx reducer/effects)
-│   │                  events.store.ts, stocks.store.ts, coordination.store.ts,
-│   │                  caisse.store.ts, analyse.store.ts, home-data/*
-│   ├── guards/        auth-guard, guest-guard
-│   ├── interceptors/  auth, api-case-request, api-case-response, error
-│   ├── models/        event, user, auth-state, auth-tokens, rsvp, order,
-│   │                  analyse, global, endpoint, error, ws-message
-│   └── tokens/        api-url.token.ts
-├── shared/
-│   ├── components/ui/ btn, input, field, badge, avatar, card, checkbox,
-│   │                  toggle, kbd, logo, skeleton
-│   ├── components/table/   bfd-table (ColumnType enum)
-│   ├── components/modal/   modal.service + shells + modales métier
-│   ├── components/toast/   toast.service
-│   ├── components/dropdown/
-│   ├── components/tooltip/
-│   └── utils/         case-converter.ts, base-function.ts
-└── pages/
-    ├── app-shell/     sidebar + topbar
-    ├── authed/        presences, stocks, coordination, logistique, caisse,
-    │                  tickets, adherents, equipe, etats, analyse, paiements,
-    │                  notifications, precommandes-admin, home, soiree, recettes
-    ├── guest/         login
-    ├── public/        precommandes
-    └── states/        not-found
+projects/
+├── bae-dashboard/src/app/     l'application interne (membres du BAE)
+│   ├── core/
+│   │   ├── services/      auth, events, stocks, coordination, rsvp, tokens, orders,
+│   │   │                  recipes, production, payments, transactions, clients,
+│   │   │                  print, page-header, theme, websocket
+│   │   ├── store/         auth/ (NgRx reducer/effects)
+│   │   │                  events.store.ts, stocks.store.ts, coordination.store.ts,
+│   │   │                  caisse.store.ts, analyse.store.ts, clients.store.ts,
+│   │   │                  logistique.store.ts, recipes.store.ts, home-data/*
+│   │   ├── guards/        auth-guard, guest-guard
+│   │   ├── models/        event, user, auth-state, rsvp, order, analyse, global,
+│   │   │                  endpoint, error, ws-message
+│   │   └── interceptors/  propres au dashboard ; la casse et l'enveloppe vivent dans bae-ui
+│   ├── shared/
+│   │   ├── components/modal/   modal.service + shells + modales métier
+│   │   └── components/page-actions/, text-input/
+│   └── pages/
+│       ├── app-shell/     sidebar + topbar
+│       ├── authed/        presences, stocks, coordination, logistique, caisse,
+│       │                  tickets, adherents, equipe, etats, analyse, paiements,
+│       │                  notifications, precommandes-admin, home, soiree, recettes
+│       ├── guest/         login
+│       └── states/        not-found
+├── bae-public/src/app/        la zone client (précommandes, cotisations)
+│   └── pages/             commande, contact, faq, fastpass, login, mes-commandes,
+│                          paiement, precommandes, public-shell
+└── bae-ui/src/lib/            bibliothèque partagée, importée via `@bae/ui`
+    ├── components/ui/     avatar, badge, btn, card, checkbox, field, input, kbd,
+    │                      logo, qr-code, skeleton, toggle
+    ├── components/        detail-sheet, dropdown, table, toast, tooltip
+    ├── http/              API_BASE_URL + intercepteurs (casse, enveloppe)
+    ├── directives/        floating
+    ├── theme/
+    └── utils/             money, api-error, external-navigation, settle
 ```
 
 ### Path aliases
 
-- `#core/*` → `src/app/core/*`
-- `#shared/*` → `src/app/shared/*`
-- `#pages/*` → `src/app/pages/*`
-- `#app/*` → `src/app/*`
+Les alias `#*` pointent **tous** vers le dashboard ; le projet public n'en a pas et importe
+en relatif.
+
+- `@bae/ui` → `projects/bae-ui/src/public-api.ts`
+- `#core/*` → `projects/bae-dashboard/src/app/core/*`
+- `#shared/*` → `projects/bae-dashboard/src/app/shared/*`
+- `#pages/*` → `projects/bae-dashboard/src/app/pages/*`
+- `#app/*` → `projects/bae-dashboard/src/app/*`
 
 ---
 
@@ -187,14 +200,14 @@ Tous sont **standalone**, `ChangeDetectionStrategy.OnPush`, utilisent `input()` 
 
 | Sélecteur      | Inputs clés                                                     | Outputs           |
 | -------------- | --------------------------------------------------------------- | ----------------- |
-| `bfd-btn`      | `kind`, `size`, `icon`, `iconRight`, `full`, `disabled`, `type` | `clicked`         |
-| `bfd-input`    | `icon`, `placeholder`, `size`                                   | `valueChange`     |
-| `bfd-badge`    | `kind`, `dot`                                                   | —                 |
-| `bfd-card`     | `padding`                                                       | —                 |
-| `bfd-checkbox` | `checked`, `disabled`                                           | `change: boolean` |
-| `bfd-toggle`   | `on`, `label`, `disabled`                                       | `change: boolean` |
-| `bfd-skeleton` | —                                                               | —                 |
-| `bfd-avatar`   | —                                                               | —                 |
+| `bae-btn`      | `kind`, `size`, `icon`, `iconRight`, `full`, `disabled`, `type` | `clicked`         |
+| `bae-input`    | `icon`, `placeholder`, `size`                                   | `valueChange`     |
+| `bae-badge`    | `kind`, `dot`                                                   | —                 |
+| `bae-card`     | `padding`                                                       | —                 |
+| `bae-checkbox` | `checked`, `disabled`                                           | `change: boolean` |
+| `bae-toggle`   | `on`, `label`, `disabled`                                       | `change: boolean` |
+| `bae-skeleton` | —                                                               | —                 |
+| `bae-avatar`   | —                                                               | —                 |
 
 ### Checkbox & Toggle — mode contrôlé vs CVA
 

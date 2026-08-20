@@ -12,6 +12,19 @@ branche depuis `feat/paiement-lydia` (la création a été refusée par les perm
 | **9**  | Permission `payment:read`, route `GET /payments`, `PaymentsController.index` (vue staff), section « Paiements en ligne » sur la page `paiements`, note de pied de page périmée supprimée.                                                                                                   |
 | **5**  | La modale existait mais **ne fonctionnait pas** : voir ci-dessous. Réparée et couverte.                                                                                                                                                                                                     |
 
+## ✅ Bloc A1 — nettoyage sans risque
+
+| #      | État                                                                                                                                                                                                                                            |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2**  | `ExternalNavigation` remplace `window.location.href` dans les deux pages de login, avec un test par zone sur le paramètre `app=`.                                                                                                               |
+| **3**  | `<bae-toast-container />` ajouté à `bae-public` : tout toast public était muet.                                                                                                                                                                 |
+| **16** | `CartRow`, `SupplierTotal` et `ScannerUnknownModal` supprimés (vérifiés sans référence). L'appel `svc.getGoods()` et l'état `goods` retirés du `LogistiqueStore` — une requête par chargement que personne ne lisait ; quatre specs mis à jour. |
+| **17** | **Rien à faire.** `LogistiqueAssignModal` **est utilisée** par `LogistiqueEvents` (`events.ts:33`), qui est routée. La note « restée factice » du handoff est périmée.                                                                          |
+| **24** | **Déjà faite** par `2a8d492 fix(coordination): n'affirme plus une cause unique` (2026-08-06).                                                                                                                                                   |
+| **30** | `.claude/CLAUDE.md` : arborescence des trois projets, alias réels, et sélecteurs `bfd-*` → `bae-*`.                                                                                                                                             |
+
+Vérifié : typecheck vert, **807 tests, 0 échec** (639 dashboard, 82 public, 86 ui).
+
 ### Deux défauts trouvés en passant, et corrigés
 
 1. **La modale de clôture de production était cassée depuis toujours.** Elle lisait
