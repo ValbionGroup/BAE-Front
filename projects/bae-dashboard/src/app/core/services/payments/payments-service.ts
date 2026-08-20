@@ -8,8 +8,6 @@ import { API_BASE_URL } from '@bae/ui';
  * `transactions` : une transaction naît de l'encaissement, un paiement existe
  * dès la demande et peut n'aboutir jamais. C'est justement cet écart que la page
  * rapproche.
- *
- * Les clés arrivent en camelCase : l'intercepteur de casse convertit la réponse.
  */
 export type PaymentStatus = 'pending' | 'paid' | 'refused' | 'cancelled' | 'expired';
 
@@ -17,15 +15,11 @@ export interface ApiPayment {
   id: number;
   orderRef: string;
   status: PaymentStatus;
-  /** `pre_order` ou `subscription`. */
-  kind: string;
+  kind: 'pre_order' | 'subscription';
   provider: string;
-  /** En **centimes**, contrairement à `transactions.amount` qui est en euros. */
   amountCents: number;
-  /** Référence du prestataire, à rapprocher de son relevé. */
   providerReference: string | null;
   transactionIdentifier: string | null;
-  /** `null` tant que le paiement n'est pas confirmé. */
   transactionId: number | null;
   paidAt: string | null;
   expiresAt: string | null;

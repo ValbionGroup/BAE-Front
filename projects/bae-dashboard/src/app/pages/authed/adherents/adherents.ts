@@ -223,11 +223,6 @@ export class Adherents implements OnInit {
     ];
   });
 
-  /**
-   * La maquette portait une quatrième tuile, « Solde courant ». Elle est absente
-   * parce que rien ne la fonde : il n'existe ni crédit, ni avoir, ni compte
-   * prépayé en base. Un solde affiché serait un nombre inventé.
-   */
   protected readonly stats = computed<readonly StatTile[]>(() => {
     const detail = this.detail();
     return [

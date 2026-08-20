@@ -123,8 +123,6 @@ export class Paiements implements OnInit {
 
   ngOnInit(): void {
     void this.events.load();
-    // Hors de l'effet de soirée : `payments` n'a pas d'`event_id`, une demande de
-    // paiement n'appartient à aucune soirée avant d'avoir abouti.
     void this.refreshPayments();
   }
 
@@ -171,11 +169,6 @@ export class Paiements implements OnInit {
     ];
   });
 
-  /**
-   * Les paiements en ligne, avec les identifiants du prestataire — c'est ce
-   * qu'on compare au relevé Lydia. `transactions` ne les porte pas : elle naît
-   * de l'encaissement, quand un paiement existe dès la demande.
-   */
   protected readonly paymentRows = computed<readonly PaymentRow[]>(() =>
     this.payments().map((payment) => ({
       id: payment.id,

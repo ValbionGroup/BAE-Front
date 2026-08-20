@@ -67,12 +67,6 @@ export class ProductionReturnModal {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
-  /**
-   * Le chargement vit dans un `effect`, pas dans le constructeur : un
-   * `input.required()` lu à l'instanciation lève toujours, les inputs n'étant
-   * appliqués qu'après — et le `catch` transformerait cette erreur de cycle de
-   * vie en « impossible de lire ce que la soirée a prélevé ».
-   */
   constructor() {
     effect(() => {
       const eventId = this.eventId();
