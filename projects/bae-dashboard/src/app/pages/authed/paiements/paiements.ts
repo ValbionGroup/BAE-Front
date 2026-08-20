@@ -22,8 +22,13 @@ import {
   type ApiTransaction,
   type TransactionType,
 } from '#core/services/transactions/transactions-service';
+import {
+  PaymentsService,
+  type ApiPayment,
+  type PaymentStatus,
+} from '#core/services/payments/payments-service';
 import { EventsStore } from '#core/store/events.store';
-import { Badge } from '@bae/ui';
+import { Badge, BadgeKind, formatCents } from '@bae/ui';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 
@@ -36,9 +41,42 @@ interface Row {
   readonly orderCount: number;
 }
 
+interface PaymentRow {
+  readonly id: number;
+  readonly orderRef: string;
+  readonly when: string;
+  readonly payer: string;
+  readonly kind: string;
+  readonly statusLabel: string;
+  readonly statusKind: BadgeKind;
+  readonly amount: string;
+  readonly reference: string;
+}
+
 const METHOD_LABEL: Record<TransactionType, string> = {
   cash: 'Espèces',
   lydia: 'Lydia',
+};
+
+const STATUS_LABEL: Record<PaymentStatus, string> = {
+  pending: 'En attente',
+  paid: 'Payé',
+  refused: 'Refusé',
+  cancelled: 'Annulé',
+  expired: 'Expiré',
+};
+
+const STATUS_KIND: Record<PaymentStatus, BadgeKind> = {
+  pending: 'warn',
+  paid: 'ok',
+  refused: 'danger',
+  cancelled: 'neutral',
+  expired: 'ghost',
+};
+
+const KIND_LABEL: Record<string, string> = {
+  pre_order: 'Précommande',
+  subscription: 'Cotisation',
 };
 
 @Component({
@@ -50,6 +88,7 @@ const METHOD_LABEL: Record<TransactionType, string> = {
 })
 export class Paiements implements OnInit {
   private readonly transactionsService = inject(TransactionsService);
+  private readonly paymentsService = inject(PaymentsService);
   private readonly events = inject(EventsStore);
 
   protected readonly icFilter = LucideFilter;
@@ -60,6 +99,8 @@ export class Paiements implements OnInit {
   protected readonly loadState = signal<LoadState>('init');
   protected readonly loadError = signal<string | null>(null);
   private readonly transactions = signal<readonly ApiTransaction[]>([]);
+  private readonly payments = signal<readonly ApiPayment[]>([]);
+  protected readonly paymentsError = signal<string | null>(null);
 
   /** `null` = toutes soirées confondues, ce qui est le repli hors service. */
   protected readonly activeEvent = this.events.activeEvent;
@@ -82,6 +123,9 @@ export class Paiements implements OnInit {
 
   ngOnInit(): void {
     void this.events.load();
+    // Hors de l'effet de soirée : `payments` n'a pas d'`event_id`, une demande de
+    // paiement n'appartient à aucune soirée avant d'avoir abouti.
+    void this.refreshPayments();
   }
 
   protected readonly rows = computed<readonly Row[]>(() =>
@@ -127,8 +171,37 @@ export class Paiements implements OnInit {
     ];
   });
 
+  /**
+   * Les paiements en ligne, avec les identifiants du prestataire — c'est ce
+   * qu'on compare au relevé Lydia. `transactions` ne les porte pas : elle naît
+   * de l'encaissement, quand un paiement existe dès la demande.
+   */
+  protected readonly paymentRows = computed<readonly PaymentRow[]>(() =>
+    this.payments().map((payment) => ({
+      id: payment.id,
+      orderRef: payment.orderRef,
+      when: formatWhen(payment.paidAt ?? payment.createdAt),
+      payer: payment.payerName ?? payment.payerEmail ?? '—',
+      kind: KIND_LABEL[payment.kind] ?? payment.kind,
+      statusLabel: STATUS_LABEL[payment.status] ?? payment.status,
+      statusKind: STATUS_KIND[payment.status] ?? 'neutral',
+      amount: formatCents(payment.amountCents),
+      reference: payment.providerReference ?? payment.transactionIdentifier ?? '—',
+    })),
+  );
+
   protected formatMoney(value: number): string {
     return formatMoney(value);
+  }
+
+  private async refreshPayments(): Promise<void> {
+    this.paymentsError.set(null);
+    try {
+      this.payments.set(await lastValueFrom(this.paymentsService.getAll()));
+    } catch {
+      this.payments.set([]);
+      this.paymentsError.set('Impossible de charger les paiements en ligne.');
+    }
   }
 
   private async refresh(eventId: string | null): Promise<void> {

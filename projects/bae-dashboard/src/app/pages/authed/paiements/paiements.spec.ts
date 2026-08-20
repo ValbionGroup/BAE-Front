@@ -1,26 +1,64 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { API_BASE_URL } from '@bae/ui';
 
 import { Paiements } from './paiements';
+import type { ApiPayment } from '#core/services/payments/payments-service';
+
+const baseUrl = 'http://api.test/v1';
+
+const PAYMENTS: ApiPayment[] = [
+  {
+    id: 1,
+    orderRef: 'ref-1',
+    status: 'paid',
+    kind: 'pre_order',
+    provider: 'lydia',
+    amountCents: 1500,
+    providerReference: 'lydia-uuid-1',
+    transactionIdentifier: 'tx-1',
+    transactionId: 9,
+    paidAt: '2026-08-18T19:30:00.000Z',
+    expiresAt: null,
+    createdAt: '2026-08-18T19:15:00.000Z',
+    payerName: 'Camille Renard',
+    payerEmail: 'c.renard@etu.ec.fr',
+  },
+];
 
 describe(Paiements.name, () => {
-  let component: Paiements;
-  let fixture: ComponentFixture<Paiements>;
+  let http: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Paiements],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: baseUrl },
+      ],
     }).compileComponents();
-
-    fixture = TestBed.createComponent(Paiements);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  /**
+   * Les deux tables de cette page ne parlent pas la même unité :
+   * `transactions.amount` est en euros, `payments.amount_cents` en centimes.
+   * Les confondre afficherait « 1500 € » pour quinze euros.
+   */
+  it('renders payment amounts in euros, not raw cents', async () => {
+    const fixture = TestBed.createComponent(Paiements);
+    fixture.detectChanges();
+
+    http.expectOne(`${baseUrl}/payments`).flush(PAYMENTS);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('15,00 €');
+    expect(text).toContain('lydia-uuid-1');
   });
 });

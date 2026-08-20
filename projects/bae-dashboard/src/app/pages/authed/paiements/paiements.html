@@ -94,20 +94,87 @@
         </table>
       </div>
     }
-  </div>
-
-  <!--
-    Le rapprochement (§4) reste à construire : il suppose un `status` sur
-    `transactions` et une référence de fournisseur de paiement, que la refonte
-    du §10.2 doit apporter. Le bouton est donc absent plutôt qu'inerte.
-  -->
-  <div class="border-t border-border-s px-[22px] py-3">
-    <div class="flex items-center gap-2 text-[11px] text-muted">
-      <svg [lucideIcon]="icQr" [size]="12" aria-hidden="true"></svg>
-      <span>
-        Le rapprochement des paiements en ligne attend la refonte de
-        <span class="mono">transactions</span> (statut et référence fournisseur).
-      </span>
+    <div class="border-t border-border-s px-[22px] py-4">
+      <div class="flex items-center gap-2">
+        <svg [lucideIcon]="icQr" [size]="12" class="text-muted" aria-hidden="true"></svg>
+        <span class="text-[10.5px] font-semibold uppercase tracking-wider text-muted">
+          Paiements en ligne
+        </span>
+      </div>
+      <div class="mt-1 text-[11px] text-muted">
+        Toutes soirées confondues : une demande de paiement n'appartient à aucune soirée avant
+        d'avoir abouti.
+      </div>
     </div>
+
+    @if (paymentsError(); as error) {
+      <div class="flex items-start gap-2.5 px-[22px] pb-[22px] text-xs text-danger" role="alert">
+        <svg [lucideIcon]="icAlert" [size]="14" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+        <span>{{ error }}</span>
+      </div>
+    } @else if (paymentRows().length === 0) {
+      <div class="px-[22px] pb-[22px] text-xs text-muted">Aucun paiement en ligne enregistré.</div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-border-s text-left">
+              <th
+                class="px-[22px] py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Commande
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Date
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Payeur
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Objet
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Statut
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Référence prestataire
+              </th>
+              <th
+                class="px-[22px] py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Montant
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of paymentRows(); track p.id) {
+              <tr class="border-b border-border-s hover:bg-surface-2/50">
+                <td class="mono px-[22px] py-3 text-xs text-text-2">{{ p.orderRef }}</td>
+                <td class="mono tnum px-3 py-3 text-xs text-muted">{{ p.when }}</td>
+                <td class="px-3 py-3 text-xs text-text">{{ p.payer }}</td>
+                <td class="px-3 py-3 text-xs text-muted">{{ p.kind }}</td>
+                <td class="px-3 py-3">
+                  <bae-badge [kind]="p.statusKind">{{ p.statusLabel }}</bae-badge>
+                </td>
+                <td class="mono px-3 py-3 text-xs text-muted">{{ p.reference }}</td>
+                <td class="mono tnum px-[22px] py-3 text-right font-semibold text-text">
+                  {{ p.amount }} €
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   </div>
 </div>
