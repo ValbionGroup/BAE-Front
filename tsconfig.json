@@ -16,6 +16,7 @@
     "module": "preserve",
     "paths": {
       "@bae/ui": ["./projects/bae-ui/src/public-api.ts"],
+      "@bae/ui/testing": ["./projects/bae-ui/src/testing.ts"],
       "#core/*": ["./projects/bae-dashboard/src/app/core/*"],
       "#shared/*": ["./projects/bae-dashboard/src/app/shared/*"],
       "#pages/*": ["./projects/bae-dashboard/src/app/pages/*"],
