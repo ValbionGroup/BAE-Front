@@ -104,7 +104,6 @@ describe(Logistique.name, () => {
     vouchers: ApiVoucher[] = [],
     list: ApiShoppingList = shoppingList(),
   ): Promise<void> {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush(vouchers);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
     http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(list);
@@ -143,7 +142,6 @@ describe(Logistique.name, () => {
 
   /** Rend la page avec un 403 sur la seule branche des bons d'achat. */
   async function renderVouchersForbidden(): Promise<void> {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers'))
       .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
@@ -157,7 +155,6 @@ describe(Logistique.name, () => {
 
   /** Rend la page avec un 403 sur la seule branche de la liste de courses. */
   async function renderShoppingListForbidden(): Promise<void> {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([VOUCHER]);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([{ id: 3, name: 'Leclerc' }]);
     http
@@ -183,7 +180,6 @@ describe(Logistique.name, () => {
   it('demande la liste de courses de la soirée du segment de route', async () => {
     // L'id vient du stub `ActivatedRoute` (`7`) : la requête doit cibler cette
     // soirée précisément, pas une autre.
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
     const req = http.expectOne((r) => r.url.includes('/shopping-list'));
@@ -235,7 +231,6 @@ describe(Logistique.name, () => {
     expect(component['goodLines'](lines).map((l) => l.id)).toEqual([1]);
     expect(component['furnitureLines'](lines).map((l) => l.id)).toEqual([2]);
     // Requêtes obligatoires : on solde celles ouvertes par `beforeEach`.
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(shoppingList());
@@ -333,7 +328,6 @@ describe(Logistique.name, () => {
     // lignes : la colonne doit le dire, pas laisser croire au meilleur prix.
     expect(component['isComparable'](totals[1])).toBe(false);
     expect(component['cheapestComparable'](totals)?.name).toBe('Leclerc');
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/events/7/shopping-list')).flush(shoppingList());
@@ -407,7 +401,6 @@ describe(Logistique.name, () => {
   });
 
   it('distingue une panne réseau d’un refus sur la liste de courses', async () => {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
     http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
     http
@@ -631,7 +624,6 @@ describe(Logistique.name, () => {
   });
 
   it('also reads the usable-voucher KPI as unknown on a load failure other than 403', async () => {
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers'))
       .flush({ message: 'Erreur serveur' }, { status: 500, statusText: 'x' });

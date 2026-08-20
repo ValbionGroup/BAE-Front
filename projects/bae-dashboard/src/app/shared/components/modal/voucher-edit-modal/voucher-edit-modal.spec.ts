@@ -29,7 +29,6 @@ describe(VoucherEditModal.name, () => {
 
     // Peuple le store comme le ferait la page Logistique avant d'ouvrir la modale.
     const loading = store.load();
-    http.expectOne((r) => r.url.endsWith('/goods')).flush([]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers'))
       .flush([

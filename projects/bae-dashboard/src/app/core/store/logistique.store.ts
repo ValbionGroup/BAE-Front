@@ -5,7 +5,6 @@ import { LogistiqueService } from '#core/services/logistique/logistique-service'
 import type { LoadingStatus } from '#core/models/global.model';
 import { messageOf, settle } from '@bae/ui';
 import type {
-  ApiGood,
   ApiShoppingList,
   ApiSupplier,
   ApiVoucher,
@@ -64,7 +63,6 @@ function insertByExpiry(cards: readonly VoucherCard[], card: VoucherCard): Vouch
 interface LogistiqueState {
   loading: LoadingStatus;
   loadError: string | null;
-  goods: ApiGood[];
   vouchers: VoucherCard[];
   suppliers: ApiSupplier[];
   /** Vrai quand l'API a refusé la lecture des bons (403). Distinct d'une
@@ -116,7 +114,6 @@ interface LogistiqueState {
 const initialState: LogistiqueState = {
   loading: 'init',
   loadError: null,
-  goods: [],
   vouchers: [],
   suppliers: [],
   vouchersForbidden: false,
@@ -149,15 +146,14 @@ export const LogistiqueStore = signalStore(
       try {
         // Seule la branche des bons est isolée : si le catalogue tombe, il ne
         // reste aucune page à montrer et `loadError` est la bonne réponse.
-        const [goods, vouchers, suppliers] = await lastValueFrom(
-          forkJoin([svc.getGoods(), settle(svc.getVouchers()), svc.getSuppliers()]),
+        const [vouchers, suppliers] = await lastValueFrom(
+          forkJoin([settle(svc.getVouchers()), svc.getSuppliers()]),
         );
         // Un appel dépassé (double `refresh()`) est jeté, pas appliqué.
         if (store.fetchGeneration() !== generation) return;
         const forbidden = !vouchers.ok && vouchers.status === 403;
         patchState(store, {
           loading: 'loaded',
-          goods,
           vouchers: vouchers.ok ? vouchers.value.map(toVoucherCard) : [],
           suppliers,
           vouchersForbidden: forbidden,

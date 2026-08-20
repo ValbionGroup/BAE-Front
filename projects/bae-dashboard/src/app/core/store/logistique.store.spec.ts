@@ -5,7 +5,6 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { LogistiqueStore } from './logistique.store';
 import { API_BASE_URL } from '@bae/ui';
 import type {
-  ApiGood,
   ApiShoppingList,
   ApiSupplier,
   ApiVoucher,
@@ -39,21 +38,6 @@ function shoppingList(overrides: Partial<ApiShoppingList> = {}): ApiShoppingList
     supplierTotals: [{ id: 3, name: 'Leclerc', total: 385, fullCoverage: true }],
     savings: 0,
     unpricedCount: 0,
-    ...overrides,
-  };
-}
-
-function good(overrides: Partial<ApiGood> = {}): ApiGood {
-  return {
-    id: 1,
-    name: 'Saucisses',
-    unit: 'kg',
-    brand: null,
-    categoryId: null,
-    category: null,
-    suppliers: [],
-    bestSupplier: null,
-    bestPrice: null,
     ...overrides,
   };
 }
@@ -97,38 +81,36 @@ describe(LogistiqueStore.name, () => {
 
   afterEach(() => http.verify());
 
-  function flush(goods: ApiGood[], vouchers: ApiVoucher[], suppliers: ApiSupplier[] = []): void {
-    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush(goods);
+  function flush(vouchers: ApiVoucher[], suppliers: ApiSupplier[] = []): void {
     http.expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET').flush(vouchers);
     http.expectOne((r) => r.url.endsWith('/suppliers') && r.method === 'GET').flush(suppliers);
   }
 
-  /** Charge la page avec les trois appels que fait désormais `load()`. */
+  /** Charge la page avec les deux appels que fait `load()`. */
   async function loadWith(vouchers: ApiVoucher[]): Promise<void> {
     const loading = store.load();
-    flush([], vouchers, [supplier()]);
+    flush(vouchers, [supplier()]);
     await loading;
   }
 
   it('starts idle', () => {
     expect(store.loading()).toBe('init');
-    expect(store.goods()).toEqual([]);
     expect(store.vouchers()).toEqual([]);
   });
 
-  it('loads goods and vouchers together', async () => {
+  it('loads vouchers and suppliers together', async () => {
     const pending = store.load();
-    flush([good()], [voucher()]);
+    flush([voucher()], [supplier()]);
     await pending;
 
     expect(store.loading()).toBe('loaded');
-    expect(store.goods()).toHaveLength(1);
     expect(store.vouchers()).toHaveLength(1);
+    expect(store.suppliers()).toHaveLength(1);
   });
 
   it('formats the expiry DATE without shifting it across a timezone', async () => {
     const pending = store.load();
-    flush([], [voucher({ expiresAt: '2026-01-01' })]);
+    flush([voucher({ expiresAt: '2026-01-01' })]);
     await pending;
 
     expect(store.vouchers()[0].expiresLabel).toBe('01/01/2026');
@@ -136,7 +118,7 @@ describe(LogistiqueStore.name, () => {
 
   it('passes the server urgency flags through untouched', async () => {
     const pending = store.load();
-    flush([], [voucher({ warn: true, expired: false, used: false, daysUntilExpiry: 3 })]);
+    flush([voucher({ warn: true, expired: false, used: false, daysUntilExpiry: 3 })]);
     await pending;
 
     expect(store.vouchers()[0]).toMatchObject({ warn: true, expired: false, used: false });
@@ -144,7 +126,7 @@ describe(LogistiqueStore.name, () => {
 
   it('labels a voucher with no supplier rather than dropping it', async () => {
     const pending = store.load();
-    flush([], [voucher({ supplierId: null, supplier: null })]);
+    flush([voucher({ supplierId: null, supplier: null })]);
     await pending;
 
     expect(store.vouchers()[0].supplierName).toBe('Enseigne non précisée');
@@ -152,7 +134,7 @@ describe(LogistiqueStore.name, () => {
 
   it('handles an empty voucher list', async () => {
     const pending = store.load();
-    flush([good()], []);
+    flush([]);
     await pending;
 
     expect(store.loading()).toBe('loaded');
@@ -161,13 +143,12 @@ describe(LogistiqueStore.name, () => {
 
   it('records an error state when a request fails', async () => {
     const pending = store.load();
-    // The vouchers and suppliers legs are answered first: once goods errors,
-    // `forkJoin` unsubscribes and its siblings can no longer be flushed —
-    // they would then stay open and trip `http.verify()`.
+    // La branche des bons est servie d'abord : une fois les enseignes en erreur,
+    // `forkJoin` se désabonne et sa sœur ne peut plus être servie — elle
+    // resterait ouverte et ferait échouer `http.verify()`.
     http.expectOne((r) => r.url.endsWith('/vouchers')).flush([]);
-    http.expectOne((r) => r.url.endsWith('/suppliers')).flush([]);
     http
-      .expectOne((r) => r.url.endsWith('/goods'))
+      .expectOne((r) => r.url.endsWith('/suppliers'))
       .flush(null, { status: 500, statusText: 'Server Error' });
     await pending;
 
@@ -177,17 +158,17 @@ describe(LogistiqueStore.name, () => {
 
   it('does not refetch once loaded, but refresh() bypasses the guard', async () => {
     const first = store.load();
-    flush([good({ id: 1 })], []);
+    flush([voucher({ id: 1 })]);
     await first;
 
     await store.load();
-    http.expectNone((r) => r.url.endsWith('/goods'));
+    http.expectNone((r) => r.url.endsWith('/vouchers'));
 
     const second = store.refresh();
-    flush([good({ id: 1 }), good({ id: 2 })], []);
+    flush([voucher({ id: 1 }), voucher({ id: 2 })]);
     await second;
 
-    expect(store.goods()).toHaveLength(2);
+    expect(store.vouchers()).toHaveLength(2);
   });
 
   it('loads the suppliers that feed the create form', async () => {
@@ -376,7 +357,6 @@ describe(LogistiqueStore.name, () => {
 
   it('keeps the page alive when the vouchers are forbidden', async () => {
     const loading = store.load();
-    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush([good()]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
       .flush({ message: 'Missing permission: voucher:read' }, { status: 403, statusText: 'x' });
@@ -387,7 +367,7 @@ describe(LogistiqueStore.name, () => {
     // bons ne doit pas l'emporter avec lui.
     expect(store.loading()).toBe('loaded');
     expect(store.loadError()).toBeNull();
-    expect(store.goods()).toHaveLength(1);
+    expect(store.suppliers()).toHaveLength(1);
     expect(store.vouchers()).toEqual([]);
     expect(store.vouchersForbidden()).toBe(true);
     expect(store.vouchersLoadError()).toBeNull();
@@ -395,7 +375,6 @@ describe(LogistiqueStore.name, () => {
 
   it('separates a broken vouchers endpoint from a forbidden one', async () => {
     const loading = store.load();
-    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush([good()]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
       .flush(null, { status: 500, statusText: 'Server Error' });
@@ -409,7 +388,6 @@ describe(LogistiqueStore.name, () => {
 
   it('clears the forbidden flag when a refresh succeeds', async () => {
     const loading = store.load();
-    http.expectOne((r) => r.url.endsWith('/goods') && r.method === 'GET').flush([]);
     http
       .expectOne((r) => r.url.endsWith('/vouchers') && r.method === 'GET')
       .flush(null, { status: 403, statusText: 'x' });
@@ -418,7 +396,7 @@ describe(LogistiqueStore.name, () => {
     expect(store.vouchersForbidden()).toBe(true);
 
     const again = store.refresh();
-    flush([], [voucher({ id: 1 })], [supplier()]);
+    flush([voucher({ id: 1 })], [supplier()]);
     await again;
 
     // Un droit accordé entre-temps doit se voir sans recharger l'application.

@@ -31,7 +31,6 @@ describe(VoucherCreateModal.name, () => {
   async function loadStore(): Promise<void> {
     const store = TestBed.inject(LogistiqueStore);
     const loading = store.load();
-    http.expectOne(`${baseUrl}/goods`).flush([]);
     http.expectOne(`${baseUrl}/vouchers`).flush([]);
     http.expectOne(`${baseUrl}/suppliers`).flush([{ id: 3, name: 'Leclerc' }]);
     await loading;

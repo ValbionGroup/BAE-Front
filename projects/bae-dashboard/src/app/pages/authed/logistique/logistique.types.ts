@@ -108,27 +108,6 @@ export interface CartCell {
   readonly isBest: boolean;
 }
 
-/** One shopping-list row. `cells` is always the same length as the column set. */
-export interface CartRow {
-  readonly id: number;
-  readonly name: string;
-  readonly unit: string;
-  readonly brand: string | null;
-  readonly categoryName: string;
-  readonly cells: readonly CartCell[];
-  readonly bestSupplierName: string | null;
-  readonly bestPrice: number | null;
-}
-
-/** Per-supplier column total over the selected rows. */
-export interface SupplierTotal {
-  readonly supplierId: number;
-  /** Sum over the selected rows this supplier prices; `null` when it prices none. */
-  readonly total: number | null;
-  /** True when this supplier prices every selected row. */
-  readonly fullCoverage: boolean;
-}
-
 /** A voucher ready for display. */
 export interface VoucherCard {
   readonly id: number;
