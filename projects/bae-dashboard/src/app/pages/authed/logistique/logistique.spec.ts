@@ -547,6 +547,25 @@ describe(Logistique.name, () => {
     await fixture.whenStable();
   });
 
+  it('stays focusable while the write is in flight', async () => {
+    await renderLoaded();
+
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-testid="toggle-voucher-1"]',
+    );
+    toggle.click();
+    const req = http.expectOne((r) => r.url.endsWith('/vouchers/1'));
+    fixture.detectChanges();
+
+    // Un élément désactivé perd le focus : la personne au clavier serait
+    // rejetée en haut de la page au moment précis où elle agit.
+    expect(toggle.disabled).toBe(false);
+    expect(toggle.getAttribute('aria-busy')).toBe('true');
+
+    req.flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
+    await fixture.whenStable();
+  });
+
   it('confirms a consumption with a toast', async () => {
     const shown = vi.spyOn(TestBed.inject(ToastService), 'show');
     await renderLoaded();

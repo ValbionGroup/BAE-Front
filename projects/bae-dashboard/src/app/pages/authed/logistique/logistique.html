@@ -347,16 +347,21 @@
           </div>
 
           <div class="mt-2 flex items-center justify-between gap-2">
-            <!-- `<button>` natif : `bae-btn` ne propage pas les `aria-*` jusqu'au
-                 bouton interne. -->
+            <!-- `<button>` natif parce qu'il porte `aria-busy`, que `bae-btn`
+                 n'expose pas.
+
+                 Jamais `disabled` pendant l'écriture : un élément désactivé perd
+                 le focus, et la personne au clavier se retrouve rejetée en haut
+                 de la page au moment précis où elle agit. Un second clic est
+                 sans effet — `toggleVoucherUsed` neutralise un bon déjà en
+                 cours d'écriture. -->
             <button
               type="button"
               [attr.data-testid]="'toggle-voucher-' + voucher.id"
               [attr.aria-label]="toggleLabel(voucher)"
               [attr.aria-busy]="isSaving(voucher.id)"
-              [disabled]="isSaving(voucher.id)"
               (click)="toggleVoucher(voucher)"
-              class="inline-flex h-7 items-center rounded-md border border-border bg-surface-2 px-2.5 text-xs text-text transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+              class="inline-flex h-7 items-center rounded-md border border-border bg-surface-2 px-2.5 text-xs text-text transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none aria-busy:cursor-progress aria-busy:opacity-60"
             >
               {{ voucher.used ? 'Annuler' : 'Marquer consommé' }}
             </button>
