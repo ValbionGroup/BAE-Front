@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { DropdownContainer } from '@bae/ui';
+import { DropdownContainer, ToastContainer } from '@bae/ui';
 
 @Component({
   selector: 'bfp-root',
-  imports: [RouterOutlet, DropdownContainer],
+  imports: [RouterOutlet, DropdownContainer, ToastContainer],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
