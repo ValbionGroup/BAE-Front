@@ -26,7 +26,7 @@ import {
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ClientsStore } from '#core/store/clients.store';
-import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton } from '@bae/ui';
+import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton, DetailSheet } from '@bae/ui';
 import type { ClientDetail, ClientRow, MembershipStatus } from './adherents.types';
 
 interface InfoRow {
@@ -48,9 +48,11 @@ const STATUS_LABELS: Record<MembershipStatus, string> = {
   none: 'Non-adhérent',
 };
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-adherents',
-  imports: [Btn, Badge, Avatar, Input, Skeleton, LucideDynamicIcon],
+  imports: [Btn, Badge, Avatar, Input, Skeleton, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './adherents.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Sans `block h-full`, le composant n'a pas de hauteur propre : le `h-full`
@@ -59,6 +61,34 @@ const STATUS_LABELS: Record<MembershipStatus, string> = {
   host: { class: 'block h-full' },
 })
 export class Adherents implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    {
+      label: 'Export CSV',
+      icon: this.icDownload,
+      kind: 'ghost',
+      disabled: true,
+      title: "L'export CSV n'est pas encore branché.",
+      run: () => {},
+    },
+    {
+      label: 'Import liste',
+      icon: this.icUpload,
+      disabled: true,
+      title: "L'import de liste n'est pas encore branché.",
+      run: () => {},
+    },
+    {
+      label: 'Enregistrer une cotisation',
+      icon: this.icPlus,
+      kind: 'primary',
+      primary: true,
+      disabled: true,
+      title:
+        'Un compte se crée par EirbConnect, jamais ici : ce bouton enregistrera une cotisation.',
+      run: () => {},
+    },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   protected readonly store = inject(ClientsStore);

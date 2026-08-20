@@ -1,27 +1,10 @@
 <ng-template #actions>
-  <bae-btn
-    kind="ghost"
-    size="md"
-    [icon]="icUpload"
-    [disabled]="true"
-    title="Aucun stockage de justificatifs côté API"
-    >Preuve d'achat</bae-btn
-  >
-  <bae-btn kind="secondary" size="md" [icon]="icDownload" (clicked)="printFicheLogistique()"
-    >Fiche logistique</bae-btn
-  >
-  @if (!vouchersForbidden()) {
-    <span data-testid="add-voucher">
-      <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openCreateVoucher()">
-        Nouveau bon
-      </bae-btn>
-    </span>
-  }
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+<div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   <!-- KPI row -->
-  <div class="mb-4 grid grid-cols-4 gap-3">
+  <div class="mb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
     <div class="rounded-md border border-border-s bg-surface p-3.5">
       <div class="mb-1 text-[11px] text-muted">Articles à acheter</div>
       @if (shoppingListLoading() === 'init' || shoppingListLoading() === 'loading') {
@@ -89,14 +72,14 @@
     <div
       data-testid="shopping-list-forbidden"
       role="status"
-      class="rounded-md border border-dashed border-border bg-surface px-6 py-10 text-center text-[12.5px] text-muted"
+      class="rounded-md border border-dashed border-border bg-surface px-4 md:px-6 py-10 text-center text-[12.5px] text-muted"
     >
       <svg [lucideIcon]="icLock" [size]="14" class="mx-auto mb-2 block" aria-hidden="true"></svg>
       Accès restreint — la liste de courses est réservée aux membres habilités à consulter le stock.
     </div>
   } @else if (shoppingListLoadError(); as message) {
     <div
-      class="rounded-md border border-border-s bg-surface px-6 py-10 text-center"
+      class="rounded-md border border-border-s bg-surface px-4 md:px-6 py-10 text-center"
       role="alert"
       aria-live="polite"
     >
@@ -117,7 +100,7 @@
       }
     </div>
   } @else if (goodRows().length === 0 && furnitureRows().length === 0) {
-    <div class="rounded-md border border-border-s bg-surface px-6 py-10 text-center">
+    <div class="rounded-md border border-border-s bg-surface px-4 md:px-6 py-10 text-center">
       <p class="m-0 text-[12.5px] text-muted">
         Rien à acheter : le stock couvre déjà tout le menu de cette soirée.
       </p>
@@ -230,52 +213,56 @@
         >
           NON-ALIMENTAIRE
         </div>
-        <table class="w-full border-collapse text-[12.5px]">
-          <caption class="sr-only">
-            Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes :
-            ces articles n'ont aucun fournisseur rattaché.
-          </caption>
-          <thead>
-            <tr class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase">
-              <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">Produit</th>
-              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
-              <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Prix</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (line of furnitureRows(); track line.id) {
-              <tr class="border-t border-border-s">
-                <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
-                  {{ line.name }}
-                  @if (line.brand) {
-                    <span class="text-muted"> · {{ line.brand }}</span>
-                  }
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-[12.5px]">
+            <caption class="sr-only">
+              Fournitures non alimentaires manquantes pour la soirée, sans comparatif d'enseignes :
+              ces articles n'ont aucun fournisseur rattaché.
+            </caption>
+            <thead>
+              <tr
+                class="bg-surface-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
+              >
+                <th scope="col" class="min-w-55 px-3.5 py-2.5 text-left font-semibold">Produit</th>
+                <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Qté</th>
+                <th scope="col" class="px-3.5 py-2.5 text-right font-semibold">Prix</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of furnitureRows(); track line.id) {
+                <tr class="border-t border-border-s">
+                  <th scope="row" class="px-3.5 py-2.5 text-left font-normal text-text">
+                    {{ line.name }}
+                    @if (line.brand) {
+                      <span class="text-muted"> · {{ line.brand }}</span>
+                    }
+                  </th>
+                  <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
+                    {{ line.missingQty }} {{ line.unit }}
+                  </td>
+                  <td class="mono tnum px-3.5 py-2.5 text-right text-text">
+                    @if (line.bestPrice === null) {
+                      <span aria-label="Prix inconnu">—</span>
+                    } @else {
+                      {{ formatPrice(line.bestPrice) }} €
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="border-t-2 border-border bg-surface-2">
+                <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
+                  Total
                 </th>
-                <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
-                  {{ line.missingQty }} {{ line.unit }}
-                </td>
-                <td class="mono tnum px-3.5 py-2.5 text-right text-text">
-                  @if (line.bestPrice === null) {
-                    <span aria-label="Prix inconnu">—</span>
-                  } @else {
-                    {{ formatPrice(line.bestPrice) }} €
-                  }
+                <td class="px-3.5 py-3"></td>
+                <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
+                  {{ furnitureTotalLabel() }}
                 </td>
               </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="border-t-2 border-border bg-surface-2">
-              <th scope="row" class="px-3.5 py-3 text-left text-[12.5px] font-semibold text-text">
-                Total
-              </th>
-              <td class="px-3.5 py-3"></td>
-              <td class="mono tnum px-3.5 py-3 text-right text-[13px] font-bold text-text">
-                {{ furnitureTotalLabel() }}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+            </tfoot>
+          </table>
+        </div>
       </div>
     }
   }
@@ -295,7 +282,7 @@
   </div>
 
   @if (loading() === 'init' || loading() === 'loading') {
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       @for (placeholder of [1, 2, 3]; track placeholder) {
         <div class="rounded-md border border-dashed border-border bg-surface p-3.5">
           <bae-skeleton width="50%" height="14px" />
@@ -307,14 +294,14 @@
     <div
       data-testid="vouchers-forbidden"
       role="status"
-      class="rounded-md border border-dashed border-border bg-surface px-6 py-8 text-center text-[12px] text-muted"
+      class="rounded-md border border-dashed border-border bg-surface px-4 md:px-6 py-8 text-center text-[12px] text-muted"
     >
       <svg [lucideIcon]="icLock" [size]="14" class="mx-auto mb-2 block" aria-hidden="true"></svg>
       Accès restreint — les bons d'achat sont réservés au pôle logistique et au trésorier.
     </div>
   } @else if (vouchersLoadError(); as message) {
     <div
-      class="rounded-md border border-dashed border-border bg-surface px-6 py-8 text-center"
+      class="rounded-md border border-dashed border-border bg-surface px-4 md:px-6 py-8 text-center"
       role="alert"
     >
       <p class="m-0 text-[12px] text-danger">{{ message }}</p>
@@ -324,12 +311,12 @@
     </div>
   } @else if (vouchers().length === 0) {
     <div
-      class="rounded-md border border-dashed border-border bg-surface px-6 py-8 text-center text-[12px] text-muted"
+      class="rounded-md border border-dashed border-border bg-surface px-4 md:px-6 py-8 text-center text-[12px] text-muted"
     >
       Aucun bon d'achat enregistré.
     </div>
   } @else {
-    <ul class="m-0 grid list-none grid-cols-3 gap-3 p-0">
+    <ul class="m-0 grid list-none grid-cols-1 sm:grid-cols-3 gap-3 p-0">
       @for (voucher of vouchers(); track voucher.id) {
         <li
           [class]="

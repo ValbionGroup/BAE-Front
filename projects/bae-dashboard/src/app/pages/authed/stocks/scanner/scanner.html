@@ -1,8 +1,10 @@
 <ng-template #actions>
-  <bae-btn kind="ghost" size="md" [icon]="icX" (clicked)="quit()">Quitter</bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="grid h-full grid-cols-[1.4fr_1fr] grid-rows-[minmax(0,1fr)] overflow-hidden">
+<div
+  class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1.4fr_1fr] md:grid-rows-[minmax(0,1fr)]"
+>
   <!-- GAUCHE : caméra -->
   <div class="relative flex min-h-0 flex-col overflow-hidden bg-[#0a0a0c]">
     <video #video class="absolute inset-0 h-full w-full object-cover" muted playsinline></video>
@@ -59,7 +61,7 @@
         </div>
       </div>
 
-      <div class="w-[240px]">
+      <div class="w-full max-w-[240px]">
         <bae-input
           placeholder="Code-barres…"
           [value]="manualCode()"
@@ -72,7 +74,9 @@
   </div>
 
   <!-- DROITE : session -->
-  <aside class="flex min-h-0 flex-col border-l border-border-s bg-surface">
+  <aside
+    class="flex min-h-0 flex-col border-t border-border-s bg-surface md:border-l md:border-t-0"
+  >
     <div class="flex items-center gap-2.5 border-b border-border-s px-5 py-4">
       <span
         class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-soft text-blue"
@@ -99,7 +103,7 @@
     <div class="min-h-0 flex-1 overflow-y-auto px-5 py-3">
       @if (lines().length === 0) {
         <div
-          class="rounded-md border border-dashed border-border px-6 py-10 text-center text-[12px] text-muted"
+          class="rounded-md border border-dashed border-border px-4 md:px-6 py-10 text-center text-[12px] text-muted"
         >
           Rien de scanné pour l'instant.
         </div>

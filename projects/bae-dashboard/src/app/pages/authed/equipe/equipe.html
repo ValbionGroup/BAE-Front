@@ -1,18 +1,8 @@
 <ng-template #actions>
-  <bae-btn kind="ghost" size="md" [icon]="icDownload">Audit log</bae-btn>
-  <!-- Aucune table `invitations` ni endpoint côté back (§3.2) : le bouton reste
-       en place — le manque est côté API — mais cesse de l'être en silence. -->
-  <bae-btn
-    kind="primary"
-    size="md"
-    [icon]="icPlus"
-    [disabled]="true"
-    title="Endpoint d'invitation non disponible"
-    >Inviter un membre</bae-btn
-  >
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+<div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   <!-- Tabs -->
   <div class="flex gap-4 border-b border-border-s mb-5" role="tablist" aria-label="Sections équipe">
     @for (tab of tabs; track tab; let i = $index) {
@@ -61,7 +51,7 @@
                 journal de requêtes
               </div>
             </div>
-            <label class="w-[220px]">
+            <label class="w-full md:w-[220px]">
               <span class="sr-only">Filtrer les membres</span>
               <bae-input
                 [icon]="icSearch"
@@ -73,7 +63,7 @@
           </div>
 
           <div
-            class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
+            class="hidden md:grid md:grid-cols-[36px_1fr_160px_220px_110px_28px] px-4 py-2.5 border-b border-border-s text-[10.5px] font-semibold text-muted uppercase tracking-wider"
           >
             <span></span><span>Nom</span><span>Rôle</span><span>Scope</span
             ><span>Dernière act.</span><span></span>
@@ -82,7 +72,7 @@
           @if (loading() === 'loading' || loading() === 'init') {
             @for (row of skeletonRows; track row) {
               <div
-                class="grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center gap-2 px-4 py-3 border-b border-border-s"
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[36px_1fr_160px_220px_110px_28px] items-center gap-2 px-4 py-3 border-b border-border-s"
               >
                 <bae-skeleton width="28px" height="28px" rounded="pill" />
                 <bae-skeleton width="60%" height="10px" />
@@ -93,18 +83,18 @@
               </div>
             }
           } @else if (errors().members) {
-            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+            <div role="alert" class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
               {{ errors().members }}
             </div>
           } @else if (team().length === 0) {
-            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+            <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-muted">
               Aucun membre à afficher.
             </div>
           } @else {
             @for (m of team(); track m.id; let last = $last) {
               <div
                 [class]="
-                  'grid grid-cols-[36px_1fr_160px_220px_110px_28px] items-center px-4 py-3 text-[12.5px] ' +
+                  'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[36px_1fr_160px_220px_110px_28px] items-center px-4 py-3 text-[12.5px] ' +
                   (last ? '' : 'border-b border-border-s')
                 "
               >
@@ -165,11 +155,11 @@
               }
             </div>
           } @else if (errors().roles || errors().permissions) {
-            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+            <div role="alert" class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
               {{ errors().roles ?? errors().permissions }}
             </div>
           } @else if (perms().rows.length === 0 || perms().roles.length === 0) {
-            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+            <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-muted">
               Aucun rôle ou aucune permission enregistrée.
             </div>
           } @else {
@@ -237,11 +227,11 @@
               }
             </div>
           } @else if (errors().logs) {
-            <div role="alert" class="px-6 py-10 text-center text-[12.5px] text-danger">
+            <div role="alert" class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
               {{ errors().logs }}
             </div>
           } @else if (audit().length === 0) {
-            <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+            <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-muted">
               Aucune activité tracée.
             </div>
           } @else {

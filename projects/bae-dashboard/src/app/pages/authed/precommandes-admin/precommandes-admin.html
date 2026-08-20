@@ -1,9 +1,9 @@
 <ng-template #actions>
-  <bae-btn kind="primary" size="md" [icon]="icCheck" (clicked)="markReady()">Marquer prête</bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
 @if (activeEvent() === null) {
-  <div class="flex h-full items-center justify-center p-8">
+  <div class="flex h-full items-center justify-center p-4 md:p-8">
     <div class="max-w-md text-center">
       <div class="text-sm font-medium text-text">Aucune soirée en cours</div>
       <p class="mt-2 text-xs leading-relaxed text-muted">
@@ -13,7 +13,9 @@
     </div>
   </div>
 } @else {
-  <div class="grid h-full grid-cols-[380px_1fr_360px] overflow-hidden">
+  <div
+    class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[380px_1fr] lg:grid-cols-[380px_1fr_360px]"
+  >
     <!-- COL 1 : file d'attente -->
     <div class="flex min-h-0 flex-col overflow-hidden border-r border-border-s">
       <div class="border-b border-border-s px-4 py-3.5">
@@ -209,7 +211,9 @@
     </div>
 
     <!-- COL 3 : borne de retrait -->
-    <div class="min-h-0 overflow-y-auto border-l border-border-s bg-sidebar p-[22px]">
+    <div
+      class="min-h-0 overflow-y-auto border-t border-border-s bg-sidebar p-4 md:border-l md:border-t-0 md:p-[22px]"
+    >
       <div class="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
         Borne retrait
       </div>

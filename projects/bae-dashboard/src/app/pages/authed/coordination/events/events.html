@@ -1,17 +1,13 @@
 <!-- Topbar actions -->
 <ng-template #actions>
-  <bae-btn kind="ghost" size="md" [icon]="icCalendar">Calendrier</bae-btn>
-  <bae-btn kind="ghost" size="md" [icon]="icDownload">Exporter</bae-btn>
-  <bae-btn kind="primary" size="md" [icon]="icPlus" (clicked)="openNew()">
-    Nouvelle soirée
-  </bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="grid h-full grid-cols-[1.5fr_1fr] overflow-hidden">
+<div class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1.5fr_1fr]">
   <!-- LEFT: table -->
   <div class="flex min-w-0 flex-col overflow-hidden border-r border-border-s">
     <!-- Tabs + search -->
-    <div class="flex items-center gap-2.5 border-b border-border-s px-6 py-3.5">
+    <div class="flex items-center gap-2.5 border-b border-border-s px-4 md:px-6 py-3.5">
       <div class="flex gap-1.5">
         @for (tab of tabs(); track tab.key) {
           @let isActive = activeTab() === tab.key;
@@ -46,7 +42,7 @@
 
     <!-- Header row -->
     <div
-      class="grid grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="hidden md:grid md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
     >
       <span></span>
       <span>Soirée</span>
@@ -63,7 +59,9 @@
           Chargement…
         </div>
       } @else if (loadError()) {
-        <div class="px-6 py-10 text-center text-[12.5px] text-danger">{{ loadError() }}</div>
+        <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-danger">
+          {{ loadError() }}
+        </div>
       } @else {
         @for (e of visibleEvents(); track e.id) {
           @let selected = selectedId() === e.id;
@@ -71,7 +69,7 @@
           <div
             (click)="select(e.id)"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-6 py-3 ' +
+              'relative grid cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1.5 md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 ' +
               (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50') +
               (e.status === 'past' ? ' opacity-80' : '')
             "
@@ -81,7 +79,7 @@
             }
             <span
               [class]="
-                'inline-flex h-8 w-8 items-center justify-center rounded-md ' +
+                'col-start-1 row-start-1 row-span-2 inline-flex h-8 w-8 items-center justify-center self-start rounded-md md:row-span-1 md:self-auto ' +
                 accent.bg +
                 ' ' +
                 accent.text
@@ -89,19 +87,27 @@
             >
               <svg [lucideIcon]="icCalendar" [size]="15" aria-hidden="true"></svg>
             </span>
-            <span class="min-w-0">
+            <span class="col-start-2 row-start-1 min-w-0 md:col-start-auto md:row-start-auto">
               <span class="block truncate text-[13px] font-medium text-text">{{ e.name }}</span>
               <span class="mt-0.5 block text-[11px] text-muted">
                 {{ e.recipes ? e.recipes + ' recettes' : 'aucune recette' }}
               </span>
             </span>
-            <span class="mono tnum text-[12px] text-text-2">{{ e.date }}</span>
-            <span class="mono tnum text-right text-[12px] text-text-2">
+            <span
+              class="col-start-2 row-start-2 mono tnum text-[12px] text-text-2 md:col-start-auto md:row-start-auto"
+              >{{ e.date }}</span
+            >
+            <span
+              class="col-start-3 row-start-2 justify-self-end mono tnum text-right text-[12px] text-text-2 md:col-start-auto md:row-start-auto md:justify-self-auto"
+            >
               {{ e.members }}/{{ e.maxMembers }}
             </span>
-            <bae-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bae-badge>
             <span
-              class="inline-flex items-center gap-1 justify-self-end"
+              class="col-start-3 row-start-1 justify-self-end md:col-start-auto md:row-start-auto md:justify-self-auto"
+              ><bae-badge [kind]="e.statusKind" [dot]="true">{{ e.statusLabel }}</bae-badge></span
+            >
+            <span
+              class="col-span-3 row-start-3 inline-flex items-center gap-1 justify-self-end md:col-span-1 md:row-start-auto"
               (click)="$event.stopPropagation()"
             >
               <button
@@ -123,7 +129,7 @@
             </span>
           </div>
         } @empty {
-          <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+          <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-muted">
             Aucune soirée dans cette catégorie.
           </div>
         }
@@ -132,5 +138,11 @@
   </div>
 
   <!-- RIGHT: event detail panel -->
-  <bfd-coordination-event-detail [event]="selectedEvent()" (close)="deselect()" />
+  <bae-detail-sheet
+    [open]="selectedId() !== null"
+    [title]="selectedEvent()?.name ?? ''"
+    (closed)="deselect()"
+  >
+    <bfd-coordination-event-detail [event]="selectedEvent()" (close)="deselect()" />
+  </bae-detail-sheet>
 </div>

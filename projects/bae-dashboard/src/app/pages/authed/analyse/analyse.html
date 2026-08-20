@@ -1,6 +1,6 @@
-<div class="h-full overflow-y-auto px-6 pt-5 pb-8">
+<div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   <!-- KPI row -->
-  <div class="mb-4 grid grid-cols-4 gap-3">
+  <div class="mb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
     @if (isLoading()) {
       @for (_ of skeletonKpis; track $index) {
         <div class="rounded-md border border-border-s bg-surface p-3.5">
@@ -96,7 +96,7 @@
   </div>
 
   <!-- Prediction + history -->
-  <div class="grid grid-cols-[1fr_1.6fr] gap-3.5">
+  <div class="flex flex-col gap-3.5 md:grid md:grid-cols-[1fr_1.6fr]">
     @if (isLoading()) {
       <div class="rounded-md border border-border-s bg-surface p-4">
         <bae-skeleton width="60%" height="10px" />
@@ -157,7 +157,7 @@
         @for (_ of skeletonRows; track $index; let last = $last) {
           <div
             [class]="
-              'grid grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 ' +
+              'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 ' +
               (last ? '' : 'border-b border-border-s')
             "
           >
@@ -174,7 +174,7 @@
         @for (s of store.soirees(); track s.n; let i = $index) {
           <div
             [class]="
-              'grid grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+              'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
               (i ? 'border-t border-border-s' : '')
             "
           >

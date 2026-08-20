@@ -4,7 +4,7 @@
   <!-- MOBILE — retrait de précommande, pleine page. -->
   <div
     [class]="
-      'fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 p-8 text-center md:hidden ' +
+      'fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 p-4 md:p-8 text-center md:hidden ' +
       (ok ? 'bg-ok' : 'bg-warn')
     "
     role="status"
@@ -94,7 +94,7 @@
 } @else if (order(); as done) {
   <!-- MOBILE — la vue entière confirme, comme un contrôle de billet. -->
   <div
-    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-ok p-8 text-center md:hidden"
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-ok p-4 md:p-8 text-center md:hidden"
     role="status"
     (click)="close()"
   >
@@ -132,7 +132,7 @@
 } @else if (error(); as message) {
   <!-- MOBILE — refus, plein écran. -->
   <div
-    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-danger p-8 text-center md:hidden"
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-danger p-4 md:p-8 text-center md:hidden"
     role="alert"
     (click)="close()"
   >

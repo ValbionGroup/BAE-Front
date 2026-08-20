@@ -30,7 +30,7 @@
     </div>
 
     <div
-      class="grid grid-cols-[1fr_120px_132px_36px] gap-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
+      class="hidden md:grid md:grid-cols-[1fr_120px_132px_36px] gap-2 text-[10px] font-semibold tracking-wider text-muted uppercase"
     >
       <span>Poste</span>
       <span>Moment</span>
@@ -42,8 +42,10 @@
       @for (role of draft(); track $index) {
         @let countInvalid = role.requiredCount <= 0;
         @let style = periodStyle(role.jobId);
-        <div class="grid grid-cols-[1fr_120px_132px_36px] items-center gap-2">
-          <div class="flex min-w-0 items-center gap-2.5">
+        <div
+          class="grid grid-cols-[1fr_auto_auto] items-center gap-x-2 gap-y-2 md:grid-cols-[1fr_120px_132px_36px]"
+        >
+          <div class="col-span-3 flex min-w-0 items-center gap-2.5 md:col-span-1">
             <span
               [class]="
                 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border ' +

@@ -49,7 +49,7 @@ import {
   isJobPeriod,
   type JobPeriod,
 } from '#core/models/job-period.model';
-import { isApiError, DropdownService, Btn, Badge, Avatar, ToastService } from '@bae/ui';
+import { isApiError, DropdownService, Badge, Avatar, ToastService } from '@bae/ui';
 import type { DropdownItemAction, ToastType } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import type { RoleModalRole } from '#shared/components/modal/modal.models';
@@ -417,13 +417,46 @@ function assignmentKey(eventId: number, jobId: number, memberId: number): string
   return `${eventId}:${jobId}:${memberId}`;
 }
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-coordination',
-  imports: [Btn, Badge, Avatar, LucideDynamicIcon],
+  imports: [Badge, Avatar, LucideDynamicIcon, PageActions],
   templateUrl: './coordination.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Coordination implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => {
+    const settled = this.isSettled();
+    return [
+      { label: 'Postes', icon: this.icSettings, kind: 'ghost', run: () => this.openRolesModal() },
+      {
+        label: "Imprimer l'affectation",
+        icon: this.icDownload,
+        kind: 'ghost',
+        run: () => this.printAssignments(),
+      },
+      {
+        label: settled
+          ? 'Affectation clôturée'
+          : this.algoRunning()
+            ? 'Affectation en cours…'
+            : "Lancer l'affectation automatique",
+        icon: this.icZap,
+        disabled: this.loading() || this.algoRunning() || settled,
+        run: () => this.confirmRunMatching(),
+      },
+      {
+        label: settled ? 'Affectation clôturée' : "Valider l'affectation",
+        icon: this.icCheck,
+        kind: 'primary',
+        primary: true,
+        disabled: settled,
+        run: () => this.validateAssignments(),
+      },
+    ];
+  });
+
   private readonly svc = inject(CoordinationService);
   private readonly store = inject(CoordinationStore);
   private readonly pageHeader = inject(PageHeaderService);

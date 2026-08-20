@@ -41,13 +41,28 @@ import type { AuditEntry, Invitation } from './equipe.types';
 import { teamMemberName } from '#core/services/team/team-service';
 import type { ApiTeamMember } from '#core/services/team/team-service';
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-equipe',
-  imports: [Btn, Badge, Card, Avatar, Input, Skeleton, Checkbox, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Avatar, Input, Skeleton, Checkbox, LucideDynamicIcon, PageActions],
   templateUrl: './equipe.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Equipe implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    { label: 'Audit log', icon: this.icDownload, kind: 'ghost', run: () => {} },
+    {
+      label: 'Inviter un membre',
+      icon: this.icPlus,
+      kind: 'primary',
+      primary: true,
+      disabled: true,
+      title: "Endpoint d'invitation non disponible",
+      run: () => {},
+    },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
   protected readonly store = inject(TeamStore);

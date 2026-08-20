@@ -24,7 +24,6 @@ import {
   NotificationsService,
   type ApiNotification,
 } from '#core/services/notifications/notifications-service';
-import { Btn } from '@bae/ui';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 type Tab = 'Toutes' | 'Non lues';
@@ -52,14 +51,26 @@ const PRESENTATION: Record<string, { icon: LucideIconInput; col: Notif['col']; t
   'ticket.updated': { icon: LucideTicket, col: 'ok', title: 'Ticket mis à jour' },
 };
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-notifications',
-  imports: [Btn, LucideDynamicIcon],
+  imports: [LucideDynamicIcon, PageActions],
   templateUrl: './notifications.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
 })
 export class Notifications implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    {
+      label: 'Tout marquer comme lu',
+      icon: this.icCheck,
+      primary: true,
+      disabled: this.unreadCount() === 0,
+      run: () => this.markAllRead(),
+    },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly service = inject(NotificationsService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');

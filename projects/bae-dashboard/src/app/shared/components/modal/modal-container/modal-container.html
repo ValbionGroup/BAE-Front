@@ -6,14 +6,16 @@
       (click)="closeTop()"
     ></div>
 
-    <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+    <div
+      class="absolute inset-0 flex items-end justify-center p-0 pointer-events-none md:items-center md:p-4"
+    >
       @let total = visibleModals().length;
       @for (modal of visibleModals(); track modal.id; let i = $index) {
         <div
           [attr.data-modal-id]="modal.id"
           [style.transform]="stackTransform(i, total)"
           [style.z-index]="50 + i"
-          class="absolute pointer-events-auto"
+          class="absolute inset-x-0 pointer-events-none"
         >
           @if (modal.type === 'delete') {
             <bfd-delete-modal [config]="asDelete(modal)" (close)="close(modal.id)" />

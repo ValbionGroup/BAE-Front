@@ -29,7 +29,7 @@
 
   <div class="bg-surface-2 border border-border-s rounded-md overflow-hidden">
     <div
-      class="grid grid-cols-[20px_1.3fr_92px_74px_92px_74px_104px] gap-2.5 px-3 py-2 text-[10px] font-semibold text-muted tracking-wider uppercase"
+      class="hidden md:grid md:grid-cols-[20px_1.3fr_92px_74px_92px_74px_104px] gap-2.5 px-3 py-2 text-[10px] font-semibold text-muted tracking-wider uppercase"
     >
       <span></span><span>Recette</span><span>Catégorie</span>
       <span class="text-right">Coût</span>
@@ -40,7 +40,7 @@
     @for (r of recipes(); track r.n) {
       <div
         [class]="
-          'grid grid-cols-[20px_1.3fr_92px_74px_92px_74px_104px] gap-2.5 px-3 py-2 items-center border-t border-border-s text-[12.5px] ' +
+          'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[20px_1.3fr_92px_74px_92px_74px_104px] gap-2.5 px-3 py-2 items-center border-t border-border-s text-[12.5px] ' +
           (r.sel ? 'bg-blue/[0.05]' : '')
         "
       >

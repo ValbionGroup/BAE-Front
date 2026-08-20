@@ -26,17 +26,31 @@ import { CoordinationNewModal } from '#shared/components/modal/coordination-new-
 import { CoordinationDeleteModal } from '#shared/components/modal/coordination-delete-modal/coordination-delete-modal';
 import { type ApiEvent } from '#core/services/coordination/coordination-service';
 import { CoordinationStore } from '#core/store/coordination.store';
-import { Btn, Badge, Input } from '@bae/ui';
+import { Badge, Input, DetailSheet } from '@bae/ui';
 import { CoordinationEventDetail } from './event-detail/event-detail';
 import type { CoordinationEvent, TabKey } from './events.types';
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-coordination-events',
-  imports: [Btn, Badge, Input, LucideDynamicIcon, CoordinationEventDetail],
+  imports: [Badge, Input, LucideDynamicIcon, CoordinationEventDetail, PageActions, DetailSheet],
   templateUrl: './events.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CoordinationEvents implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    { label: 'Calendrier', icon: this.icCalendar, kind: 'ghost', run: () => {} },
+    { label: 'Exporter', icon: this.icDownload, kind: 'ghost', run: () => {} },
+    {
+      label: 'Nouvelle soirée',
+      icon: this.icPlus,
+      kind: 'primary',
+      primary: true,
+      run: () => this.openNew(),
+    },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
   private readonly router = inject(Router);

@@ -1,33 +1,5 @@
-<div
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-labelledby]="'modal-title-' + config().id"
-  tabindex="-1"
-  class="w-full max-w-[560px] bg-surface border border-border rounded-xl shadow-[0_20px_80px_rgba(0,0,0,.5)] flex flex-col max-h-[90vh] focus:outline-none"
->
-  <div class="px-[22px] py-[18px] border-b border-border-s flex items-center gap-3">
-    <span
-      class="w-9 h-9 rounded-[10px] inline-flex items-center justify-center bg-danger-soft text-danger"
-    >
-      <svg lucideTrash2 [size]="18" aria-hidden="true"></svg>
-    </span>
-    <h2
-      [id]="'modal-title-' + config().id"
-      class="text-[15px] font-semibold text-text flex-1 min-w-0 truncate"
-    >
-      {{ config().title }}
-    </h2>
-    <button
-      type="button"
-      (click)="onClose()"
-      aria-label="Fermer"
-      class="text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded"
-    >
-      <svg lucideX [size]="16" aria-hidden="true"></svg>
-    </button>
-  </div>
-
-  <div class="p-[22px] flex flex-col gap-3.5 overflow-y-auto">
+<bfd-modal-shell [icon]="icTrash" tone="danger" [title]="config().title" (close)="onClose()">
+  <div class="flex flex-col gap-3.5">
     <p class="text-text-2 text-[13px] leading-relaxed">{{ config().message }}</p>
 
     @if (config().confirmationText) {
@@ -47,10 +19,10 @@
     }
   </div>
 
-  <div class="px-[22px] py-3.5 border-t border-border-s flex items-center justify-end gap-2">
+  <div modal-footer class="flex flex-1 items-center justify-end gap-2">
     <bae-btn kind="ghost" size="md" (clicked)="onClose()">Annuler</bae-btn>
     <bae-btn kind="danger" size="md" [disabled]="!canConfirm()" (clicked)="onConfirm()"
       >Supprimer</bae-btn
     >
   </div>
-</div>
+</bfd-modal-shell>

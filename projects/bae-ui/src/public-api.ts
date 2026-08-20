@@ -26,6 +26,9 @@ export * from './lib/components/ui/qr-code/qr-code';
 export * from './lib/components/ui/skeleton/skeleton';
 export * from './lib/components/ui/toggle/toggle';
 
+// Panneau de détail
+export * from './lib/components/detail-sheet/detail-sheet';
+
 // Tableau
 export * from './lib/components/table/table';
 export * from './lib/components/table/table.types';

@@ -1,6 +1,6 @@
 <div class="flex h-full flex-col overflow-hidden">
   <!-- Segment tabs + search -->
-  <div class="flex items-center gap-1.5 border-b border-border-s px-6 py-3">
+  <div class="flex items-center gap-1.5 border-b border-border-s px-4 md:px-6 py-3">
     @for (tab of tabs(); track tab.key) {
       @let isActive = activeTab() === tab.key;
       <button
@@ -32,7 +32,7 @@
   </div>
 
   <!-- Event cards -->
-  <div class="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-6 pb-8 pt-4">
+  <div class="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-4 md:px-6 pb-8 pt-4">
     @for (event of visibleEvents(); track event.id) {
       @let menu = event.menu ?? [];
       @let state = statusOf(event);
@@ -129,7 +129,7 @@
 
           <!-- Recipe table header -->
           <div
-            class="grid grid-cols-[24px_1.4fr_100px_92px_90px_110px_60px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
+            class="hidden md:grid md:grid-cols-[24px_1.4fr_100px_92px_90px_110px_60px] gap-3 bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
           >
             <span></span>
             <span>Recette</span>
@@ -147,7 +147,7 @@
           <div class="max-h-76 overflow-y-auto">
             @for (line of menu; track line.productId) {
               <div
-                class="grid grid-cols-[24px_1.4fr_100px_92px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[24px_1.4fr_100px_92px_90px_110px_60px] items-center gap-3 border-t border-border-s px-4 py-2.5 text-[12.5px]"
               >
                 <span
                   class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-surface-3 text-text-2"
@@ -249,7 +249,7 @@
         }
       </article>
     } @empty {
-      <div class="px-6 py-10 text-center text-[12.5px] text-muted">
+      <div class="px-4 md:px-6 py-10 text-center text-[12.5px] text-muted">
         Aucune soirée dans cette catégorie.
       </div>
     }

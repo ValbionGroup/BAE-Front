@@ -58,14 +58,26 @@ type LoadState = 'init' | 'loading' | 'loaded' | 'error';
 const FILTERS = ['Toutes', 'À préparer', 'En cours', 'Prêtes'] as const;
 type Filter = (typeof FILTERS)[number];
 
+import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+
 @Component({
   selector: 'bfd-precommandes-admin',
-  imports: [Btn, Badge, Card, Input, LucideDynamicIcon],
+  imports: [Btn, Badge, Card, Input, LucideDynamicIcon, PageActions],
   templateUrl: './precommandes-admin.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
 })
 export class PrecommandesAdmin implements OnInit {
+  protected readonly pageActions = computed<readonly PageAction[]>(() => [
+    {
+      label: 'Marquer prête',
+      icon: this.icCheck,
+      kind: 'primary',
+      primary: true,
+      run: () => this.markReady(),
+    },
+  ]);
+
   private readonly pageHeader = inject(PageHeaderService);
   private readonly preOrders = inject(PreOrdersService);
   private readonly events = inject(EventsStore);

@@ -1,12 +1,10 @@
 <ng-template #actions>
-  <bae-btn kind="secondary" size="md" [icon]="icUser" (clicked)="openMyPresences()">
-    Mes présences
-  </bae-btn>
+  <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="h-full grid grid-cols-[1fr_360px]">
+<div class="flex h-full flex-col md:grid md:grid-cols-[1fr_360px]">
   <!-- LEFT: Calendar -->
-  <div class="flex min-w-0 flex-col p-5">
+  <div class="flex min-w-0 flex-col p-3 md:p-5">
     <!-- Tabs + month nav -->
     <div class="mb-3.5 flex items-center">
       <!--<div class="inline-flex gap-px rounded-md border border-border bg-surface-2 p-0.5">
@@ -48,7 +46,7 @@
     <div class="grid grid-cols-7 border-l border-t border-border-s">
       @for (d of weekdays; track d) {
         <div
-          class="border-b border-r border-border-s bg-surface px-2.5 py-2 text-[11px] font-medium text-muted"
+          class="border-b border-r border-border-s bg-surface px-1 py-1.5 text-center text-[10px] font-medium text-muted md:px-2.5 md:py-2 md:text-left md:text-[11px]"
         >
           {{ d }}
         </div>
@@ -56,19 +54,20 @@
     </div>
 
     <!-- Days grid -->
-    <div class="grid flex-1 grid-cols-7 auto-rows-fr border-l border-border-s">
+    <div
+      class="grid flex-1 grid-cols-7 auto-rows-fr border-t border-border-s md:border-l md:border-t-0"
+    >
       @for (d of days(); track $index) {
         @let ev = eventFor(d);
         @let im = inMonth(d);
         <div
-          class="flex flex-col gap-1 border-b border-r border-border-s p-1.5"
+          class="flex min-h-[58px] flex-col gap-1 border-b border-r border-border-s p-0.5 md:min-h-[76px] md:p-1.5"
           [class.bg-surface]="!im"
           [class.opacity-50]="!im"
-          style="min-height: 76px"
         >
           <div class="flex items-center gap-1">
             <span
-              class="tnum inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium"
+              class="tnum inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium md:text-[11px]"
               [class]="isToday(d) ? 'bg-blue text-white' : im ? 'text-text-2' : 'text-muted'"
               >{{ d.getDate() }}</span
             >
@@ -76,13 +75,15 @@
           @if (ev) {
             <div
               (click)="selectEventView(ev.id)"
-              [class]="`flex flex-col gap-0.75 rounded-sm px-1.5 py-1 text-[11px] font-medium leading-snug cursor-pointer select-none ${getEventColor(ev)}`"
+              [class]="`flex flex-col gap-0.75 rounded-sm px-1 py-0.5 text-[9.5px] font-medium leading-snug cursor-pointer select-none md:px-1.5 md:py-1 md:text-[11px] ${getEventColor(ev)}`"
             >
               <span class="overflow-hidden text-ellipsis whitespace-nowrap">{{ ev.name }}</span>
               @if (isPresenceLoading(ev)) {
                 <bae-skeleton width="56px" height="10px" />
               } @else {
-                <span class="mono text-[9.5px] opacity-85">{{ respLabel(ev) }}</span>
+                <span class="mono hidden text-[9.5px] opacity-85 md:inline">{{
+                  respLabel(ev)
+                }}</span>
               }
             </div>
           }
@@ -92,5 +93,11 @@
   </div>
 
   <!-- RIGHT: Roster aside -->
-  <bfd-presences-roster-aside [eventId]="activeEventView()" />
+  <bae-detail-sheet
+    [open]="activeEventView() !== undefined"
+    title="Feuille de présence"
+    (closed)="selectEventView(undefined)"
+  >
+    <bfd-presences-roster-aside [eventId]="activeEventView()" />
+  </bae-detail-sheet>
 </div>

@@ -10,7 +10,7 @@
       </div>
     }
 
-    <div class="mt-3 grid grid-cols-3 gap-3">
+    <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
       @for (k of kpis(); track k.label) {
         <div class="rounded-md border border-border-s bg-surface p-3.5">
           <div class="text-[11px] text-muted">{{ k.label }}</div>
@@ -39,50 +39,60 @@
     } @else if (rows().length === 0) {
       <div class="p-[22px] text-xs text-muted">Aucune transaction enregistrée.</div>
     } @else {
-      <table class="w-full border-collapse text-sm">
-        <thead>
-          <tr class="border-b border-border-s text-left">
-            <th
-              class="px-[22px] py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-            >
-              Référence
-            </th>
-            <th class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted">
-              Date
-            </th>
-            <th class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted">
-              Moyen
-            </th>
-            <th class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted">
-              Commandes
-            </th>
-            <th
-              class="px-[22px] py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-            >
-              Montant
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (r of rows(); track r.id) {
-            <tr class="border-b border-border-s hover:bg-surface-2/50">
-              <td class="mono px-[22px] py-3 text-xs text-text-2">{{ r.reference }}</td>
-              <td class="mono tnum px-3 py-3 text-xs text-muted">{{ r.when }}</td>
-              <td class="px-3 py-3">
-                <bae-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">
-                  {{ r.method }}
-                </bae-badge>
-              </td>
-              <td class="px-3 py-3 text-xs text-muted">
-                {{ r.orderCount }} {{ r.orderCount > 1 ? 'commandes' : 'commande' }}
-              </td>
-              <td class="mono tnum px-[22px] py-3 text-right font-semibold text-text">
-                {{ formatMoney(r.amount) }} €
-              </td>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-border-s text-left">
+              <th
+                class="px-[22px] py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Référence
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Date
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Moyen
+              </th>
+              <th
+                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Commandes
+              </th>
+              <th
+                class="px-[22px] py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+              >
+                Montant
+              </th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr class="border-b border-border-s hover:bg-surface-2/50">
+                <td class="mono px-[22px] py-3 text-xs text-text-2">
+                  {{ r.reference }}
+                </td>
+                <td class="mono tnum px-3 py-3 text-xs text-muted">{{ r.when }}</td>
+                <td class="px-3 py-3">
+                  <bae-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">
+                    {{ r.method }}
+                  </bae-badge>
+                </td>
+                <td class="px-3 py-3 text-xs text-muted">
+                  {{ r.orderCount }} {{ r.orderCount > 1 ? 'commandes' : 'commande' }}
+                </td>
+                <td class="mono tnum px-[22px] py-3 text-right font-semibold text-text">
+                  {{ formatMoney(r.amount) }} €
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
   </div>
 
