@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ExternalNavigation } from '@bae/ui';
+import { findA11yViolations } from '@bae/ui/testing';
 
 import { Precommandes } from './precommandes';
 import { SessionStore, type SessionStatus } from '../../core/session.store';
@@ -120,6 +121,12 @@ describe(Precommandes.name, () => {
 
   const cartText = (): string =>
     host.querySelector('#menu .lg\\:sticky')?.textContent?.replace(/\s+/g, ' ') ?? '';
+
+  it('rend le catalogue sans violation d’accessibilité', async () => {
+    await mount();
+
+    expect(await findA11yViolations(host)).toEqual([]);
+  });
 
   it('demande le catalogue au montage, puis le menu de la soirée mise en avant', async () => {
     await mount();

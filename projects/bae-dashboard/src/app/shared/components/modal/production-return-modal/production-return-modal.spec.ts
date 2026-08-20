@@ -6,6 +6,7 @@ import { API_BASE_URL } from '@bae/ui';
 import { ProductionReturnModal } from './production-return-modal';
 import { PrintService } from '#core/services/print/print-service';
 import { ModalService } from '../modal.service';
+import { findA11yViolations } from '@bae/ui/testing';
 
 const baseUrl = 'http://api.test/v1';
 const returnsUrl = `${baseUrl}/events/9/production-returns`;
@@ -125,6 +126,13 @@ describe(ProductionReturnModal.name, () => {
 
     expect(closeSpy).not.toHaveBeenCalled();
     expect(component['error']()).toBeTruthy();
+  });
+
+  it('renders without accessibility violations', async () => {
+    await loadReturnable();
+    fixture.detectChanges();
+
+    expect(await findA11yViolations(fixture.nativeElement)).toEqual([]);
   });
 
   it('prints the closing sheet', async () => {

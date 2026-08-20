@@ -10,6 +10,7 @@ import { vi } from 'vitest';
 import { Logistique } from './logistique';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ToastService } from '@bae/ui';
+import { findA11yViolations } from '@bae/ui/testing';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
 import { PrintService } from '#core/services/print/print-service';
@@ -545,6 +546,12 @@ describe(Logistique.name, () => {
     expect(req.request.body.usedAt).toBeTruthy();
     req.flush({ ...VOUCHER, used: true, usedAt: '2026-08-09T12:00:00.000Z' });
     await fixture.whenStable();
+  });
+
+  it('renders the shopping list without accessibility violations', async () => {
+    await renderLoaded();
+
+    expect(await findA11yViolations(fixture.nativeElement)).toEqual([]);
   });
 
   it('stays focusable while the write is in flight', async () => {
