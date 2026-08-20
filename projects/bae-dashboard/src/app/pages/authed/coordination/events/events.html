@@ -3,7 +3,9 @@
   <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1.5fr_1fr]">
+<div
+  class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1.5fr_1fr] md:grid-rows-[minmax(0,1fr)]"
+>
   <!-- LEFT: table -->
   <div class="flex min-w-0 flex-col overflow-hidden border-r border-border-s">
     <!-- Tabs + search -->
@@ -139,7 +141,7 @@
 
   <!-- RIGHT: event detail panel -->
   <bae-detail-sheet
-    [open]="selectedId() !== null"
+    [open]="sheetOpen()"
     [title]="selectedEvent()?.name ?? ''"
     (closed)="deselect()"
   >

@@ -2,9 +2,9 @@
   <bfd-page-actions [actions]="pageActions()" />
 </ng-template>
 
-<div class="flex h-full flex-col md:grid md:grid-cols-[1fr_360px]">
+<div class="flex h-full flex-col md:grid md:grid-cols-[1fr_360px] md:grid-rows-[minmax(0,1fr)]">
   <!-- LEFT: Calendar -->
-  <div class="flex min-w-0 flex-col p-3 md:p-5">
+  <div class="flex min-h-0 min-w-0 flex-col p-3 md:p-5">
     <!-- Tabs + month nav -->
     <div class="mb-3.5 flex items-center">
       <!--<div class="inline-flex gap-px rounded-md border border-border bg-surface-2 p-0.5">

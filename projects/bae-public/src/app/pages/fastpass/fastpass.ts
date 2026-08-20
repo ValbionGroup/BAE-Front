@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   LucideCheck,
@@ -9,9 +9,11 @@ import {
   LucideShield,
   LucideZap,
 } from '@lucide/angular';
-import { Badge, Btn, Card, Skeleton, formatCents } from '@bae/ui';
+import { Badge, Btn, Card, ExternalNavigation, Skeleton, formatCents } from '@bae/ui';
 
 import { CatalogStore } from '../../core/catalog.store';
+import { PaymentsService } from '../../core/payments.service';
+import { SessionStore } from '../../core/session.store';
 import type { PublicFastPass } from '../../core/catalog.models';
 
 interface Plan {
@@ -38,10 +40,44 @@ interface Benefit {
 })
 export class Fastpass {
   protected readonly store = inject(CatalogStore);
+  private readonly payments = inject(PaymentsService);
+  private readonly navigation = inject(ExternalNavigation);
+  private readonly session = inject(SessionStore);
+
   protected readonly icCheck = LucideCheck;
+
+  protected readonly submitting = signal(false);
+  protected readonly checkoutError = signal<string | null>(null);
+
+  /**
+   * Les tarifs restent consultables déconnecté ; seule la souscription exige un
+   * compte. Testé contre `anonymous` et non « pas authentifié » : tant que la
+   * session est `unknown`, l'afficher le dirait à quelqu'un déjà connecté.
+   */
+  protected readonly needsLogin = computed(() => this.session.status() === 'anonymous');
 
   constructor() {
     this.store.loadFastPasses();
+  }
+
+  protected subscribe(fastPassId: number): void {
+    if (this.submitting() || !this.session.isAuthenticated()) return;
+
+    this.submitting.set(true);
+    this.checkoutError.set(null);
+
+    this.payments.openSubscription(fastPassId).subscribe({
+      next: (payment) => {
+        if (payment.mobileUrl === null) this.fail();
+        else this.navigation.go(payment.mobileUrl);
+      },
+      error: () => this.fail(),
+    });
+  }
+
+  private fail(): void {
+    this.submitting.set(false);
+    this.checkoutError.set('Le paiement n’a pas pu être ouvert. Réessayez dans un instant.');
   }
 
   protected readonly plans = computed<readonly Plan[]>(() => {

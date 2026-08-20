@@ -14,6 +14,10 @@ import { LucideX } from '@lucide/angular';
   templateUrl: './detail-sheet.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
+    // L'hôte s'intercale entre la grille de la page et le panneau : sans `h-full` sur
+    // les deux, l'aside retombe en hauteur automatique et les `h-full` internes (donc
+    // le défilement du panneau) ne se résolvent plus.
+    class: 'block min-h-0 md:h-full',
     '(document:keydown.escape)': 'onEscape()',
   },
 })
@@ -29,7 +33,7 @@ export class DetailSheet {
     () =>
       'fixed inset-x-0 bottom-0 z-40 flex max-h-[85dvh] flex-col overflow-y-auto ' +
       'rounded-t-xl border-t border-border-s bg-surface shadow-[0_-8px_40px_rgba(0,0,0,.35)] ' +
-      'transition-transform duration-200 md:static md:z-auto md:max-h-none md:rounded-none ' +
+      'transition-transform duration-200 md:static md:z-auto md:h-full md:max-h-none md:rounded-none ' +
       'md:border-l md:border-t-0 md:shadow-none md:transition-none ' +
       (this.open() ? 'translate-y-0' : 'translate-y-full md:translate-y-0'),
   );

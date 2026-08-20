@@ -6,7 +6,11 @@
   class="flex h-full flex-col overflow-hidden md:grid md:grid-cols-[1.4fr_1fr] md:grid-rows-[minmax(0,1fr)]"
 >
   <!-- GAUCHE : caméra -->
-  <div class="relative flex min-h-0 flex-col overflow-hidden bg-[#0a0a0c]">
+  <!-- Hauteur explicite sous `md` : tout le contenu du volet est en position absolue, donc
+       sans elle l'élément mesure 0 px de haut dans la colonne flex et la caméra disparaît. -->
+  <div
+    class="relative flex h-[42dvh] min-h-[240px] shrink-0 flex-col overflow-hidden bg-[#0a0a0c] md:h-auto md:min-h-0"
+  >
     <video #video class="absolute inset-0 h-full w-full object-cover" muted playsinline></video>
 
     <!-- Cadre de visée -->
@@ -37,9 +41,9 @@
 
     <!-- Barre du bas : état et saisie manuelle -->
     <div
-      class="absolute right-0 bottom-0 left-0 z-10 flex items-end gap-3 bg-gradient-to-t from-black/70 to-transparent p-4"
+      class="absolute right-0 bottom-0 left-0 z-10 flex flex-col gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 md:flex-row md:items-end md:gap-3 md:p-4"
     >
-      <div class="flex-1 text-[12px] text-white/85">
+      <div class="min-w-0 flex-1 text-[12px] text-white/85">
         <div class="flex items-center gap-2">
           <svg [lucideIcon]="icScan" [size]="14" aria-hidden="true"></svg>
           <span class="font-semibold">
@@ -61,21 +65,25 @@
         </div>
       </div>
 
-      <div class="w-full max-w-[240px]">
-        <bae-input
-          placeholder="Code-barres…"
-          [value]="manualCode()"
-          (valueChange)="onManualCode($event)"
-          (keyup.enter)="submitManual()"
-        />
+      <!-- `md:contents` : la saisie manuelle forme une rangée à part sous `md`, puis
+           redevient voisine du texte d'état dans la barre horizontale au-dessus. -->
+      <div class="flex items-end gap-2 md:contents">
+        <div class="min-w-0 flex-1 md:w-[240px] md:flex-none">
+          <bae-input
+            placeholder="Code-barres…"
+            [value]="manualCode()"
+            (valueChange)="onManualCode($event)"
+            (keyup.enter)="submitManual()"
+          />
+        </div>
+        <bae-btn kind="secondary" size="md" (clicked)="submitManual()">Ajouter</bae-btn>
       </div>
-      <bae-btn kind="secondary" size="md" (clicked)="submitManual()">Ajouter</bae-btn>
     </div>
   </div>
 
   <!-- DROITE : session -->
   <aside
-    class="flex min-h-0 flex-col border-t border-border-s bg-surface md:border-l md:border-t-0"
+    class="flex min-h-0 flex-1 flex-col border-t border-border-s bg-surface md:border-l md:border-t-0"
   >
     <div class="flex items-center gap-2.5 border-b border-border-s px-5 py-4">
       <span

@@ -97,6 +97,9 @@ export class Adherents implements OnInit {
   protected readonly searchQuery = signal('');
   protected readonly activeFilter = signal(0);
   protected readonly selectedId = signal<number | null>(null);
+  /** Distinct de `selectedId` : la présélection ci-dessous n'ouvre pas la feuille mobile,
+   *  et la fermer ne désélectionne pas — sinon l'effet re-sélectionne aussitôt. */
+  protected readonly sheetOpen = signal(false);
   protected readonly detail = signal<ClientDetail | null>(null);
   protected readonly detailLoading = signal(false);
 
@@ -145,6 +148,11 @@ export class Adherents implements OnInit {
 
   ngOnInit(): void {
     void this.store.load();
+  }
+
+  protected select(id: number): void {
+    this.selectedId.set(id);
+    this.sheetOpen.set(true);
   }
 
   private async loadDetail(id: number): Promise<void> {

@@ -1,9 +1,12 @@
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ExternalNavigation } from '@bae/ui';
 
 import { Precommandes } from './precommandes';
+import { SessionStore, type SessionStatus } from '../../core/session.store';
 import type { PublicEvent, PublicMenu } from '../../core/catalog.models';
 
 const OPEN_EVENT: PublicEvent = {
@@ -73,10 +76,30 @@ describe(Precommandes.name, () => {
     host = fixture.nativeElement as HTMLElement;
   };
 
+  let sessionStatus: ReturnType<typeof signal<SessionStatus>>;
+  let navigation: { go: ReturnType<typeof vi.fn> };
+
   beforeEach(async () => {
+    // La session est simulée : `SessionStore` interrogerait `/account/profile`,
+    // que ces tests n'ont pas à connaître pour parler du panier.
+    sessionStatus = signal<SessionStatus>('authenticated');
+    navigation = { go: vi.fn() };
+
     await TestBed.configureTestingModule({
       imports: [Precommandes],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: SessionStore,
+          useValue: {
+            status: sessionStatus.asReadonly(),
+            isAuthenticated: computed(() => sessionStatus() === 'authenticated'),
+          },
+        },
+        { provide: ExternalNavigation, useValue: navigation },
+      ],
     }).compileComponents();
 
     http = TestBed.inject(HttpTestingController);
@@ -178,19 +201,65 @@ describe(Precommandes.name, () => {
     expect(groups).toContain('Boissons');
   });
 
-  /**
-   * Aucun endpoint de paiement n'existe : le bouton doit le dire plutôt que
-   * d'échouer en silence au clic.
-   */
-  it('annonce que la validation n’est pas encore ouverte', async () => {
-    await mount();
-
-    const validate = [...host.querySelectorAll('button')].find((b) =>
+  const validateButton = (): HTMLButtonElement | undefined =>
+    [...host.querySelectorAll('button')].find((b) =>
       b.textContent?.includes('Valider ma précommande'),
     );
 
-    expect(validate?.disabled).toBe(true);
-    expect(host.textContent).toContain('paiement Lydia');
+  /**
+   * Le défaut visé : un bouton de validation inerte, ou envoyant vers une URL
+   * que le serveur n'a pas fournie.
+   */
+  it('la validation ouvre le paiement Lydia et y redirige', async () => {
+    await mount();
+    await addTo('Hot-dog classique', 2);
+
+    expect(validateButton()?.disabled).toBe(false);
+
+    validateButton()?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const opened = http.expectOne((r) => r.url.endsWith('/account/pre-orders'));
+    expect(opened.request.body).toEqual({
+      eventId: 1,
+      lines: [{ productId: 11, quantity: 2 }],
+    });
+
+    opened.flush({
+      orderRef: 'ref-1',
+      status: 'pending',
+      amountCents: 630,
+      mobileUrl: 'https://lydia.test/pay/ref-1',
+      expiresAt: null,
+    });
+    await fixture.whenStable();
+
+    expect(navigation.go).toHaveBeenCalledWith('https://lydia.test/pay/ref-1');
+  });
+
+  /**
+   * Le défaut visé : laisser un visiteur déconnecté valider, pour qu'il se
+   * heurte au 401 du serveur. Le menu reste consultable — c'est le panier qui
+   * doit dire ce qui manque.
+   */
+  it('un visiteur déconnecté voit le menu mais qu’il faut se connecter', async () => {
+    sessionStatus.set('anonymous');
+    await mount();
+    await addTo('Hot-dog classique');
+
+    expect(host.textContent).toContain('Hot-dog classique');
+    expect(cartText()).toContain('Connectez-vous');
+    expect(validateButton()).toBeUndefined();
+  });
+
+  /**
+   * Le défaut visé : ouvrir une demande de paiement à zéro euro.
+   */
+  it('la validation reste fermée tant que le panier est vide', async () => {
+    await mount();
+
+    expect(validateButton()?.disabled).toBe(true);
   });
 
   it('marque comme complète une soirée sans place restante', async () => {

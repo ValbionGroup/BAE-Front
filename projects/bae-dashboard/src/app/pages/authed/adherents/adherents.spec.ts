@@ -176,6 +176,27 @@ describe(Adherents.name, () => {
     expect(spent?.missing).toBeTruthy();
   });
 
+  it('only opens the mobile sheet on an explicit row click', async () => {
+    const fixture = await render();
+    const el = fixture.nativeElement as HTMLElement;
+    const panelClasses = () =>
+      (el.querySelector('[data-testid="sheet-panel"]') as HTMLElement).className;
+
+    // La première ligne est présélectionnée pour remplir la colonne desktop : cela ne
+    // doit pas déployer la feuille par-dessus la liste sur téléphone.
+    expect(panelClasses()).toContain('translate-y-full');
+
+    (el.querySelector('[role="button"][aria-current]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(panelClasses()).not.toContain('translate-y-full');
+
+    (el.querySelector('[data-testid="sheet-close"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    // La fermeture garde la sélection : la remettre à `null` relancerait la
+    // présélection, qui rouvrirait aussitôt la feuille.
+    expect(panelClasses()).toContain('translate-y-full');
+  });
+
   it('shows the API error rather than an empty list', async () => {
     const fixture = TestBed.createComponent(Adherents);
     fixture.detectChanges();

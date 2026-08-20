@@ -19,7 +19,9 @@ import { EventsStore } from '#core/store/events.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     role: 'complementary',
-    class: 'flex h-full flex-col overflow-y-auto border-l border-border-s bg-surface p-5',
+    // La bordure et le fond du panneau appartiennent désormais à `bae-detail-sheet`,
+    // qui l'enveloppe : les redoubler ici trace un liseré au bord de la feuille mobile.
+    class: 'flex h-full flex-col overflow-y-auto p-5',
   },
 })
 export class RosterAside {

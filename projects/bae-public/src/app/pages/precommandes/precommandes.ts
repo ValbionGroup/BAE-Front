@@ -18,9 +18,11 @@ import {
   LucideQrCode,
   LucideShield,
 } from '@lucide/angular';
-import { Badge, Btn, Card, Skeleton, formatCents } from '@bae/ui';
+import { Badge, Btn, Card, ExternalNavigation, Skeleton, formatCents } from '@bae/ui';
 
 import { CatalogStore } from '../../core/catalog.store';
+import { PaymentsService } from '../../core/payments.service';
+import { SessionStore } from '../../core/session.store';
 import type { PublicEvent, PublicMenuLine } from '../../core/catalog.models';
 
 interface MenuSection {
@@ -41,6 +43,9 @@ interface CartLine {
 })
 export class Precommandes {
   protected readonly store = inject(CatalogStore);
+  private readonly payments = inject(PaymentsService);
+  private readonly navigation = inject(ExternalNavigation);
+  private readonly session = inject(SessionStore);
 
   protected readonly icArrowRight = LucideArrowRight;
   protected readonly icShield = LucideShield;
@@ -111,6 +116,54 @@ export class Precommandes {
   protected readonly total = computed(() => this.subtotal() - this.discount());
 
   protected readonly isEmpty = computed(() => this.cartLines().length === 0);
+
+  protected readonly submitting = signal(false);
+  protected readonly checkoutError = signal<string | null>(null);
+
+  /**
+   * Le menu reste consultable déconnecté ; seule la validation exige un compte.
+   *
+   * ⚠️ Testé contre `anonymous`, jamais contre « pas authentifié » : tant que
+   * `/account/profile` n'a pas répondu, l'état est `unknown`, et afficher
+   * « connectez-vous » à ce moment le dirait à quelqu'un qui l'est déjà. Dans
+   * cet intervalle le bouton reste simplement inactif.
+   */
+  protected readonly needsLogin = computed(() => this.session.status() === 'anonymous');
+
+  protected readonly canCheckout = computed(
+    () => !this.isEmpty() && !this.submitting() && this.session.isAuthenticated(),
+  );
+
+  protected checkout(): void {
+    const event = this.selected();
+    if (event === null || !this.canCheckout()) return;
+
+    this.submitting.set(true);
+    this.checkoutError.set(null);
+
+    this.payments
+      .openPreOrder(
+        event.id,
+        this.cartLines().map((line) => ({
+          productId: line.item.productId,
+          quantity: line.qty,
+        })),
+      )
+      .subscribe({
+        next: (payment) => {
+          // Le total affiché n'a aucune autorité : le serveur a recalculé le
+          // prix, et c'est le sien que la page Lydia présentera.
+          if (payment.mobileUrl === null) this.fail();
+          else this.navigation.go(payment.mobileUrl);
+        },
+        error: () => this.fail(),
+      });
+  }
+
+  private fail(): void {
+    this.submitting.set(false);
+    this.checkoutError.set('Le paiement n’a pas pu être ouvert. Réessayez dans un instant.');
+  }
 
   protected pick(eventId: number): void {
     this.picked.set(eventId);
