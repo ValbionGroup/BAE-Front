@@ -33,6 +33,10 @@ export interface ClientDetail extends ClientRow {
   readonly noteAuthor: string | null;
   readonly noteWrittenAt: string | null;
   readonly subscriptions: readonly SubscriptionRow[];
+  /** Précommandes non annulées, payées ou non. */
+  readonly preOrderCount: number;
+  /** Comptoir et précommandes payées, en **centimes**. */
+  readonly spentCents: number;
 }
 
 export interface ClientsSummary {

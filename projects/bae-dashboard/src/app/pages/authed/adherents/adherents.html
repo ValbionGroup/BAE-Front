@@ -233,12 +233,9 @@
           <div class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-3">
             Activité saison
           </div>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-3 gap-2">
             @for (s of stats(); track s.k) {
-              <div
-                class="bg-surface border border-border-s rounded-md px-3 py-2.5"
-                [attr.title]="s.missing ?? null"
-              >
+              <div class="bg-surface border border-border-s rounded-md px-3 py-2.5">
                 <div class="text-[11px] text-muted">{{ s.k }}</div>
                 <div class="tnum text-base font-semibold mt-0.5 text-text">{{ s.v }}</div>
               </div>
