@@ -5,25 +5,27 @@
     <h2 class="m-0 mb-1 text-[19px] font-semibold -tracking-[0.2px] text-text">Profil</h2>
     <p class="m-0 mb-5 text-[12.5px] text-muted">Mets à jour tes infos et tes préférences.</p>
 
-    <!-- Avatar row -->
     <div class="mb-5 flex flex-wrap items-center gap-4">
-      <bae-avatar name="Léa Marchand" [size]="64" />
+      <bae-avatar [name]="displayName()" [size]="64" />
       <div>
-        <div class="text-sm font-semibold text-text">Léa Marchand</div>
-        <div class="mt-0.5 text-xs text-muted">Trésorière · ENSEIRB-MATMECA · 2A INFO</div>
+        <div class="text-sm font-semibold text-text">{{ displayName() }}</div>
+        <div class="mt-0.5 text-xs text-muted">{{ roleLabel() }}</div>
       </div>
-      <div class="flex-1"></div>
-      <bae-btn kind="ghost" size="sm" [icon]="icUpload">Changer la photo</bae-btn>
     </div>
 
-    <div class="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-      <bae-field label="Prénom"><bae-input value="Léa" /></bae-field>
-      <bae-field label="Nom"><bae-input value="Marchand" /></bae-field>
-      <bae-field label="Email"
-        ><bae-input [icon]="icMail" value="lea.marchand@enseirb-matmeca.fr"
-      /></bae-field>
-      <bae-field label="Promo"><bae-input value="2026 — Filière INFO" /></bae-field>
-    </div>
+    <dl class="mb-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+      @for (row of profileRows(); track row.k) {
+        <div class="rounded-md border border-border-s bg-surface px-3 py-2.5">
+          <dt class="text-[11px] text-muted">{{ row.k }}</dt>
+          <dd class="mono tnum m-0 mt-0.5 text-[13px] text-text">{{ row.v }}</dd>
+        </div>
+      }
+    </dl>
+
+    <p class="mb-5 text-[11px] text-muted">
+      Nom, prénom et email viennent d'EirbConnect : ils se mettent à jour à la connexion, et ne se
+      corrigent pas ici.
+    </p>
 
     <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Affichage</h3>
     <div class="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
