@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { LucideDownload, LucidePackageOpen } from '@lucide/angular';
 import { lastValueFrom } from 'rxjs';
 import { Btn, Input, ToastService, messageOf } from '@bae/ui';
@@ -59,12 +68,15 @@ export class ProductionReturnModal {
   protected readonly error = signal<string | null>(null);
 
   constructor() {
-    void this.load();
+    effect(() => {
+      const eventId = this.eventId();
+      untracked(() => void this.load(eventId));
+    });
   }
 
-  private async load(): Promise<void> {
+  private async load(eventId: string): Promise<void> {
     try {
-      const goods = await lastValueFrom(this.production.getReturnable(this.eventId()));
+      const goods = await lastValueFrom(this.production.getReturnable(eventId));
       this.lines.set(
         goods.map((good) => ({ good, quantity: '', destination: 'reserve' as Destination })),
       );

@@ -26,7 +26,7 @@ import {
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ClientsStore } from '#core/store/clients.store';
-import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton, DetailSheet } from '@bae/ui';
+import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton, DetailSheet, formatCents } from '@bae/ui';
 import type { ClientDetail, ClientRow, MembershipStatus } from './adherents.types';
 
 interface InfoRow {
@@ -39,7 +39,6 @@ interface InfoRow {
 interface StatTile {
   readonly k: string;
   readonly v: string;
-  readonly missing?: string;
 }
 
 const STATUS_LABELS: Record<MembershipStatus, string> = {
@@ -224,20 +223,12 @@ export class Adherents implements OnInit {
     ];
   });
 
-  /**
-   * Trois des quatre tuiles de la maquette n'ont aucune source : `transactions`
-   * ne porte aucun lien vers une personne, et le rattachement d'une commande à
-   * son acheteur arrive avec le lot caisse. Elles le disent plutôt que
-   * d'afficher un nombre plausible.
-   */
   protected readonly stats = computed<readonly StatTile[]>(() => {
     const detail = this.detail();
-    const unavailable = 'Disponible quand les commandes seront rattachées à leur acheteur.';
     return [
       { k: 'Cotisations', v: String(detail?.subscriptions.length ?? 0) },
-      { k: 'Précommandes', v: '—', missing: unavailable },
-      { k: 'Dépensé', v: '—', missing: unavailable },
-      { k: 'Solde courant', v: '—', missing: unavailable },
+      { k: 'Précommandes', v: String(detail?.preOrderCount ?? 0) },
+      { k: 'Dépensé', v: `${formatCents(detail?.spentCents ?? 0)} €` },
     ];
   });
 

@@ -14,7 +14,7 @@ interface PageApi {
   searchQuery: { set(value: string): void };
   visibleClients(): readonly ClientRow[];
   filterTabs(): readonly string[];
-  stats(): readonly { k: string; v: string; missing?: string }[];
+  stats(): readonly { k: string; v: string }[];
 }
 
 const CLIENTS: ClientRow[] = [
@@ -77,6 +77,8 @@ const DETAIL: ClientDetail = {
       paymentMethod: 'lydia',
     },
   ],
+  preOrderCount: 3,
+  spentCents: 1500,
 };
 
 describe(Adherents.name, () => {
@@ -167,13 +169,13 @@ describe(Adherents.name, () => {
     ]);
   });
 
-  it('marks the tiles it cannot compute instead of inventing a number', async () => {
+  // Le back sert des centimes ; les afficher tels quels annoncerait « 1500 € »
+  // pour quinze euros de consommation.
+  it('renders the spend in euros, not raw cents', async () => {
     const fixture = await render();
     const page = fixture.componentInstance as unknown as PageApi;
 
-    const spent = page.stats().find((tile) => tile.k === 'Dépensé');
-    expect(spent?.v).toBe('—');
-    expect(spent?.missing).toBeTruthy();
+    expect(page.stats().find((tile) => tile.k === 'Dépensé')?.v).toBe('15,00 €');
   });
 
   it('only opens the mobile sheet on an explicit row click', async () => {
