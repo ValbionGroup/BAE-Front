@@ -10,7 +10,7 @@ import {
   type UpdateMemberPatch,
 } from '#core/services/team/team-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf, settle } from '@bae/ui';
+import { messageOf, settle, type PageMetadata } from '@bae/ui';
 
 /** Per-section error messages, so one dead endpoint only blanks its own card. */
 export interface TeamSectionErrors {
@@ -28,20 +28,14 @@ interface TeamState {
   permissions: ApiTeamPermission[];
   logs: ApiTeamLog[];
   errors: TeamSectionErrors;
-  /** Rôles dont un PUT est en vol. Chaque requête porte la liste complète :
-   *  deux écritures concurrentes sur le même rôle s'écraseraient. */
   savingRoleIds: number[];
   permissionsError: string | null;
-  /** Role the current `permissionsError` describes; lets a retry on that same
-   *  role clear it without touching an unrelated role's still-unseen error. */
   permissionsErrorRoleId: number | null;
-  /** Membres dont une écriture est en vol, pour empêcher deux mutations
-   *  concurrentes sur la même ligne de s'écraser. */
   savingMemberIds: number[];
   memberError: string | null;
-  /** Membre que `memberError` décrit ; une nouvelle tentative sur ce membre
-   *  l'efface sans toucher à l'erreur non vue d'un autre. */
   memberErrorId: number | null;
+  logsPage: PageMetadata | null;
+  logsPaging: boolean;
 }
 
 const NO_ERRORS: TeamSectionErrors = {
@@ -58,6 +52,8 @@ const initialState: TeamState = {
   roles: [],
   permissions: [],
   logs: [],
+  logsPage: null,
+  logsPaging: false,
   errors: NO_ERRORS,
   savingRoleIds: [],
   permissionsError: null,
@@ -98,16 +94,33 @@ export const TeamStore = signalStore(
         members: result.members.ok ? result.members.value : [],
         roles: result.roles.ok ? result.roles.value : [],
         permissions: result.permissions.ok ? result.permissions.value : [],
-        logs: result.logs.ok ? result.logs.value : [],
+        logs: result.logs.ok ? result.logs.value.rows : [],
+        logsPage: result.logs.ok ? result.logs.value.pagination : null,
         errors,
+      });
+    },
+
+    async goToLogsPage(page: number): Promise<void> {
+      if (store.logsPaging() || page < 1) return;
+
+      const pagination = store.logsPage();
+      if (pagination && (page > pagination.lastPage || page === pagination.currentPage)) return;
+
+      patchState(store, { logsPaging: true });
+      const result = await lastValueFrom(settle(svc.getLogs(page)));
+      patchState(store, {
+        logsPaging: false,
+        ...(result.ok
+          ? { logs: result.value.rows, logsPage: result.value.pagination }
+          : {
+              errors: { ...store.errors(), logs: 'Impossible de charger cette page du journal.' },
+            }),
       });
     },
 
     async setRolePermission(roleId: number, permission: string, granted: boolean): Promise<void> {
       if (store.savingRoleIds().includes(roleId)) return;
 
-      // A stale error only ever names one role; a fresh attempt on that same
-      // role is the signal that it's no longer describing the current state.
       if (store.permissionsErrorRoleId() === roleId) {
         patchState(store, { permissionsError: null, permissionsErrorRoleId: null });
       }
@@ -139,9 +152,6 @@ export const TeamStore = signalStore(
           roles: store.roles().map((role) => (role.id === roleId ? saved : role)),
         });
       } catch (error) {
-        // Only `target` (this role's pre-click value) is restored, merged into
-        // live state: a wholesale `before` would also revert any other role
-        // whose write landed while this one was in flight.
         patchState(store, {
           roles: store.roles().map((role) => (role.id === roleId ? target : role)),
           permissionsError: messageOf(
@@ -166,10 +176,6 @@ export const TeamStore = signalStore(
 
       const target = store.members().find((member) => member.id === id);
       if (!target) {
-        // Membre disparu du store entre-temps (supprimé depuis un autre
-        // onglet pendant l'édition) : un retour muet laisserait `memberErrorId`
-        // à sa valeur précédente, la modale lirait « pas d'erreur pour ce
-        // membre » et se fermerait comme si l'écriture avait abouti.
         patchState(store, {
           memberError: 'Ce membre a été supprimé entre-temps.',
           memberErrorId: id,
@@ -177,11 +183,6 @@ export const TeamStore = signalStore(
         return;
       }
 
-      // Écriture optimiste : le rôle affiché suit le patch tant que la réponse
-      // n'est pas là. `role` est recalculé localement pour que le badge change
-      // tout de suite — le serveur renverra la relation rechargée.
-      // ⚠️ Le nom vit sous `user`, pas à plat : l'écrire à plat ne changeait
-      // rien à l'écran, la ligne ne bougeant qu'au rechargement suivant.
       const patchedUser =
         patch.firstName === undefined && patch.lastName === undefined
           ? target.user
@@ -217,9 +218,6 @@ export const TeamStore = signalStore(
           members: store.members().map((member) => (member.id === id ? saved : member)),
         });
       } catch (error) {
-        // Seule cette ligne est restaurée, fusionnée dans l'état vivant : un
-        // `before` global annulerait aussi l'écriture d'un autre membre qui a
-        // abouti pendant que celle-ci était en vol.
         patchState(store, {
           members: store.members().map((member) => (member.id === id ? target : member)),
           memberError: messageOf(error, 'Impossible de modifier ce membre.'),
@@ -232,12 +230,6 @@ export const TeamStore = signalStore(
       }
     },
 
-    /**
-     * Délibérément NON optimiste. Retirer la ligne puis la remettre sur un refus
-     * produit un clignotement qui se lit comme un bug — or le refus n'est pas un
-     * cas rare ici : deux des trois gardes du back (hiérarchie, auto-suppression)
-     * se déclenchent sur des gestes que l'interface ne peut pas toujours prévoir.
-     */
     async deleteMember(id: number): Promise<void> {
       if (store.savingMemberIds().includes(id)) return;
 

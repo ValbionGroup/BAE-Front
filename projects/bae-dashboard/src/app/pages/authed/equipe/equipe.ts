@@ -323,6 +323,13 @@ export class Equipe implements OnInit {
     toAuditEntries(this.store.logs(), this.store.members(), this.now()),
   );
 
+  protected readonly logsPage = this.store.logsPage;
+  protected readonly logsPaging = this.store.logsPaging;
+
+  protected goToLogsPage(page: number): void {
+    void this.store.goToLogsPage(page);
+  }
+
   private readonly subtitle = computed(() => {
     if (this.loading() === 'loading' || this.loading() === 'init') return 'Chargement…';
     if (this.loading() === 'error') return 'Données indisponibles';

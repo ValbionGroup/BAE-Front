@@ -56,6 +56,7 @@ export * from './lib/components/toast/toast-container/toast-container';
 // HTTP — les six intercepteurs se posent dans cet ordre, cf. `app.config.ts`
 export * from './lib/http/api-url.token';
 export * from './lib/http/api-response.model';
+export * from './lib/http/pagination';
 export * from './lib/http/interceptors/api-case-request/api-case-request-interceptor';
 export * from './lib/http/interceptors/auth/auth-interceptor';
 export * from './lib/http/interceptors/csrf/csrf-interceptor';

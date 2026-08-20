@@ -45,6 +45,6 @@ describe(TeamService.name, () => {
 
   it('requests the logs endpoint', () => {
     service.getLogs().subscribe();
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
   });
 });

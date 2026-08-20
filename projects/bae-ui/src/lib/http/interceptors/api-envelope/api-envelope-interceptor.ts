@@ -4,6 +4,8 @@ import { throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { API_BASE_URL } from '../../api-url.token';
 import { ApiErrorEnvelope, ApiSuccessEnvelope, isApiError } from '../../api-response.model';
+import { PAGINATION, type PageMetadata } from '../../pagination';
+import { convertKeysToCamelCase } from '../../../utils/case-converter';
 
 const isSuccessEnvelope = (body: unknown): body is ApiSuccessEnvelope =>
   typeof body === 'object' && body !== null && 'data' in body;
@@ -46,6 +48,10 @@ export const apiEnvelopeInterceptor: HttpInterceptorFn = (req, next) => {
     }),
     map((event) => {
       if (event instanceof HttpResponse && isSuccessEnvelope(event.body)) {
+        const metadata = (event.body as { metadata?: unknown }).metadata;
+        if (metadata != null) {
+          req.context.set(PAGINATION, convertKeysToCamelCase(metadata) as PageMetadata);
+        }
         return event.clone({ body: event.body.data });
       }
       return event;

@@ -45,7 +45,7 @@ describe(MemberEditModal.name, () => {
       { id: 2, name: 'Admin', createdAt: null, updatedAt: null, permissions: [] },
     ]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const fixture = TestBed.createComponent(MemberEditModal);
@@ -80,7 +80,7 @@ describe(MemberEditModal.name, () => {
       { id: 2, name: 'Admin', createdAt: null, updatedAt: null, permissions: [] },
     ]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const fixture = TestBed.createComponent(MemberEditModal);
@@ -125,7 +125,7 @@ describe(MemberEditModal.name, () => {
       .expectOne(`${baseUrl}/roles`)
       .flush([{ id: 9, name: 'Admin', createdAt: null, updatedAt: null, permissions: [] }]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const fixture = TestBed.createComponent(MemberEditModal);
@@ -161,7 +161,7 @@ describe(MemberEditModal.name, () => {
       .expectOne(`${baseUrl}/roles`)
       .flush([{ id: 1, name: 'Finance', createdAt: null, updatedAt: null, permissions: [] }]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const fixture = TestBed.createComponent(MemberEditModal);
@@ -212,7 +212,7 @@ describe(MemberEditModal.name, () => {
       httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
       httpMock.expectOne(`${baseUrl}/roles`).flush([]);
       httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-      httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+      httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
       await loaded;
 
       // Opened through the real service, exactly as `Equipe.openEdit` does, so

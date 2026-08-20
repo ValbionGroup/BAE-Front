@@ -9,6 +9,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { apiEnvelopeInterceptor } from './api-envelope-interceptor';
 import { API_BASE_URL } from '../../api-url.token';
+import { PAGINATION, paginationContext } from '../../pagination';
 
 describe('apiEnvelopeInterceptor', () => {
   const apiBaseUrl = 'http://api.test';
@@ -53,6 +54,37 @@ describe('apiEnvelopeInterceptor', () => {
 
     expect(caught?.error).toEqual({ code: 'NOT_FOUND', message: 'Event not found' });
     expect(caught?.status).toBe(404);
+  });
+
+  /**
+   * Cet intercepteur voit la réponse avant la conversion de casse, et celle-ci
+   * ne traite que le corps : sans conversion ici, l'appelant recevrait
+   * `per_page` et lirait `undefined` sur `perPage`.
+   */
+  it('should expose pagination on the request context, in camelCase', () => {
+    const context = paginationContext();
+    http.get(`${apiBaseUrl}/logs`, { context }).subscribe();
+
+    httpMock.expectOne(`${apiBaseUrl}/logs`).flush({
+      data: [{ id: 1 }],
+      metadata: { total: 320, per_page: 200, current_page: 1, last_page: 2 },
+    });
+
+    expect(context.get(PAGINATION)).toEqual({
+      total: 320,
+      perPage: 200,
+      currentPage: 1,
+      lastPage: 2,
+    });
+  });
+
+  it('should leave the pagination null when the response carries none', () => {
+    const context = paginationContext();
+    http.get(`${apiBaseUrl}/events`, { context }).subscribe();
+
+    httpMock.expectOne(`${apiBaseUrl}/events`).flush({ data: [{ id: 1 }] });
+
+    expect(context.get(PAGINATION)).toBeNull();
   });
 
   it('should leave non-enveloped bodies untouched', () => {

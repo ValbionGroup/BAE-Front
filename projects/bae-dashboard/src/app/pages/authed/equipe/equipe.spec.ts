@@ -51,7 +51,7 @@ describe(Equipe.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     httpMock.verify();
   });
 
@@ -69,7 +69,7 @@ describe(Equipe.name, () => {
     ]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([{ id: 1, name: 'Finance', permissions: [] }]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
 
     const text: string = fixture.nativeElement.textContent;
@@ -85,7 +85,7 @@ describe(Equipe.name, () => {
       .flush(null, { status: 500, statusText: 'Server Error' });
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
 
     expect(fixture.nativeElement.textContent).toContain('Impossible de charger les membres.');
@@ -125,7 +125,7 @@ describe(Equipe.name, () => {
         { permission: 'role:read' },
         { permission: 'stock:read' },
       ]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
   }
 
@@ -174,7 +174,7 @@ describe(Equipe.name, () => {
     ]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
 
     const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
@@ -209,7 +209,7 @@ describe(Equipe.name, () => {
       },
     ]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
 
     const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
@@ -240,7 +240,7 @@ describe(Equipe.name, () => {
     ]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await flushAsync(fixture);
 
     const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
@@ -290,7 +290,7 @@ describe(Equipe.name, () => {
       ]);
       httpMock.expectOne(`${baseUrl}/roles`).flush([]);
       httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-      httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+      httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
       await flushAsync(fixture);
 
       const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
@@ -352,7 +352,7 @@ describe(Equipe.name, () => {
       ]);
       httpMock.expectOne(`${baseUrl}/roles`).flush([]);
       httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-      httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+      httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
       await flushAsync(fixture);
 
       const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(

@@ -51,7 +51,7 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([{ id: 1, name: 'Finance' }]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     expect(store.loading()).toBe('loaded');
@@ -59,6 +59,29 @@ describe(TeamStore.name, () => {
     expect(store.roles().length).toBe(1);
     expect(store.permissions().length).toBe(1);
     expect(store.errors().members).toBeNull();
+  });
+
+  /**
+   * Le défaut visé : un fil d'activité qui montre la première page en laissant
+   * croire qu'il montre tout le journal. La pagination doit remonter jusqu'au
+   * store, et changer de page ne doit recharger que le journal.
+   */
+  it('exposes the log pagination and swaps only the logs on a page change', async () => {
+    const loaded = store.load();
+    httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
+    httpMock.expectOne(`${baseUrl}/roles`).flush([]);
+    httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
+    await loaded;
+
+    const paging = store.goToLogsPage(2);
+    const request = httpMock.expectOne((r) => r.url === `${baseUrl}/logs`);
+    expect(request.request.params.get('page')).toBe('2');
+    request.flush([]);
+    await paging;
+
+    // Les membres restent chargés : changer de page ne touche pas le reste.
+    expect(store.members().length).toBe(1);
   });
 
   it('degrades gracefully when a single endpoint fails', async () => {
@@ -69,7 +92,7 @@ describe(TeamStore.name, () => {
     httpMock
       .expectOne(`${baseUrl}/permissions`)
       .flush(null, { status: 500, statusText: 'Server Error' });
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     expect(store.loading()).toBe('loaded');
@@ -83,7 +106,9 @@ describe(TeamStore.name, () => {
     const loaded = store.load();
 
     for (const path of ['members', 'roles', 'permissions', 'logs']) {
-      httpMock.expectOne(`${baseUrl}/${path}`).flush(null, { status: 500, statusText: 'Nope' });
+      httpMock
+        .expectOne((r) => r.url === `${baseUrl}/${path}`)
+        .flush(null, { status: 500, statusText: 'Nope' });
     }
     await loaded;
 
@@ -94,7 +119,7 @@ describe(TeamStore.name, () => {
   it('skips a second load once loaded (cache guard)', async () => {
     const loaded = store.load();
     for (const path of ['members', 'roles', 'permissions', 'logs']) {
-      httpMock.expectOne(`${baseUrl}/${path}`).flush([]);
+      httpMock.expectOne((r) => r.url === `${baseUrl}/${path}`).flush([]);
     }
     await loaded;
 
@@ -115,7 +140,7 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([role]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
   }
 
@@ -176,7 +201,7 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([ROLE, roleB]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const failing = store.setRolePermission(1, 'log:read', true);
@@ -243,7 +268,7 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([ROLE, roleB]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([{ permission: 'stock:read' }]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const failing = store.setRolePermission(1, 'log:read', true);
@@ -278,7 +303,7 @@ describe(TeamStore.name, () => {
     ]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     // Les deux écritures partent avant que l'une ou l'autre ne réponde.
@@ -324,7 +349,7 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const deleting = store.deleteMember(2);
@@ -343,7 +368,7 @@ describe(TeamStore.name, () => {
     httpMock.expectOne(`${baseUrl}/members`).flush([MEMBER]);
     httpMock.expectOne(`${baseUrl}/roles`).flush([]);
     httpMock.expectOne(`${baseUrl}/permissions`).flush([]);
-    httpMock.expectOne(`${baseUrl}/logs`).flush([]);
+    httpMock.expectOne((r) => r.url === `${baseUrl}/logs`).flush([]);
     await loaded;
 
     const deleting = store.deleteMember(2);

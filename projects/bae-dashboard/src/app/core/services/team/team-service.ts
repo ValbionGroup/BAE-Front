@@ -1,16 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { API_BASE_URL } from '@bae/ui';
+import { Observable, map } from 'rxjs';
+import { API_BASE_URL, PAGINATION, paginationContext, type PageMetadata } from '@bae/ui';
 
-// All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
-// Shapes below were verified against a live backend (AdonisJS 7, `GET /v1/{members,roles,permissions,logs}`).
-
-/**
- * Role shape as embedded in a member by `GET /members`, which preloads the role WITHOUT
- * its permissions. No `permissions` field here on purpose: see `ApiTeamRoleWithPermissions`
- * for the `GET /roles` shape, which does carry them.
- */
 export interface ApiTeamRole {
   id: number;
   name: string;
@@ -117,6 +109,15 @@ export interface ApiTeamLog {
   user: ApiTeamLogUser | null;
 }
 
+/** Le maximum que le serveur accepte : au-delà il rabote sans le dire. */
+export const LOG_PAGE_SIZE = 200;
+
+export interface LogPage {
+  rows: ApiTeamLog[];
+  /** `null` si la réponse n'a pas porté de pagination. */
+  pagination: PageMetadata | null;
+}
+
 /**
  * Corps de `PATCH /members/:id`. Les trois champs sont optionnels et le corps
  * est un delta : ce qui n'y figure pas n'est pas touché. `roleId: null` signifie
@@ -162,13 +163,17 @@ export class TeamService {
   }
 
   /**
-   * `GET /logs` paginates server-side (50 rows per page by default, 200 max) and this
-   * call sends neither `page` nor `limit`, so it silently gets the default first page —
-   * the most recent entries, newest first — not the whole table. The Équipe page's
-   * audit panel only ever shows that first page.
+   * `GET /logs`, une page à la fois — le serveur plafonne à 200 lignes.
+   *
+   * Retourne la pagination avec les lignes : sans elle, l'écran ne peut pas dire
+   * s'il montre tout le journal ou seulement sa tête, et affirmerait donc
+   * quelque chose de faux.
    */
-  getLogs(): Observable<ApiTeamLog[]> {
-    return this.http.get<ApiTeamLog[]>(`${this.baseUrl}/logs`);
+  getLogs(page = 1, limit = LOG_PAGE_SIZE): Observable<LogPage> {
+    const context = paginationContext();
+    return this.http
+      .get<ApiTeamLog[]>(`${this.baseUrl}/logs`, { params: { page, limit }, context })
+      .pipe(map((rows) => ({ rows, pagination: context.get(PAGINATION) })));
   }
 
   /**
