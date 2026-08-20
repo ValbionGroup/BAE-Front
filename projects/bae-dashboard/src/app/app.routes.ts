@@ -3,6 +3,7 @@ import { AppRoutes } from './app-routes.const';
 import { AppShell } from '#pages/app-shell/app-shell';
 import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
+import { memberGuard } from '#core/guards/auth/member-guard';
 import { permissionGuardFor } from '#core/guards/auth/permission-guard';
 
 export { AppRoutes } from './app-routes.const';
@@ -13,16 +14,20 @@ export const routes: Routes = [
     canActivate: [guestGuard],
     loadComponent: () => import('#pages/guest/login/login').then((m) => m.Login),
   },
+  {
+    path: AppRoutes.accesRefuse,
+    loadComponent: () => import('#pages/states/forbidden/forbidden').then((m) => m.Forbidden),
+  },
   { path: AppRoutes.soiree, pathMatch: 'full', redirectTo: AppRoutes.soireeLive },
   {
     path: AppRoutes.soireeLive,
-    canActivate: [authGuard, permissionGuardFor(AppRoutes.soireeLive)],
+    canActivate: [authGuard, memberGuard, permissionGuardFor(AppRoutes.soireeLive)],
     loadComponent: () => import('#pages/authed/soiree/live/live').then((m) => m.SoireeLive),
   },
   {
     path: '',
     component: AppShell,
-    canActivate: [authGuard],
+    canActivate: [authGuard, memberGuard],
     children: [
       {
         path: AppRoutes.home,

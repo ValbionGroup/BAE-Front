@@ -4,7 +4,8 @@ import { ApiError } from '@bae/ui';
 export interface AuthState {
   // Optional when not logged in
   user?: UserModel;
-  member?: MemberModel;
+  /** `null` — et non `undefined` — quand le profil a répondu sans membre rattaché. */
+  member?: MemberModel | null;
   /** Absent tant que le profil n'a pas répondu ; jamais confondu avec « aucun droit ». */
   permissions?: string[];
 

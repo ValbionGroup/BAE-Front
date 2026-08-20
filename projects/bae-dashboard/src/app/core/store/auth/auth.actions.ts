@@ -15,12 +15,12 @@ export const rehydrationFailed = createAction('[Auth] RehydrationFailed');
 
 export const rehydrationSuccess = createAction(
   '[Auth] Rehydrate profile',
-  props<{ user: UserModel; member: MemberModel; permissions: string[] }>(),
+  props<{ user: UserModel; member: MemberModel | null; permissions: string[] }>(),
 );
 
 export const loginSuccess = createAction(
   '[Auth] Login Success',
-  props<{ user: UserModel; member: MemberModel; permissions: string[] }>(),
+  props<{ user: UserModel; member: MemberModel | null; permissions: string[] }>(),
 );
 
 export const loginFailure = createAction('[Auth] Login Failure', props<{ error: ApiError }>());

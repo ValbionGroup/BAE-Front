@@ -1,0 +1,58 @@
+<div class="h-screen overflow-hidden relative">
+  <div
+    aria-hidden="true"
+    class="absolute inset-0 opacity-70 pointer-events-none"
+    style="
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent 0 22px,
+          color-mix(in oklch, var(--bae-text) 5%, transparent) 22px 23px
+        ),
+        radial-gradient(
+          circle at 50% 12%,
+          color-mix(in oklch, var(--bae-red) 13%, transparent) 0%,
+          transparent 55%
+        );
+    "
+  ></div>
+
+  <div class="relative h-full overflow-y-auto flex items-center justify-center px-6">
+    <div class="text-center max-w-md py-12">
+      <div
+        class="w-[84px] h-[84px] mx-auto rounded-full bg-danger-soft text-danger flex items-center justify-center relative"
+      >
+        <svg aria-hidden="true" [lucideIcon]="icLock" [size]="38"></svg>
+        <span
+          aria-hidden="true"
+          class="absolute -inset-1.5 rounded-full border-2 border-dashed border-danger opacity-40"
+        ></span>
+      </div>
+
+      <h1 class="mt-5.5 mb-0 text-[22px] font-semibold text-text -tracking-[0.4px]">
+        Accès réservé
+      </h1>
+      <p class="text-[13px] text-muted mt-2.5 max-w-[340px] mx-auto leading-relaxed">
+        Ce compte n’est rattaché à <b class="text-text">aucun membre du BAE</b>. Si tu penses qu’il
+        s’agit d’une erreur, contacte le bureau du BAE.
+      </p>
+
+      <div
+        class="mt-5 p-3 bg-surface-2 border border-border-s rounded-md max-w-[340px] mx-auto flex items-center gap-2.5 text-left"
+      >
+        <bae-avatar [name]="avatarName()" [size]="32" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-text font-medium truncate">{{ user()?.email }}</p>
+          <p class="text-[10.5px] text-muted">Compte adhérent · non membre</p>
+        </div>
+      </div>
+
+      <div class="inline-flex flex-wrap justify-center gap-2 mt-5.5">
+        <bae-btn kind="primary" [icon]="icArrowRight" (clicked)="goToPublicApp()">
+          Retour à l’espace adhérent
+        </bae-btn>
+        <bae-btn kind="ghost" [icon]="icLogOut" (clicked)="logout()">Se déconnecter</bae-btn>
+      </div>
+    </div>
+  </div>
+</div>

@@ -23,4 +23,5 @@ export const AppRoutes = {
   equipe: 'equipe',
   etats: 'etats',
   login: 'login',
+  accesRefuse: 'acces-refuse',
 } as const;
