@@ -7,7 +7,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Login } from './login';
-import { API_BASE_URL } from '@bae/ui';
+import { API_BASE_URL, ExternalNavigation } from '@bae/ui';
 
 function configure(ssoError: string | null) {
   return TestBed.configureTestingModule({
@@ -37,6 +37,21 @@ describe('Login', () => {
     fixture = TestBed.createComponent(Login);
     await fixture.whenStable();
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  // `app=dashboard` est la seule partie propre à cette zone, et le back refuse
+  // toute autre valeur : la recopier depuis le front public casse la connexion.
+  it('part vers l’IdP en annonçant la zone dashboard', async () => {
+    await configure(null);
+    const go = vi.spyOn(TestBed.inject(ExternalNavigation), 'go').mockImplementation(() => {});
+    fixture = TestBed.createComponent(Login);
+    await fixture.whenStable();
+
+    (
+      fixture.componentInstance as unknown as { loginWithEirbConnect(): void }
+    ).loginWithEirbConnect();
+
+    expect(go).toHaveBeenCalledWith('http://api.test/v1/auth/keycloak/redirect?app=dashboard');
   });
 
   it('propose EirbConnect et non plus « ENT Bordeaux INP »', async () => {

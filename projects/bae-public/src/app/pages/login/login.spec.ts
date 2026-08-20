@@ -6,6 +6,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 
+import { ExternalNavigation } from '@bae/ui';
+
 import { Login } from './login';
 
 async function mount(ssoError: string | null): Promise<ComponentFixture<Login>> {
@@ -79,5 +81,18 @@ describe(Login.name, () => {
     // Aucun formulaire de mot de passe : la zone publique n'en a pas.
     expect(host.querySelector('form')).toBeNull();
     expect(host.querySelector('input[type="password"]')).toBeNull();
+  });
+
+  // `app=public` est la seule partie propre à cette zone, et le back refuse
+  // toute autre valeur : la recopier depuis le dashboard casse la connexion.
+  it('part vers l’IdP en annonçant la zone publique', async () => {
+    const fixture = await mount(null);
+    const go = vi.spyOn(TestBed.inject(ExternalNavigation), 'go').mockImplementation(() => {});
+
+    (
+      fixture.componentInstance as unknown as { loginWithEirbConnect(): void }
+    ).loginWithEirbConnect();
+
+    expect(go.mock.calls[0][0]).toMatch(/\/auth\/keycloak\/redirect\?app=public$/);
   });
 });

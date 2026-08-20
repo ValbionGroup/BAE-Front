@@ -3,7 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { LucideDynamicIcon, LucideShield, LucideTriangleAlert } from '@lucide/angular';
-import { API_BASE_URL, Btn, Card } from '@bae/ui';
+import { API_BASE_URL, Btn, Card, ExternalNavigation } from '@bae/ui';
 
 /**
  * Messages d'échec du retour SSO. `not_a_member` en est **absent à dessein** :
@@ -26,6 +26,7 @@ const SSO_ERRORS: Readonly<Record<string, string>> = {
 })
 export class Login {
   private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly externalNavigation = inject(ExternalNavigation);
 
   private readonly ssoErrorCode = toSignal(
     inject(ActivatedRoute).queryParamMap.pipe(map((params) => params.get('sso_error'))),
@@ -42,16 +43,11 @@ export class Login {
   });
 
   /**
-   * Navigation **de premier niveau**, et non un appel `HttpClient` : c'est un
-   * flux OAuth, le navigateur doit réellement quitter la page pour atteindre
-   * l'IdP puis revenir. Une requête XHR se ferait bloquer et ne poserait aucun
-   * cookie de session.
-   *
    * `app=public` désigne la zone, pas une URL : la destination de retour est
    * résolue côté serveur, qui refuse toute autre valeur. Accepter une URL ici
    * ouvrirait une redirection arbitraire.
    */
   protected loginWithEirbConnect(): void {
-    window.location.href = `${this.apiBaseUrl}/auth/keycloak/redirect?app=public`;
+    this.externalNavigation.go(`${this.apiBaseUrl}/auth/keycloak/redirect?app=public`);
   }
 }

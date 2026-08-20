@@ -12,7 +12,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import * as AuthActions from '#core/store/auth/auth.actions';
 import { selectLoginError } from '#core/store/auth/auth.selector';
-import { API_BASE_URL, Logo, Btn, Badge, Field, Toggle } from '@bae/ui';
+import { API_BASE_URL, ExternalNavigation, Logo, Btn, Badge, Field, Toggle } from '@bae/ui';
 import { HealthService } from '#core/services/health/health-service';
 import { ServiceStatus } from '#core/models/health.model';
 import { TextInput } from '#shared/components/text-input/text-input';
@@ -30,6 +30,7 @@ export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly externalNavigation = inject(ExternalNavigation);
   private readonly health = inject(HealthService);
   private readonly ssoErrorCode = toSignal(
     inject(ActivatedRoute).queryParamMap.pipe(map((params) => params.get('sso_error'))),
@@ -110,17 +111,12 @@ export class Login {
   }
 
   /**
-   * Navigation **de premier niveau**, et non un appel `HttpClient` : c'est un
-   * flux OAuth, le navigateur doit réellement quitter la page pour atteindre
-   * l'IdP puis revenir. Une requête XHR se ferait bloquer et ne poserait aucun
-   * cookie de session.
-   *
    * `app=dashboard` désigne la zone, pas une URL : la destination de retour est
    * résolue côté serveur. Le back refuse toute autre valeur — accepter une URL
    * ici ouvrirait une redirection arbitraire.
    */
   protected loginWithEirbConnect(): void {
-    window.location.href = `${this.apiBaseUrl}/auth/keycloak/redirect?app=dashboard`;
+    this.externalNavigation.go(`${this.apiBaseUrl}/auth/keycloak/redirect?app=dashboard`);
   }
 
   protected switchRemember() {
