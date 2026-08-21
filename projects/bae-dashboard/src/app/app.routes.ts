@@ -5,6 +5,7 @@ import { authGuard } from '#core/guards/auth/auth-guard';
 import { guestGuard } from '#core/guards/auth/guest-guard';
 import { memberGuard } from '#core/guards/auth/member-guard';
 import { permissionGuardFor } from '#core/guards/auth/permission-guard';
+import { twoFactorChallengeGuard } from '#core/guards/auth/two-factor-challenge-guard';
 
 export { AppRoutes } from './app-routes.const';
 
@@ -13,6 +14,32 @@ export const routes: Routes = [
     path: AppRoutes.login,
     canActivate: [guestGuard],
     loadComponent: () => import('#pages/guest/login/login').then((m) => m.Login),
+  },
+  {
+    path: AppRoutes.loginTwoFactor,
+    canActivate: [guestGuard, twoFactorChallengeGuard],
+    loadComponent: () => import('#pages/guest/two-factor/two-factor').then((m) => m.LoginTwoFactor),
+  },
+  {
+    path: AppRoutes.motDePasseOublie,
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('#pages/guest/mot-de-passe-oublie/mot-de-passe-oublie').then(
+        (m) => m.MotDePasseOublie,
+      ),
+  },
+  /**
+   * ⚠️ Sans `guestGuard`, délibérément. Quelqu'un dont la session est encore
+   * vivante ailleurs — et qui clique le lien reçu dans sa boîte mail — doit
+   * pouvoir s'en servir. `guestGuard` le renverrait vers l'accueil, c'est-à-dire
+   * précisément pour les gens qui ont le plus besoin de ce parcours.
+   */
+  {
+    path: AppRoutes.reinitialiserMotDePasse,
+    loadComponent: () =>
+      import('#pages/guest/reinitialiser-mot-de-passe/reinitialiser-mot-de-passe').then(
+        (m) => m.ReinitialiserMotDePasse,
+      ),
   },
   {
     path: AppRoutes.accesRefuse,

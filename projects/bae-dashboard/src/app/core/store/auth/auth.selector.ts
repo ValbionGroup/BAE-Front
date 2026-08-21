@@ -12,6 +12,16 @@ export const selectLoginError = createSelector(
   (state: AuthState) => state.loginError,
 );
 
+export const selectTwoFactorPending = createSelector(
+  selectAuthState,
+  (state: AuthState) => state.twoFactorPending === true,
+);
+
+export const selectTwoFactorError = createSelector(
+  selectAuthState,
+  (state: AuthState) => state.twoFactorError,
+);
+
 /**
  * `undefined` (profil pas encore réglé) et `[]` (réglé, rien d'accordé)
  * deviennent tous deux `[]` ici. Correct pour un affichage, qui n'a de

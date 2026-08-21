@@ -8,6 +8,17 @@ export interface UserModel {
    * lui-même ne sort pas de la base.
    */
   hasPassword: boolean;
+  /**
+   * Source unique de vérité pour « la 2FA est-elle active ». Le magasin de
+   * l'assistant d'activation ne porte que les étapes en cours, jamais ce fait :
+   * deux détenteurs pour un même booléen finiraient par le contredire.
+   *
+   * `false` tant que l'inscription n'est pas confirmée par un premier code
+   * valide — un secret généré mais jamais vérifié ne garde rien.
+   */
+  twoFactorEnabled: boolean;
+  twoFactorConfirmedAt: string | null;
+  recoveryCodesRemaining: number;
 }
 
 export interface MemberModel {

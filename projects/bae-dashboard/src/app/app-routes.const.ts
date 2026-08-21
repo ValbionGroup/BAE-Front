@@ -23,5 +23,8 @@ export const AppRoutes = {
   equipe: 'equipe',
   etats: 'etats',
   login: 'login',
+  loginTwoFactor: 'login/2fa',
+  motDePasseOublie: 'mot-de-passe-oublie',
+  reinitialiserMotDePasse: 'reinitialiser-mot-de-passe',
   accesRefuse: 'acces-refuse',
 } as const;

@@ -115,4 +115,88 @@ describe(AuthEffects.name, () => {
     expect(localStorage.getItem(ThemeService.STORAGE_KEY)).toBe('dark');
     expect(localStorage.getItem('une_autre_cle')).toBe('doit-survivre');
   });
+
+  /**
+   * ⚠️ Le défaut le plus probable de tout le lot de la 2FA. `E_TWO_FACTOR_REQUIRED`
+   * arrive sur le **même** `catchError` que de vrais identifiants erronés : traité
+   * comme tel, la page de connexion afficherait « Identifiants incorrects. » sur un
+   * mot de passe correct, et n'irait jamais vers l'écran du code.
+   */
+  it('traite une demande de second facteur autrement qu’un échec de connexion', async () => {
+    const actionsSubject = new Subject<Action>();
+    actions$ = actionsSubject.asObservable();
+    effects = TestBed.inject(AuthEffects);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    const result = firstValueFrom(effects.login$);
+    actionsSubject.next(AuthActions.loginStart({ email: 'a@b.c', password: 'motdepasse' }));
+
+    httpMock
+      .expectOne('http://api.test/v1/auth/login')
+      .flush(
+        { code: 'E_TWO_FACTOR_REQUIRED', message: 'Second facteur requis.' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+    expect(await result).toEqual(AuthActions.twoFactorRequired());
+    // Aucun appel de profil : il n'y a pas de session à lire.
+    httpMock.verify();
+  });
+
+  it('traite un vrai refus d’identifiants comme un échec de connexion', async () => {
+    const actionsSubject = new Subject<Action>();
+    actions$ = actionsSubject.asObservable();
+    effects = TestBed.inject(AuthEffects);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    const result = firstValueFrom(effects.login$);
+    actionsSubject.next(AuthActions.loginStart({ email: 'a@b.c', password: 'faux' }));
+
+    httpMock
+      .expectOne('http://api.test/v1/auth/login')
+      .flush(
+        { code: 'E_INVALID_CREDENTIALS', message: 'Identifiants invalides.' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+    expect(await result).toEqual(
+      AuthActions.loginFailure({
+        error: { code: 'E_INVALID_CREDENTIALS', message: 'Identifiants invalides.' },
+      }),
+    );
+    httpMock.verify();
+  });
+
+  /**
+   * ⚠️ Sans repli, `navigateByUrl(undefined)` lève. Le cas s'atteint en tapant
+   * `/login` directement — donc sans rebond d'`authGuard`, donc sans `redirectTo` —
+   * et le saut par l'écran du code le rend courant.
+   */
+  it('retombe sur l’accueil quand aucune destination n’était demandée', async () => {
+    const actionsSubject = new Subject<Action>();
+    actions$ = actionsSubject.asObservable();
+    effects = TestBed.inject(AuthEffects);
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    const result = firstValueFrom(effects.loginSuccess$);
+    actionsSubject.next(
+      AuthActions.loginSuccess({
+        user: {
+          id: 1,
+          casId: 'x',
+          email: 'a@b.c',
+          hasPassword: true,
+          twoFactorEnabled: false,
+          twoFactorConfirmedAt: null,
+          recoveryCodesRemaining: 0,
+        },
+        member: null,
+        permissions: [],
+      }),
+    );
+    await result;
+
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
 });

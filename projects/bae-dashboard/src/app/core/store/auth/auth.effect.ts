@@ -12,6 +12,9 @@ import { AppRoutes } from '#app/app.routes';
 
 const UNKNOWN_LOGIN_ERROR: ApiError = { code: 'UNKNOWN_ERROR', message: '' };
 
+/** Le code que le back renvoie quand le mot de passe est bon mais insuffisant. */
+const TWO_FACTOR_REQUIRED = 'E_TWO_FACTOR_REQUIRED';
+
 const toApiError = (err: unknown): ApiError =>
   isApiError((err as HttpErrorResponse)?.error)
     ? (err as HttpErrorResponse).error
@@ -25,6 +28,11 @@ export class AuthEffects {
   private readonly router = inject(Router);
   private readonly navigation = inject(ExternalNavigation);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+
+  /** La destination demandée avant le rebond vers la connexion, s'il y en avait une. */
+  private redirectTo(): string | undefined {
+    return this.router.routerState?.snapshot?.root?.queryParams['redirectTo'];
+  }
 
   /**
    * ⚠️ Plus aucune garde locale préalable : le cookie de session est `httpOnly`,
@@ -66,10 +74,75 @@ export class AuthEffects {
                   permissions: userProfile.permissions,
                 }),
               ),
+              // ⚠️ Surtout **pas** de branche 2FA ici : une demande de second
+              // facteur ne peut pas venir d'un appel de profil. L'y ajouter
+              // avalerait un échec réel derrière une redirection silencieuse.
               catchError((err) => of(AuthActions.loginFailure({ error: toApiError(err) }))),
             );
           }),
-          catchError((err) => of(AuthActions.loginFailure({ error: toApiError(err) }))),
+          /**
+           * C'est ici, et seulement ici, que la 2FA se signale. Le back répond
+           * `401 E_TWO_FACTOR_REQUIRED` plutôt qu'un `200` sans session :
+           * un 200 ferait continuer le `switchMap` ci-dessus vers
+           * `getUserProfile$()`, qui répondrait 401 faute de session, et la page
+           * afficherait « Identifiants incorrects. » sur un mot de passe correct.
+           */
+          catchError((err) => {
+            const error = toApiError(err);
+            return of(
+              error.code === TWO_FACTOR_REQUIRED
+                ? AuthActions.twoFactorRequired()
+                : AuthActions.loginFailure({ error }),
+            );
+          }),
+        ),
+      ),
+    ),
+  );
+
+  /**
+   * Le défi vit dans un cookie que le JavaScript ne peut pas lire, donc l'étape du
+   * code est une **route** et non un état de ce composant : au rafraîchissement,
+   * l'état du composant disparaît alors que le défi, lui, est toujours vivant.
+   *
+   * `redirectTo` doit traverser le saut, sinon la destination profonde est perdue.
+   */
+  twoFactorRequired$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.twoFactorRequired),
+        switchMap(() =>
+          from(
+            this.router.navigate([AppRoutes.loginTwoFactor], {
+              queryParams: { redirectTo: this.redirectTo() },
+              queryParamsHandling: 'merge',
+            }),
+          ),
+        ),
+      ),
+    { dispatch: false },
+  );
+
+  twoFactorVerify$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.twoFactorVerifyStart),
+      mergeMap(({ code, kind }) =>
+        this.authService.verifyTwoFactor$(code, kind).pipe(
+          // Le succès réutilise `loginSuccess` : l'aval est identique — profil en
+          // magasin, websocket ouvert, navigation. Un second chemin de succès
+          // dupliquerait la navigation et finirait par en diverger.
+          switchMap(() =>
+            this.authService.getUserProfile$().pipe(
+              map((userProfile) =>
+                AuthActions.loginSuccess({
+                  user: userProfile.user,
+                  member: userProfile.member,
+                  permissions: userProfile.permissions,
+                }),
+              ),
+            ),
+          ),
+          catchError((err) => of(AuthActions.twoFactorVerifyFailure({ error: toApiError(err) }))),
         ),
       ),
     ),
@@ -79,10 +152,12 @@ export class AuthEffects {
     () =>
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess),
-        switchMap(() => {
-          const redirectTo = this.router.routerState?.snapshot?.root?.queryParams['redirectTo'];
-          return from(this.router.navigateByUrl(redirectTo));
-        }),
+        switchMap(() =>
+          // ⚠️ Le repli compte : sans `redirectTo` — quelqu'un qui tape `/login`
+          // au lieu d'y être renvoyé par `authGuard` — `navigateByUrl(undefined)`
+          // levait. Le saut 2FA rend ce cas courant.
+          from(this.router.navigateByUrl(this.redirectTo() ?? '/')),
+        ),
       ),
     { dispatch: false },
   );

@@ -10,6 +10,16 @@ export interface AuthState {
   permissions?: string[];
 
   loginError?: ApiError;
+
+  /**
+   * Un défi 2FA est en cours : le mot de passe était bon, le second facteur
+   * manque. Le défi lui-même vit dans un cookie `httpOnly` — ce drapeau n'en est
+   * que l'écho local, et ne fait donc autorité que le temps d'une navigation.
+   * C'est `twoFactorChallengeGuard` qui interroge l'API après un rafraîchissement.
+   */
+  twoFactorPending?: boolean;
+  /** Le refus du dernier code présenté, distinct de `loginError`. */
+  twoFactorError?: ApiError;
 }
 
 // Root app state

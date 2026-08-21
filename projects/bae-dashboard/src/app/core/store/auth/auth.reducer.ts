@@ -15,6 +15,8 @@ export const authReducer = createReducer(
     permissions,
     alert: undefined,
     loginError: undefined,
+    twoFactorPending: undefined,
+    twoFactorError: undefined,
   })),
 
   on(AuthActions.rehydrationSuccess, (state, { user, member, permissions }) => ({
@@ -41,6 +43,27 @@ export const authReducer = createReducer(
     member: undefined,
     permissions: [],
     loginError: undefined,
+  })),
+
+  /**
+   * ⚠️ Ne touche **ni** `user` **ni** `permissions`, contrairement à
+   * `loginFailure`. Celui-ci pose `permissions: []` pour débloquer les gardes qui
+   * attendent que le profil se règle ; ici il l'est déjà, depuis la réhydratation
+   * au démarrage, et le réécrire ne serait que du bruit.
+   *
+   * En revanche `loginError` doit être effacé : sinon la page de connexion peint
+   * une alerte rouge à l'instant même où on la quitte pour l'écran du code.
+   */
+  on(AuthActions.twoFactorRequired, (state) => ({
+    ...state,
+    twoFactorPending: true,
+    twoFactorError: undefined,
+    loginError: undefined,
+  })),
+
+  on(AuthActions.twoFactorVerifyFailure, (state, { error }) => ({
+    ...state,
+    twoFactorError: error,
   })),
 
   on(AuthActions.logout, () => initialAuthState),
