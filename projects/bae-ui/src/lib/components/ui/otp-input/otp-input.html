@@ -1,0 +1,43 @@
+<div class="relative inline-flex">
+  <!--
+    Les cases ne sont que la peinture : c'est le `<input>` unique qui porte la
+    valeur, le focus et le nom accessible. Six `<input>` réels casseraient
+    l'autofill `one-time-code` (mono-champ par spécification), le collage et
+    l'ordre de tabulation — et, `bae-field` posant un `<label>` implicite autour
+    du contenu projeté, cinq d'entre eux n'auraient aucun nom accessible.
+  -->
+  <div class="pointer-events-none flex gap-2 forced-colors:hidden" aria-hidden="true">
+    @for (slot of slots(); track slot) {
+      <div [class]="boxClass(slot)">{{ digitAt(slot) }}</div>
+    }
+  </div>
+
+  <!--
+    ⚠️ Jamais `opacity-0` ni `sr-only` : le premier supprime aussi l'anneau de
+    focus que certains agents utilisateurs peignent encore, le second casse le
+    clic-pour-focus et déplace le clavier logiciel. On rend donc le texte et le
+    caret transparents, et le champ garde toute sa surface.
+
+    ⚠️ En couleurs forcées, le système écrase `text-transparent` : les vrais
+    chiffres traverseraient les cases. On cache alors la décoration et on rend
+    le champ visible — d'où sa taille explicite, le conteneur n'ayant plus rien
+    pour le dimensionner.
+  -->
+  <input
+    [attr.id]="id()"
+    type="text"
+    inputmode="numeric"
+    autocomplete="one-time-code"
+    pattern="[0-9]*"
+    [attr.maxlength]="length()"
+    [attr.aria-label]="ariaLabel()"
+    [attr.aria-describedby]="errorId()"
+    [attr.aria-invalid]="invalid() ? 'true' : null"
+    [disabled]="disabled() || isDisabled"
+    [value]="value()"
+    (input)="onInput($event)"
+    (focus)="focused.set(true)"
+    (blur)="onBlur()"
+    class="absolute inset-0 h-full w-full rounded-md border-none bg-transparent text-center text-transparent caret-transparent outline-none selection:bg-transparent forced-colors:static forced-colors:h-10 forced-colors:w-44 forced-colors:border forced-colors:text-[CanvasText]"
+  />
+</div>

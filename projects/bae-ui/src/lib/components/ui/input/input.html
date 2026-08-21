@@ -3,12 +3,14 @@
     <svg [lucideIcon]="i" [size]="15" class="text-muted shrink-0" aria-hidden="true"></svg>
   }
   <input
+    [attr.id]="id()"
     [type]="type()"
     [value]="innerValue"
     [placeholder]="placeholder()"
     [disabled]="disabled() || isDisabled"
     [readOnly]="readonly()"
     [attr.aria-label]="ariaLabel()"
+    [attr.aria-describedby]="errorId()"
     [attr.aria-invalid]="invalid() ? 'true' : null"
     (input)="onInput($event)"
     (blur)="onTouched()"

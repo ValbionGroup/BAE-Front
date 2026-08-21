@@ -9,6 +9,12 @@ import { Input } from './input';
 })
 class HostComponent {}
 
+@Component({
+  imports: [Input],
+  template: `<bae-input id="courriel" errorId="courriel-error" />`,
+})
+class LabelledHostComponent {}
+
 describe('Input', () => {
   let fixture: ComponentFixture<HostComponent>;
 
@@ -26,5 +32,30 @@ describe('Input', () => {
     const inputEl = fixture.nativeElement.querySelector('bae-input input');
     expect(inputEl).toBeTruthy();
     expect(inputEl.getAttribute('placeholder')).toBe('Test');
+  });
+
+  /**
+   * L'hôte ne prend pas le focus : un `id` ou un `aria-describedby` qui y reste
+   * désigne un élément que le lecteur d'écran n'annonce jamais, et un
+   * `<label for>` de la page ne cible plus rien.
+   */
+  it('should forward identifying attributes to the inner input, not the host', async () => {
+    const labelled = TestBed.createComponent(LabelledHostComponent);
+    labelled.detectChanges();
+    await labelled.whenStable();
+
+    const host = labelled.nativeElement.querySelector('bae-input');
+    const inputEl = host.querySelector('input');
+
+    const cases: ReadonlyArray<[attribute: string, expected: string]> = [
+      ['id', 'courriel'],
+      ['aria-describedby', 'courriel-error'],
+    ];
+
+    for (const [attribute, expected] of cases) {
+      expect(inputEl.getAttribute(attribute), attribute).toBe(expected);
+    }
+
+    expect(host.getAttribute('id'), 'host id').toBeNull();
   });
 });

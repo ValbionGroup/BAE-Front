@@ -22,6 +22,7 @@ export * from './lib/components/ui/field/field';
 export * from './lib/components/ui/input/input';
 export * from './lib/components/ui/kbd/kbd';
 export * from './lib/components/ui/logo/logo';
+export * from './lib/components/ui/otp-input/otp-input';
 export * from './lib/components/ui/qr-code/qr-code';
 export * from './lib/components/ui/skeleton/skeleton';
 export * from './lib/components/ui/toggle/toggle';

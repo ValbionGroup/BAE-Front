@@ -57,6 +57,20 @@ export class Input implements ControlValueAccessor {
    */
   readonly ariaLabel = input<string | null>(null);
 
+  /**
+   * Même raison que `ariaLabel` : l'hôte porte l'attribut, le `<input>` porte le
+   * focus. Sans transmission, un `<label for>` ou un `aria-describedby` écrit
+   * par la page désignerait un élément qui n'est jamais annoncé.
+   */
+  readonly id = input<string | null>(null);
+
+  /**
+   * L'id du message d'erreur à annoncer avec le champ. L'annonce elle-même reste
+   * à la page : un `role="alert"` interne se déclencherait à chaque rendu, alors
+   * que seule la page sait qu'un échec est **nouveau**.
+   */
+  readonly errorId = input<string | null>(null);
+
   readonly valueChange = output<string>();
 
   protected innerValue = '';
