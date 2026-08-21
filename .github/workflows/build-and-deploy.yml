@@ -16,7 +16,6 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    concurrency: production
     steps:
       # `environment.ts` vit dans la bibliothèque partagée : les deux
       # applications le lisent via `API_BASE_URL`, donc une seule génération
