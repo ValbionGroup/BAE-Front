@@ -8,71 +8,384 @@
     <div class="flex max-w-[760px] flex-col gap-[18px]">
       @if (hasPassword()) {
         <bae-card data-testid="password-panel">
-          <div class="text-sm font-semibold text-text">Mot de passe</div>
-          <div class="mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <bae-field label="Mot de passe actuel">
-              <bae-input type="password" value="••••••••••" />
-            </bae-field>
-            <span></span>
-            <bae-field
-              label="Nouveau mot de passe"
-              hint="≥ 12 caractères · 1 majuscule · 1 chiffre"
-            >
-              <bae-input
-                type="password"
-                placeholder="…"
-                data-testid="new-password"
-                (valueChange)="newPassword.set($event)"
-              />
-            </bae-field>
-            <bae-field label="Confirmer">
-              <bae-input type="password" placeholder="…" />
-            </bae-field>
-          </div>
-          <!--
+          <form [formGroup]="passwordForm" (ngSubmit)="submitPassword()" novalidate>
+            <div class="text-sm font-semibold text-text">Mot de passe</div>
+            <div class="mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <bae-field label="Mot de passe actuel">
+                <!--
+                Pas de valeur factice ici : les puces affichées auparavant étaient
+                un mensonge, et surtout elles auraient été soumises telles quelles.
+              -->
+                <bae-input
+                  formControlName="currentPassword"
+                  id="current-password"
+                  type="password"
+                  placeholder="…"
+                  data-testid="current-password"
+                />
+              </bae-field>
+              <span></span>
+              <bae-field label="Nouveau mot de passe" [hint]="ruleHint">
+                <bae-input
+                  formControlName="password"
+                  id="new-password"
+                  type="password"
+                  placeholder="…"
+                  data-testid="new-password"
+                />
+              </bae-field>
+              <bae-field label="Confirmer">
+                <bae-input
+                  formControlName="passwordConfirmation"
+                  id="confirm-password"
+                  type="password"
+                  placeholder="…"
+                  data-testid="confirm-password"
+                  [invalid]="passwordMismatch()"
+                  [errorId]="passwordMismatch() ? 'confirm-password-error' : null"
+                />
+                @if (passwordMismatch()) {
+                  <span id="confirm-password-error" class="text-[11px] text-danger" role="alert">
+                    Les deux mots de passe ne correspondent pas.
+                  </span>
+                }
+              </bae-field>
+            </div>
+            <!--
             Les barres ne redisent que ce que le libellé énonce : `aria-hidden`,
             et c'est le texte — en `aria-live` — qui porte le verdict.
           -->
-          <div class="mt-3.5">
-            <div class="flex gap-1" aria-hidden="true">
-              @for (slot of barSlots; track slot) {
-                <div
-                  data-testid="strength-bar"
-                  [attr.data-filled]="slot <= strength().level"
+            <div class="mt-3.5">
+              <div class="flex gap-1" aria-hidden="true">
+                @for (slot of barSlots; track slot) {
+                  <div
+                    data-testid="strength-bar"
+                    [attr.data-filled]="slot <= strength().level"
+                    [class]="
+                      'h-1 flex-1 rounded-sm ' +
+                      (slot > strength().level
+                        ? 'bg-border'
+                        : strength().level <= 1
+                          ? 'bg-danger'
+                          : strength().level === 2
+                            ? 'bg-warn'
+                            : 'bg-ok')
+                    "
+                  ></div>
+                }
+              </div>
+              <div class="mt-1.5 flex justify-between gap-3 text-[11px]" aria-live="polite">
+                <span
+                  data-testid="strength-label"
                   [class]="
-                    'h-1 flex-1 rounded-sm ' +
-                    (slot > strength().level
-                      ? 'bg-border'
-                      : strength().level <= 1
-                        ? 'bg-danger'
-                        : strength().level === 2
-                          ? 'bg-warn'
-                          : 'bg-ok')
+                    strength().level <= 1
+                      ? 'text-danger'
+                      : strength().level === 2
+                        ? 'text-warn'
+                        : 'text-ok'
                   "
-                ></div>
-              }
+                  >{{ strength().label }}</span
+                >
+                <span class="text-muted" data-testid="strength-advice">{{
+                  strength().advice
+                }}</span>
+              </div>
             </div>
-            <div class="mt-1.5 flex justify-between gap-3 text-[11px]" aria-live="polite">
-              <span
-                data-testid="strength-label"
-                [class]="
-                  strength().level <= 1
-                    ? 'text-danger'
-                    : strength().level === 2
-                      ? 'text-warn'
-                      : 'text-ok'
-                "
-                >{{ strength().label }}</span
+            <div class="mt-4 flex gap-2">
+              <bae-btn
+                kind="primary"
+                type="submit"
+                data-testid="password-submit"
+                [disabled]="!passwordSubmittable() || passwordBusy()"
               >
-              <span class="text-muted" data-testid="strength-advice">{{ strength().advice }}</span>
+                {{ passwordBusy() ? 'Mise à jour…' : 'Mettre à jour' }}
+              </bae-btn>
+              <bae-btn kind="ghost" type="button" (clicked)="cancelPassword()">Annuler</bae-btn>
             </div>
-          </div>
-          <div class="mt-4 flex gap-2">
-            <bae-btn kind="primary">Mettre à jour</bae-btn>
-            <bae-btn kind="ghost">Annuler</bae-btn>
-          </div>
+          </form>
         </bae-card>
       }
+
+      <!-- Double authentification -->
+      <bae-card data-testid="two-factor-panel">
+        @if (!hasPassword()) {
+          <!--
+            Ne rien afficher serait pire qu'une explication : la 2FA est au cahier
+            des charges, et son absence sur cette page passerait pour un oubli.
+          -->
+          <div class="flex items-start gap-4">
+            <div
+              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-muted"
+            >
+              <svg [lucideIcon]="icShield" [size]="22" aria-hidden="true"></svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2.5">
+                <div class="text-sm font-semibold text-text">Double authentification</div>
+                <bae-badge kind="neutral" data-testid="two-factor-status">Sans objet</bae-badge>
+              </div>
+              <div class="mt-1 text-[11.5px] text-muted">
+                Ce compte se connecte avec EirbConnect, qui gère lui-même ses facteurs
+                d'authentification.
+              </div>
+            </div>
+          </div>
+        } @else if (step() === 'showingCodes') {
+          <!-- 3. Codes de secours — le seul moment où ils existent en clair. -->
+          <div class="text-sm font-semibold text-text">3. Codes de secours</div>
+          <p class="mt-1 mb-0 text-[11.5px] text-muted">
+            Notez-les maintenant : ils ne seront plus affichés. Chacun ne sert qu'une fois, et
+            remplace le code de votre application si vous perdez votre téléphone.
+          </p>
+
+          <ul
+            class="mono mt-3.5 grid grid-cols-2 gap-1.5 rounded-md border border-border-s bg-surface-2 p-3 text-[12.5px] text-text"
+            data-testid="two-factor-recovery-codes"
+          >
+            @for (code of recoveryCodes(); track code) {
+              <li>{{ code }}</li>
+            }
+          </ul>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <bae-btn
+              kind="secondary"
+              size="sm"
+              (clicked)="copy((recoveryCodes() ?? []).join('\n'))"
+            >
+              Copier
+            </bae-btn>
+          </div>
+
+          <div class="mt-3.5">
+            <bae-checkbox
+              [checked]="codesAcknowledged()"
+              (change)="codesAcknowledged.set($event)"
+              ariaLabel="J'ai enregistré mes codes de secours"
+            />
+            <span class="ml-2 align-middle text-[12.5px] text-text">
+              J'ai enregistré mes codes de secours
+            </span>
+          </div>
+
+          <div class="mt-3.5">
+            <bae-btn
+              kind="primary"
+              size="sm"
+              [disabled]="!codesAcknowledged()"
+              (clicked)="dismissCodes()"
+            >
+              Terminer
+            </bae-btn>
+          </div>
+        } @else if (step() === 'enrolling') {
+          <!-- L'assistant, comme une vraie liste ordonnée : `aria-current` porte l'étape. -->
+          <ol class="m-0 list-none p-0">
+            <li aria-current="step">
+              <div class="text-sm font-semibold text-text">1. Scanner le code</div>
+              <p class="mt-1 mb-0 text-[11.5px] text-muted">
+                Ouvrez votre application d'authentification et scannez ce code.
+              </p>
+
+              <div class="mt-3.5 flex flex-wrap items-start gap-4">
+                @if (otpauthUri(); as uri) {
+                  <div class="rounded-md bg-white p-2" data-testid="two-factor-qr">
+                    <bae-qr-code
+                      [value]="uri"
+                      [size]="150"
+                      alt="Code QR de configuration de la double authentification"
+                    />
+                  </div>
+                }
+
+                <!--
+                  ⚠️ Le secret en texte n'est pas un confort : `bae-qr-code` rend une
+                  `<img>` porteuse d'un SVG en data-URI, donc opaque à un lecteur
+                  d'écran. C'est le seul chemin d'activation pour un utilisateur non
+                  voyant, et à ce titre une exigence (WCAG 1.1.1), pas une option.
+                -->
+                <div class="min-w-0 flex-1">
+                  <div class="text-[11.5px] text-muted">Ou saisissez cette clé à la main :</div>
+                  <code
+                    class="mono mt-1 block break-all text-[12.5px] text-text"
+                    data-testid="two-factor-secret"
+                    >{{ groupedSecret() }}</code
+                  >
+                  <div class="mt-2">
+                    <bae-btn kind="ghost" size="sm" (clicked)="copy(secret() ?? '')">
+                      Copier la clé
+                    </bae-btn>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <li class="mt-5">
+              <div class="text-sm font-semibold text-text">2. Code de vérification</div>
+              <p class="mt-1 mb-0 text-[11.5px] text-muted">
+                Saisissez les six chiffres affichés par votre application.
+              </p>
+
+              <div class="mt-3.5">
+                <bae-field label="Code à 6 chiffres">
+                  <bae-otp-input
+                    id="two-factor-enrolment-code"
+                    ariaLabel="Code de vérification à 6 chiffres"
+                    data-testid="two-factor-code"
+                    [invalid]="twoFactorError() !== null"
+                    [errorId]="twoFactorError() !== null ? 'two-factor-enrolment-error' : null"
+                    (valueChange)="enrolmentCode.set($event)"
+                    (completed)="confirmEnrolment()"
+                  />
+                </bae-field>
+                @if (twoFactorError(); as message) {
+                  <span
+                    id="two-factor-enrolment-error"
+                    class="mt-1 block text-[11px] text-danger"
+                    role="alert"
+                    >{{ message }}</span
+                  >
+                }
+              </div>
+
+              <div class="mt-3.5 flex gap-2">
+                <bae-btn
+                  kind="primary"
+                  size="sm"
+                  [disabled]="enrolmentCode().length !== 6 || twoFactorBusy()"
+                  (clicked)="confirmEnrolment()"
+                >
+                  {{ twoFactorBusy() ? 'Vérification…' : 'Vérifier' }}
+                </bae-btn>
+                <bae-btn kind="ghost" size="sm" (clicked)="dismissCodes()">Annuler</bae-btn>
+              </div>
+            </li>
+          </ol>
+        } @else if (twoFactorEnabled()) {
+          <div class="flex items-start gap-4">
+            <div
+              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-ok-soft text-ok"
+            >
+              <svg [lucideIcon]="icShield" [size]="22" aria-hidden="true"></svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2.5">
+                <div class="text-sm font-semibold text-text">2FA · application authenticator</div>
+                <bae-badge kind="ok" [dot]="true" data-testid="two-factor-status">Active</bae-badge>
+              </div>
+              <!--
+                Tout ce qui est écrit ici a une source. L'ancienne carte inventait
+                un nom d'appareil (« iPhone 14 »), qu'aucune donnée n'alimente —
+                même principe que `locationPlaceholder` pour les sessions.
+              -->
+              <div class="mt-1 text-[11.5px] text-muted">
+                @if (confirmedAtLabel(); as day) {
+                  Configurée le {{ day }} ·
+                }
+                {{ recoveryCodesRemaining() }} code{{
+                  recoveryCodesRemaining() === 1 ? '' : 's'
+                }}
+                de secours restant{{ recoveryCodesRemaining() === 1 ? '' : 's' }}
+              </div>
+
+              @if (recoveryCodesRemaining() === 0) {
+                <p class="mt-2 mb-0 text-[11.5px] text-warn" role="status">
+                  Plus aucun code de secours : perdre votre téléphone vous fermerait l'accès.
+                </p>
+              }
+
+              @if (disabling()) {
+                <div class="mt-3.5">
+                  <bae-field
+                    label="Mot de passe"
+                    hint="Confirmez votre identité pour désactiver la 2FA."
+                  >
+                    <bae-input
+                      id="two-factor-disable-password"
+                      type="password"
+                      placeholder="…"
+                      data-testid="two-factor-disable-password"
+                      [invalid]="twoFactorError() !== null"
+                      (valueChange)="disablePassword.set($event)"
+                    />
+                  </bae-field>
+                  @if (twoFactorError(); as message) {
+                    <span class="mt-1 block text-[11px] text-danger" role="alert">{{
+                      message
+                    }}</span>
+                  }
+                  <div class="mt-3 flex gap-2">
+                    <bae-btn
+                      kind="danger"
+                      size="sm"
+                      [disabled]="disablePassword() === '' || twoFactorBusy()"
+                      (clicked)="disableTwoFactor()"
+                    >
+                      {{ twoFactorBusy() ? 'Désactivation…' : 'Confirmer la désactivation' }}
+                    </bae-btn>
+                    <bae-btn kind="ghost" size="sm" (clicked)="disabling.set(false)">
+                      Annuler
+                    </bae-btn>
+                  </div>
+                </div>
+              } @else {
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <bae-btn
+                    kind="secondary"
+                    size="sm"
+                    data-testid="two-factor-regenerate"
+                    [disabled]="twoFactorBusy()"
+                    (clicked)="regenerateCodes()"
+                  >
+                    Régénérer codes de secours
+                  </bae-btn>
+                  <bae-btn
+                    kind="ghost"
+                    size="sm"
+                    data-testid="two-factor-disable"
+                    (clicked)="disabling.set(true)"
+                  >
+                    Désactiver
+                  </bae-btn>
+                </div>
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="flex items-start gap-4">
+            <div
+              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-muted"
+            >
+              <svg [lucideIcon]="icShield" [size]="22" aria-hidden="true"></svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2.5">
+                <div class="text-sm font-semibold text-text">Double authentification</div>
+                <bae-badge kind="neutral" data-testid="two-factor-status">Inactive</bae-badge>
+              </div>
+              <div class="mt-1 text-[11.5px] text-muted">
+                Un code à six chiffres en plus de votre mot de passe, à chaque connexion.
+              </div>
+
+              @if (twoFactorError(); as message) {
+                <p class="mt-2 mb-0 text-[11.5px] text-danger" role="alert">{{ message }}</p>
+              }
+
+              <div class="mt-3">
+                <bae-btn
+                  kind="primary"
+                  size="sm"
+                  data-testid="two-factor-start"
+                  [disabled]="twoFactorBusy()"
+                  (clicked)="startEnrolment()"
+                >
+                  {{ twoFactorBusy() ? 'Préparation…' : 'Activer' }}
+                </bae-btn>
+              </div>
+            </div>
+          </div>
+        }
+      </bae-card>
 
       <!-- Sessions -->
       <bae-card [padding]="0">

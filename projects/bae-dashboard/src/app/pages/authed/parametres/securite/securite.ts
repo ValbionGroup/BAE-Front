@@ -7,13 +7,38 @@ import {
   signal,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { lastValueFrom } from 'rxjs';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { Store } from '@ngrx/store';
-import { LucideDynamicIcon, LucideLogOut, LucideMonitor } from '@lucide/angular';
+import { LucideDynamicIcon, LucideLogOut, LucideMonitor, LucideShield } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { SessionsStore } from '#core/store/sessions.store';
-import { logout } from '#core/store/auth/auth.actions';
+import { TwoFactorStore } from '#core/store/two-factor.store';
+import { logout, rehydrateAuth } from '#core/store/auth/auth.actions';
 import { selectUser } from '#core/store/auth/auth.selector';
-import { isApiError, ToastService, Btn, Badge, Card, Field, Input, Skeleton } from '@bae/ui';
+import { AccountSecurityService } from '#core/services/account-security/account-security-service';
+import {
+  PASSWORD_RULE_HINT,
+  STRENGTH_BAR_SLOTS,
+  meetsPasswordRule,
+  passwordStrengthOf,
+} from '#shared/password-strength';
+import {
+  isApiError,
+  ToastService,
+  Btn,
+  Badge,
+  Card,
+  Checkbox,
+  Field,
+  Input,
+  OtpInput,
+  QrCode,
+  Skeleton,
+} from '@bae/ui';
 import { ParametresSideNav } from '../side-nav/side-nav';
 import type { SessionRow } from './sessions.types';
 
@@ -24,32 +49,32 @@ import type { SessionRow } from './sessions.types';
  */
 const LOCATION_PLACEHOLDER = 'Localisation indisponible';
 
-/**
- * Les seuils de la jauge sont ceux que le champ annonce déjà en indication :
- * douze caractères, une majuscule, un chiffre. Le quatrième palier est une marge
- * au-delà de la règle, pas une exigence — d'où « excellent » et non « requis ».
- */
-const MIN_LENGTH = 12;
-const EXCELLENT_LENGTH = 16;
-const RULE_ADVICE = 'Au moins 12 caractères, 1 majuscule et 1 chiffre.';
-
-interface PasswordStrength {
-  /** Nombre de barres remplies, de 0 à 4. */
-  readonly level: number;
-  readonly label: string;
-  readonly advice: string;
-}
-
 @Component({
   selector: 'bfd-parametres-securite',
-  imports: [Btn, Badge, Card, Field, Input, Skeleton, ParametresSideNav, LucideDynamicIcon],
+  imports: [
+    Btn,
+    Badge,
+    Card,
+    Field,
+    Input,
+    OtpInput,
+    QrCode,
+    Checkbox,
+    Skeleton,
+    ReactiveFormsModule,
+    ParametresSideNav,
+    LucideDynamicIcon,
+  ],
   templateUrl: './securite.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ParametresSecurite implements OnInit {
   private readonly store = inject(SessionsStore);
+  private readonly twoFactor = inject(TwoFactorStore);
   private readonly authStore = inject(Store);
   private readonly toast = inject(ToastService);
+  private readonly fb = inject(FormBuilder);
+  private readonly accountSecurity = inject(AccountSecurityService);
 
   constructor() {
     inject(PageHeaderService).set({
@@ -66,6 +91,7 @@ export class ParametresSecurite implements OnInit {
 
   protected readonly icLogout = LucideLogOut;
   protected readonly icDevice = LucideMonitor;
+  protected readonly icShield = LucideShield;
   protected readonly locationPlaceholder = LOCATION_PLACEHOLDER;
 
   private readonly user = this.authStore.selectSignal(selectUser);
@@ -78,42 +104,186 @@ export class ParametresSecurite implements OnInit {
    */
   protected readonly hasPassword = computed(() => this.user()?.hasPassword === true);
 
-  protected readonly summary = computed(() =>
-    this.hasPassword() ? 'Mot de passe et sessions actives.' : 'Sessions actives.',
+  /**
+   * Un compte SSO ne voit ni mot de passe ni 2FA — la 2FA ne garde que la
+   * connexion par mot de passe, et son second facteur est géré par l'IdP.
+   */
+  protected readonly summary = computed(() => {
+    if (!this.hasPassword()) return 'Sessions actives.';
+    return this.twoFactorEnabled()
+      ? 'Mot de passe, double authentification et sessions actives.'
+      : 'Mot de passe et sessions actives.';
+  });
+
+  protected readonly barSlots = STRENGTH_BAR_SLOTS;
+  protected readonly ruleHint = PASSWORD_RULE_HINT;
+
+  protected readonly passwordForm = this.fb.group({
+    currentPassword: ['', Validators.required],
+    password: ['', [Validators.required, Validators.minLength(12)]],
+    passwordConfirmation: ['', Validators.required],
+  });
+
+  /**
+   * ⚠️ Le formulaire **entier** passe par un signal, et non chaque contrôle
+   * séparément : un `computed` ne suit que les signaux qu'il lit. Mélanger un
+   * `this.passwordForm.value.x` non réactif à des signaux donne un calcul qui ne
+   * se rafraîchit que par accident, quand un *autre* champ change — donc un
+   * bouton qui reste désactivé selon l'ordre de saisie.
+   */
+  private readonly formValue = toSignal(this.passwordForm.valueChanges, {
+    initialValue: this.passwordForm.value,
+  });
+
+  private readonly newPasswordValue = computed(() => this.formValue()?.password ?? '');
+  private readonly confirmationValue = computed(() => this.formValue()?.passwordConfirmation ?? '');
+
+  protected readonly strength = computed(() => passwordStrengthOf(this.newPasswordValue()));
+
+  protected readonly passwordMismatch = computed(() => {
+    const confirmation = this.confirmationValue();
+    return confirmation !== '' && confirmation !== this.newPasswordValue();
+  });
+
+  protected readonly passwordSubmittable = computed(
+    () =>
+      (this.formValue()?.currentPassword ?? '') !== '' &&
+      meetsPasswordRule(this.newPasswordValue()) &&
+      !this.passwordMismatch() &&
+      this.confirmationValue() !== '',
   );
 
-  protected readonly newPassword = signal('');
-  protected readonly barSlots = [1, 2, 3, 4];
+  protected readonly passwordBusy = signal(false);
 
-  protected readonly strength = computed<PasswordStrength>(() => {
-    const value = this.newPassword();
-    // Champ vide : aucun verdict. Un « Bon mot de passe » avant la première
-    // frappe apprend à ne pas lire la jauge.
-    if (value === '') return { level: 0, label: '', advice: '' };
+  // --- Double authentification ---
 
-    const met = [value.length >= MIN_LENGTH, /[A-Z]/.test(value), /\d/.test(value)].filter(
-      Boolean,
-    ).length;
+  /**
+   * Source unique de vérité : le profil. Le magasin de l'assistant ne porte que
+   * les étapes en cours, jamais ce fait.
+   */
+  protected readonly twoFactorEnabled = computed(() => this.user()?.twoFactorEnabled === true);
+  protected readonly recoveryCodesRemaining = computed(
+    () => this.user()?.recoveryCodesRemaining ?? 0,
+  );
 
-    if (met < 3) {
-      return {
-        level: met,
-        label: met < 2 ? 'Mot de passe faible' : 'Mot de passe moyen',
-        advice: RULE_ADVICE,
-      };
-    }
-
-    const missing = EXCELLENT_LENGTH - value.length;
-    if (missing > 0) {
-      return {
-        level: 3,
-        label: 'Bon mot de passe',
-        advice: `Ajouter ${missing} caractère${missing > 1 ? 's' : ''} pour « excellent »`,
-      };
-    }
-
-    return { level: 4, label: 'Excellent mot de passe', advice: '' };
+  protected readonly confirmedAtLabel = computed(() => {
+    const iso = this.user()?.twoFactorConfirmedAt;
+    if (iso === null || iso === undefined) return null;
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return null;
+    return format(date, 'd MMMM yyyy', { locale: fr });
   });
+
+  protected readonly step = this.twoFactor.step;
+  protected readonly twoFactorBusy = this.twoFactor.busy;
+  protected readonly twoFactorError = this.twoFactor.error;
+  protected readonly secret = this.twoFactor.secret;
+  protected readonly otpauthUri = this.twoFactor.otpauthUri;
+  protected readonly recoveryCodes = this.twoFactor.recoveryCodes;
+
+  /** Le secret en groupes de quatre : c'est ainsi qu'on le recopie sans se perdre. */
+  protected readonly groupedSecret = computed(() => {
+    const secret = this.secret();
+    return secret === null ? null : (secret.match(/.{1,4}/g) ?? [secret]).join(' ');
+  });
+
+  protected readonly enrolmentCode = signal('');
+  protected readonly codesAcknowledged = signal(false);
+  protected readonly disablePassword = signal('');
+  protected readonly disabling = signal(false);
+
+  protected async startEnrolment(): Promise<void> {
+    this.enrolmentCode.set('');
+    this.codesAcknowledged.set(false);
+    await this.twoFactor.start();
+  }
+
+  protected async confirmEnrolment(): Promise<void> {
+    if (this.enrolmentCode().length !== 6 || this.twoFactorBusy()) return;
+
+    if (await this.twoFactor.confirm(this.enrolmentCode())) {
+      this.enrolmentCode.set('');
+      // Le profil porte le drapeau `twoFactorEnabled` : sans réhydratation, la
+      // carte continuerait d'afficher « Inactive » alors que la 2FA est en place.
+      this.authStore.dispatch(rehydrateAuth());
+    }
+  }
+
+  protected async regenerateCodes(): Promise<void> {
+    this.codesAcknowledged.set(false);
+    if (await this.twoFactor.regenerate()) {
+      this.authStore.dispatch(rehydrateAuth());
+    }
+  }
+
+  protected async disableTwoFactor(): Promise<void> {
+    if (this.disablePassword() === '' || this.twoFactorBusy()) return;
+
+    if (await this.twoFactor.disable(this.disablePassword())) {
+      this.disablePassword.set('');
+      this.disabling.set(false);
+      this.toast.show({
+        type: 'success',
+        title: 'Double authentification désactivée',
+        message: 'Votre mot de passe est redevenu le seul facteur.',
+      });
+      this.authStore.dispatch(rehydrateAuth());
+    }
+  }
+
+  protected dismissCodes(): void {
+    this.codesAcknowledged.set(false);
+    this.twoFactor.reset();
+  }
+
+  protected async copy(value: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      this.toast.show({ type: 'success', title: 'Copié', message: '' });
+    } catch {
+      // Le presse-papiers est refusé hors contexte sécurisé, et le texte reste
+      // sélectionnable à la main : inutile d'alarmer.
+      this.toast.show({
+        type: 'error',
+        title: 'Copie impossible',
+        message: 'Sélectionnez le texte pour le copier.',
+      });
+    }
+  }
+
+  protected async submitPassword(): Promise<void> {
+    if (!this.passwordSubmittable() || this.passwordBusy()) return;
+
+    const { currentPassword, password, passwordConfirmation } = this.passwordForm.value;
+    this.passwordBusy.set(true);
+
+    try {
+      await lastValueFrom(
+        this.accountSecurity.changePassword$(currentPassword!, password!, passwordConfirmation!),
+      );
+      this.cancelPassword();
+      this.toast.show({
+        type: 'success',
+        title: 'Mot de passe mis à jour',
+        message: 'Vos autres sessions ont été déconnectées.',
+      });
+      // Les autres sessions sont tombées côté serveur : la liste à l'écran ne dit
+      // plus la vérité.
+      await this.store.refresh();
+    } catch (error) {
+      this.toast.show({
+        type: 'error',
+        title: 'Changement impossible',
+        message: this.errorMessage(error),
+      });
+    } finally {
+      this.passwordBusy.set(false);
+    }
+  }
+
+  protected cancelPassword(): void {
+    this.passwordForm.reset({ currentPassword: '', password: '', passwordConfirmation: '' });
+  }
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
