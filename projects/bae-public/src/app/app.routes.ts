@@ -52,6 +52,18 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/paiement/paiement').then((m) => m.Paiement),
       },
       {
+        path: 'conditions',
+        title: 'BAE — Mentions légales et conditions',
+        loadComponent: () =>
+          import('./pages/legal/conditions/conditions').then((m) => m.Conditions),
+      },
+      {
+        path: 'confidentialite',
+        title: 'BAE — Politique de confidentialité',
+        loadComponent: () =>
+          import('./pages/legal/confidentialite/confidentialite').then((m) => m.Confidentialite),
+      },
+      {
         path: 'login',
         title: 'BAE — Connexion',
         canActivate: [guestGuard],

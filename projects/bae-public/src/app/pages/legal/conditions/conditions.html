@@ -1,0 +1,342 @@
+<bfp-legal-layout
+  badge="Informations légales"
+  heading="Mentions légales et conditions"
+  intro="Qui édite ce site, ce que vous acceptez en l’utilisant, et ce qui s’applique à vos précommandes comme à votre FastPass."
+  [updatedAt]="updatedAt"
+  [toc]="toc"
+>
+  <section id="mentions">
+    <h2 class="m-0 mb-4 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+      Mentions légales
+    </h2>
+
+    <div class="flex flex-col gap-7">
+      <section id="editeur">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 1 — Éditeur du site
+        </h3>
+        <p>
+          Le site <span class="mono">{{ site.domain }}</span> est édité par le {{ org.name }},
+          association étudiante de l’ENSEIRB-MATMECA.
+        </p>
+
+        <bfp-legal-facts class="mt-3.5 block" [rows]="identity" />
+      </section>
+
+      <section id="hebergeur">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 2 — Hébergement
+        </h3>
+        <p>
+          Le site est hébergé par {{ host.name }}, {{ host.legalForm }}, enregistrée sous le numéro
+          RNA <span class="mono">{{ host.rna }}</span
+          >, dont le siège est situé {{ host.address }}.
+        </p>
+        <p>
+          {{ host.name }} fournit l’infrastructure ; le {{ org.acronym }} reste seul responsable des
+          contenus publiés sur le site et des données qu’il y traite.
+        </p>
+      </section>
+    </div>
+  </section>
+
+  <section id="cgu">
+    <h2 class="m-0 mb-4 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+      Conditions d’utilisation
+    </h2>
+
+    <div class="flex flex-col gap-7">
+      <section id="objet">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 3 — Objet du service
+        </h3>
+        <p>
+          Le site permet de consulter les soirées organisées par le {{ org.acronym }} et leur carte,
+          de précommander des articles, de souscrire un FastPass, de suivre ses commandes et
+          d’écrire à l’association.
+        </p>
+        <p>
+          Naviguer sur le site vaut acceptation des conditions d’utilisation, soit les articles 3 à
+          8. Valider une commande ou une souscription vaut en outre acceptation des conditions de
+          vente, soit les articles 9 à 18.
+        </p>
+      </section>
+
+      <section id="compte">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 4 — Compte et connexion
+        </h3>
+        <p>
+          La connexion se fait exclusivement par EirbConnect, le service d’authentification d’{{
+            host.name
+          }}, qui s’appuie lui-même sur le CAS de Bordeaux INP : disposer d’un compte EirbConnect
+          suppose de s’être authentifié au moins une fois auprès de l’école.
+        </p>
+        <p>
+          Le {{ org.acronym }} ne crée aucun compte, ne choisit aucun mot de passe et n’en conserve
+          aucun : au moment de la connexion, il reçoit d’EirbConnect votre adresse électronique,
+          votre nom et votre prénom, et rien d’autre.
+        </p>
+        <p>
+          Votre session repose sur un cookie technique que seul le serveur peut lire ou effacer. Les
+          commandes passées depuis votre session vous sont attribuées : pensez à vous déconnecter
+          sur un poste partagé. Se déconnecter du site ferme également la session EirbConnect, faute
+          de quoi un simple clic suffirait à reconnecter la personne suivante.
+        </p>
+        <p>
+          L’espace de gestion du {{ org.acronym }} est réservé à ses membres. Chercher à y accéder
+          sans y être habilité constitue un manquement aux présentes conditions.
+        </p>
+      </section>
+
+      <section id="usage">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 5 — Règles d’usage
+        </h3>
+        <p>En utilisant le site, vous vous engagez à :</p>
+        <ul>
+          <li>
+            donner des informations exactes, en particulier lorsque vous nous écrivez au sujet d’une
+            commande ;
+          </li>
+          <li>
+            ne pas partager ni revendre le QR code d’une commande, ni votre FastPass, qui est
+            nominatif et rattaché à votre compte ;
+          </li>
+          <li>
+            ne pas automatiser vos requêtes, contourner les limites du site, ni tenter d’accéder à
+            des données qui ne sont pas les vôtres.
+          </li>
+        </ul>
+        <p>
+          En cas de manquement, le {{ org.acronym }} peut suspendre l’accès au service et annuler
+          les commandes concernées, après vous en avoir informé lorsque c’est possible.
+        </p>
+      </section>
+
+      <section id="disponibilite">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 6 — Disponibilité du service
+        </h3>
+        <p>
+          Le site est tenu par des étudiants bénévoles et fourni en l’état, sans garantie de
+          disponibilité continue : une soirée peut ouvrir tard, une fonctionnalité peut évoluer, le
+          service peut être interrompu pour maintenance.
+        </p>
+        <p>
+          Une panne du site ne remet pas en cause une commande déjà payée. En cas de difficulté au
+          moment du retrait, présentez votre confirmation de paiement : elle vaut preuve de la
+          commande.
+        </p>
+      </section>
+
+      <section id="propriete">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 7 — Propriété intellectuelle
+        </h3>
+        <p>
+          Le nom, le logo et les contenus éditoriaux du {{ org.acronym }} — textes, visuels, cartes
+          des soirées — restent la propriété de l’association.
+        </p>
+        <p>
+          Le code source de l’application est publié sous licence {{ site.codeLicense }} et reste la
+          propriété de son auteur : sa consultation, son étude et sa modification sont libres à des
+          fins non commerciales, mais tout usage commercial — en particulier l’exploitation du
+          service pour le compte d’un tiers — exige une autorisation écrite. Publié ne veut pas dire
+          libre de droits.
+        </p>
+        <p>Cette licence ne transfère aucun droit sur le nom ni sur le logo de l’association.</p>
+      </section>
+
+      <section id="tiers">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 8 — Services extérieurs
+        </h3>
+        <p>
+          Deux services extérieurs interviennent dans le fonctionnement du site : EirbConnect, opéré
+          par {{ host.name }}, pour l’authentification — laquelle repose en amont sur le CAS de
+          Bordeaux INP — et {{ payment.name }} ({{ payment.legalName }}) pour le paiement. Leurs
+          propres conditions s’appliquent à ce qu’ils font. Le {{ org.acronym }} n’a accès ni à vos
+          identifiants, ni à vos données bancaires.
+        </p>
+      </section>
+    </div>
+  </section>
+
+  <section id="cgv">
+    <h2 class="m-0 mb-4 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+      Conditions de vente
+    </h2>
+
+    <div class="flex flex-col gap-7">
+      <section id="offre">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 9 — Ce que propose le BAE
+        </h3>
+        <p>Le {{ org.acronym }} propose deux choses distinctes :</p>
+        <ul>
+          <li>
+            la <strong>précommande</strong> d’articles pour une soirée déterminée : vous payez à
+            l’avance et retirez sur place le soir venu ;
+          </li>
+          <li>
+            le <strong>FastPass</strong>, nom commercial de l’adhésion annuelle à l’association : il
+            ouvre le tarif adhérent et les avantages annoncés sur sa page, pour la durée indiquée au
+            moment de la souscription.
+          </li>
+        </ul>
+        <p>
+          Les précommandes sont ouvertes à tous. Le FastPass est nominatif, non transférable, et ne
+          se renouvelle pas automatiquement : à l’échéance il s’éteint, sans prélèvement ni
+          reconduction.
+        </p>
+      </section>
+
+      <section id="prix">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 10 — Prix
+        </h3>
+        <p>
+          Les prix sont affichés en euros sur la page de chaque soirée et sur celle du FastPass. Ils
+          peuvent varier d’une soirée à l’autre.
+        </p>
+        <p>
+          Le prix qui vous engage est celui que le serveur calcule au moment où vous validez la
+          commande, à partir du tarif de la soirée : le total affiché dans le panier est indicatif,
+          et c’est le montant de la demande de paiement qui fait foi.
+        </p>
+        <p>
+          Aucun numéro de TVA intracommunautaire n’est attribué à l’association ; les prix affichés
+          sont des prix nets, tels qu’ils sont encaissés.
+        </p>
+      </section>
+
+      <section id="commande">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 11 — Commande et paiement
+        </h3>
+        <p>
+          Une commande suit toujours les mêmes étapes : vous composez votre panier, vous le validez,
+          le site vous conduit sur la page de paiement de {{ payment.name }}, puis vous ramène sur
+          le site qui affiche le résultat.
+        </p>
+        <p>
+          <strong>La commande n’est ferme qu’une fois le paiement encaissé.</strong> Un panier
+          validé mais non payé ne réserve rien. La demande de paiement a une durée de validité
+          indiquée à l’écran : passé ce délai, elle expire et la commande n’est pas retenue.
+        </p>
+        <p>
+          Après encaissement, une confirmation vous est envoyée par courrier électronique avec le QR
+          code de retrait ; elle reste consultable dans « Mes commandes ». Le paiement est traité
+          par {{ payment.name }} : le {{ org.acronym }} ne voit ni ne conserve vos coordonnées
+          bancaires.
+        </p>
+      </section>
+
+      <section id="cloture">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 12 — Clôture des précommandes
+        </h3>
+        <p>
+          Les précommandes d’une soirée ferment douze heures avant son début, et plus tôt si les
+          quantités disponibles sont épuisées. La date exacte de clôture est affichée sur la soirée.
+        </p>
+        <p>
+          Après la clôture, la commande en ligne n’est plus possible ; l’achat sur place le reste,
+          dans la limite des stocks.
+        </p>
+      </section>
+
+      <section id="retrait">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 13 — Retrait des commandes
+        </h3>
+        <p>
+          Le retrait se fait au stand du {{ org.acronym }}, pendant la soirée concernée et dans les
+          horaires annoncés, sur présentation du QR code reçu par courrier électronique. Le code est
+          vérifié à la remise des articles et ne peut servir qu’une fois.
+        </p>
+        <p>
+          Une commande non retirée pendant la soirée ne peut être ni reportée sur une autre date, ni
+          remboursée. Pour les articles dont la vente est réglementée, une preuve d’âge peut être
+          demandée au moment du retrait ; le refus de la fournir ne donne pas droit à remboursement.
+        </p>
+      </section>
+
+      <section id="retractation">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 14 — Droit de rétractation
+        </h3>
+        <p>
+          <strong>Précommandes.</strong> Elles portent sur des prestations de loisirs fournies à une
+          date déterminée : l’article L. 221-28, 4° du code de la consommation écarte, dans ce cas,
+          le droit de rétractation. Une précommande payée n’est donc pas remboursable, sauf dans le
+          cas prévu à l’article 15.
+        </p>
+        <p>
+          <strong>FastPass.</strong> Vous disposez de quatorze jours à compter du paiement pour
+          renoncer à votre souscription, en écrivant à
+          <a href="mailto:{{ org.email }}">{{ org.email }}</a
+          >. Si vous avez déjà profité des avantages du pass, le remboursement est réduit à
+          proportion de ce qui vous a été fourni. Passé ce délai, la souscription est définitive.
+        </p>
+      </section>
+
+      <section id="annulation">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 15 — Annulation par le BAE
+        </h3>
+        <p>
+          Si le {{ org.acronym }} annule une soirée ou ne peut pas fournir un article commandé, les
+          précommandes concernées sont remboursées intégralement, par le même moyen de paiement,
+          dans un délai maximal de trente jours.
+        </p>
+        <p>
+          Le {{ org.acronym }} peut proposer à la place un article de valeur équivalente ; vous
+          restez libre de le refuser et d’être remboursé.
+        </p>
+      </section>
+
+      <section id="litiges">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 16 — Réclamations et litiges
+        </h3>
+        <p>
+          Écrivez-nous d’abord, depuis la <a routerLink="/contact">page Contact</a> ou à
+          <a href="mailto:{{ org.email }}">{{ org.email }}</a> : l’équipe répond sous quarante-huit
+          heures en période de cours. Indiquez la référence de la commande, elle figure sur votre
+          confirmation.
+        </p>
+        <p>
+          Si le désaccord persiste, vous pouvez recourir gratuitement à un médiateur de la
+          consommation ; écrivez-nous et nous vous communiquerons les coordonnées du médiateur
+          compétent. Les présentes conditions sont soumises au droit français et, à défaut d’accord
+          amiable, les tribunaux français sont compétents.
+        </p>
+      </section>
+
+      <section id="donnees">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 17 — Données personnelles
+        </h3>
+        <p>
+          Les données que le site traite, les raisons pour lesquelles il les traite et les droits
+          dont vous disposez sont détaillés dans la
+          <a routerLink="/confidentialite">politique de confidentialité</a>, qui fait partie
+          intégrante des présentes conditions.
+        </p>
+      </section>
+
+      <section id="modification">
+        <h3 class="m-0 mb-2 text-[15px] leading-[1.3] font-semibold text-text">
+          Article 18 — Modification des conditions
+        </h3>
+        <p>
+          Le {{ org.acronym }} peut modifier les présentes conditions. La version applicable à une
+          commande est celle en ligne au moment où elle est passée ; sa date figure en tête de cette
+          page. Toute modification de fond est signalée sur le site.
+        </p>
+      </section>
+    </div>
+  </section>
+</bfp-legal-layout>

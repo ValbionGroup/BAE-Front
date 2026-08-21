@@ -25,6 +25,7 @@ import {
   messageOf,
 } from '@bae/ui';
 
+import { ORGANISATION } from '../../core/organisation';
 import { SessionStore } from '../../core/session.store';
 import { TicketsService } from '../../core/tickets.service';
 
@@ -34,7 +35,7 @@ interface Channel {
   readonly value: string;
 }
 
-const SUPPORT_EMAIL = 'bureau.alternants@enseirb-matmeca.fr';
+const SUPPORT_EMAIL = ORGANISATION.email;
 
 @Component({
   selector: 'bfp-contact',
@@ -78,12 +79,6 @@ export class Contact {
   protected readonly canSubmit = computed(() => this.isAuthenticated() && !this.sending());
 
   constructor() {
-    /**
-     * ⚠️ C'est le **contrôle** qu'on désactive, pas l'élément : Angular ignore
-     * un `[disabled]` posé sur un `formControlName` (et le signale en console).
-     * Le formulaire naît donc désactivé et ne s'ouvre qu'une fois la session
-     * connue — `POST /v1/tickets` refuse un anonyme par un 401.
-     */
     effect(() => {
       if (this.isAuthenticated()) this.form.enable({ emitEvent: false });
       else this.form.disable({ emitEvent: false });

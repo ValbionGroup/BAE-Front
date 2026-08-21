@@ -1,0 +1,18 @@
+<dl class="flex flex-col gap-px overflow-hidden rounded-md border border-border-s bg-border-s">
+  @for (fact of rows(); track fact.label) {
+    <div class="flex flex-col gap-0.5 bg-surface px-3.5 py-2.5 sm:flex-row sm:gap-5">
+      <dt
+        class="text-[11px] font-semibold tracking-[0.6px] text-muted uppercase sm:w-52 sm:shrink-0 sm:pt-0.5"
+      >
+        {{ fact.label }}
+      </dt>
+      <dd class="m-0 text-[13px] leading-[1.6] text-text" [class.mono]="fact.mono">
+        @if (fact.mailto) {
+          <a href="mailto:{{ fact.value }}">{{ fact.value }}</a>
+        } @else {
+          {{ fact.value }}
+        }
+      </dd>
+    </div>
+  }
+</dl>

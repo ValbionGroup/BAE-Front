@@ -1,0 +1,57 @@
+<section class="px-6 pt-14 pb-2 md:px-14">
+  <div class="mx-auto max-w-250">
+    <bae-badge kind="blue" [dot]="true">{{ badge() }}</bae-badge>
+    <h1
+      class="mt-4 mb-2.5 text-[30px] leading-[1.08] font-semibold -tracking-[0.9px] md:text-[38px]"
+    >
+      {{ heading() }}
+    </h1>
+    <p class="max-w-150 text-[15px] leading-[1.6] text-text-2">{{ intro() }}</p>
+    <p class="mt-4 text-[11.5px] text-muted">
+      Version en vigueur au <span class="mono">{{ updatedAt() }}</span>
+    </p>
+  </div>
+</section>
+
+<div
+  class="mx-auto grid max-w-250 grid-cols-1 gap-8 px-6 pt-8 pb-16 md:px-14 lg:grid-cols-[minmax(0,1fr)_15rem] lg:gap-12"
+>
+  <nav aria-label="Sommaire" class="lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:self-start">
+    <p class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+      Sommaire
+    </p>
+    <ol class="m-0 flex list-none flex-col gap-2.5 border-l border-border-s p-0 pl-3.5">
+      @for (part of toc(); track part.id) {
+        <li>
+          <a
+            [routerLink]="[]"
+            [fragment]="part.id"
+            class="block rounded-sm text-[12.5px] leading-[1.45] font-semibold text-text-2 transition-colors hover:text-text focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+            >{{ part.label }}</a
+          >
+
+          @if (part.children; as articles) {
+            <ol class="m-0 mt-1.5 flex list-none flex-col gap-1.5 p-0">
+              @for (article of articles; track article.id) {
+                <li>
+                  <a
+                    [routerLink]="[]"
+                    [fragment]="article.id"
+                    class="block rounded-sm text-[12px] leading-[1.4] text-muted transition-colors hover:text-text-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+                    >{{ article.label }}</a
+                  >
+                </li>
+              }
+            </ol>
+          }
+        </li>
+      }
+    </ol>
+  </nav>
+
+  <article
+    class="flex flex-col gap-9 lg:col-start-1 lg:row-start-1 [&_section]:scroll-mt-6 [&_p]:m-0 [&_p]:text-[13.5px] [&_p]:leading-[1.75] [&_p]:text-text-2 [&_p+p]:mt-2.5 [&_ul]:mt-2.5 [&_ul]:mb-0 [&_ul]:flex [&_ul]:list-none [&_ul]:flex-col [&_ul]:gap-1.5 [&_ul]:p-0 [&_li]:relative [&_li]:pl-4.5 [&_li]:text-[13.5px] [&_li]:leading-[1.7] [&_li]:text-text-2 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-faint [&_li]:before:content-['—'] [&_a]:text-blue [&_a]:underline [&_a]:decoration-blue/30 [&_a]:underline-offset-2 [&_a:hover]:decoration-blue [&_strong]:font-semibold [&_strong]:text-text"
+  >
+    <ng-content />
+  </article>
+</div>

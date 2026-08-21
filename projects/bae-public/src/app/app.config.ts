@@ -4,7 +4,7 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideLucideConfig } from '@lucide/angular';
 import {
@@ -29,21 +29,19 @@ import { SessionStore } from './core/session.store';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(() => {
-      // Le thème doit s'appliquer avant le premier rendu, sinon la page
-      // s'affiche en sombre puis bascule.
       inject(ThemeService);
-      // Résout la session au démarrage : les gardes attendent ce verdict plutôt
-      // que de conclure « déconnecté » sur un état encore inconnu.
       inject(SessionStore).load();
     }),
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withInMemoryScrolling({ anchorScrolling: 'enabled' }),
+    ),
     provideHttpClient(
       withInterceptors([
         apiCaseRequestInterceptor,
         authInterceptor,
-        // Après `authInterceptor` : `withCredentials` doit déjà être posé, sinon
-        // le cookie CSRF ne partirait pas avec l'en-tête qui le recopie.
         csrfInterceptor,
         errorInterceptor,
         apiResponseCaseInterceptor,
