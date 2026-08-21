@@ -15,6 +15,7 @@ import {
   LucideCheck,
   LucideDynamicIcon,
   LucideIconInput,
+  LucideMail,
   LucideTicket,
   LucideTriangleAlert,
   LucideUsers,
@@ -23,6 +24,7 @@ import { PageHeaderService } from '#core/services/page-header/page-header-servic
 import {
   NotificationsService,
   type ApiNotification,
+  type ApiNotificationDelivery,
 } from '#core/services/notifications/notifications-service';
 
 type LoadState = 'init' | 'loading' | 'loaded' | 'error';
@@ -36,6 +38,8 @@ interface Notif {
   readonly detail: string;
   readonly when: string;
   readonly unread: boolean;
+  /** Vide quand le fait n'a été livré que dans l'application. */
+  readonly delivery: string;
 }
 
 /**
@@ -77,6 +81,7 @@ export class Notifications implements OnInit {
 
   protected readonly icCheck = LucideCheck;
   protected readonly icAlert = LucideTriangleAlert;
+  protected readonly icMail = LucideMail;
 
   protected readonly loadState = signal<LoadState>('init');
   protected readonly loadError = signal<string | null>(null);
@@ -176,7 +181,27 @@ function toNotif(notification: ApiNotification): Notif {
     detail: firstLine(payload),
     when: formatWhen(notification.occurredAt),
     unread: notification.readAt === null,
+    delivery: describeDelivery(notification.channels),
   };
+}
+
+/**
+ * Ne parle que du mail : la livraison dans l'application, c'est cette page même,
+ * l'annoncer serait redondant. Un mail encore en file doit le dire — le mailer
+ * par défaut journalise au lieu d'envoyer, sans rien signaler, et `sentAt` est la
+ * seule trace qui distingue les deux.
+ */
+function describeDelivery(channels: readonly ApiNotificationDelivery[]): string {
+  const mail = channels.find((delivery) => delivery.channel === 'mail');
+  if (mail === undefined) return '';
+  if (mail.sentAt === null) return 'par mail · en file d’envoi';
+
+  const sent = new Date(mail.sentAt);
+  if (Number.isNaN(sent.getTime())) return 'par mail';
+  return `par mail · envoyé le ${sent.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+  })}`;
 }
 
 function firstLine(payload: Record<string, unknown>): string {

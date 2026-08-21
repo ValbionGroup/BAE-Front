@@ -18,6 +18,7 @@ function notification(overrides: Partial<ApiNotification> = {}): ApiNotification
     payload: { subject: 'Réponds', lines: ['La soirée Gala a lieu vendredi.'] },
     occurredAt: new Date().toISOString(),
     readAt: null,
+    channels: [{ channel: 'in_app', sentAt: null }],
     ...overrides,
   };
 }
@@ -65,6 +66,38 @@ describe('Notifications', () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Un fait nouveau');
+  });
+
+  /**
+   * Un rappel de présence part **par mail seulement** : `emit()` retombe sur son
+   * défaut `['mail']`. L'écran ne disait donc rien de son acheminement, alors que
+   * `MAIL_MAILER=log` avale les messages sans rien signaler — l'état de la file
+   * est la seule chose qui distingue « parti » de « jamais parti ».
+   */
+  it.each([
+    {
+      label: 'une livraison in-app seule ne mentionne aucun acheminement',
+      channels: [{ channel: 'in_app' as const, sentAt: null }],
+      expected: '',
+    },
+    {
+      label: 'un mail encore en file le dit',
+      channels: [{ channel: 'mail' as const, sentAt: null }],
+      expected: 'par mail · en file d’envoi',
+    },
+    {
+      label: 'un mail parti porte sa date',
+      channels: [{ channel: 'mail' as const, sentAt: '2026-08-18T09:30:00.000Z' }],
+      expected: 'par mail · envoyé le 18/08',
+    },
+  ])('$label', async ({ channels, expected }) => {
+    const fixture = await build([notification({ channels })]);
+
+    const delivery = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="delivery"]',
+    );
+
+    expect(delivery?.textContent?.trim() ?? '').toBe(expected);
   });
 
   it('ne rappelle pas le serveur pour une notification déjà lue', async () => {

@@ -74,6 +74,12 @@
           @if (n.detail) {
             <div class="mt-0.5 text-[11.5px] leading-relaxed text-muted">{{ n.detail }}</div>
           }
+          @if (n.delivery) {
+            <div class="mt-1 flex items-center gap-1 text-[10.5px] text-muted">
+              <svg [lucideIcon]="icMail" [size]="11" class="shrink-0" aria-hidden="true"></svg>
+              <span data-testid="delivery">{{ n.delivery }}</span>
+            </div>
+          }
         </div>
 
         <span class="mono shrink-0 text-[10.5px] text-muted">{{ n.when }}</span>
@@ -82,9 +88,8 @@
   </div>
 
   <!--
-    ⚠️ Seules les notifications du canal `in_app` apparaissent ici. Les rappels
-    partis par mail sont le **même fait**, livré autrement : ils vivent dans la
-    même table mais sur un autre canal, et les mélanger ferait croire à un double
-    envoi. Voir `BAE-Back/NOTIFICATIONS.md`.
+    ⚠️ Une entrée = un **fait**, pas une livraison. Un fait livré à la fois dans
+    l'application et par mail n'apparaît qu'une fois, son canal mail en mention :
+    deux lignes feraient croire à un double envoi. Voir `BAE-Back/NOTIFICATIONS.md`.
   -->
 </div>

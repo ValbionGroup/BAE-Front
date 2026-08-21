@@ -3,10 +3,27 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
 
+/** `mail` et `in_app` sont les deux seuls canaux que `notifications.channel` accepte. */
+export type NotificationChannel = 'mail' | 'in_app';
+
+/**
+ * Une livraison du fait à cette personne, sur un canal. `sentAt` n'a de sens que
+ * pour `mail` : il reste `null` tant que `notify:dispatch` n'a pas vidé la file,
+ * et c'est la seule chose qui distingue « parti » de « jamais parti ».
+ */
+export interface ApiNotificationDelivery {
+  readonly channel: NotificationChannel;
+  readonly sentAt: string | null;
+}
+
 /**
  * Une notification est la **projection personnelle** d'un événement métier : le
  * `verb` et le `payload` viennent de `activity_events`, `readAt` de la ligne de
  * livraison. Le flux global — le fil d'activité — lit la même source autrement.
+ *
+ * Une entrée porte **un fait**, pas une livraison : un fait envoyé à la fois dans
+ * l'application et par mail arrive ici une seule fois, ses deux canaux dans
+ * `channels`. Les lister séparément ferait croire à un double envoi.
  */
 export interface ApiNotification {
   readonly id: number;
@@ -18,6 +35,7 @@ export interface ApiNotification {
   readonly payload: Record<string, unknown>;
   readonly occurredAt: string | null;
   readonly readAt: string | null;
+  readonly channels: readonly ApiNotificationDelivery[];
 }
 
 @Injectable({ providedIn: 'root' })
