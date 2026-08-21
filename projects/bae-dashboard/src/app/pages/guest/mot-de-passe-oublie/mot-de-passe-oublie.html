@@ -1,0 +1,80 @@
+<bfd-auth-card [icon]="icLock" heading="Mot de passe oublié" [description]="description">
+  @if (sent()) {
+    <!--
+      ⚠️ Cette confirmation ne dit **pas** qu'un mail est parti, seulement qu'il
+      partira « si un compte correspond ». C'est la moitié front de la garantie
+      anti-énumération : le back répond 204 quoi qu'il arrive, et un « c'est
+      envoyé ! » catégorique révélerait ici ce qu'il refuse de révéler là-bas.
+    -->
+    <div
+      class="rounded-md border border-ok bg-ok-soft px-3.5 py-3 text-[12.5px] text-ok"
+      role="status"
+      aria-live="polite"
+      data-testid="forgot-sent"
+    >
+      Si un compte membre correspond à cette adresse, un lien de réinitialisation vient d'y être
+      envoyé. Pensez à vérifier les indésirables.
+    </div>
+    <p class="mt-3 mb-0 text-[11.5px] text-muted">
+      Les comptes qui se connectent avec EirbConnect n'ont pas de mot de passe à réinitialiser :
+      utilisez le bouton EirbConnect sur la page de connexion.
+    </p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="flex flex-col gap-3.5">
+      @if (failed()) {
+        <div
+          class="flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-[12.5px] text-danger"
+          role="alert"
+          aria-live="assertive"
+          data-testid="forgot-error"
+        >
+          <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>La demande n'a pas pu aboutir. Réessayez dans un instant.</span>
+        </div>
+      }
+
+      <bae-field label="Email">
+        <bae-input
+          formControlName="email"
+          id="forgot-email"
+          type="email"
+          [icon]="icMail"
+          placeholder="prenom.nom@enseirb-matmeca.fr"
+          [invalid]="form.controls.email.invalid && form.controls.email.touched"
+          [errorId]="
+            form.controls.email.invalid && form.controls.email.touched ? 'forgot-email-error' : null
+          "
+        />
+        @if (form.controls.email.invalid && form.controls.email.touched) {
+          <span id="forgot-email-error" class="text-[11px] text-danger" role="alert">
+            @if (form.controls.email.errors?.['required']) {
+              L'adresse e-mail est requise.
+            } @else {
+              Saisissez une adresse e-mail valide.
+            }
+          </span>
+        }
+      </bae-field>
+
+      <bae-btn
+        kind="primary"
+        [full]="true"
+        size="lg"
+        type="submit"
+        [disabled]="form.invalid || busy()"
+      >
+        {{ busy() ? 'Envoi…' : 'Envoyer le lien' }}
+      </bae-btn>
+    </form>
+  }
+
+  <p class="mt-4 mb-0 text-center">
+    <a
+      [routerLink]="loginPath"
+      class="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text"
+    >
+      Retour à la connexion
+      <svg [lucideIcon]="icArrowRight" [size]="13" aria-hidden="true"></svg>
+    </a>
+  </p>
+</bfd-auth-card>

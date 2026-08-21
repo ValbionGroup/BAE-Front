@@ -1,0 +1,128 @@
+<bfd-auth-card [icon]="icLock" heading="Nouveau mot de passe" [description]="description()">
+  @if (done()) {
+    <div
+      class="rounded-md border border-ok bg-ok-soft px-3.5 py-3 text-[12.5px] text-ok"
+      role="status"
+      aria-live="polite"
+      data-testid="reset-done"
+    >
+      Mot de passe modifié. Toutes vos sessions ont été fermées : reconnectez-vous.
+    </div>
+    <div class="mt-4">
+      <bae-btn kind="primary" [full]="true" size="lg" (clicked)="goToLogin()">
+        Aller à la connexion
+      </bae-btn>
+    </div>
+  } @else if (token() === null) {
+    <!-- Une impasse doit toujours offrir une sortie, sinon elle force un support. -->
+    <div
+      class="rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-[12.5px] text-danger"
+      role="alert"
+      data-testid="reset-no-token"
+    >
+      Ce lien est incomplet. Demandez-en un nouveau.
+    </div>
+    <div class="mt-4">
+      <bae-btn kind="secondary" [full]="true" size="lg" (clicked)="goToForgot()">
+        Demander un nouveau lien
+      </bae-btn>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="flex flex-col gap-3.5">
+      @if (error(); as message) {
+        <div
+          class="flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-[12.5px] text-danger"
+          role="alert"
+          aria-live="assertive"
+          data-testid="reset-error"
+        >
+          <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>{{ message }}</span>
+        </div>
+      }
+
+      @if (expired()) {
+        <bae-btn kind="secondary" [full]="true" (clicked)="goToForgot()">
+          Demander un nouveau lien
+        </bae-btn>
+      }
+
+      <bae-field label="Nouveau mot de passe" [hint]="ruleHint">
+        <bae-input
+          formControlName="password"
+          id="reset-password"
+          type="password"
+          placeholder="…"
+          data-testid="reset-password"
+          [invalid]="form.controls.password.invalid && form.controls.password.touched"
+        />
+      </bae-field>
+
+      <!--
+        Les barres ne redisent que ce que le libellé énonce : `aria-hidden`, et
+        c'est le texte — en `aria-live` — qui porte le verdict.
+      -->
+      <div>
+        <div class="flex gap-1" aria-hidden="true">
+          @for (slot of barSlots; track slot) {
+            <div
+              data-testid="strength-bar"
+              [attr.data-filled]="slot <= strength().level"
+              [class]="
+                'h-1 flex-1 rounded-sm ' +
+                (slot > strength().level
+                  ? 'bg-border'
+                  : strength().level <= 1
+                    ? 'bg-danger'
+                    : strength().level === 2
+                      ? 'bg-warn'
+                      : 'bg-ok')
+              "
+            ></div>
+          }
+        </div>
+        <div class="mt-1.5 flex justify-between gap-3 text-[11px]" aria-live="polite">
+          <span
+            data-testid="strength-label"
+            [class]="
+              strength().level <= 1
+                ? 'text-danger'
+                : strength().level === 2
+                  ? 'text-warn'
+                  : 'text-ok'
+            "
+            >{{ strength().label }}</span
+          >
+          <span class="text-muted" data-testid="strength-advice">{{ strength().advice }}</span>
+        </div>
+      </div>
+
+      <bae-field label="Confirmer">
+        <bae-input
+          formControlName="passwordConfirmation"
+          id="reset-confirmation"
+          type="password"
+          placeholder="…"
+          data-testid="reset-confirmation"
+          [invalid]="mismatch()"
+          [errorId]="mismatch() ? 'reset-confirmation-error' : null"
+        />
+        @if (mismatch()) {
+          <span id="reset-confirmation-error" class="text-[11px] text-danger" role="alert">
+            Les deux mots de passe ne correspondent pas.
+          </span>
+        }
+      </bae-field>
+
+      <bae-btn
+        kind="primary"
+        [full]="true"
+        size="lg"
+        type="submit"
+        [disabled]="!submittable() || busy()"
+      >
+        {{ busy() ? 'Enregistrement…' : 'Changer le mot de passe' }}
+      </bae-btn>
+    </form>
+  }
+</bfd-auth-card>

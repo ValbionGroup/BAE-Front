@@ -9,7 +9,7 @@ import {
   LucideShield,
   LucideTriangleAlert,
 } from '@lucide/angular';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import * as AuthActions from '#core/store/auth/auth.actions';
 import { selectLoginError } from '#core/store/auth/auth.selector';
 import { API_BASE_URL, ExternalNavigation, Logo, Btn, Badge, Field, Toggle } from '@bae/ui';
@@ -17,15 +17,17 @@ import { HealthService } from '#core/services/health/health-service';
 import { ServiceStatus } from '#core/models/health.model';
 import { TextInput } from '#shared/components/text-input/text-input';
 import { APP_VERSION } from '#app/app-version';
+import { AppRoutes } from '#app/app-routes.const';
 
 @Component({
   selector: 'bfd-login',
-  imports: [ReactiveFormsModule, TextInput, Logo, Btn, Badge, Field, LucideDynamicIcon],
+  imports: [ReactiveFormsModule, RouterLink, TextInput, Logo, Btn, Badge, Field, LucideDynamicIcon],
   templateUrl: './login.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
   protected readonly appVersion = APP_VERSION;
+  protected readonly forgotPasswordPath = `/${AppRoutes.motDePasseOublie}`;
 
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
