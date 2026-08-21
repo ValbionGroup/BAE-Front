@@ -2,7 +2,9 @@ name: Build and deploy
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]*.[0-9]*.[0-9]*-*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+  workflow_dispatch:
 
 concurrency:
   group: production
@@ -77,9 +79,6 @@ jobs:
       registry_username: ${{ secrets.registry_username }}
       registry_api_key: ${{ secrets.registry_api_key }}
 
-  # Le déclencheur est un tag, pas un push de branche : un filtre `paths:` ne
-  # s'y appliquerait pas. Les deux fronts partagent donc une version et se
-  # déploient ensemble — c'est la contrepartie assumée du mono-dépôt.
   deploy-dashboard:
     name: Deploy dashboard on Portainer
     needs: [build-and-push-dashboard]
