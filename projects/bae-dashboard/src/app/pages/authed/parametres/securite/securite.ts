@@ -8,10 +8,11 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Store } from '@ngrx/store';
-import { LucideDynamicIcon, LucideLogOut, LucideMonitor, LucideShield } from '@lucide/angular';
+import { LucideDynamicIcon, LucideLogOut, LucideMonitor } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { SessionsStore } from '#core/store/sessions.store';
 import { logout } from '#core/store/auth/auth.actions';
+import { selectUser } from '#core/store/auth/auth.selector';
 import { isApiError, ToastService, Btn, Badge, Card, Field, Input, Skeleton } from '@bae/ui';
 import { ParametresSideNav } from '../side-nav/side-nav';
 import type { SessionRow } from './sessions.types';
@@ -22,6 +23,22 @@ import type { SessionRow } from './sessions.types';
  * rather than a fabricated city.
  */
 const LOCATION_PLACEHOLDER = 'Localisation indisponible';
+
+/**
+ * Les seuils de la jauge sont ceux que le champ annonce déjà en indication :
+ * douze caractères, une majuscule, un chiffre. Le quatrième palier est une marge
+ * au-delà de la règle, pas une exigence — d'où « excellent » et non « requis ».
+ */
+const MIN_LENGTH = 12;
+const EXCELLENT_LENGTH = 16;
+const RULE_ADVICE = 'Au moins 12 caractères, 1 majuscule et 1 chiffre.';
+
+interface PasswordStrength {
+  /** Nombre de barres remplies, de 0 à 4. */
+  readonly level: number;
+  readonly label: string;
+  readonly advice: string;
+}
 
 @Component({
   selector: 'bfd-parametres-securite',
@@ -47,10 +64,56 @@ export class ParametresSecurite implements OnInit {
     void this.store.load();
   }
 
-  protected readonly icShield = LucideShield;
   protected readonly icLogout = LucideLogOut;
   protected readonly icDevice = LucideMonitor;
   protected readonly locationPlaceholder = LOCATION_PLACEHOLDER;
+
+  private readonly user = this.authStore.selectSignal(selectUser);
+
+  /**
+   * Un compte né du SSO n'a pas de mot de passe à changer. Le `=== true` n'est
+   * pas de la coquetterie : `user` est `undefined` tant que le profil n'a pas
+   * répondu, et le panneau doit rester caché jusque-là plutôt qu'apparaître
+   * pour disparaître.
+   */
+  protected readonly hasPassword = computed(() => this.user()?.hasPassword === true);
+
+  protected readonly summary = computed(() =>
+    this.hasPassword() ? 'Mot de passe et sessions actives.' : 'Sessions actives.',
+  );
+
+  protected readonly newPassword = signal('');
+  protected readonly barSlots = [1, 2, 3, 4];
+
+  protected readonly strength = computed<PasswordStrength>(() => {
+    const value = this.newPassword();
+    // Champ vide : aucun verdict. Un « Bon mot de passe » avant la première
+    // frappe apprend à ne pas lire la jauge.
+    if (value === '') return { level: 0, label: '', advice: '' };
+
+    const met = [value.length >= MIN_LENGTH, /[A-Z]/.test(value), /\d/.test(value)].filter(
+      Boolean,
+    ).length;
+
+    if (met < 3) {
+      return {
+        level: met,
+        label: met < 2 ? 'Mot de passe faible' : 'Mot de passe moyen',
+        advice: RULE_ADVICE,
+      };
+    }
+
+    const missing = EXCELLENT_LENGTH - value.length;
+    if (missing > 0) {
+      return {
+        level: 3,
+        label: 'Bon mot de passe',
+        advice: `Ajouter ${missing} caractère${missing > 1 ? 's' : ''} pour « excellent »`,
+      };
+    }
+
+    return { level: 4, label: 'Excellent mot de passe', advice: '' };
+  });
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;

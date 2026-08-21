@@ -2,6 +2,12 @@ export interface UserModel {
   id: number;
   casId: string;
   email: string;
+  /**
+   * `false` pour un compte provisionné par le SSO : `users.password` est
+   * nullable et rien ne lui en donnera jamais. Dérivé côté back — le hash
+   * lui-même ne sort pas de la base.
+   */
+  hasPassword: boolean;
 }
 
 export interface MemberModel {

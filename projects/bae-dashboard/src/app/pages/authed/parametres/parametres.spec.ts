@@ -7,7 +7,7 @@ import { provideMockStore } from '@ngrx/store/testing';
 import { Parametres } from './parametres';
 
 const AUTH = {
-  user: { id: 4, casId: 'cas-4', email: 'lucie.bernard@enseirb-matmeca.fr' },
+  user: { id: 4, casId: 'cas-4', email: 'lucie.bernard@enseirb-matmeca.fr', hasPassword: true },
   member: { id: 4, points: 12, firstName: 'Lucie', lastName: 'Bernard', role: 'Tresorier' },
   permissions: [],
 };

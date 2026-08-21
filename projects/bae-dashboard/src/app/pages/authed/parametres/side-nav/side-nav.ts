@@ -40,7 +40,7 @@ export class ParametresSideNav {
     },
     {
       id: 'security',
-      l: 'Sécurité & 2FA',
+      l: 'Sécurité',
       icon: LucideShield,
       route: `/${AppRoutes.parametresSecurite}`,
     },

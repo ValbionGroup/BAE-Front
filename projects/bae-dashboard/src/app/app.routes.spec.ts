@@ -15,7 +15,7 @@ import type { AuthState } from '#core/models/auth/auth-state.model';
  */
 describe('routes du dashboard', () => {
   const NON_MEMBRE: AuthState = {
-    user: { id: 1, casId: 'x', email: 'adherent@enseirb.fr' },
+    user: { id: 1, casId: 'x', email: 'adherent@enseirb.fr', hasPassword: false },
     member: null,
     permissions: [],
   };
