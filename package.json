@@ -1,6 +1,7 @@
 {
   "name": "bae-front",
   "version": "0.9.0",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
