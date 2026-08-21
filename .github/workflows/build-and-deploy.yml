@@ -10,9 +10,6 @@ concurrency:
   group: production
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   create-env:
     name: Create environment file
@@ -56,6 +53,7 @@ jobs:
     name: Build and push dashboard image
     needs: [create-env]
     permissions:
+      contents: read
       id-token: write
     uses: Eirbware/.github/.github/workflows/build-and-publish.yml@master
     with:
@@ -71,6 +69,7 @@ jobs:
     name: Build and push public image
     needs: [create-env]
     permissions:
+      contents: read
       id-token: write
     uses: Eirbware/.github/.github/workflows/build-and-publish.yml@master
     with:
