@@ -40,11 +40,19 @@ Aucune modification back. Deux défauts trouvés par les tests avant d'exister �
   `registeredAt`) et `subscription-create-modal.ts` (l'échéance annoncée, calculée depuis un
   `<input type=date>`) corrigés de même.
 
-  > ⚠️ **Reste ouvert** : `stocks.store.ts` fait le même `new Date` en **quatre** endroits sur
-  > `expirationDate` et `openedAt` — la colonne est un `@column.date()`, donc servie en
-  > `YYYY-MM-DD`. Trois sont de l'affichage, mais **le quatrième décide du statut DLC**
-  > (`périmé` / `bientôt`), ce qui en fait autre chose qu'un correctif d'une ligne : à faire
-  > avec ses tests de bornes.
+  `stocks.store.ts` enfin, en quatre endroits sur `expirationDate` et `openedAt`
+  (`@column.date()`). Trois relevaient de l'affichage ; le quatrième décidait du **statut DLC** :
+  un lot dont la DLC tombe le jour même s'affichait `périmé` dès le matin, et comptait dans le
+  KPI « périmés ». Quatre tests de bornes le tiennent désormais (veille, jour même, 7 j, 8 j).
+
+  Balayage terminé : les seuls champs servis sans heure sont ceux de `subscriptions`,
+  `clients`, `stock_batches` et `vouchers`. **Le chemin des bons d'achat s'en protégeait déjà**
+  (`logistique.store.ts:formatIsoDate`, parsé à la main). Tout le reste parse des horodatages
+  complets, que `new Date` lit correctement.
+
+  > 🔧 Deux idiomes coexistent maintenant pour le même problème : `parseISO` et le
+  > `formatIsoDate` maison de la logistique. Un helper unique dans `@bae/ui` les réunirait —
+  > les deux applications en ont besoin.
 
 - « Pas encore su » se rendait comme « pas de cotisation », et une panne réseau aussi : la page
   aurait envoyé racheter une formule déjà payée. Trois états distincts désormais.
