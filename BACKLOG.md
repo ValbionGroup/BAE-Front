@@ -13,6 +13,27 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 
 ## ✅ Livré
 
+### 2026-08-24 — le FastPass accessible depuis le site public
+
+`GET /account/qr` existait depuis le lot SSO — jeton d'identité signé, TTL 180 s, résolu au
+comptoir en acheteur avec la validité de son fast pass. **Rien ne l'exposait côté public** : un
+adhérent n'avait aucun moyen de montrer son adhésion.
+
+| Portée     | Livré                                                                                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Public** | Page `/ma-carte` sous `sessionGuard` : porteur, formule, échéance, QR qui se réémet seul à `ttl - 15 s` (patron de `commande.ts`). |
+| **Public** | Entrée « FastPass » dans le menu de compte **et** dans le menu mobile, conditionnée à une cotisation active.                       |
+| **Public** | `PurchasesStore.loadSubscriptions()` — la moitié cotisations, gardée sur `init` : une requête par session, pas par navigation.     |
+| **Public** | `displayName` remonté du `PublicHeader` vers `SessionStore`, les deux le lisaient autrement.                                       |
+
+Aucune modification back. Deux défauts trouvés par les tests avant d'exister à l'écran :
+
+- `new Date('2027-01-12')` se lit en UTC puis s'affiche en heure locale — l'échéance reculait
+  d'un jour à l'ouest de Greenwich. `parseISO` corrige. **Le même appel traîne dans
+  `commande.ts:dateOf`**, sur des dates de soirée : à reprendre.
+- « Pas encore su » se rendait comme « pas de cotisation », et une panne réseau aussi : la page
+  aurait envoyé racheter une formule déjà payée. Trois états distincts désormais.
+
 ### 2026-08-24 — le DTO de la soirée dérive du modèle (tâche 19)
 
 `EventData` et `EventApiDto` listaient les mêmes champs à la main, et un ajout se payait en
@@ -385,7 +406,7 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | ------------- | ------------------------------------------------------------------------------------------- |
 | Back          | **634 tests, 0 échec** — relevé le 2026-08-23, non rejoué depuis (rien n'a bougé côté back) |
 | bae-dashboard | **702** (2026-08-24)                                                                        |
-| bae-public    | **92** (2026-08-24)                                                                         |
+| bae-public    | **112** (2026-08-24)                                                                        |
 | bae-ui        | **101** (2026-08-24)                                                                        |
 | Typecheck     | `ng build bae-dashboard` vert · Prettier vert sur tout le dépôt (2026-08-24)                |
 
