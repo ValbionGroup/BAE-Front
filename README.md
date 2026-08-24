@@ -27,7 +27,8 @@ styles.
 ## Prérequis
 
 - **Node.js** ≥ 22
-- **pnpm** 10.33.3 (activable via `corepack enable`)
+- **pnpm** 11.23.0 — version épinglée dans `devEngines.packageManager` ;
+  toute pnpm 11 la récupère seule au premier `pnpm install` (`onFail: "download"`)
 - **Docker** ≥ 24 + **Docker Compose** v2 (pour le déploiement conteneurisé)
 
 ---
@@ -35,7 +36,6 @@ styles.
 ## Installation
 
 ```bash
-corepack enable
 pnpm install
 cp projects/bae-ui/src/environment/environment.example.ts \
    projects/bae-ui/src/environment/environment.ts
