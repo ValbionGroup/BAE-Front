@@ -53,6 +53,17 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 const STATUS_RANK: Record<MembershipStatus, number> = { expired: 0, active: 1, none: 2 };
 
+/** Même règle que `/clients/summary`, sinon l'onglet et son compteur divergent. */
+const EXPIRY_WARN_WINDOW_DAYS = 30;
+
+function expiringSoon(row: ClientRow): boolean {
+  return (
+    row.status === 'active' &&
+    row.daysUntilExpiry !== null &&
+    row.daysUntilExpiry <= EXPIRY_WARN_WINDOW_DAYS
+  );
+}
+
 interface InfoRow {
   readonly k: string;
   readonly v: string;
@@ -213,7 +224,8 @@ export class Adherents implements OnInit {
     const matching = this.store.clients().filter((row) => {
       if (filter === 1 && row.status !== 'active') return false;
       if (filter === 2 && row.status !== 'expired') return false;
-      if (filter === 3 && row.status !== 'none') return false;
+      if (filter === 3 && !expiringSoon(row)) return false;
+      if (filter === 4 && row.status !== 'none') return false;
       if (query === '') return true;
       return (
         (row.name ?? '').toLowerCase().includes(query) ||

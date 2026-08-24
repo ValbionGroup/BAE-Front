@@ -136,6 +136,33 @@ describe(Adherents.name, () => {
     expect(text).toContain('p.aubry@gmail.com');
   });
 
+  // L'onglet et sa pastille doivent compter la même chose : le back retient
+  // « à jour, et à 30 jours ou moins de l'échéance ».
+  it('the expiring tab applies the same rule as the counter it displays', async () => {
+    const fixture = await render();
+    const page = fixture.componentInstance as unknown as PageApi;
+
+    page.activeFilter.set(3);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Camille expire dans 40 jours : à jour, mais hors fenêtre.
+    expect(page.visibleClients()).toEqual([]);
+  });
+
+  it('lists the non-members under their own tab, not everyone', async () => {
+    const fixture = await render();
+    const page = fixture.componentInstance as unknown as PageApi;
+
+    page.activeFilter.set(4);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    http.expectOne(`${baseUrl}/clients/3`).flush({ ...DETAIL, ...CLIENTS[2], subscriptions: [] });
+    await fixture.whenStable();
+
+    expect(page.visibleClients().map((row) => row.id)).toEqual([3]);
+  });
+
   it('the tabs actually filter, they do not only restyle', async () => {
     const fixture = await render();
     const page = fixture.componentInstance as unknown as PageApi;
@@ -173,6 +200,7 @@ describe(Adherents.name, () => {
       'Tous · 3',
       'À jour · 1',
       'Expirés · 1',
+      'Expirant dans < 30j · 0',
       'Non-adhérents · 1',
     ]);
   });
