@@ -51,14 +51,11 @@ const SORT_LABELS: Record<SortKey, string> = {
   status: 'Cotisation',
 };
 
-/** Ordre d'urgence, pas alphabétique : ce qu'on trie par statut, on le trie
- *  pour voir d'abord ce qui demande une relance. */
 const STATUS_RANK: Record<MembershipStatus, number> = { expired: 0, active: 1, none: 2 };
 
 interface InfoRow {
   readonly k: string;
   readonly v: string;
-  /** Renseigné quand la valeur n'existe pas encore en base, pour le dire. */
   readonly missing?: string;
 }
 
@@ -126,8 +123,6 @@ export class Adherents implements OnInit {
   protected readonly sortKey = signal<SortKey>('name');
   protected readonly sortDir = signal<SortDir>('asc');
   protected readonly selectedId = signal<number | null>(null);
-  /** Distinct de `selectedId` : la présélection ci-dessous n'ouvre pas la feuille mobile,
-   *  et la fermer ne désélectionne pas — sinon l'effet re-sélectionne aussitôt. */
   protected readonly sheetOpen = signal(false);
   protected readonly detail = signal<ClientDetail | null>(null);
   protected readonly detailLoading = signal(false);
@@ -138,8 +133,6 @@ export class Adherents implements OnInit {
       if (tpl) this.pageHeader.setActions(tpl);
     });
 
-    // Le sous-titre annonçait « 342 inscrits » en dur ; il suit maintenant les
-    // compteurs servis par `/clients/summary`.
     effect(() => {
       const summary = this.store.summary();
       this.pageHeader.set({
@@ -152,7 +145,6 @@ export class Adherents implements OnInit {
       });
     });
 
-    // La première ligne visible est sélectionnée d'office, comme sur la maquette.
     effect(() => {
       const visible = this.visibleClients();
       const current = this.selectedId();
@@ -187,7 +179,6 @@ export class Adherents implements OnInit {
   private async loadDetail(id: number): Promise<void> {
     this.detailLoading.set(true);
     const detail = await this.store.getDetail(id);
-    // La sélection a pu changer pendant l'appel : n'écraser que si elle tient.
     if (this.selectedId() === id) this.detail.set(detail);
     this.detailLoading.set(false);
   }
@@ -210,14 +201,11 @@ export class Adherents implements OnInit {
       `Tous · ${summary?.total ?? 0}`,
       `À jour · ${summary?.upToDate ?? 0}`,
       `Expirés · ${summary?.expired ?? 0}`,
-      // La maquette disait « Externes », qui décrivait une provenance. Ce sont
-      // des comptes créés par EirbConnect qui n'ont simplement pas d'adhésion —
-      // le même mot que le badge de la ligne, « Non-adhérent ».
+      `Expirant dans < 30j · ${summary?.expiringSoon ?? 0}`,
       `Non-adhérents · ${summary?.withoutSubscription ?? 0}`,
     ];
   });
 
-  /** Les onglets filtrent réellement : avant, ils ne changeaient que le style. */
   protected readonly visibleClients = computed<readonly ClientRow[]>(() => {
     const query = this.searchQuery().trim().toLowerCase();
     const filter = this.activeFilter();
@@ -235,8 +223,6 @@ export class Adherents implements OnInit {
     });
 
     const dir = this.sortDir() === 'asc' ? 1 : -1;
-    // Copie : `sort()` réordonne en place, et `store.clients()` est l'état du
-    // store — le trier ici le trierait pour tout le monde.
     return [...matching].sort((a, b) => dir * this.compare(a, b));
   });
 
@@ -335,8 +321,6 @@ export class Adherents implements OnInit {
       items: (Object.keys(SORT_LABELS) as SortKey[]).map((key) => ({
         type: 'action' as const,
         label: SORT_LABELS[key],
-        // Le sens n'a de sens qu'affiché sur le critère actif : ailleurs, il
-        // annoncerait un ordre qui n'est pas celui de la liste.
         trailing: key === current ? (this.sortDir() === 'asc' ? '↑' : '↓') : undefined,
         onClick: () => this.applySort(key),
       })),
