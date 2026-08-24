@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
 
-/** Ce que `GET /fast-passes` sert : le modèle brut, sans transformation. */
 interface FastPassApiRow {
   readonly id: number;
   readonly label: string;
@@ -12,11 +11,7 @@ interface FastPassApiRow {
   readonly price: number;
 }
 
-/**
- * Les deux unités sont nommées parce qu'aucune des deux ne va de soi :
- * `duration` se compte en **années** (`expiryOf()` fait `plus({ years })`), et
- * `price` en **euros** — c'est un `float` en base, pas des centimes.
- */
+/** `duration` est en **années**, `price` en **euros** — pas en centimes. */
 export interface FastPassRow {
   readonly id: number;
   readonly label: string;

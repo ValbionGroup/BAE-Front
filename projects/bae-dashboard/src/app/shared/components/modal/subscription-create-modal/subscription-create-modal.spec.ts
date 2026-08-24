@@ -88,8 +88,6 @@ describe(SubscriptionCreateModal.name, () => {
     await fixture.whenStable();
   }
 
-  // `fast_passes.duration` se compte en années : un tri numérique brut les
-  // mettrait dans le bon ordre par accident, un tri sur le libellé non.
   it('lists the plans shortest first, with their duration in years', async () => {
     const fixture = await render();
     const labels = Array.from(selectAt(fixture, 0).querySelectorAll('option')).map((option) =>
@@ -104,16 +102,13 @@ describe(SubscriptionCreateModal.name, () => {
     pick(selectAt(fixture, 0), '1');
     fixture.detectChanges();
 
-    // La date de souscription vaut aujourd'hui : l'expiration tombe donc un an
-    // plus tard, quel que soit le jour où le test tourne.
     const expected = new Date();
     expected.setFullYear(expected.getFullYear() + 1);
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain(String(expected.getFullYear()));
   });
 
-  // Une cotisation offerte n'est pas une cotisation à 0 € : sans méthode de
-  // paiement, le back ne crée aucune transaction.
+  // Une cotisation offerte n'est pas une cotisation à 0 € : pas de transaction.
   it('sends no payment at all when none was chosen', async () => {
     const fixture = await render();
     pick(selectAt(fixture, 0), '1');
@@ -153,8 +148,7 @@ describe(SubscriptionCreateModal.name, () => {
     await flushReload(fixture);
   });
 
-  // La clé primaire est `(user_id, fast_pass_id, subscribed_at)` : rejouer le
-  // même renouvellement est un 409, pas un plantage.
+  // Clé primaire `(user_id, fast_pass_id, subscribed_at)` : un rejeu est un 409.
   it('shows the API refusal instead of closing', async () => {
     const fixture = await render();
     pick(selectAt(fixture, 0), '1');

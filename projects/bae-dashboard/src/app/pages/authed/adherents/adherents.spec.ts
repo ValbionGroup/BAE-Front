@@ -116,7 +116,6 @@ describe(Adherents.name, () => {
 
     http.expectOne(`${baseUrl}/clients/1`).flush(DETAIL);
     // Deux sauts : `loadDetail` attend `getDetail`, qui attend `lastValueFrom`.
-    // Un seul tour rendrait la feuille encore vide, squelette compris.
     await fixture.whenStable();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -136,8 +135,6 @@ describe(Adherents.name, () => {
     expect(text).toContain('p.aubry@gmail.com');
   });
 
-  // L'onglet et sa pastille doivent compter la même chose : le back retient
-  // « à jour, et à 30 jours ou moins de l'échéance ».
   it('the expiring tab applies the same rule as the counter it displays', async () => {
     const fixture = await render();
     const page = fixture.componentInstance as unknown as PageApi;
@@ -235,7 +232,6 @@ describe(Adherents.name, () => {
     expect(panelClasses()).toContain('translate-y-full');
   });
 
-  /** Ouvre le menu de tri et joue l'entrée demandée, comme le ferait un clic. */
   function chooseSort(fixture: ComponentFixture<Adherents>, label: string): void {
     const el = fixture.nativeElement as HTMLElement;
     const trigger = Array.from(el.querySelectorAll('button')).find((button) =>
@@ -246,14 +242,11 @@ describe(Adherents.name, () => {
     const dropdown = TestBed.inject(DropdownService);
     const items = dropdown.current()!.items as DropdownItemAction[];
     items.find((item) => item.label === label)!.onClick();
-    // `DropdownContainer` referme après un clic d'entrée, et il n'est pas monté
-    // ici : sans cela, la deuxième ouverture serait lue comme une bascule.
+    // `DropdownContainer` referme après un clic ; il n'est pas monté ici.
     dropdown.close();
     fixture.detectChanges();
   }
 
-  // Une fiche sans date d'expiration n'est pas « la plus lointaine » : elle
-  // n'a pas de date, et reste en queue dans les deux sens.
   it('sorts on the expiry, keeping the undated rows last both ways', async () => {
     const fixture = await render();
     const page = fixture.componentInstance as unknown as PageApi;
@@ -261,7 +254,6 @@ describe(Adherents.name, () => {
     chooseSort(fixture, 'Expiration');
     expect(page.visibleClients().map((row) => row.id)).toEqual([2, 1, 3]);
 
-    // Rechoisir le critère actif inverse le sens, sans second menu.
     chooseSort(fixture, 'Expiration');
     expect(page.visibleClients().map((row) => row.id)).toEqual([1, 2, 3]);
     expect(page.sortLabel()).toBe('Expiration ↓');
@@ -275,7 +267,6 @@ describe(Adherents.name, () => {
     expect(page.visibleClients().map((row) => row.status)).toEqual(['expired', 'active', 'none']);
   });
 
-  /** Clique le bouton portant ce libellé, puis rend la modale ouverte. */
   function clickAndRead(fixture: ComponentFixture<Adherents>, label: string): ComponentModalConfig {
     const el = fixture.nativeElement as HTMLElement;
     const target = Array.from(el.querySelectorAll('button')).find((button) =>
@@ -293,8 +284,6 @@ describe(Adherents.name, () => {
     const modal = clickAndRead(fixture, 'Modifier');
 
     expect(modal.component).toBe(ClientEditModal);
-    // La fiche entière, pas seulement l'id : la modale préremplit ses deux
-    // champs sans relire le détail que le store ne garde pas.
     expect((modal.inputs?.['client'] as ClientDetail).phone).toBe('06 24 31 88 02');
   });
 

@@ -59,8 +59,7 @@ describe(ClientEditModal.name, () => {
     return fixture;
   }
 
-  /** `updateClient` recharge liste **et** compteurs après l'écriture, et ne le
-   *  fait qu'au tour suivant : les attendre avant de les servir. */
+  /** Le rechargement n'est émis qu'au tour suivant : attendre avant de servir. */
   async function flushReload(fixture: ComponentFixture<ClientEditModal>): Promise<void> {
     await fixture.whenStable();
     http.expectOne(`${baseUrl}/clients`).flush([]);
@@ -89,8 +88,7 @@ describe(ClientEditModal.name, () => {
     expect(el.querySelector('textarea')?.value).toBe('Allergie noix.');
   });
 
-  // Ni promotion ni école : le back les refuse parce que le prochain login SSO
-  // les réécrit. Un champ qui se vide tout seul est pire que pas de champ.
+  // Le back refuse promotion et école : le prochain login SSO les réécrirait.
   it('offers no field the backend would silently drop', async () => {
     const fixture = await render();
     const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).map(
@@ -102,8 +100,6 @@ describe(ClientEditModal.name, () => {
     expect(labels).not.toContain('École');
   });
 
-  // `null` veut dire « vider » côté validateur, `undefined` « ne pas toucher » :
-  // une chaîne vide serait enregistrée comme un numéro qui vaut "".
   it('sends null, not an empty string, for a cleared field', async () => {
     const fixture = await render();
     const textarea = (fixture.nativeElement as HTMLElement).querySelector('textarea')!;
@@ -127,16 +123,12 @@ describe(ClientEditModal.name, () => {
     submit(fixture);
     http.expectOne(`${baseUrl}/clients/7`).flush(CLIENT);
     await flushReload(fixture);
-    // Deuxième tour : `updateClient` ne rend la main qu'après son `finally`,
-    // et c'est seulement là que la modale prévient la page.
     await fixture.whenStable();
 
     expect(saved).toBe(1);
     expect(TestBed.inject(ModalService).modals().length).toBe(0);
   });
 
-  // Un refus doit rester lisible à côté du formulaire qui l'a provoqué : fermer
-  // la modale ferait disparaître le message avec la saisie.
   it('keeps the modal open and shows the API message on a refusal', async () => {
     const fixture = await render();
 

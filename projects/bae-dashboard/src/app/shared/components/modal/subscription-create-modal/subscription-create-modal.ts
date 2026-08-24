@@ -10,22 +10,12 @@ import type { ClientRow } from '#pages/authed/adherents/adherents.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
-/** Le back accepte les deux, et rien d'autre (`createSubscriptionValidator`). */
 type PaymentType = 'cash' | 'lydia';
 
 /**
- * Enregistrement d'une cotisation — le geste s'appelle « renouveler » sur une
- * fiche, « enregistrer une cotisation » depuis la liste, mais c'est le même :
- * un renouvellement **ajoute une ligne**, il n'en modifie aucune.
- *
- * Pas de sélecteur d'adhérent : la page est déjà une liste maîtresse avec une
- * ligne sélectionnée en permanence, et lui ajouter un second choix ferait deux
- * endroits pour désigner la même personne — dont l'un pourrait contredire ce
- * que la fiche ouverte affiche.
- *
- * Le montant est en **euros** : `transactions.amount` est un `decimal(10,2)`,
- * comme `fast_passes.price`. Le paiement est facultatif — une cotisation peut
- * être offerte, et l'encaissement en ligne n'existe pas depuis cet écran.
+ * Un renouvellement **ajoute une ligne**, il n'en modifie aucune. Le montant est
+ * en euros (`transactions.amount` est un `decimal(10,2)`), et le paiement est
+ * facultatif : sans lui, aucune transaction n'est créée.
  */
 @Component({
   selector: 'bfd-subscription-create-modal',
@@ -36,8 +26,7 @@ type PaymentType = 'cash' | 'lydia';
 export class SubscriptionCreateModal {
   readonly id = input.required<string>();
   readonly client = input.required<ClientRow>();
-  /** La page relit le détail : le store recharge la liste et les compteurs,
-   *  pas l'historique de la fiche ouverte. */
+  /** Le store recharge la liste et les compteurs, jamais la fiche ouverte. */
   readonly onSaved = input<() => void>(() => {});
 
   private readonly modalService = inject(ModalService);
@@ -54,17 +43,13 @@ export class SubscriptionCreateModal {
   protected readonly fastPassId = signal<string>('');
   protected readonly subscribedAt = signal<string>(todayIso());
   protected readonly paymentType = signal<'' | PaymentType>('');
-  /** `null` tant qu'on n'a pas saisi de montant : il suit alors le prix de la
-   *  formule choisie, et cesse de le suivre dès la première frappe. */
+  /** `null` = suit le prix de la formule, jusqu'à la première frappe. */
   private readonly amountEdit = signal<string | null>(null);
 
-  /** Vrai une fois qu'on a tenté d'envoyer : les erreurs de champ ne
-   *  s'affichent pas tant que l'utilisateur n'a rien soumis. */
   protected readonly submitted = signal(false);
 
   constructor() {
-    // Aucune entrée requise n'est lue ici : `input.required()` dans un
-    // constructeur lève `NG0950` (le piège de la modale de clôture).
+    // Ne rien lire de `input.required()` ici : cela lèverait `NG0950`.
     this.store.clearSaveError();
     this.fastPasses.getAll().subscribe({
       next: (rows) => {
@@ -90,7 +75,7 @@ export class SubscriptionCreateModal {
     return plan === null ? '' : plan.priceEuros.toFixed(2).replace('.', ',');
   });
 
-  /** La virgule est la séparatrice décimale française ; `Number` ne la lit pas. */
+  /** `Number` ne lit pas la virgule décimale. */
   protected readonly parsedAmount = computed(() => {
     const raw = this.amount().trim().replace(',', '.');
     if (raw === '') return null;
@@ -98,8 +83,7 @@ export class SubscriptionCreateModal {
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   });
 
-  /** Le back calcule l'expiration en ajoutant `duration` **années** à la date
-   *  de souscription : l'annoncer évite de découvrir l'unité après coup. */
+  /** Le back ajoute `duration` **années** à la date de souscription. */
   protected readonly expiresAt = computed<string | null>(() => {
     const plan = this.selectedPlan();
     const start = this.subscribedAt();
@@ -146,8 +130,6 @@ export class SubscriptionCreateModal {
       userId: this.client().id,
       fastPassId: Number(this.fastPassId()),
       subscribedAt: this.subscribedAt(),
-      // Sans méthode de paiement, aucune transaction n'est créée : c'est ce qui
-      // distingue une cotisation offerte d'une cotisation à 0 €.
       payment: type === '' || amount === null ? undefined : { amount, type },
     });
 
@@ -162,7 +144,7 @@ export class SubscriptionCreateModal {
   }
 }
 
-/** Calculée ici et non dans le gabarit : `new Date()` n'y est pas disponible. */
+/** `new Date()` n'est pas disponible dans un gabarit. */
 function todayIso(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, '0');
