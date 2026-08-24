@@ -1,307 +1,166 @@
-# BAE — exécution des tâches 45, 7, 9, 5 puis séquençage du bloc A
+# BAE — état des tâches restantes
 
-## ✅ Livré le 2026-08-20 — lots 45, 7, 9 et 5
+> **Dernière mise à jour : 2026-08-23.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
+> code** à cette date. Les blocs B à I datent du 2026-08-20 et n'ont **pas** été rejoués : les
+> traiter comme une piste, pas comme un état.
 
-Les quatre tâches sont faites. **Le travail back n'est pas commité** : il faut d'abord créer une
-branche depuis `feat/paiement-lydia` (la création a été refusée par les permissions en séance).
-
-| Lot    | Livré                                                                                                                                                                                                                                                                                       |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **45** | `pre_order_items.list_price_cents` + `pre_orders.discount_percent` (migration `1788000000000`), prix et pourcentage portés par l'`intent` du paiement, `buildView` corrigé, `applyDiscount` centralisé. Corrige aussi le total surfacturé à l'écran client (700 affiché pour 630 encaissé). |
-| **7**  | `client_activity_service.activityOf()`, exposé par `ClientsController.show`. Tuiles Précommandes et Dépensé branchées, **tuile « Solde courant » retirée**.                                                                                                                                 |
-| **9**  | Permission `payment:read`, route `GET /payments`, `PaymentsController.index` (vue staff), section « Paiements en ligne » sur la page `paiements`, note de pied de page périmée supprimée.                                                                                                   |
-| **5**  | La modale existait mais **ne fonctionnait pas** : voir ci-dessous. Réparée et couverte.                                                                                                                                                                                                     |
-
-## ✅ Bloc A1 — nettoyage sans risque
-
-| #      | État                                                                                                                                                                                                                                            |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **2**  | `ExternalNavigation` remplace `window.location.href` dans les deux pages de login, avec un test par zone sur le paramètre `app=`.                                                                                                               |
-| **3**  | `<bae-toast-container />` ajouté à `bae-public` : tout toast public était muet.                                                                                                                                                                 |
-| **16** | `CartRow`, `SupplierTotal` et `ScannerUnknownModal` supprimés (vérifiés sans référence). L'appel `svc.getGoods()` et l'état `goods` retirés du `LogistiqueStore` — une requête par chargement que personne ne lisait ; quatre specs mis à jour. |
-| **17** | **Rien à faire.** `LogistiqueAssignModal` **est utilisée** par `LogistiqueEvents` (`events.ts:33`), qui est routée. La note « restée factice » du handoff est périmée.                                                                          |
-| **24** | **Déjà faite** par `2a8d492 fix(coordination): n'affirme plus une cause unique` (2026-08-06).                                                                                                                                                   |
-| **30** | `.claude/CLAUDE.md` : arborescence des trois projets, alias réels, et sélecteurs `bfd-*` → `bae-*`.                                                                                                                                             |
-
-Vérifié : typecheck vert, **807 tests, 0 échec** (639 dashboard, 82 public, 86 ui).
-
-### Deux défauts trouvés en passant, et corrigés
-
-1. **La modale de clôture de production était cassée depuis toujours.** Elle lisait
-   `input.required()` dans son **constructeur** ; or les inputs sont appliqués après
-   l'instanciation, donc la lecture levait (`NG0950`) et le `try/catch` la transformait en
-   « Impossible de lire ce que la soirée a prélevé ». Aucune requête n'était jamais émise.
-   Le chargement vit désormais dans un `effect()`, comme `recipe-edit-modal`.
-   **Le seul test qui la couvrait était un `should create`** — d'où l'invisibilité du défaut.
-2. **`public_catalog.spec.ts` verrouillait le bug de la tâche 45** sous le nom « calcule le total
-   depuis le menu de la soirée ». Renommé d'après ce qu'il protège réellement (référence et état
-   de paiement) ; l'assertion de total appartient désormais aux tests d'instantané.
-
-### Reste à traiter, découvert en séance
-
-| Sujet                                    | Détail                                                                                                                                                                                                                                                                            |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`mergeLines` absent des précommandes** | `intent.lines` n'est pas fusionné par produit, alors que `pre_order_items` a une PK `(pre_order_id, product_id)`. Deux lignes du même produit dans un même POST font **échouer l'insert au callback, après encaissement**. Correctif court, laissé hors périmètre faute d'accord. |
-| **13 tests PDF en échec**                | `print_*`, `pdf_service`, `event_receivables/pdf` : `Error: The browser is already running for /tmp/claude-502/puppeteer_dev_chrome_profile-*`. Profils Chromium orphelins, échoue aussi **en isolation**, indépendant de ce lot.                                                 |
-| **Formatage de `schema.ts`**             | `migration:run` le réécrit sans Prettier (241 lignes de bruit). Passer `prettier --write database/schema.ts` après chaque migration.                                                                                                                                              |
-
-État de vérification : typecheck vert des deux côtés ; front **806 tests, 0 échec** (639 dashboard,
-81 public, 86 ui) ; back **565 passés, 13 échecs** tous dans la famille PDF ci-dessus.
+Ce document a un défaut connu, qui est celui qu'il reproche aux deux HANDOFF : c'est un journal, et
+un lot ultérieur ferme des points sans les rayer sur place. Entre le 20 et le 21 août, **seize
+commits** ont atterri sans que rien ne soit rayé ici, si bien que la moitié du bloc A y figurait
+comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas écrire.**
 
 ---
 
-## Contexte de ce plan
+## ✅ Livré
 
-L'inventaire en annexe (130 tâches) a été tiré des deux handoffs puis confronté au code.
-Quatre tâches en étaient données « débloquées par des lots livrés depuis ». L'exploration
-détaillée en a corrigé trois :
+### 2026-08-23 — créneaux de retrait des précommandes
 
-| #   | Annoncé    | Réalité vérifiée                                                                                                                                                                                                                                                                               |
-| --- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5   | À faire    | **Déjà faite.** `shared/components/modal/production-return-modal/` (161 l. + template) existe, avec le radiogroup « En réserve / Au rebut », le plafonnement client sur `returnableQty` et un bouton d'impression ; ouverte par `closeNight()` (`live.ts:485`). Reste une **lacune de tests**. |
-| 7   | Front seul | **Front + back.** Aucun endpoint n'agrège par client, et « Solde courant » n'a aucune définition en base (`grep credit\|solde\|balance\|wallet` : rien).                                                                                                                                       |
-| 9   | Front seul | **Front + back.** `payments` porte la donnée, mais il n'existe **aucune route staff** ni permission `payment:read`. La page lit `/transactions`, pas `/payments`.                                                                                                                              |
-| 45  | À faire    | **Exacte**, et elle corrige un second bug plus visible : `buildView` somme le prix public brut sans appliquer les remises, donc « mes précommandes » affiche au client **plus que ce qu'il a payé** (700 au lieu de 630). Aucun test ne couvre ce chemin.                                      |
+`pre_orders.pickup_at` existait, circulait de bout en bout et n'était **écrit qu'à la commande,
+affiché nulle part**. Trois trous comblés :
 
-### Décisions arrêtées
+| Portée        | Livré                                                                                                                                                                                                          |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Back**      | `pickupWindowOf` / `assertPickupSlot` / `setPickupAt` (`pre_order_service.ts`), route `PATCH /pre-orders/:id/pickup` gardée par `order:write`, diffusion `broadcastPreOrder`. `PublicEventView.endsAt` exposé. |
+| **Back**      | Le créneau choisi au **checkout client** passe par la même règle : `POST /pre-orders` acceptait jusque-là n'importe quelle heure ISO.                                                                          |
+| **bae-ui**    | `buildPickupSlots` / `pickupWindowEnd` / `formatPickupSlot`, partagés par les deux applications — ce que le client choisit, le staff doit pouvoir le reprendre.                                                |
+| **Dashboard** | La colonne « Borne retrait » de `precommandes-admin` (faux scanner + champ inerte) remplacée par l'éditeur de créneaux.                                                                                        |
+| **Public**    | Sélecteur de créneau au panier ; créneau affiché sur `commande` et `mes-commandes`.                                                                                                                            |
 
-1. **45** — figer le **prix public par ligne** (`pre_order_items.list_price_cents`) et le
-   **pourcentage total appliqué** (`pre_orders.discount_percent`), plutôt que de copier le
-   couple `(list, unit)` d'`order_products` : la remise précommande est un pourcentage global
-   avec un arrondi unique sur le sous-total, et la ventiler par ligne exigerait d'inventer une
-   règle de répartition des centimes.
-2. **7** — « Dépensé » = ventes au comptoir + précommandes payées. La tuile
-   **« Solde courant » est retirée** : rien en base ne la fonde.
-3. **9** — route staff en **lecture seule**, exposant les trois champs aujourd'hui écrits et
-   jamais relus (`provider_reference`, `transaction_identifier`, `paid_at`).
-4. **Branche** — le back s'empile sur `feat/paiement-lydia` (6ᵉ PR de la pile) ; la pile n'est
-   pas mergée dans ce lot.
+**Défaut d'encaissement corrigé au passage.** `pre_order_items` a pour clé primaire
+`(pre_order_id, product_id)` : deux lignes du même produit dans une même commande faisaient
+**échouer l'insert au callback de paiement**, donc après débit — client débité, précommande
+inexistante. Fusion posée dans `quotePreOrder` (le point de construction des lignes, pas
+d'écriture), ce qui referme aussi le contournement du plafond par découpage en plusieurs lignes.
 
-### Préalable d'environnement
+**Unité de `events.duration` tranchée : ce sont des secondes**, comme l'écrit `calcDuration()`. La
+colonne n'avait jamais été relue, si bien que les 20 specs back la posaient en heures (`duration: 4`).
+Converties.
 
-`bae-postgres-dev` **n'est pas lancé**. Or `node ace migration:run` régénère
-`database/schema.ts` **depuis la base connectée**, et le handoff avertit qu'il y aspire les
-colonnes des autres branches. Donc : démarrer le conteneur, et régénérer depuis une base
-conforme à `feat/paiement-lydia` (au besoin `migration:fresh` sur une base jetable), puis
-vérifier le diff de `schema.ts` avant de le commiter.
+### 2026-08-23 — pilotage clavier
 
----
+Les listes maîtresses du dashboard étaient des `<div>` cliquables : inatteignables à la tabulation,
+et muettes sur la ligne ouverte. Axe ne le voyait pas — il ne détecte pas un gestionnaire de clic.
 
-## Lot 1 — Tâche 45 : instantané de prix des précommandes
+- Vraies `<button>` là où rien d'interactif n'est imbriqué : `precommandes-admin`, `recettes`,
+  `parametres` (choix de thème), `presences` (pastille de calendrier).
+- `role="button"` + `tabindex` + Entrée/Espace là où la ligne porte déjà un contrôle :
+  `coordination/events` (bouton d'action), `stocks` (case à cocher).
+- `adherents` avait le patron mais ne gérait qu'Entrée ; Espace ajouté.
+- Le fond de modale reste un `div` `aria-hidden` : c'est correct, Échap ferme déjà
+  (`modal-container.ts:30`) et le focus est piégé.
 
-Le chemin de création est en **deux temps** : `quotePreOrder()` calcule le prix à l'ouverture
-du paiement, puis **le jette** ; `fulfilPreOrder()` écrit `pre_order_items` au callback Lydia,
-depuis `intent.lines` qui ne porte que `productId` + `quantity`.
+Vérifié : plus aucun `div` cliquable inerte dans les trois projets.
 
-**Conséquence structurante :** le prix et le pourcentage doivent être **portés par l'`intent`**,
-pas recalculés au callback — `fastPassOf(userId, now)` peut avoir expiré entre les deux, et les
-pourcentages viennent de variables d'environnement qui changent entre deux déploiements.
+### 2026-08-20 — lots 45, 7, 9, 5, puis A1
 
-1. **Migration** — transposer `database/migrations/1787600000000_add_price_snapshot_to_order_products_table.ts`,
-   qui est le cas exactement analogue : `alterTable` avec `integer(...).notNullable().defaultTo(0)`,
-   puis backfill en `this.defer(async (db) => db.rawQuery(...))`. Reprendre son piège documenté :
-   les jointures passent par le `WHERE`, jamais par un `JOIN … ON`, car Postgres interdit de
-   référencer l'alias de la table mise à jour. La transposition joint via `pre_orders.event_id`
-   au lieu de `orders.event_id`.
-   - `pre_order_items.list_price_cents` (integer, centimes — convention du dépôt, cf.
-     `order_products.*_cents`, `sponsorship_prices.price_cents`)
-   - `pre_orders.discount_percent` (integer)
-2. **`app/models/pre_order.ts`** — ajouter `list_price_cents` à `pivotColumns`, sinon la colonne
-   est **silencieusement absente** des lectures (`pre_order_items` est un pivot `manyToMany`, il
-   n'existe pas de modèle `PreOrderItem`).
-3. **`app/services/pre_order_quote_service.ts`** — faire retourner à `quotePreOrder()` les lignes
-   tarifées et le pourcentage retenu, en plus du montant.
-4. **`app/controllers/account_payments_controller.ts`** — verser ces deux informations dans
-   l'`intent`.
-5. **`app/services/payment_service.ts` (`fulfilPreOrder`)** — écrire les deux colonnes. Tolérer
-   leur absence pour les paiements `pending` déjà en base, dont l'`intent` est à l'ancien format
-   (repli sur le menu courant).
-6. **`app/services/account_purchase_service.ts` (`buildView`)** — lire l'instantané au lieu de
-   `menusOf()`, et appliquer `discount_percent` : `total = subtotal − round(subtotal × pct / 100)`,
-   ce qui reproduit `quotePreOrder()` au centime et corrige le second bug.
-
-**À signaler, même code path, défaut sévère :** `intent.lines` n'est pas fusionné par produit
-(pas d'équivalent du `mergeLines()` des commandes), alors que `pre_order_items` a une PK
-`(pre_order_id, product_id)`. Deux lignes du même produit dans un même POST font donc **échouer
-l'insert au callback, après encaissement**. Un `mergeLines` dans `quotePreOrder` coûte quelques
-lignes ; je le propose mais ne l'ajoute pas sans ton accord.
-
-**Tests** — `tests/functional/order_price_snapshot.spec.ts` est le modèle transposable presque
-tel quel (il double le prix de la soirée _après_ la vente et vérifie que le total ne bouge pas).
-`buildView` n'a **aucun test** aujourd'hui : les deux à écrire sont « le prix d'une précommande
-ne suit pas le menu quand il change » et « le total affiché égale le montant encaissé ». Poser
-`preOrderCloseLeadHours` sur la soirée dans les fixtures, comme le fait déjà
-`account_pre_order_payment.spec.ts`, pour ne pas dépendre de l'environnement de qui exécute.
-
----
-
-## Lot 2 — Tâche 7 : tuiles adhérents
-
-Dépend du lot 1 : le « dépensé en précommandes » devient exact une fois l'instantané posé.
-
-- **Back** — fonction d'agrégat batch à côté de `subscriptionsByUser()`
-  (`app/controllers/clients_controller.ts:39`), branchée sur **`show` seulement** : les tuiles
-  vivent dans `ClientDetail`, donc `index` et `summary` ne changent pas. Reprendre le motif
-  anti-N+1 de `subscriptionsByUser`, et celui de `event_summary_service.ts:51-64` pour la somme
-  `unit_price_cents × quantity`.
-  - précommandes : `COUNT(*) FROM pre_orders WHERE user_id = ? AND status <> 'cancelled'`
-  - dépensé : ventes comptoir via `orders.client_id` (hors `cancelled`) **+** précommandes payées
-  - ⚠️ unités : `order_products.*_cents` et `event_products.price` en **centimes** ;
-    `transactions.amount` est un `decimal` en **euros** transitant en **string**.
-- **Front** — `adherents.ts:233-242` : brancher `Précommandes` et `Dépensé`, **supprimer la tuile
-  « Solde courant »**. Mettre à jour `adherents.spec.ts:170-178`, qui verrouille aujourd'hui le
-  `'—'`, et corriger le commentaire de `adherents.ts:227-232` dont la seconde moitié est périmée.
-
----
-
-## Lot 3 — Tâche 9 : liste staff des paiements
-
-- **Back** — permission `payment:read` (catalogue RBAC + seeder), route
-  `GET /payments` dans `start/routes/billing.ts` (groupe `auth()` + `audience('member')`),
-  contrôleur `PaymentsController.index`. Exposer `orderRef`, `status`, `kind`, `amountCents`,
-  `providerReference`, `transactionIdentifier`, `paidAt`, `expiresAt`, et le nom du payeur.
-  `toPaymentView` (`payment_service.ts:33`) est la vue **client** et n'expose que cinq champs :
-  ne pas la réutiliser, en écrire une vue staff distincte.
-  Les statuts font autorité dans la migration `1787900000001_create_payments_table.ts`
-  (`pending`, `paid`, `refused`, `cancelled`, `expired`) — il n'existe **aucun enum TS**.
-- **Front** — la page lit `/transactions` et garde ses trois KPI ; ajouter la section des
-  paiements en ligne. **Supprimer la note de pied de page** `paiements.html:99-112`, qui affirme
-  que le rapprochement attend une refonte de `transactions` : `payments` porte déjà `status` et
-  la référence fournisseur.
-- ⚠️ La nouvelle permission n'existera pas en base tant que les seeders RBAC ne sont pas rejoués
-  (tâches 58/59 de l'annexe) : sans ça la route renvoie **403 à tout le monde**.
-
----
-
-## Lot 4 — Tâche 5 : combler les tests de la modale existante
-
-Aucun code de production à écrire. La spec fait 54 lignes et ne couvre ni `submit()`, ni la
-distinction réserve/rebut, ni le refus back. Trois tests, trois défauts distincts :
-
-1. **Le rebut n'envoie rien.** Une régression ici recréditerait en stock ce qui a été jeté —
-   silencieusement, et sans qu'aucun autre test ne tombe. Le back n'écrit **rien** pour une ligne
-   omise ; c'est toute la sémantique.
-2. **Le garde `tooMuch`** empêche d'envoyer plus que `returnableQty` : sans lui l'utilisateur
-   reçoit un 400 `E_RETURN_EXCEEDS_PICKED` là où l'écran pouvait le dire avant.
-3. **Sur refus back, la modale reste ouverte et conserve les saisies.** C'est le comportement
-   qu'un `close()` trop hâtif casserait, en faisant perdre le travail de saisie.
-
-Suivre le patron du dépôt : garder la promesse (`const submitted = modal.submit()`), assertionner
-`req.request.body` **avant** `flush`, puis `await submitted` ; `http.expectNone(url)` pour le cas
-« tout au rebut » ; et le helper `settle = () => new Promise(r => setTimeout(r, 0))` déjà utilisé
-dans `live.spec.ts:12`, parce qu'en zoneless `whenStable()` ne suit pas les promesses nues.
-
----
-
-## Vérification
-
-- Back : `node ace test` (⚠️ tourne sur la **base de dev**, faute de `.env.test` — tâche 63 de
-  l'annexe) ; vérifier le diff de `database/schema.ts` après régénération.
-- Front : `pnpm test` (ou `./node_modules/.bin/ng test bae-dashboard`) — `pnpm` refuse de démarrer
-  hors TTY tant que `node_modules` est désynchronisé du lockfile, faire `pnpm install` d'abord.
-- Typecheck : `./node_modules/.bin/tsc --build tsconfig.json` (vert au départ de ce lot).
-- Bout en bout, tâche 45 : ouvrir une précommande, encaisser via le faux client Lydia
-  (`LYDIA_DRIVER=fake`), **modifier le prix au menu**, puis relire « mes précommandes » — le
-  total doit être inchangé et égal au montant encaissé.
-- Tâches 7 et 9 : à l'écran, avec un compte portant les permissions requises **après** avoir
-  rejoué les seeders RBAC.
-
----
-
-## Ensuite — le bloc A, séquencé
-
-29 items, dont 5 (faite), 7 et 9 (ci-dessus). Reste 26, à prendre dans cet ordre :
-
-| Lot                                           | Tâches                                                                                                                                                                                                                                                                | Pourquoi dans cet ordre                                                                                                                                                                                                      |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A1 — Nettoyage sans risque**                | 2 (`ExternalNavigation` dans les 2 logins), 3 (`bae-toast-container` dans `bae-public`), 16 (code mort), 17 (`LogistiqueAssignModal` : retirer ou brancher), 24 (`describeMatching`), 30 (`CLAUDE.md` périmé)                                                         | Aucune dépendance, aucun arbitrage, et ça réduit le bruit avant tout le reste. La 3 est un piège actif : tout toast public est muet aujourd'hui.                                                                             |
-| **A2 — a11y, harnais d'abord**                | 18 (axe-core), puis 4 (`bfd-btn` : `id`, `aria-*`, `focus-visible`), 15 (focus perdu pendant l'écriture), 23 (thème : les trois choix)                                                                                                                                | Installer le harnais **avant** les correctifs, sinon on corrige à l'aveugle alors que les règles du projet exigent qu'AXE passe. La 4 supprime les contournements en `<button>` natif de `home.html` et `my-presences.html`. |
-| **A3 — Branchements sur endpoints existants** | 6 (présences à 3 états), 11 (2ᵉ bouton « Fiche logistique »), 10 (canaux hors `in_app`), 8 (borne de retrait → scan partagé), 12 (pagination des logs), 28 (`adherents` sur `clients`), 29 (masquer le mot de passe en SSO pur), 27 (gestes désactivés des adhérents) | Le back est déjà là dans tous les cas. 27 en dernier du lot : c'est le seul dont il faut vérifier les endpoints un par un.                                                                                                   |
-| **A4 — Correctness**                          | 13 (course refresh/écriture dans `toggleVoucherUsed` et `createVoucher`), 14 (texte dédié au 403)                                                                                                                                                                     | Fenêtre étroite mais un id en double casse `@for … track`.                                                                                                                                                                   |
-| **A5 — Chantiers structurants**               | 19 (fusionner les deux modélisations de soirée), 20 (composant de scan mutualisé), 26 (écarts au design system)                                                                                                                                                       | À faire après A1-A4 : ils touchent large, et 19 réduit le coût de tout ajout ultérieur (« un ajout se paie en six déclarations »). 20 évite d'écrire quatre fois le même code caméra.                                        |
-| **A6 — Vérifications humaines, en continu**   | 21 (les 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes), 22 (bout-en-bout du logout SSO)                                                                                                                                                | Non bloquantes, à intercaler. La 21 avec deux comptes compte double : c'est le comportement d'un compte **sans** la permission qu'il faut voir.                                                                              |
-| **Différée**                                  | 25 (`modal/` vers `bae-ui`)                                                                                                                                                                                                                                           | Différée volontairement : à faire le jour où `bae-public` aura une modale.                                                                                                                                                   |
-
-⚠️ **Non inclus dans le bloc A** mais préalable à 20 : la 97 (`@zxing/browser`) est un arbitrage
-de dépendance — Firefox et Safari desktop n'ont pas `BarcodeDetector`. À trancher avant de
-mutualiser le composant de scan, pas après.
-
----
-
----
-
-# Annexe — inventaire complet des 130 tâches
-
-Les deux handoffs (3102 + 2060 lignes) sont des journaux cumulatifs : un lot ultérieur ferme
-des points ouverts d'un lot antérieur **sans les rayer sur place**. Ils s'arrêtent au §39
-(2026-08-18), alors que deux lots ont atterri depuis — **responsive mobile** (v0.7.0) et
-**paiement Lydia** (v0.8.0). Le but de ce document est de dire, pour chaque tâche encore
-ouverte, si elle est **faisable directement** ou **ce qui la bloque**.
-
-Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md). Les items du
-bloc J sont **déjà faits** : vérifiés dans le code, contre ce que le handoff affirme.
+| #      | Livré                                                                                                                                                                                   |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **45** | `pre_order_items.list_price_cents` + `pre_orders.discount_percent`, prix portés par l'`intent`. Corrige le total surfacturé à l'écran client.                                           |
+| **7**  | `client_activity_service.activityOf()`, tuiles Précommandes et Dépensé ; tuile « Solde courant » retirée.                                                                               |
+| **9**  | Permission `payment:read`, `GET /payments`, section « Paiements en ligne » de la page `paiements`.                                                                                      |
+| **5**  | Modale de clôture de production : elle lisait `input.required()` dans son **constructeur**, donc levait `NG0950` — aucune requête n'était émise. Chargement déplacé dans un `effect()`. |
+| **A1** | 2 (`ExternalNavigation`), 3 (`bae-toast-container` : tout toast public était muet), 16 (code mort), 17 (rien à faire), 24, 30 (`CLAUDE.md`).                                            |
 
 ---
 
 ## Corrections d'état, vérifiées dans le code
 
-| Fait vérifié                                                                                                                                                                                                  | Conséquence                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Back : **5 PR ouvertes, 0 mergée**. `main` back n'a qu'`orders` (#26). Pile **linéaire** : `main → #27(19) → #28(28) → #33(38) → #35(56) → #37(74)`, 0 commit de retard.                                      | Merger **#37 seule** fait atterrir les cinq. Tâche 1.                                         |
-| `POST /pre-orders` **existe** (`start/routes/public.ts:25`, `AccountPayments.preOrder`, garde `audience('client')`).                                                                                          | Le « maillon bloquant » de tout le §36/§38/§39 **est levé**.                                  |
-| Lot Lydia : table **`payments`** (`status`, `providerReference`, `expiresAt`, `orderRef`, `intent`, `provider`, `transactionId`), webhook, confirmation idempotente, expiration.                              | §10 largement livré. La « refonte de `transactions` » (§10.2) est **contournée, pas faite**.  |
-| `TicketSchema` + `TicketMessageSchema` + 5 routes existent.                                                                                                                                                   | Contradiction H2 §33.1 (« arbitrage ouvert ») vs §33.2 (« construit ») → **construit**.       |
-| `GET /events/:id/production-returns` **existe** (`ProductionRuns.returnState`).                                                                                                                               | H2 §32 « le seul blocage réel » → **levé**. Débloque la modale de clôture.                    |
-| PrimeNG : absent de `package.json` **et** plus référencé.                                                                                                                                                     | H1 §0 septies « `main` ne compile pas depuis un clone neuf » → **périmé**. Typecheck vert.    |
-| `DB_PORT=5432` partout (`.env.example`, `docker-compose*.yml`).                                                                                                                                               | H1 §8 (« 3306 est correct, ne le corrigez pas en 5432 ») est **faux et activement trompeur**. |
-| Aucun stockage de fichiers (`@adonisjs/drive`/`flydrive`/`aws-sdk` absents).                                                                                                                                  | H2 §23.1 confirmé bloqué.                                                                     |
-| `config/mail.ts` : « Aucun SMTP n'est encore fourni […] Aucun code à changer. »                                                                                                                               | Demande externe pure.                                                                         |
-| `goods` : pas de colonne de méthode de stockage (a `barcode`). `events` : pas de colonne `type`. `pre_order_items` : pas de colonne de prix. Pas de contrainte unique `(user_id, event_id)` sur `pre_orders`. | Tâches 44, 58, 45, 46.                                                                        |
-| Workspace = monorepo `projects/{bae-dashboard,bae-public,bae-ui}`, `src/` n'existe plus.                                                                                                                      | `.claude/CLAUDE.md` (qui documente `src/app/…`) est **périmé**. Tâche 30.                     |
+| Fait vérifié                                                                                                                       | Conséquence                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **`gh pr list` sur `BAE-Back` renvoie `[]` (2026-08-23).** La pile des 5 PR est mergée.                                            | **Tâche 1 faite.** Ce document la donnait pour le blocage n°1.        |
+| **Suite back : 634 tests, 0 échec.** La famille PDF (`print_*`, `pdf_service`, `event_receivables/pdf`) passe.                     | Les « 13 tests PDF en échec » du 2026-08-20 sont **périmés**.         |
+| `POST /pre-orders` existe (`start/routes/public.ts`), garde `audience('client')`.                                                  | Le « maillon bloquant » du §36/§38/§39 est levé.                      |
+| Lot Lydia : table `payments` complète, webhook, confirmation idempotente, expiration.                                              | §10 largement livré. La refonte de `transactions` est **contournée**. |
+| `GET /events/:id/production-returns` existe.                                                                                       | H2 §32 « le seul blocage réel » → levé.                               |
+| PrimeNG absent de `package.json` et plus référencé.                                                                                | H1 §0 septies (« `main` ne compile pas ») → **périmé**.               |
+| `DB_PORT=5432` partout.                                                                                                            | H1 §8 (« 3306 est correct ») est **faux et activement trompeur**.     |
+| Aucun stockage de fichiers (`@adonisjs/drive`/`flydrive`/`aws-sdk` absents).                                                       | H2 §23.1 confirmé bloqué.                                             |
+| `config/mail.ts` : aucun SMTP fourni.                                                                                              | Demande externe pure.                                                 |
+| `goods` : pas de colonne de méthode de stockage. `events` : pas de colonne `type`. Pas de contrainte unique `(user_id, event_id)`. | Tâches 44, 58, 46.                                                    |
 
 ---
 
 ## Bloc 0 — Répare une casse existante
 
-| #   | Tâche                                                                                                          | Portée | Faisable ?                                                                                                                                                                                                                                                                             |
-| --- | -------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Merger la pile de PR back (#27 adhérents, #28 SSO, #33 order-serve, #35 public-prereqs, #37 Lydia) dans `main` | BACK   | **Oui, directement** — pile linéaire, fast-forward. Seule décision : merger #37 d'un coup (74 commits, 5 domaines) ou les cinq en séquence. Tant que ce n'est pas fait, `adhérents`, la zone publique et Lydia sont en 404 contre le back déployé. `H1 §0 quaterdecies, H2 §33.2 pt 2` |
+| #   | Tâche                                 | État                                                         |
+| --- | ------------------------------------- | ------------------------------------------------------------ |
+| 1   | Merger la pile de PR back dans `main` | ✅ **Fait.** Aucune PR ouverte sur `BAE-Back` au 2026-08-23. |
 
 ---
 
-## Bloc A — Faisable directement, front
+## Bloc A — Front
 
-| #   | Tâche                                                                                                                                                                               | Faisable ?                                                                                                                                    |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2   | Remplacer `window.location.href` en dur par `ExternalNavigation` dans les deux pages de login (`bae-dashboard/…/login.ts:123`, `bae-public/…/login.ts:55`) + tests                  | Oui. L'utilitaire existe déjà dans `bae-ui`. `H2 §39.6`                                                                                       |
-| 3   | Ajouter `<bae-toast-container />` à `bae-public/src/app/app.html` (ne rend que `router-outlet` + `dropdown-container`)                                                              | Oui. Sans lui, tout toast public est muet silencieusement. `H2 §39.4/§39.6`                                                                   |
-| 4   | `bfd-btn` : propager `id` et les `aria-*` jusqu'au `<button>` interne, reconduire `focus-visible:ring-2`                                                                            | Oui. Supprime les contournements en `<button>` natif de `home.html`/`my-presences.html`. `H1 §8, H2 §14`                                      |
-| 5   | Modale de clôture de production « ce qui reste : réserve ou rebut »                                                                                                                 | **Oui — débloqué** : `GET production-returns` existe. `H2 §32 pt 4`                                                                           |
-| 6   | Présences : afficher les **trois** états (le « pas encore répondu » se distingue visuellement)                                                                                      | Oui, le helper back `presenceStates` est livré. `H2 §19` (P4)                                                                                 |
-| 7   | Tuiles Précommandes / Dépensé / Solde de la page adhérents, à `—`                                                                                                                   | **Oui — débloqué** : `orders.client_id` existe depuis le lot `orders`. `H1 §0 undecies`                                                       |
-| 8   | Borne de retrait de `precommandes-admin` → composant de scan partagé                                                                                                                | Oui, `POST /qr/verify` existe et sert déjà la caisse. `H1 §0 septdecies`                                                                      |
-| 9   | Rapprochement de la page `paiements`                                                                                                                                                | **Oui — débloqué** : `payments.status` + `providerReference` fournissent ce qu'attendait la « refonte de `transactions` ». `H1 §0 septdecies` |
-| 10  | `notifications` : afficher les canaux autres que `in_app`                                                                                                                           | Oui. `H1 §0 septdecies`                                                                                                                       |
-| 11  | Second bouton « Fiche logistique » (pied de carte de soirée) cliquable et sans effet → le brancher                                                                                  | Oui, les 7 PDF sont livrés. `H2 §31`                                                                                                          |
-| 12  | Pagination des logs : `TeamService.getLogs()` doit envoyer `page`/`limit` ; gérer `metadata` chez les consommateurs (fil d'activité + « dernière activité » calculés sur 50 lignes) | Oui. `H1 §0 bis, §8`                                                                                                                          |
-| 13  | Fermer la course refresh/écriture dans `toggleVoucherUsed` et `createVoucher` (compteur de génération sur `fetch()`)                                                                | Oui. Fenêtre étroite mais un id en double casse `@for … track`. `H1 §0 quinquies`                                                             |
-| 14  | Texte dédié au 403 au lieu du message brut de l'API (« Missing permission: voucher:write ») ; faire primer « Accès restreint » sur `messageOf`                                      | Oui. `H1 §0 quinquies, §0 septies`                                                                                                            |
-| 15  | Le bouton de bascule perd le focus clavier pendant l'écriture (`[disabled]`)                                                                                                        | Oui, a11y. `H1 §0 quinquies`                                                                                                                  |
-| 16  | Code mort : `CartRow`, `SupplierTotal`, l'appel inutile `svc.getGoods()` dans `LogistiqueStore.fetch()`, `ScannerUnknownModal`                                                      | Oui. `H1 §0 sexies, §0 septies`                                                                                                               |
-| 17  | `LogistiqueAssignModal` restée factice : la retirer **ou** la brancher, pas la laisser                                                                                              | Oui. `H1 §0 septies`                                                                                                                          |
-| 18  | Installer un harnais **axe-core**                                                                                                                                                   | Oui — les règles du projet exigent qu'AXE passe, il n'est vérifié qu'à la lecture du markup. `H1 §8`                                          |
-| 19  | Fusionner les deux modélisations concurrentes de la soirée (`ApiEvent`/`CoordinationEvent` vs `EventApiDto`/`EventData`)                                                            | Oui, chantier propre : « un ajout se paie en six déclarations ». `H2 §39.2/§39.6`                                                             |
-| 20  | Mutualiser un **composant de scan réutilisable** (caisse Lydia, `stocks/scanner`, QR du BAE), avec deux boutons distincts                                                           | Oui. Sinon « quatre fois le même code caméra ». `H1 §10.5/§11` (P0 CDC)                                                                       |
-| 21  | Vérifications à l'œil jamais faites : les 7 écrans publics, `soiree/bilan`, page Équipe, bons d'achat avec **deux** comptes (`Pole Log` + `Membre`)                                 | Oui. `H2 §36.8, H1 §0 decies/§0 quinquies`                                                                                                    |
-| 22  | Vérifier le bout-en-bout du logout SSO à la main (le protocole n'est joué en test nulle part)                                                                                       | Oui. `H2 §39.1`                                                                                                                               |
-| 23  | Vérifier que l'écran de préférences expose les **trois** choix de thème (`toggle()` ne revient jamais à `system`, qui est le défaut demandé)                                        | Oui. `H2 §22.5`                                                                                                                               |
-| 24  | Reformuler `describeMatching()` (ses messages supposent que les membres non affectés sont courants, ce que la règle des ex æquo rend rare)                                          | Oui. `H1 §6`                                                                                                                                  |
-| 25  | Sortir `shared/components/modal/` dans `bae-ui` (`modal-container` importe `RolesModal` en dur)                                                                                     | Oui mais **différé volontairement** : à faire le jour où `bae-public` aura une modale. `H2 §34.2`                                             |
-| 26  | Relever les écarts `primitives.jsx`/`theme.jsx` ↔ implémentation Angular, et lire les maquettes des écrans non encore codés avant de les coder                                      | Oui, sous réserve d'accès au MCP `claude_design`. `H2 §14`                                                                                    |
-| 27  | Adhérents : brancher les gestes désactivés (enregistrer une cotisation, modifier une fiche, renouveler, export CSV, import, « Contacter », tri)                                     | **Partiellement** — à vérifier endpoint par endpoint après la tâche 1. `H1 §0 undecies`                                                       |
-| 28  | Brancher `adherents` sur `clients` et non `members` (colonne « promotion »)                                                                                                         | Oui. `H1 §4.4`                                                                                                                                |
-| 29  | Masquer le panneau de changement de mot de passe pour un compte SSO pur (`password = null`)                                                                                         | Oui. `H1 §2.3`                                                                                                                                |
-| 30  | Mettre à jour `.claude/CLAUDE.md` : il documente `src/app/…` et les alias `#core/*` → `src/app/core/*`, alors que le workspace est `projects/{bae-dashboard,bae-public,bae-ui}`     | Oui.                                                                                                                                          |
+29 items. **22 faits, 6 ouverts, 1 différé.** Chaque « fait » ci-dessous a été constaté dans le
+code le 2026-08-23, pas déduit d'un message de commit.
+
+### Faits
+
+| #      | Preuve                                                                                                          |
+| ------ | --------------------------------------------------------------------------------------------------------------- |
+| **2**  | `ExternalNavigation` dans les deux logins, un test par zone sur le paramètre `app=`.                            |
+| **3**  | `<bae-toast-container />` dans `bae-public/app.html`.                                                           |
+| **4**  | `bae-btn` porte `id`, `ariaLabel`, `ariaPressed`, `ariaDescribedby` ; spec « puts the id on the inner button ». |
+| **5**  | Modale de clôture réparée et couverte.                                                                          |
+| **6**  | `roster-aside.ts:50-52` distingue les **trois** états, « Non répondu » compris, avec sa propre couleur.         |
+| **7**  | Tuiles Précommandes et Dépensé branchées.                                                                       |
+| **8**  | ⚠️ **Prémisse fausse, tâche annulée.** Voir ci-dessous.                                                         |
+| **9**  | Section « Paiements en ligne » de la page `paiements`.                                                          |
+| **10** | `notifications.html:92` rend le canal mail en mention.                                                          |
+| **11** | `logistique.ts:163` et `events.html:236` branchés sur `PrintService.download`, deux specs.                      |
+| **12** | `TeamService.getLogs(page, limit)` envoie bien les deux paramètres.                                             |
+| **13** | Compteur de génération dans `logistique.store.ts:144-164`, et `shoppingListGeneration:343`.                     |
+| **14** | Panneaux « Accès restreint » : `logistique.html:78,300`, `soiree/live/live.html:392`.                           |
+| **15** | `88c7bfe` — le bouton de bascule reste focusable pendant l'écriture.                                            |
+| **16** | `CartRow`, `SupplierTotal`, `ScannerUnknownModal` et l'appel `svc.getGoods()` supprimés.                        |
+| **17** | Rien à faire : `LogistiqueAssignModal` **est** utilisée par `LogistiqueEvents`.                                 |
+| **18** | Harnais axe-core (`bae-ui/src/testing.ts`), consommé par plusieurs specs.                                       |
+| **20** | `core/services/barcode/barcode-scanner-service.ts` mutualisé, consommé par `buyer-picker` et `stocks/scanner`.  |
+| **23** | `parametres.ts:54-58` expose les **trois** choix, `system` compris.                                             |
+| **24** | `2a8d492` — `describeMatching` n'affirme plus une cause unique.                                                 |
+| **28** | `adherents.ts:93` injecte `ClientsStore`, plus `members`.                                                       |
+| **29** | `securite.html:9` conditionne le panneau à `hasPassword()`, spec `userWith(hasPassword)`.                       |
+| **30** | `.claude/CLAUDE.md` à jour (arborescence, alias, sélecteurs).                                                   |
+
+### La tâche 8 n'existe pas
+
+> « Borne de retrait de `precommandes-admin` → composant de scan partagé »
+
+**Prémisse fausse.** `precommandes-admin` est la **liste des précommandes d'une soirée**, pas une
+borne : le retrait du client est géré par la **caisse**, qui vérifie déjà les QR. Le panneau
+« Borne retrait » était un faux scanner que personne n'avait demandé — il a été remplacé le
+2026-08-23 par l'éditeur de créneaux, qui est le besoin réel. Ne pas la rejouer.
+
+Conséquence sur la **tâche 20** : la mutualisation du scan est faite (deux consommateurs), et le
+troisième consommateur qu'on lui prêtait n'a jamais eu lieu d'être. L'arbitrage `@zxing/browser`
+(tâche 97) reste ouvert mais n'est plus bloquant pour cet écran.
+
+### Ouverts
+
+| #      | Tâche                                                                                                | Note                                                                                                                                         |
+| ------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **27** | Adhérents : brancher les gestes désactivés                                                           | 4 `[disabled]="true"` dans `adherents.html` (tri + 3 actions). La tâche 1 étant faite, les endpoints sont joignables : à vérifier un par un. |
+| **19** | Fusionner `EventData` / `EventApiDto`                                                                | Les deux coexistent toujours dans `event.model.ts`. Chantier structurant : « un ajout se paie en six déclarations ».                         |
+| **26** | Écarts au design system                                                                              | Demande l'accès au MCP `claude_design`.                                                                                                      |
+| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir.                                                         |
+| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                                                                        |
+| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.                                                                       |
+
+### Ordre proposé
+
+1. **27** — le seul qui débloque des gestes visibles à l'écran, et le back est prêt.
+2. **19** — après 27 : il touche large, et réduit le coût de tout ajout ultérieur.
+3. **26** — sous réserve d'accès aux maquettes.
+4. **21 / 22** — à intercaler, ce sont des vérifications humaines.
+
+---
+
+# Annexe — inventaire des tâches 31 à 130
+
+> ⚠️ **Évalué le 2026-08-20 et non rejoué depuis.** Les blocs 0 et A ci-dessus ont bougé ;
+> ceux-ci n'ont pas été revérifiés. Avant d'attaquer une ligne : relire la source citée,
+> **puis le code**.
+
+Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 
 ---
 
@@ -463,12 +322,27 @@ bloc J sont **déjà faits** : vérifiés dans le code, contre ce que le handoff
 
 ## Vérification
 
-Ce document est un inventaire, pas un lot de code : rien n'est à exécuter pour le valider.
-Les faits du tableau « Corrections d'état » ont été vérifiés cette session par lecture de
-`start/routes/*.ts`, `database/schema.ts`, `config/mail.ts`, `package.json`,
-`projects/bae-public/src/app/app.html`, `git log`/`git merge-base` sur les deux dépôts, et
-un `tsc --build` vert côté front.
+### État des suites au 2026-08-23
+
+| Suite         | Résultat                                 |
+| ------------- | ---------------------------------------- |
+| Back          | **634 tests, 0 échec** (`node ace test`) |
+| bae-dashboard | **683**                                  |
+| bae-public    | **92**                                   |
+| bae-ui        | **101**                                  |
+| Typecheck     | vert des deux côtés · Prettier vert      |
+
+⚠️ `node ace test` tourne sur la **base de dev**, faute de `.env.test` (tâche 63) : un changement
+de branche produit des échecs qui n'en sont pas. Côté front, `pnpm` refuse de démarrer hors TTY
+tant que `node_modules` est désynchronisé du lockfile — `pnpm install` d'abord, ou passer par
+`./node_modules/.bin/ng`.
+
+### Comment lire ce document
 
 Avant d'attaquer une tâche : relire la ligne source citée, **puis le code**. La règle que le
 handoff énonce lui-même vaut dans les deux sens — une section « ✅ RÉALISÉ » ne se croit pas
-sur parole, et une section « ❌ bloqué » non plus (blocs H et I).
+sur parole, et une section « ❌ bloqué » non plus (blocs H et I). **Ce document ne fait pas
+exception** : ses blocs B à I datent du 2026-08-20 et n'ont pas été rejoués depuis.
+
+Et en refermant un lot : **rayer ici**. C'est le seul entretien qui empêche ce fichier de
+redevenir ce qu'il reproche aux handoffs.
