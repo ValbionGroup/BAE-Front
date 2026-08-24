@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { addDays, format } from 'date-fns';
+
 import { StocksStore } from './stocks.store';
 import { API_BASE_URL } from '@bae/ui';
 import type { ApiStockItem } from '#core/services/stocks/stocks-service';
@@ -51,6 +53,45 @@ describe(StocksStore.name, () => {
     http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
     await loading;
   }
+
+  /** Une DLC exprimée en jours par rapport à aujourd'hui, au format du back. */
+  const dlcIn = (days: number): string => format(addDays(new Date(), days), 'yyyy-MM-dd');
+
+  const statusOf = async (days: number): Promise<string> => {
+    await loadWith([item({ nearestExpirationDate: dlcIn(days) })]);
+    return store.products()[0].nearestDlcStatus;
+  };
+
+  /**
+   * La borne qui compte : `expiration_date` est une colonne `date`, servie en
+   * `YYYY-MM-DD`. Lue comme de l'UTC puis comparée à minuit **local**, une DLC
+   * du jour tombe trois heures dans le passé à l'ouest de Greenwich — le lot
+   * s'affiche périmé le matin même de sa date.
+   *
+   * ⚠️ Ne mord qu'à l'ouest de Greenwich.
+   */
+  it('ne déclare pas périmé un lot dont la DLC est aujourd’hui', async () => {
+    expect(await statusOf(0)).toBe('soon');
+  });
+
+  it('déclare périmé un lot dont la DLC est passée', async () => {
+    expect(await statusOf(-1)).toBe('expired');
+  });
+
+  it('alerte à sept jours, plus au-delà', async () => {
+    expect(await statusOf(7)).toBe('soon');
+    TestBed.resetTestingModule();
+  });
+
+  it('n’alerte pas encore à huit jours', async () => {
+    expect(await statusOf(8)).toBe('ok');
+  });
+
+  it('affiche la DLC au jour servi par l’API', async () => {
+    await loadWith([item({ nearestExpirationDate: '2026-08-31' })]);
+
+    expect(store.products()[0].nearestDlc).toBe('31/08/26');
+  });
 
   it('should be created', () => {
     expect(store).toBeTruthy();

@@ -1,6 +1,7 @@
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { inject } from '@angular/core';
 import { forkJoin, lastValueFrom } from 'rxjs';
+import { parseISO } from 'date-fns';
 import {
   StocksService,
   type ApiCategory,
@@ -11,9 +12,15 @@ import type { LoadingStatus } from '#core/models/global.model';
 import { messageOf, settle } from '@bae/ui';
 import type { DlcStatus, StockBatchRow, StockProduct } from '#pages/authed/stocks/stocks.types';
 
+/**
+ * `parseISO` et non `new Date` : `expiration_date` est une colonne `date`,
+ * servie en `YYYY-MM-DD`. Lue comme de l'UTC, elle revient trois heures avant
+ * minuit **local** à l'ouest de Greenwich — et un lot dont la DLC est le jour
+ * même s'affichait périmé dès le matin, KPI compris.
+ */
 function dlcStatus(expirationDate: string | null, today: Date): DlcStatus {
   if (!expirationDate) return 'none';
-  const exp = new Date(expirationDate);
+  const exp = parseISO(expirationDate);
   const diffDays = (exp.getTime() - today.getTime()) / 86_400_000;
   if (diffDays < 0) return 'expired';
   if (diffDays <= 7) return 'soon';
@@ -25,7 +32,7 @@ function toStockProduct(item: ApiStockItem): StockProduct {
   today.setHours(0, 0, 0, 0);
   const nearestDlcStatus = dlcStatus(item.nearestExpirationDate, today);
   const nearestDlc = item.nearestExpirationDate
-    ? new Date(item.nearestExpirationDate).toLocaleDateString('fr-FR', {
+    ? parseISO(item.nearestExpirationDate).toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: '2-digit',
         year: '2-digit',
@@ -171,7 +178,7 @@ export const StocksStore = signalStore(
         initialQty: b.initialQty,
         remainingQty: b.remainingQty,
         dlcLabel: b.expirationDate
-          ? new Date(b.expirationDate).toLocaleDateString('fr-FR', {
+          ? parseISO(b.expirationDate).toLocaleDateString('fr-FR', {
               day: '2-digit',
               month: '2-digit',
               year: '2-digit',
@@ -179,7 +186,7 @@ export const StocksStore = signalStore(
           : null,
         dlcStatus: dlcStatus(b.expirationDate, today),
         openedAt: b.openedAt
-          ? new Date(b.openedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+          ? parseISO(b.openedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
           : null,
       }));
     },
