@@ -13,6 +13,30 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 
 ## ✅ Livré
 
+### 2026-08-24 — le DTO de la soirée dérive du modèle (tâche 19)
+
+`EventData` et `EventApiDto` listaient les mêmes champs à la main, et un ajout se payait en
+plusieurs éditions dont rien ne signalait l'oubli : les champs sont optionnels, un mapping
+incomplet compile. `EventApiDto` et `RosterRowApiDto` sont désormais **dérivés** (`Omit` +
+les seuls champs dont la forme change : `id` entier, dates ISO), et `toEventData` /
+`toRosterRow` ne convertissent plus que ces champs-là, le reste passe par diffusion.
+
+Conséquence assumée : ce que l'API sert en plus (`createdAt`, `updatedAt`) entre maintenant dans
+le store, où rien ne le lit et d'où rien ne repart vers l'API.
+
+**`location` ne ment plus.** Le modèle le déclarait `string` requis alors qu'**aucune colonne
+`location` n'existe côté back** : il était toujours `undefined`. `agenda.store.ts:19` le gardait
+déjà, `my-presences.html` non — l'écran affichait « Lieu · » suivi de rien. Le champ reste
+déclaré (c'est un manque du back), en `string | null` optionnel, et le gabarit le conditionne.
+
+> ⚠️ **Il reste une troisième déclaration de la même soirée** : `ApiEvent`
+> (`coordination-service.ts:8`), avec `id: number` et un `preOrderCloseLeadHours` que les deux
+> autres n'ont pas. La fusionner touche 4 fichiers de coordination et leurs specs — écartée
+> volontairement de la 19, à reprendre si le coût d'un ajout se fait sentir de ce côté.
+
+> ⚠️ Les fixtures de spec servent un `location: 'Foyer'` que l'API n'envoie jamais. C'est ce qui
+> a masqué le trou : un test qui invente son payload ne teste pas le contrat.
+
 ### 2026-08-24 — gestes de la page Adhérents (tâche 27)
 
 Le back était prêt et **le chemin d'écriture front l'était aussi** : `ClientsStore.updateClient()`
@@ -120,7 +144,7 @@ Vérifié : plus aucun `div` cliquable inerte dans les trois projets.
 
 ## Bloc A — Front
 
-29 items. **23 faits, 5 ouverts, 1 différé.** Chaque « fait » ci-dessous a été constaté dans le
+29 items. **24 faits, 4 ouverts, 1 différé.** Chaque « fait » ci-dessous a été constaté dans le
 code le 2026-08-23 (le 2026-08-24 pour la 27), pas déduit d'un message de commit.
 
 ### Faits
@@ -144,6 +168,7 @@ code le 2026-08-23 (le 2026-08-24 pour la 27), pas déduit d'un message de commi
 | **16** | `CartRow`, `SupplierTotal`, `ScannerUnknownModal` et l'appel `svc.getGoods()` supprimés.                        |
 | **17** | Rien à faire : `LogistiqueAssignModal` **est** utilisée par `LogistiqueEvents`.                                 |
 | **18** | Harnais axe-core (`bae-ui/src/testing.ts`), consommé par plusieurs specs.                                       |
+| **19** | `EventApiDto` / `RosterRowApiDto` dérivés du modèle — voir « Livré » ci-dessus.                                 |
 | **20** | `core/services/barcode/barcode-scanner-service.ts` mutualisé, consommé par `buyer-picker` et `stocks/scanner`.  |
 | **23** | `parametres.ts:54-58` expose les **trois** choix, `system` compris.                                             |
 | **24** | `2a8d492` — `describeMatching` n'affirme plus une cause unique.                                                 |
@@ -167,23 +192,22 @@ troisième consommateur qu'on lui prêtait n'a jamais eu lieu d'être. L'arbitra
 
 ### Ouverts
 
-| #      | Tâche                                                                                                | Note                                                                                                                 |
-| ------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **19** | Fusionner `EventData` / `EventApiDto`                                                                | Les deux coexistent toujours dans `event.model.ts`. Chantier structurant : « un ajout se paie en six déclarations ». |
-| **26** | Écarts au design system                                                                              | Demande l'accès au MCP `claude_design`.                                                                              |
-| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir.                                 |
-| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                                                |
-| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.                                               |
+| #      | Tâche                                                                                                | Note                                                                                 |
+| ------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **26** | Écarts au design system                                                                              | Demande l'accès au MCP `claude_design`.                                              |
+| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir. |
+| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                |
+| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.               |
 
 ### Ordre proposé
 
-1. **19** — il touche large, et réduit le coût de tout ajout ultérieur.
-2. **26** — sous réserve d'accès aux maquettes.
-3. **21 / 22** — à intercaler, ce sont des vérifications humaines.
+1. **26** — sous réserve d'accès aux maquettes.
+2. **21 / 22** — à intercaler, ce sont des vérifications humaines.
 
-Le bloc A ne contient plus de code faisable en dehors de la 19 : la suite est dans les blocs B et
-C, dont les gardes de permission manquantes (**32**, **33**) — un bon d'achat est un objet au
-porteur, et n'importe quel membre peut aujourd'hui supprimer une soirée.
+**Le bloc A ne contient plus de code.** Ce qui reste y est soit non-code (21, 22), soit
+suspendu à un accès (26), soit différé (25). La suite est dans les blocs B et C, à commencer par
+les gardes de permission manquantes (**32**, **33**) : un bon d'achat est un objet au porteur, et
+n'importe quel membre peut aujourd'hui supprimer une soirée.
 
 ---
 
@@ -360,7 +384,7 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | Suite         | Résultat                                                                                    |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | Back          | **634 tests, 0 échec** — relevé le 2026-08-23, non rejoué depuis (rien n'a bougé côté back) |
-| bae-dashboard | **700** (2026-08-24)                                                                        |
+| bae-dashboard | **702** (2026-08-24)                                                                        |
 | bae-public    | **92** (2026-08-24)                                                                         |
 | bae-ui        | **101** (2026-08-24)                                                                        |
 | Typecheck     | `ng build bae-dashboard` vert · Prettier vert sur tout le dépôt (2026-08-24)                |
