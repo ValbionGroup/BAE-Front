@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import type { Observable } from 'rxjs';
 import { API_BASE_URL, messageOf } from '@bae/ui';
 
 import type { LoadingStatus } from './catalog.models';
@@ -43,6 +44,7 @@ export class PurchasesStore {
   private readonly baseUrl = inject(API_BASE_URL);
 
   private readonly _status = signal<LoadingStatus>('init');
+  private readonly _subscriptionsStatus = signal<LoadingStatus>('init');
   private readonly _preOrders = signal<readonly MyPreOrder[]>([]);
   private readonly _subscriptions = signal<readonly MySubscription[]>([]);
   private readonly _error = signal<string | null>(null);
@@ -50,11 +52,34 @@ export class PurchasesStore {
   readonly status = this._status.asReadonly();
   readonly preOrders = this._preOrders.asReadonly();
   readonly subscriptions = this._subscriptions.asReadonly();
+  readonly subscriptionsStatus = this._subscriptionsStatus.asReadonly();
   readonly error = this._error.asReadonly();
 
   readonly isEmpty = computed(
     () => this._preOrders().length === 0 && this._subscriptions().length === 0,
   );
+
+  readonly activeSubscription = computed<MySubscription | null>(
+    () => this._subscriptions().find((row) => row.status === 'active') ?? null,
+  );
+
+  /**
+   * La moitié « cotisations » seulement : l'en-tête en a besoin sur toutes les
+   * pages, les précommandes n'intéressent que « Mes commandes ». Garde sur
+   * `init` parce que le magasin est un singleton et l'en-tête permanent.
+   */
+  loadSubscriptions(): void {
+    if (this._subscriptionsStatus() !== 'init') return;
+    this._subscriptionsStatus.set('loading');
+
+    this.fetchSubscriptions().subscribe({
+      next: (subscriptions) => {
+        this._subscriptions.set(subscriptions);
+        this._subscriptionsStatus.set('loaded');
+      },
+      error: () => this._subscriptionsStatus.set('error'),
+    });
+  }
 
   load(): void {
     if (this._status() === 'loading') return;
@@ -82,9 +107,10 @@ export class PurchasesStore {
       },
     });
 
-    this.http.get<MySubscription[]>(`${this.baseUrl}/account/subscriptions`).subscribe({
+    this.fetchSubscriptions().subscribe({
       next: (subscriptions) => {
         this._subscriptions.set(subscriptions);
+        this._subscriptionsStatus.set('loaded');
         settle();
       },
       error: (error: unknown) => {
@@ -93,6 +119,16 @@ export class PurchasesStore {
         settle();
       },
     });
+  }
+
+  /** Après un échec : la garde d'`init` refuserait un second essai. */
+  reloadSubscriptions(): void {
+    this._subscriptionsStatus.set('init');
+    this.loadSubscriptions();
+  }
+
+  private fetchSubscriptions(): Observable<readonly MySubscription[]> {
+    return this.http.get<MySubscription[]>(`${this.baseUrl}/account/subscriptions`);
   }
 
   findPreOrder(id: number): MyPreOrder | null {

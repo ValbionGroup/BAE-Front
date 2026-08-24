@@ -1,0 +1,72 @@
+<section class="mx-auto w-full max-w-lg px-6 py-10 md:py-14">
+  <h1 class="m-0 text-2xl font-semibold -tracking-[0.3px] text-text">Mon FastPass</h1>
+
+  @if (purchases.activeSubscription(); as pass) {
+    <p class="mt-1.5 text-[13.5px] text-text-2">
+      Présentez ce code au comptoir : il prouve votre adhésion.
+    </p>
+
+    <bae-card class="mt-6 block">
+      <div class="flex flex-col items-center gap-4 text-center">
+        <div class="flex flex-col items-center gap-1.5">
+          <bae-badge kind="ok" [dot]="true">Cotisation à jour</bae-badge>
+          <span class="text-lg font-semibold text-text">{{ session.displayName() }}</span>
+          <span class="text-[13px] text-text-2">
+            {{ pass.label }} · valable jusqu'au {{ dateOf(pass.expiresAt) }}
+          </span>
+        </div>
+
+        <div class="w-full max-w-64 rounded-lg bg-white p-4">
+          @if (qrToken(); as token) {
+            <bae-qr-code
+              class="block w-full"
+              [value]="token"
+              [alt]="'Code d’adhérent de ' + session.displayName()"
+              (failed)="qrError.set('Le QR n’a pas pu être dessiné.')"
+            />
+          } @else {
+            <div
+              class="flex aspect-square items-center justify-center px-2 text-center text-xs text-[#1a1a1a]"
+            >
+              {{ qrError() ?? 'Génération du QR…' }}
+            </div>
+          }
+        </div>
+
+        @if (qrError()) {
+          <bae-btn kind="outline" size="sm" (clicked)="refreshQr()">Réessayer</bae-btn>
+        } @else {
+          <p class="m-0 text-[11.5px] text-muted">
+            Le code se renouvelle tout seul. Gardez la page ouverte jusqu'au passage.
+          </p>
+        }
+      </div>
+    </bae-card>
+  } @else if (pending()) {
+    <div class="mt-6"><bae-skeleton height="280px" rounded="md" /></div>
+  } @else if (purchases.subscriptionsStatus() === 'error') {
+    <p class="mt-1.5 text-[13.5px] text-text-2">
+      Votre adhésion n’a pas pu être vérifiée — le serveur n’a pas répondu.
+    </p>
+
+    <div class="mt-6">
+      <bae-btn kind="outline" size="sm" (clicked)="retrySubscriptions()">Réessayer</bae-btn>
+    </div>
+  } @else {
+    <p class="mt-1.5 text-[13.5px] text-text-2">
+      Aucune cotisation en cours sur ce compte — il n'y a donc pas de code à présenter.
+    </p>
+
+    <bae-card class="mt-6 block">
+      <div class="flex flex-col items-start gap-3">
+        <svg [lucideIcon]="icPass" [size]="20" class="text-muted" aria-hidden="true"></svg>
+        <p class="m-0 text-[13px] text-text-2">
+          Le FastPass est l'adhésion au BAE : il ouvre les précommandes et les tarifs adhérents.
+        </p>
+        <a routerLink="/fastpass">
+          <bae-btn kind="primary" size="sm">Découvrir le FastPass</bae-btn>
+        </a>
+      </div>
+    </bae-card>
+  }
+</section>

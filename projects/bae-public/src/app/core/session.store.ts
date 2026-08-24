@@ -41,6 +41,15 @@ export class SessionStore {
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => this._status() === 'authenticated');
 
+  /** Le nom du membre, ou la partie locale de l'e-mail pour un client. */
+  readonly displayName = computed(() => {
+    const user = this._user();
+    if (user === null) return '';
+
+    const full = [user.firstName, user.lastName].filter((part) => part !== null).join(' ');
+    return full === '' ? user.email.split('@')[0] : full;
+  });
+
   /** Idempotent : rappelé après un retour SSO, il ne relance rien s'il sait déjà. */
   load(): void {
     this.http.get<ProfileResponse>(`${this.baseUrl}/account/profile`).subscribe({

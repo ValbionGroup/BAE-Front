@@ -57,8 +57,8 @@
             aria-haspopup="menu"
             (click)="openAccountMenu($event)"
           >
-            <bae-avatar [name]="displayName()" [size]="22" />
-            <span class="max-w-32 truncate">{{ displayName() }}</span>
+            <bae-avatar [name]="session.displayName()" [size]="22" />
+            <span class="max-w-32 truncate">{{ session.displayName() }}</span>
           </button>
         }
         @default {
@@ -93,6 +93,15 @@
           >
         }
         @if (session.isAuthenticated()) {
+          @if (hasFastPass()) {
+            <a
+              routerLink="/ma-carte"
+              routerLinkActive="text-text font-medium"
+              (click)="closeMenu()"
+              class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+              >FastPass</a
+            >
+          }
           <a
             routerLink="/mes-commandes"
             routerLinkActive="text-text font-medium"
@@ -110,8 +119,10 @@
           }
           @case ('authenticated') {
             <div class="flex items-center gap-2.5 px-2 py-1">
-              <bae-avatar [name]="displayName()" [size]="26" />
-              <span class="min-w-0 flex-1 truncate text-[13px] text-text">{{ displayName() }}</span>
+              <bae-avatar [name]="session.displayName()" [size]="26" />
+              <span class="min-w-0 flex-1 truncate text-[13px] text-text">{{
+                session.displayName()
+              }}</span>
             </div>
             <bae-btn kind="ghost" size="sm" [full]="true" (clicked)="logout()">Déconnexion</bae-btn>
           }

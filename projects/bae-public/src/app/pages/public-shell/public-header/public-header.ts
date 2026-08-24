@@ -1,6 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
+  LucideBadgeCheck,
   LucideDynamicIcon,
   LucideLogOut,
   LucideMenu,
@@ -13,6 +21,7 @@ import {
 import { Avatar, Btn, DropdownService, Logo, Skeleton, ThemeService } from '@bae/ui';
 
 import { APP_VERSION } from '../../../app-version';
+import { PurchasesStore } from '../../../core/purchases.store';
 import { SessionStore } from '../../../core/session.store';
 
 interface NavLink {
@@ -32,8 +41,17 @@ export class PublicHeader {
   private readonly router = inject(Router);
 
   protected readonly session = inject(SessionStore);
+  private readonly purchases = inject(PurchasesStore);
   protected readonly theme = inject(ThemeService);
   protected readonly appVersion = APP_VERSION;
+
+  constructor() {
+    effect(() => {
+      if (this.session.isAuthenticated()) this.purchases.loadSubscriptions();
+    });
+  }
+
+  protected readonly hasFastPass = computed(() => this.purchases.activeSubscription() !== null);
 
   protected readonly icUser = LucideUser;
   protected readonly icMenu = LucideMenu;
@@ -49,14 +67,6 @@ export class PublicHeader {
   ];
 
   protected readonly menuOpen = signal(false);
-
-  protected readonly displayName = computed(() => {
-    const user = this.session.user();
-    if (user === null) return '';
-
-    const full = [user.firstName, user.lastName].filter((part) => part !== null).join(' ');
-    return full === '' ? user.email.split('@')[0] : full;
-  });
 
   protected readonly themeLabel = computed(() =>
     this.theme.resolved() === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre',
@@ -77,6 +87,16 @@ export class PublicHeader {
       width: 210,
       header: this.session.user()?.email,
       items: [
+        ...(this.hasFastPass()
+          ? [
+              {
+                type: 'action' as const,
+                icon: LucideBadgeCheck,
+                label: 'FastPass',
+                onClick: () => void this.router.navigate(['/ma-carte']),
+              },
+            ]
+          : []),
         {
           type: 'action',
           icon: LucideQrCode,

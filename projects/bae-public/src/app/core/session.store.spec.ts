@@ -71,6 +71,33 @@ describe(SessionStore.name, () => {
     expect(store.user()?.firstName).toBe('Alex');
   });
 
+  it('compose le nom affichable à partir du membre', () => {
+    store.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({
+        user: { id: 1, email: 'staff@enseirb.fr' },
+        member: { firstName: 'Alex', lastName: 'Admin' },
+      });
+
+    expect(store.displayName()).toBe('Alex Admin');
+  });
+
+  // Un client n'a pas de ligne `members` : l'e-mail entier déborderait de
+  // l'en-tête, c'est sa partie locale qui l'identifie.
+  it('retombe sur la partie locale de l’e-mail sans nom connu', () => {
+    store.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({ user: { id: 7, email: 'client@enseirb.fr' }, member: null });
+
+    expect(store.displayName()).toBe('client');
+  });
+
+  it('n’affiche aucun nom tant que personne n’est connu', () => {
+    expect(store.displayName()).toBe('');
+  });
+
   it('traite un 401 comme une visite anonyme, pas comme un incident', () => {
     store.load();
     http

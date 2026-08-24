@@ -38,6 +38,12 @@ export const routes: Routes = [
           import('./pages/mes-commandes/mes-commandes').then((m) => m.MesCommandes),
       },
       {
+        path: 'ma-carte',
+        title: 'BAE — Mon FastPass',
+        canActivate: [sessionGuard],
+        loadComponent: () => import('./pages/ma-carte/ma-carte').then((m) => m.MaCarte),
+      },
+      {
         path: 'commande/:id',
         title: 'BAE — Détail de la commande',
         canActivate: [sessionGuard],
