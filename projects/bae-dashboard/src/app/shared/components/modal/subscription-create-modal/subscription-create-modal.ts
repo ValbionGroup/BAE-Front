@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideBadgeCheck } from '@lucide/angular';
+import { parseISO } from 'date-fns';
 import { Btn, Field, Input, ToastService } from '@bae/ui';
 import { ClientsStore } from '#core/store/clients.store';
 import {
@@ -88,7 +89,9 @@ export class SubscriptionCreateModal {
     const plan = this.selectedPlan();
     const start = this.subscribedAt();
     if (plan === null || start === '') return null;
-    const date = new Date(start);
+    // `parseISO` : `new Date` lirait ce `YYYY-MM-DD` en UTC pour le réafficher
+    // en heure locale, soit un jour de moins à l'ouest de Greenwich.
+    const date = parseISO(start);
     if (Number.isNaN(date.getTime())) return null;
     date.setFullYear(date.getFullYear() + plan.durationYears);
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });

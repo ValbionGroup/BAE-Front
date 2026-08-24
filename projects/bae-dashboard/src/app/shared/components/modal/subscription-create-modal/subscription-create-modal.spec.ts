@@ -97,6 +97,26 @@ describe(SubscriptionCreateModal.name, () => {
     expect(labels).toEqual(['Choisir une formule…', 'Annuelle · 1 an', 'Scolarité · 3 ans']);
   });
 
+  /**
+   * La date de souscription est un `YYYY-MM-DD` sorti d'un `<input type=date>` :
+   * lue par `new Date`, elle part en UTC pour revenir en heure locale, et
+   * l'échéance annoncée recule d'un jour à l'ouest de Greenwich.
+   *
+   * ⚠️ Ne mord qu'à l'ouest de Greenwich.
+   */
+  it('announces the exact day the backend will compute', async () => {
+    const fixture = await render();
+    pick(selectAt(fixture, 0), '1');
+    const date = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      'input[type="date"]',
+    )!;
+    date.value = '2026-01-12';
+    date.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('12 janv. 2027');
+  });
+
   it('announces the expiry the backend will compute', async () => {
     const fixture = await render();
     pick(selectAt(fixture, 0), '1');

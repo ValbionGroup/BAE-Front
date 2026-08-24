@@ -295,6 +295,22 @@ describe(Adherents.name, () => {
     expect((modal.inputs?.['client'] as ClientRow).id).toBe(1);
   });
 
+  /**
+   * `expiresAt`, `subscribedAt` et `registeredAt` arrivent en `YYYY-MM-DD`
+   * (`toISODate()`). Lus par `new Date`, ils partent en UTC pour être réaffichés
+   * en heure locale, ce qui les recule d'un jour à l'ouest de Greenwich.
+   *
+   * ⚠️ Ne mord qu'à l'ouest de Greenwich : ailleurs le décalage ne traverse pas
+   * la frontière du jour.
+   */
+  it('renders a date-only field on the day the API sent', async () => {
+    const fixture = await render();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('31 août 2026');
+    expect(text).toContain('12 sept. 2025');
+  });
+
   it('shows the API error rather than an empty list', async () => {
     const fixture = TestBed.createComponent(Adherents);
     fixture.detectChanges();
