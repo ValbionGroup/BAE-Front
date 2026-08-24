@@ -1,8 +1,8 @@
 # BAE — état des tâches restantes
 
-> **Dernière mise à jour : 2026-08-23.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
-> code** à cette date. Les blocs B à I datent du 2026-08-20 et n'ont **pas** été rejoués : les
-> traiter comme une piste, pas comme un état.
+> **Dernière mise à jour : 2026-08-24.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
+> code** au 2026-08-23, et la tâche 27 livrée le 2026-08-24. Les blocs B à I datent du 2026-08-20
+> et n'ont **pas** été rejoués : les traiter comme une piste, pas comme un état.
 
 Ce document a un défaut connu, qui est celui qu'il reproche aux deux HANDOFF : c'est un journal, et
 un lot ultérieur ferme des points sans les rayer sur place. Entre le 20 et le 21 août, **seize
@@ -12,6 +12,36 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 ---
 
 ## ✅ Livré
+
+### 2026-08-24 — gestes de la page Adhérents (tâche 27)
+
+Le back était prêt et **le chemin d'écriture front l'était aussi** : `ClientsStore.updateClient()`
+et `ClientsStore.subscribe()` existaient, testés, branchés sur `PATCH /clients/:id` et
+`POST /subscriptions`. Il ne manquait que les formulaires — la tâche était du branchement, pas un
+chantier.
+
+| Portée        | Livré                                                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard** | `ClientEditModal` (téléphone, note interne) sur le bouton « Modifier ».                                                                                          |
+| **Dashboard** | `SubscriptionCreateModal` : formule, date, paiement facultatif. Une seule modale pour « Renouveler » (fiche) et « Enregistrer une cotisation » (action de page). |
+| **Dashboard** | `FastPassesService` — `GET /fast-passes` n'avait aucun consommateur côté dashboard. Nomme ses unités : `durationYears`, `priceEuros`.                            |
+| **Dashboard** | Tri de la liste (nom, expiration, cotisation) par le menu « Trier », avec inversion du sens en rechoisissant le critère actif.                                   |
+
+**Le périmètre réel était de 7 gestes, pas 4** : `adherents.ts` en portait trois de plus dans
+`pageActions` que le gabarit. Trois restent inertes, désormais avec une infobulle qui dit
+**pourquoi** et non « pas encore branché » :
+
+- **Contacter** — aucun SMTP (tâche 100, demande externe).
+- **Export CSV** — aucun endpoint d'export.
+- **Import liste** — un compte naît d'EirbConnect ; ce qu'un import créerait n'est pas tranché.
+
+**Prémisse corrigée au passage.** L'infobulle de « Modifier » promettait la promotion :
+`updateClientValidator` la refuse **délibérément**, elle dérive du claim `diplome` et le prochain
+login SSO l'écraserait. Le formulaire ne porte donc que téléphone et note, et le dit.
+
+Trois pièges d'attente relevés dans les specs, tous le même : `lastValueFrom` rend la main **un
+tour après** le `flush()`. Le rechargement du store, la fermeture de la modale et le remplissage de
+la feuille de détail demandent chacun un tour de plus que ce qu'on croit.
 
 ### 2026-08-23 — créneaux de retrait des précommandes
 
@@ -90,8 +120,8 @@ Vérifié : plus aucun `div` cliquable inerte dans les trois projets.
 
 ## Bloc A — Front
 
-29 items. **22 faits, 6 ouverts, 1 différé.** Chaque « fait » ci-dessous a été constaté dans le
-code le 2026-08-23, pas déduit d'un message de commit.
+29 items. **23 faits, 5 ouverts, 1 différé.** Chaque « fait » ci-dessous a été constaté dans le
+code le 2026-08-23 (le 2026-08-24 pour la 27), pas déduit d'un message de commit.
 
 ### Faits
 
@@ -117,6 +147,7 @@ code le 2026-08-23, pas déduit d'un message de commit.
 | **20** | `core/services/barcode/barcode-scanner-service.ts` mutualisé, consommé par `buyer-picker` et `stocks/scanner`.  |
 | **23** | `parametres.ts:54-58` expose les **trois** choix, `system` compris.                                             |
 | **24** | `2a8d492` — `describeMatching` n'affirme plus une cause unique.                                                 |
+| **27** | Modifier, Renouveler, Enregistrer une cotisation et Trier branchés — voir « Livré » ci-dessus.                  |
 | **28** | `adherents.ts:93` injecte `ClientsStore`, plus `members`.                                                       |
 | **29** | `securite.html:9` conditionne le panneau à `hasPassword()`, spec `userWith(hasPassword)`.                       |
 | **30** | `.claude/CLAUDE.md` à jour (arborescence, alias, sélecteurs).                                                   |
@@ -136,21 +167,23 @@ troisième consommateur qu'on lui prêtait n'a jamais eu lieu d'être. L'arbitra
 
 ### Ouverts
 
-| #      | Tâche                                                                                                | Note                                                                                                                                         |
-| ------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **27** | Adhérents : brancher les gestes désactivés                                                           | 4 `[disabled]="true"` dans `adherents.html` (tri + 3 actions). La tâche 1 étant faite, les endpoints sont joignables : à vérifier un par un. |
-| **19** | Fusionner `EventData` / `EventApiDto`                                                                | Les deux coexistent toujours dans `event.model.ts`. Chantier structurant : « un ajout se paie en six déclarations ».                         |
-| **26** | Écarts au design system                                                                              | Demande l'accès au MCP `claude_design`.                                                                                                      |
-| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir.                                                         |
-| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                                                                        |
-| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.                                                                       |
+| #      | Tâche                                                                                                | Note                                                                                                                 |
+| ------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **19** | Fusionner `EventData` / `EventApiDto`                                                                | Les deux coexistent toujours dans `event.model.ts`. Chantier structurant : « un ajout se paie en six déclarations ». |
+| **26** | Écarts au design system                                                                              | Demande l'accès au MCP `claude_design`.                                                                              |
+| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir.                                 |
+| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                                                |
+| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.                                               |
 
 ### Ordre proposé
 
-1. **27** — le seul qui débloque des gestes visibles à l'écran, et le back est prêt.
-2. **19** — après 27 : il touche large, et réduit le coût de tout ajout ultérieur.
-3. **26** — sous réserve d'accès aux maquettes.
-4. **21 / 22** — à intercaler, ce sont des vérifications humaines.
+1. **19** — il touche large, et réduit le coût de tout ajout ultérieur.
+2. **26** — sous réserve d'accès aux maquettes.
+3. **21 / 22** — à intercaler, ce sont des vérifications humaines.
+
+Le bloc A ne contient plus de code faisable en dehors de la 19 : la suite est dans les blocs B et
+C, dont les gardes de permission manquantes (**32**, **33**) — un bon d'achat est un objet au
+porteur, et n'importe quel membre peut aujourd'hui supprimer une soirée.
 
 ---
 
@@ -322,15 +355,15 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 
 ## Vérification
 
-### État des suites au 2026-08-23
+### État des suites au 2026-08-24
 
-| Suite         | Résultat                                 |
-| ------------- | ---------------------------------------- |
-| Back          | **634 tests, 0 échec** (`node ace test`) |
-| bae-dashboard | **683**                                  |
-| bae-public    | **92**                                   |
-| bae-ui        | **101**                                  |
-| Typecheck     | vert des deux côtés · Prettier vert      |
+| Suite         | Résultat                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Back          | **634 tests, 0 échec** — relevé le 2026-08-23, non rejoué depuis (rien n'a bougé côté back) |
+| bae-dashboard | **700** (2026-08-24)                                                                        |
+| bae-public    | **92** (2026-08-24)                                                                         |
+| bae-ui        | **101** (2026-08-24)                                                                        |
+| Typecheck     | `ng build bae-dashboard` vert · Prettier vert sur tout le dépôt (2026-08-24)                |
 
 ⚠️ `node ace test` tourne sur la **base de dev**, faute de `.env.test` (tâche 63) : un changement
 de branche produit des échecs qui n'en sont pas. Côté front, `pnpm` refuse de démarrer hors TTY
