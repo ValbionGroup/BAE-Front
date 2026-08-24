@@ -144,4 +144,18 @@ describe(MesCommandes.name, () => {
 
     expect(host.textContent).toContain('Soirée Hivernale');
   });
+
+  /**
+   * `expiresAt` arrive en `YYYY-MM-DD`. Lu par `new Date`, il part en UTC pour
+   * être réaffiché en heure locale, ce qui le recule d'un jour à l'ouest de
+   * Greenwich — l'adhésion paraît finir la veille.
+   *
+   * ⚠️ Ce test ne mord qu'à l'ouest de Greenwich : ailleurs, le décalage ne
+   * traverse pas la frontière du jour.
+   */
+  it('affiche l’échéance au jour que le serveur a envoyé', async () => {
+    await mount();
+
+    expect(host.textContent).toContain('03/09/2027');
+  });
 });
