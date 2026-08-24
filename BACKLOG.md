@@ -50,9 +50,11 @@ Aucune modification back. Deux défauts trouvés par les tests avant d'exister �
   (`logistique.store.ts:formatIsoDate`, parsé à la main). Tout le reste parse des horodatages
   complets, que `new Date` lit correctement.
 
-  > 🔧 Deux idiomes coexistent maintenant pour le même problème : `parseISO` et le
-  > `formatIsoDate` maison de la logistique. Un helper unique dans `@bae/ui` les réunirait —
-  > les deux applications en ont besoin.
+  Les deux idiomes qui coexistaient (`parseISO` d'un côté, le `formatIsoDate` à la main de la
+  logistique de l'autre) sont réunis dans **`@bae/ui` : `parseApiDate` / `formatApiDate`**
+  (`utils/api-date.ts`, 8 tests). Sept consommateurs dans les deux applications, plus un seul
+  endroit où la règle est écrite. Effet de bord assumé : une date illisible rend désormais
+  `—` côté bons d'achat, là où le regex renvoyait la chaîne brute.
 
 - « Pas encore su » se rendait comme « pas de cotisation », et une panne réseau aussi : la page
   aurait envoyé racheter une formule déjà payée. Trois états distincts désormais.
