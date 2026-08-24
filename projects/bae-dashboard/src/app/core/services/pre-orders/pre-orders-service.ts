@@ -21,6 +21,18 @@ export class PreOrdersService {
   }
 
   /**
+   * Pose, déplace ou retire le créneau de retrait.
+   *
+   * `null` **retire** le créneau — ce n'est pas « ne rien changer » : la
+   * commande repasse alors en tête de file, faute d'heure annoncée.
+   */
+  setPickup(preOrderId: number, pickupAt: string | null): Observable<PreOrderTicket> {
+    return this.http.patch<PreOrderTicket>(`${this.baseUrl}/pre-orders/${preOrderId}/pickup`, {
+      pickupAt,
+    });
+  }
+
+  /**
    * Remet la commande au client, en totalité.
    *
    * ⚠️ C'est ce geste-ci — pas `setStatus('completed')` — qui doit clore une

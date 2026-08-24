@@ -17,8 +17,6 @@ import {
   LucideClock,
   LucideDynamicIcon,
   LucideFunnel,
-  LucideQrCode,
-  LucideScanLine,
   LucideTriangleAlert,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
@@ -26,7 +24,17 @@ import { PreOrdersService } from '#core/services/pre-orders/pre-orders-service';
 import { EventsStore } from '#core/store/events.store';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
 import type { OrderStatus } from '#core/models/order.model';
-import { Btn, Badge, BadgeKind, Card, Input } from '@bae/ui';
+import {
+  Btn,
+  Badge,
+  BadgeKind,
+  Card,
+  buildPickupSlots,
+  formatPickupSlot,
+  messageOf,
+  pickupWindowEnd,
+  type PickupSlot,
+} from '@bae/ui';
 
 interface PickingLine {
   readonly name: string;
@@ -43,6 +51,8 @@ interface Ticket {
   readonly paid: boolean;
   readonly status: OrderStatus;
   readonly pickupLabel: string;
+  /** ISO brut, pour reconnaître le créneau courant dans la liste. */
+  readonly pickupAt: string | null;
   readonly due: boolean;
   readonly picking: readonly PickingLine[];
 }
@@ -62,7 +72,7 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
 
 @Component({
   selector: 'bfd-precommandes-admin',
-  imports: [Btn, Badge, Card, Input, LucideDynamicIcon, PageActions],
+  imports: [Btn, Badge, Card, LucideDynamicIcon, PageActions],
   templateUrl: './precommandes-admin.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
@@ -84,11 +94,9 @@ export class PrecommandesAdmin implements OnInit {
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   protected readonly icFilter = LucideFunnel;
-  protected readonly icScan = LucideScanLine;
   protected readonly icCheck = LucideCheck;
   protected readonly icChevRight = LucideChevronRight;
   protected readonly icClock = LucideClock;
-  protected readonly icQr = LucideQrCode;
   protected readonly icAlert = LucideTriangleAlert;
 
   protected readonly filters = FILTERS;
@@ -178,6 +186,28 @@ export class PrecommandesAdmin implements OnInit {
     return this.visibleTickets().find((ticket) => ticket.id === id) ?? null;
   });
 
+  /**
+   * Les créneaux proposables de la soirée.
+   *
+   * Le back reste l'autorité — il refuse un créneau mal aligné ou hors soirée.
+   * Cette liste ne fait que proposer, d'où le partage du même utilitaire avec la
+   * zone publique : ce que le client choisit, le staff doit pouvoir le reprendre.
+   */
+  protected readonly pickupSlots = computed<readonly PickupSlot[]>(() => {
+    const start = this.activeEvent()?.date;
+    // Une soirée sans date n'est pas censée exister, mais une exception dans un
+    // `computed` viderait tout le panneau plutôt que ce seul bloc.
+    if (!(start instanceof Date) || Number.isNaN(start.getTime())) return [];
+
+    const startIso = start.toISOString();
+    const duration = this.activeEvent()?.duration ?? null;
+    return buildPickupSlots(startIso, pickupWindowEnd(startIso, duration));
+  });
+
+  protected readonly savingPickup = signal(false);
+
+  protected readonly pickupError = signal<string | null>(null);
+
   protected readonly doneCount = computed(
     () => this.selected()?.picking.filter((line) => line.done).length ?? 0,
   );
@@ -228,6 +258,26 @@ export class PrecommandesAdmin implements OnInit {
     await this.mutate(() => lastValueFrom(this.preOrders.collect(ticket.id)));
   }
 
+  /**
+   * Déplace le créneau de la commande sélectionnée. `null` le retire.
+   *
+   * Modifiable jusqu'au retrait : le cas d'usage n'est pas la saisie initiale
+   * mais le décalage — la cuisine prend du retard, les créneaux annoncés
+   * suivent.
+   */
+  protected async setPickup(pickupAt: string | null): Promise<void> {
+    const ticket = this.selected();
+    if (ticket === null || this.savingPickup()) return;
+
+    this.savingPickup.set(true);
+    this.pickupError.set(null);
+    try {
+      await this.mutate(() => lastValueFrom(this.preOrders.setPickup(ticket.id, pickupAt)));
+    } finally {
+      this.savingPickup.set(false);
+    }
+  }
+
   private async transition(status: OrderStatus): Promise<void> {
     const ticket = this.selected();
     if (ticket === null) return;
@@ -242,9 +292,10 @@ export class PrecommandesAdmin implements OnInit {
       this.tickets.update((list) =>
         list.map((ticket) => (ticket.id === updated.id ? updated : ticket)),
       );
-    } catch {
+    } catch (error) {
       // Le serveur garde la table des transitions : un refus est légitime, pas
       // une panne. On resynchronise plutôt que d'insister.
+      this.pickupError.set(messageOf(error, 'Ce changement a été refusé.'));
       const eventId = this.events.activeEventId();
       if (eventId !== null) await this.refresh(eventId);
     }
@@ -290,6 +341,7 @@ function toTicket(ticket: PreOrderTicket): Ticket {
     paid: ticket.paid,
     status: ticket.status,
     pickupLabel: formatSlot(ticket.pickupAt),
+    pickupAt: ticket.pickupAt,
     due: ticket.due,
     picking: ticket.lines.map((line) => ({
       name: line.productName,
@@ -301,7 +353,6 @@ function toTicket(ticket: PreOrderTicket): Ticket {
 
 function formatSlot(pickupAt: string | null): string {
   if (pickupAt === null) return NO_SLOT;
-  const date = new Date(pickupAt);
-  if (Number.isNaN(date.getTime())) return NO_SLOT;
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const label = formatPickupSlot(pickupAt);
+  return label === '—' ? NO_SLOT : label;
 }

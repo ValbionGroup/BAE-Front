@@ -63,10 +63,18 @@
               {{ g.label }}
             </div>
             @for (o of g.tickets; track o.id) {
-              <div
+              <!--
+                Un `button` et non un `div` cliquable : la file se parcourt à la
+                tabulation, et `aria-current` dit laquelle est ouverte dans le
+                panneau de détail. `aria-pressed` conviendrait à une bascule, or
+                choisir une commande n'en est pas une.
+              -->
+              <button
+                type="button"
+                [attr.aria-current]="o.id === selectedId() ? 'true' : null"
                 (click)="select(o.id)"
                 [class]="
-                  'grid cursor-pointer grid-cols-[48px_1fr_auto] gap-2.5 border-b border-l-2 border-border-s px-4 py-3 ' +
+                  'grid w-full cursor-pointer grid-cols-[48px_1fr_auto] gap-2.5 border-b border-l-2 border-border-s px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue ' +
                   (o.id === selectedId()
                     ? 'border-l-blue bg-surface-2'
                     : 'border-l-transparent hover:bg-surface-2/50')
@@ -100,7 +108,7 @@
                   class="self-center text-muted"
                   aria-hidden="true"
                 ></svg>
-              </div>
+              </button>
             }
           </div>
         }
@@ -210,45 +218,76 @@
       }
     </div>
 
-    <!-- COL 3 : borne de retrait -->
+    <!-- COL 3 : créneau de retrait -->
     <div
       class="min-h-0 overflow-y-auto border-t border-border-s bg-sidebar p-4 md:border-l md:border-t-0 md:p-[22px]"
     >
       <div class="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
-        Borne retrait
+        Créneau de retrait
       </div>
 
-      <bae-card>
-        <div class="pb-1 pt-2 text-center">
-          <div
-            class="relative mx-auto flex h-40 w-40 items-center justify-center rounded-md border-2 border-dashed border-border bg-bg"
-          >
-            <svg [lucideIcon]="icScan" [size]="48" class="text-blue" aria-hidden="true"></svg>
+      @if (selected(); as ticket) {
+        <bae-card>
+          <div class="flex items-baseline justify-between">
+            <div class="text-[13px] font-medium text-text">{{ ticket.reference }}</div>
+            <div class="text-[13px] font-semibold text-text">{{ ticket.pickupLabel }}</div>
           </div>
-          <div class="mt-3 text-[13px] font-medium text-text">Scanner le QR du client</div>
-          <div class="mt-1 text-[11px] text-muted">ou saisir le N° de retrait</div>
-        </div>
-        <div class="mt-3">
-          <bae-input
-            [icon]="icQr"
-            [placeholder]="selected()?.reference ?? 'N° retrait'"
-            size="lg"
-          />
-        </div>
-      </bae-card>
+          <p class="mt-1 text-[11px] leading-relaxed text-muted">
+            Modifiable jusqu’au retrait : décale le créneau si la cuisine prend du retard.
+          </p>
 
-      <!--
-        Le scan de retrait passe par `POST /qr/verify`, déjà livré côté back et
-        déjà branché sur la caisse. Ce panneau attend d'être relié au composant
-        de scan partagé plutôt que d'en dupliquer un troisième.
-      -->
-      <div class="mt-4 rounded-md border border-border-s bg-surface p-3.5">
-        <div class="text-[11px] font-semibold text-text">Pas encore branché ici</div>
-        <p class="mt-1 text-[11px] leading-relaxed text-muted">
-          La saisie et le scan ne sont pas encore reliés. En attendant, sélectionne la commande dans
-          la file : le back vérifie déjà les QR de précommande depuis la caisse.
-        </p>
-      </div>
+          @if (pickupError(); as error) {
+            <p class="mt-2 text-[11px] font-medium text-danger" role="alert">{{ error }}</p>
+          }
+
+          <fieldset class="mt-3" [disabled]="savingPickup()">
+            <legend class="sr-only">
+              Créneau de retrait de la commande {{ ticket.reference }}
+            </legend>
+
+            <div class="grid grid-cols-3 gap-1.5">
+              @for (slot of pickupSlots(); track slot.value) {
+                <button
+                  type="button"
+                  data-testid="pickup-slot"
+                  class="rounded-md border px-1.5 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-50"
+                  [class]="
+                    slot.value === ticket.pickupAt
+                      ? 'border-blue bg-blue text-white'
+                      : 'border-border-s bg-surface text-text hover:border-blue'
+                  "
+                  [attr.aria-pressed]="slot.value === ticket.pickupAt"
+                  (click)="setPickup(slot.value)"
+                >
+                  {{ slot.label }}
+                </button>
+              } @empty {
+                <p class="col-span-3 text-[11px] text-muted">
+                  Cette soirée n’a pas d’horaire exploitable : aucun créneau à proposer.
+                </p>
+              }
+            </div>
+
+            <bae-btn
+              kind="ghost"
+              size="sm"
+              [full]="true"
+              class="mt-2 block"
+              [disabled]="ticket.pickupAt === null"
+              (clicked)="setPickup(null)"
+            >
+              Retirer le créneau
+            </bae-btn>
+          </fieldset>
+        </bae-card>
+      } @else {
+        <div class="rounded-md border border-border-s bg-surface p-3.5">
+          <div class="text-[11px] font-semibold text-text">Aucune commande sélectionnée</div>
+          <p class="mt-1 text-[11px] leading-relaxed text-muted">
+            Choisis une commande dans la file pour poser ou déplacer son heure de retrait.
+          </p>
+        </div>
+      }
     </div>
   </div>
 }
