@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { forkJoin, lastValueFrom } from 'rxjs';
 import { LogistiqueService } from '#core/services/logistique/logistique-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import { messageOf, settle } from '@bae/ui';
+import { formatApiDate, messageOf, settle } from '@bae/ui';
 import type {
   ApiShoppingList,
   ApiSupplier,
@@ -13,25 +13,13 @@ import type {
   VoucherCard,
 } from '#pages/authed/logistique/logistique.types';
 
-/**
- * Formats a `YYYY-MM-DD` DATE as `DD/MM/YYYY`.
- *
- * Parsed by hand rather than through `new Date(...)`: a bare date string is
- * read as UTC midnight, which shifts to the previous day for any negative
- * offset. The wire value carries no time, so no timezone maths should apply.
- */
-function formatIsoDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
-}
-
 function toVoucherCard(voucher: ApiVoucher): VoucherCard {
   return {
     id: voucher.id,
     supplierId: voucher.supplierId,
     supplierName: voucher.supplier?.name ?? 'Enseigne non précisée',
     value: voucher.value,
-    expiresLabel: formatIsoDate(voucher.expiresAt),
+    expiresLabel: formatApiDate(voucher.expiresAt),
     expiresAt: voucher.expiresAt,
     condition: voucher.condition,
     daysUntilExpiry: voucher.daysUntilExpiry,

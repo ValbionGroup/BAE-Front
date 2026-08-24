@@ -1,9 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { LucideDynamicIcon, LucideQrCode, LucideZap } from '@lucide/angular';
-import { Badge, BadgeKind, Btn, Card, Skeleton, formatCents, formatPickupSlot } from '@bae/ui';
+import {
+  Badge,
+  BadgeKind,
+  Btn,
+  Card,
+  Skeleton,
+  formatApiDate,
+  formatCents,
+  formatPickupSlot,
+} from '@bae/ui';
 
 import { PurchasesStore, type MyPreOrder, type MySubscription } from '../../core/purchases.store';
 
@@ -56,19 +63,12 @@ export class MesCommandes {
   }
 
   protected subscriptionLabel(subscription: MySubscription): string {
-    const expiry = format(parseISO(subscription.expiresAt), 'dd/MM/yyyy', { locale: fr });
+    const expiry = formatApiDate(subscription.expiresAt);
     return subscription.status === 'active' ? `Actif · expire ${expiry}` : `Expiré le ${expiry}`;
   }
 
-  /**
-   * `parseISO` et non `new Date` : ce dernier lit une date **sans heure** comme
-   * de l'UTC, qu'il réaffiche en heure locale — un jour de moins à l'ouest de
-   * Greenwich. Les horodatages complets sont traités pareil par les deux ; c'est
-   * le format court qui les sépare.
-   */
   protected dateOf(iso: string | null): string {
-    if (iso === null) return '—';
-    return format(parseISO(iso), 'dd/MM/yyyy', { locale: fr });
+    return formatApiDate(iso);
   }
 
   /** L'heure de retrait choisie à la commande, telle que le client la relit. */

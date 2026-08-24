@@ -24,7 +24,6 @@ import {
   LucideUpload,
 } from '@lucide/angular';
 import { Router } from '@angular/router';
-import { parseISO } from 'date-fns';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ClientsStore } from '#core/store/clients.store';
 import {
@@ -37,6 +36,7 @@ import {
   DetailSheet,
   DropdownService,
   formatCents,
+  parseApiDate,
 } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ClientEditModal } from '#shared/components/modal/client-edit-modal/client-edit-modal';
@@ -309,14 +309,8 @@ export class Adherents implements OnInit {
     return status === 'expired' ? 'text-danger' : 'text-text-2';
   }
 
-  /**
-   * `parseISO` et non `new Date` : ce dernier lit une date **sans heure** comme
-   * de l'UTC, qu'il réaffiche en heure locale — un jour de moins à l'ouest de
-   * Greenwich. `expiresAt`, `subscribedAt` et `registeredAt` arrivent en
-   * `YYYY-MM-DD`.
-   */
   protected formatDate(iso: string): string {
-    const date = parseISO(iso);
+    const date = parseApiDate(iso);
     return Number.isNaN(date.getTime())
       ? '—'
       : date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });

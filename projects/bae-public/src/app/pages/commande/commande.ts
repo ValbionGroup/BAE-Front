@@ -9,8 +9,6 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { LucideCheck, LucideClock, LucideDynamicIcon } from '@lucide/angular';
 import {
   API_BASE_URL,
@@ -19,6 +17,7 @@ import {
   Card,
   QrCode,
   Skeleton,
+  formatApiDate,
   formatCents,
   formatPickupSlot,
   messageOf,
@@ -111,15 +110,8 @@ export class Commande implements OnInit {
     return formatCents(cents);
   }
 
-  /**
-   * `parseISO` et non `new Date` : ce dernier lit une date **sans heure** comme
-   * de l'UTC, qu'il réaffiche en heure locale — un jour de moins à l'ouest de
-   * Greenwich. Les horodatages complets sont traités pareil par les deux ; c'est
-   * le format court qui les sépare.
-   */
   protected dateOf(iso: string | null): string {
-    if (iso === null) return '—';
-    return format(parseISO(iso), 'dd/MM/yyyy', { locale: fr });
+    return formatApiDate(iso);
   }
 
   /** L'heure de retrait choisie à la commande. */

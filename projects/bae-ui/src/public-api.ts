@@ -67,6 +67,7 @@ export * from './lib/http/interceptors/api-envelope/api-envelope-interceptor';
 
 // Thème et utilitaires
 export * from './lib/theme/theme-service';
+export * from './lib/utils/api-date';
 export * from './lib/utils/api-error';
 export * from './lib/utils/case-converter';
 export * from './lib/utils/external-navigation';

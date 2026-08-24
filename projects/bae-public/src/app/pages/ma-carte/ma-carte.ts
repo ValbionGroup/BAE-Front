@@ -10,10 +10,17 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { LucideBadgeCheck, LucideDynamicIcon } from '@lucide/angular';
-import { API_BASE_URL, Badge, Btn, Card, QrCode, Skeleton, messageOf } from '@bae/ui';
+import {
+  API_BASE_URL,
+  Badge,
+  Btn,
+  Card,
+  QrCode,
+  Skeleton,
+  formatApiDate,
+  messageOf,
+} from '@bae/ui';
 
 import { PurchasesStore } from '../../core/purchases.store';
 import { SessionStore } from '../../core/session.store';
@@ -94,12 +101,7 @@ export class MaCarte implements OnInit {
     });
   }
 
-  /**
-   * `parseISO` et non `new Date` : une date sans heure part sinon en UTC pour
-   * être réaffichée en heure locale, ce qui la recule d'un jour à l'ouest de
-   * Greenwich. L'échéance vient du back en `YYYY-MM-DD`.
-   */
   protected dateOf(iso: string): string {
-    return format(parseISO(iso), 'dd/MM/yyyy', { locale: fr });
+    return formatApiDate(iso);
   }
 }
