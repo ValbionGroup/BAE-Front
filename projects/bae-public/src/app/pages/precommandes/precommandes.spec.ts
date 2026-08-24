@@ -15,6 +15,7 @@ const OPEN_EVENT: PublicEvent = {
   name: 'Soirée Hivernale',
   description: 'Hot-dogs, bières, crêpes',
   startsAt: '2026-02-14T19:30:00.000+01:00',
+  endsAt: '2026-02-14T23:30:00.000+01:00',
   preOrdersCloseAt: '2026-02-14T18:30:00.000+01:00',
   capacity: 150,
   placed: 67,
@@ -243,6 +244,71 @@ describe(Precommandes.name, () => {
     await fixture.whenStable();
 
     expect(navigation.go).toHaveBeenCalledWith('https://lydia.test/pay/ref-1');
+  });
+
+  const slotSelect = (): HTMLSelectElement | null =>
+    host.querySelector<HTMLSelectElement>('#pickup-slot');
+
+  /**
+   * Le créneau est **facultatif** : sans lui la commande est préparée dès
+   * l'ouverture, ce que le back traduit déjà par `due = true`. Le corps de la
+   * requête ne doit donc pas porter de `pickupAt` vide.
+   */
+  it('n’envoie aucun créneau tant que le client n’en choisit pas', async () => {
+    await mount();
+    await addTo('Hot-dog classique', 1);
+
+    validateButton()?.click();
+    await fixture.whenStable();
+
+    const opened = http.expectOne((r) => r.url.endsWith('/account/pre-orders'));
+    expect(opened.request.body).not.toHaveProperty('pickupAt');
+    opened.flush({
+      orderRef: 'ref-2',
+      status: 'pending',
+      amountCents: 315,
+      mobileUrl: 'https://lydia.test/pay/ref-2',
+      expiresAt: null,
+    });
+    await fixture.whenStable();
+  });
+
+  it('propose les créneaux de la soirée par quarts d’heure', async () => {
+    await mount();
+    await addTo('Hot-dog classique', 1);
+
+    const options = [...(slotSelect()?.options ?? [])].map((o) => o.textContent?.trim());
+
+    // 19 h 30 → 23 h 30 par pas de 15 min, plus « Sans préférence ».
+    expect(options[0]).toBe('Sans préférence');
+    expect(options).toHaveLength(18);
+  });
+
+  it('envoie le créneau choisi avec la commande', async () => {
+    await mount();
+    await addTo('Hot-dog classique', 1);
+
+    const select = slotSelect();
+    if (select === null) throw new Error('sélecteur de créneau introuvable');
+    const chosen = select.options[3].value;
+    select.value = chosen;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    validateButton()?.click();
+    await fixture.whenStable();
+
+    const opened = http.expectOne((r) => r.url.endsWith('/account/pre-orders'));
+    // Le corps est lu **avant** l'intercepteur de casse, d'où le camelCase.
+    expect((opened.request.body as { pickupAt: string }).pickupAt).toBe(chosen);
+    opened.flush({
+      orderRef: 'ref-3',
+      status: 'pending',
+      amountCents: 315,
+      mobileUrl: 'https://lydia.test/pay/ref-3',
+      expiresAt: null,
+    });
+    await fixture.whenStable();
   });
 
   /**

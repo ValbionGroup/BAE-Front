@@ -336,6 +336,31 @@
         </span>
       </div>
 
+      @if (!isEmpty() && pickupSlots().length > 0) {
+        <div class="border-t border-border-s px-3.5 py-3">
+          <label
+            for="pickup-slot"
+            class="mb-1.5 block text-[11px] font-semibold tracking-[0.4px] text-muted uppercase"
+          >
+            Heure de retrait
+          </label>
+          <select
+            id="pickup-slot"
+            class="w-full rounded-md border border-border-s bg-surface px-2.5 py-2 text-[13px] text-text focus-visible:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+            [value]="pickupSlot() ?? ''"
+            (change)="chooseSlot($any($event.target).value)"
+          >
+            <option value="">Sans préférence</option>
+            @for (slot of pickupSlots(); track slot.value) {
+              <option [value]="slot.value">{{ slot.label }}</option>
+            }
+          </select>
+          <p class="mt-1.5 mb-0 text-[10.5px] leading-[1.5] text-muted">
+            Facultatif. Sans créneau, votre commande est préparée dès l’ouverture.
+          </p>
+        </div>
+      }
+
       <div class="px-3.5 pb-3.5">
         @if (needsLogin()) {
           <bae-btn kind="primary" size="lg" [full]="true" routerLink="/login">

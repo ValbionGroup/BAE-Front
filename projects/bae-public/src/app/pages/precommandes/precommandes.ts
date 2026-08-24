@@ -18,7 +18,16 @@ import {
   LucideQrCode,
   LucideShield,
 } from '@lucide/angular';
-import { Badge, Btn, Card, ExternalNavigation, Skeleton, formatCents } from '@bae/ui';
+import {
+  Badge,
+  Btn,
+  Card,
+  ExternalNavigation,
+  Skeleton,
+  buildPickupSlots,
+  formatCents,
+  type PickupSlot,
+} from '@bae/ui';
 
 import { CatalogStore } from '../../core/catalog.store';
 import { PaymentsService } from '../../core/payments.service';
@@ -56,6 +65,9 @@ export class Precommandes {
 
   private readonly picked = signal<number | null>(null);
 
+  /** Créneau de retrait choisi, `null` tant que le client n'en a pas voulu. */
+  protected readonly pickupSlot = signal<string | null>(null);
+
   protected readonly selected = computed<PublicEvent | null>(() => {
     const id = this.picked();
     if (id === null) return this.store.featured();
@@ -68,6 +80,9 @@ export class Precommandes {
     effect(() => {
       const event = this.selected();
       if (event !== null) this.store.loadMenu(event.id);
+      // Un créneau appartient à une soirée : le garder en changeant de soirée
+      // enverrait une heure que la nouvelle ne propose pas.
+      this.pickupSlot.set(null);
     });
   }
 
@@ -82,6 +97,19 @@ export class Precommandes {
     }
 
     return [...grouped].map(([category, items]) => ({ category, items }));
+  });
+
+  /**
+   * Les créneaux de retrait proposés, partagés avec l'écran d'administration :
+   * ce que le client choisit ici, le staff doit pouvoir le déplacer là-bas.
+   *
+   * Le back refuse de toute façon un créneau hors soirée ou mal aligné — cette
+   * liste ne fait que proposer.
+   */
+  protected readonly pickupSlots = computed<readonly PickupSlot[]>(() => {
+    const event = this.selected();
+    if (event === null) return [];
+    return buildPickupSlots(event.startsAt, event.endsAt);
   });
 
   protected readonly itemCount = computed(() => this.store.menu()?.lines.length ?? 0);
@@ -148,6 +176,7 @@ export class Precommandes {
           productId: line.item.productId,
           quantity: line.qty,
         })),
+        this.pickupSlot(),
       )
       .subscribe({
         next: (payment) => {
@@ -163,6 +192,10 @@ export class Precommandes {
   private fail(): void {
     this.submitting.set(false);
     this.checkoutError.set('Le paiement n’a pas pu être ouvert. Réessayez dans un instant.');
+  }
+
+  protected chooseSlot(value: string): void {
+    this.pickupSlot.set(value === '' ? null : value);
   }
 
   protected pick(eventId: number): void {

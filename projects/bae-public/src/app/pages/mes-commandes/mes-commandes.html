@@ -46,6 +46,11 @@
                     <p class="mono m-0 mt-0.5 text-[11.5px] text-muted">
                       {{ preOrder.reference }} · {{ dateOf(preOrder.createdAt) }}
                     </p>
+                    @if (preOrder.pickupAt; as pickupAt) {
+                      <p class="m-0 mt-0.5 text-[11.5px] font-medium text-text-2">
+                        Retrait à {{ pickupTime(pickupAt) }}
+                      </p>
+                    }
                   </div>
 
                   <span class="tnum text-[13.5px] font-medium text-text">

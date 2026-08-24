@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LucideDynamicIcon, LucideQrCode, LucideZap } from '@lucide/angular';
-import { Badge, BadgeKind, Btn, Card, Skeleton, formatCents } from '@bae/ui';
+import { Badge, BadgeKind, Btn, Card, Skeleton, formatCents, formatPickupSlot } from '@bae/ui';
 
 import { PurchasesStore, type MyPreOrder, type MySubscription } from '../../core/purchases.store';
 
@@ -63,6 +63,11 @@ export class MesCommandes {
   protected dateOf(iso: string | null): string {
     if (iso === null) return '—';
     return format(new Date(iso), 'dd/MM/yyyy', { locale: fr });
+  }
+
+  /** L'heure de retrait choisie à la commande, telle que le client la relit. */
+  protected pickupTime(iso: string): string {
+    return formatPickupSlot(iso);
   }
 
   protected price(cents: number): string {

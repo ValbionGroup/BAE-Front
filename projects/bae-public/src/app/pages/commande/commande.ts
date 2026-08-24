@@ -12,7 +12,17 @@ import { RouterLink } from '@angular/router';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LucideCheck, LucideClock, LucideDynamicIcon } from '@lucide/angular';
-import { API_BASE_URL, Badge, Btn, Card, QrCode, Skeleton, formatCents, messageOf } from '@bae/ui';
+import {
+  API_BASE_URL,
+  Badge,
+  Btn,
+  Card,
+  QrCode,
+  Skeleton,
+  formatCents,
+  formatPickupSlot,
+  messageOf,
+} from '@bae/ui';
 
 import type { LoadingStatus } from '../../core/catalog.models';
 import type { MyPreOrder } from '../../core/purchases.store';
@@ -104,5 +114,10 @@ export class Commande implements OnInit {
   protected dateOf(iso: string | null): string {
     if (iso === null) return '—';
     return format(new Date(iso), 'dd/MM/yyyy', { locale: fr });
+  }
+
+  /** L'heure de retrait choisie à la commande. */
+  protected pickupTime(iso: string): string {
+    return formatPickupSlot(iso);
   }
 }

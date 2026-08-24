@@ -36,6 +36,11 @@
             </h1>
             <p class="m-0 text-[13.5px] text-muted">
               {{ order.eventName }} · {{ dateOf(order.eventDate) }}
+              @if (order.pickupAt; as pickupAt) {
+                <br /><span class="font-medium text-text"
+                  >Retrait à {{ pickupTime(pickupAt) }}</span
+                >
+              }
               @if (!order.paid) {
                 <br />Le règlement se fait au stand, au moment du retrait.
               }

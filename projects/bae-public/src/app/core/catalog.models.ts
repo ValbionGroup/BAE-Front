@@ -3,6 +3,8 @@ export interface PublicEvent {
   readonly name: string;
   readonly description: string | null;
   readonly startsAt: string;
+  /** Fin de la soirée, donc dernier créneau de retrait proposable. */
+  readonly endsAt: string;
   readonly preOrdersCloseAt: string;
   readonly capacity: number;
   readonly placed: number;
