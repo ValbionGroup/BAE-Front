@@ -1,0 +1,84 @@
+<bfd-modal-shell
+  [icon]="icPass"
+  tone="ok"
+  title="Enregistrer une cotisation"
+  [subtitle]="client().name ?? client().email"
+  [width]="480"
+  (close)="close()"
+>
+  <div class="flex flex-col gap-3">
+    <bae-field label="Formule" [hint]="expiresAt() ? 'Expirera le ' + expiresAt() + '.' : null">
+      @if (plansLoading()) {
+        <p class="m-0 text-[12px] text-muted">Chargement des formules…</p>
+      } @else {
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="fastPassId()"
+          (change)="onFastPassId($any($event.target).value)"
+        >
+          <option value="">Choisir une formule…</option>
+          @for (plan of plans(); track plan.id) {
+            <option [value]="plan.id">
+              {{ plan.label }} · {{ plan.durationYears }} an{{ plan.durationYears > 1 ? 's' : '' }}
+            </option>
+          }
+        </select>
+      }
+    </bae-field>
+
+    <bae-field label="Date de souscription">
+      <bae-input
+        type="date"
+        [value]="subscribedAt()"
+        [invalid]="submitted() && subscribedAt() === ''"
+        (valueChange)="onSubscribedAt($event)"
+      />
+    </bae-field>
+
+    <bae-field label="Paiement" hint="« Sans paiement » enregistre une cotisation offerte.">
+      <select
+        class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+        [value]="paymentType()"
+        (change)="onPaymentType($any($event.target).value)"
+      >
+        <option value="">Sans paiement</option>
+        <option value="cash">Espèces</option>
+        <option value="lydia">Lydia</option>
+      </select>
+    </bae-field>
+
+    @if (paymentType() !== '') {
+      <bae-field label="Montant encaissé" hint="En euros — la virgule est acceptée.">
+        <bae-input
+          type="text"
+          placeholder="15"
+          suffix="€"
+          [value]="amount()"
+          [invalid]="submitted() && parsedAmount() === null"
+          (valueChange)="onAmount($event)"
+        />
+      </bae-field>
+    }
+
+    @if (plansError(); as message) {
+      <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+    }
+
+    @if (submitted() && !valid()) {
+      <p role="alert" class="m-0 text-[12px] text-danger">
+        La formule, la date et — si un paiement est enregistré — le montant sont requis.
+      </p>
+    }
+
+    @if (store.saveError(); as message) {
+      <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+    }
+  </div>
+
+  <div modal-footer class="flex-1 flex justify-end gap-2">
+    <bae-btn kind="ghost" size="md" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="primary" size="md" [disabled]="store.saving()" (clicked)="submit()">
+      {{ store.saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </bae-btn>
+  </div>
+</bfd-modal-shell>

@@ -34,7 +34,12 @@
           </button>
         }
       </div>
-      <bae-btn kind="ghost" size="sm" [icon]="icFilter" [disabled]="true" title="Tri non branché."
+      <bae-btn
+        kind="ghost"
+        size="sm"
+        [icon]="icFilter"
+        [ariaLabel]="'Trier la liste — actuellement ' + sortLabel()"
+        (clicked)="openSortMenu($event)"
         >Trier</bae-btn
       >
     </div>
@@ -162,15 +167,15 @@
               size="sm"
               [icon]="icMail"
               [disabled]="true"
-              title="Aucun envoi d'e-mail n'est encore possible."
+              title="Aucun serveur d'envoi n'est configuré : la boîte mail du BAE reste à obtenir."
               >Contacter</bae-btn
             >
             <bae-btn
               kind="secondary"
               size="sm"
               [icon]="icEdit"
-              [disabled]="true"
-              title="Le formulaire n'est pas encore branché. Il portera le téléphone, la promotion et la note : le nom et l'email viennent d'EirbConnect."
+              title="Téléphone et note interne. Le nom, l'email, la promotion et l'école viennent d'EirbConnect."
+              (clicked)="openEdit()"
               >Modifier</bae-btn
             >
           </div>
@@ -199,8 +204,8 @@
               kind="ghost"
               size="sm"
               [icon]="icPlus"
-              [disabled]="true"
-              title="Le formulaire de renouvellement n'est pas encore branché — l'endpoint existe."
+              title="Ajoute une ligne à l'historique — un renouvellement n'en modifie aucune."
+              (clicked)="openSubscription()"
               >Renouveler</bae-btn
             >
           </div>

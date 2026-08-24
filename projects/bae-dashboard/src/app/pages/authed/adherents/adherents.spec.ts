@@ -4,7 +4,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Adherents } from './adherents';
-import { API_BASE_URL } from '@bae/ui';
+import { API_BASE_URL, DropdownService, type DropdownItemAction } from '@bae/ui';
+import { ModalService } from '#shared/components/modal/modal.service';
+import type { ComponentModalConfig } from '#shared/components/modal/modal.models';
+import { ClientEditModal } from '#shared/components/modal/client-edit-modal/client-edit-modal';
+import { SubscriptionCreateModal } from '#shared/components/modal/subscription-create-modal/subscription-create-modal';
 import type { ClientDetail, ClientRow, ClientsSummary } from './adherents.types';
 
 const baseUrl = 'http://api.test/v1';
@@ -13,6 +17,7 @@ interface PageApi {
   activeFilter: { set(value: number): void };
   searchQuery: { set(value: string): void };
   visibleClients(): readonly ClientRow[];
+  sortLabel(): string;
   filterTabs(): readonly string[];
   stats(): readonly { k: string; v: string }[];
 }
@@ -110,6 +115,9 @@ describe(Adherents.name, () => {
     fixture.detectChanges();
 
     http.expectOne(`${baseUrl}/clients/1`).flush(DETAIL);
+    // Deux sauts : `loadDetail` attend `getDetail`, qui attend `lastValueFrom`.
+    // Un seul tour rendrait la feuille encore vide, squelette compris.
+    await fixture.whenStable();
     await fixture.whenStable();
     fixture.detectChanges();
     return fixture;
@@ -197,6 +205,77 @@ describe(Adherents.name, () => {
     // La fermeture garde la sélection : la remettre à `null` relancerait la
     // présélection, qui rouvrirait aussitôt la feuille.
     expect(panelClasses()).toContain('translate-y-full');
+  });
+
+  /** Ouvre le menu de tri et joue l'entrée demandée, comme le ferait un clic. */
+  function chooseSort(fixture: ComponentFixture<Adherents>, label: string): void {
+    const el = fixture.nativeElement as HTMLElement;
+    const trigger = Array.from(el.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Trier'),
+    ) as HTMLButtonElement;
+    trigger.click();
+
+    const dropdown = TestBed.inject(DropdownService);
+    const items = dropdown.current()!.items as DropdownItemAction[];
+    items.find((item) => item.label === label)!.onClick();
+    // `DropdownContainer` referme après un clic d'entrée, et il n'est pas monté
+    // ici : sans cela, la deuxième ouverture serait lue comme une bascule.
+    dropdown.close();
+    fixture.detectChanges();
+  }
+
+  // Une fiche sans date d'expiration n'est pas « la plus lointaine » : elle
+  // n'a pas de date, et reste en queue dans les deux sens.
+  it('sorts on the expiry, keeping the undated rows last both ways', async () => {
+    const fixture = await render();
+    const page = fixture.componentInstance as unknown as PageApi;
+
+    chooseSort(fixture, 'Expiration');
+    expect(page.visibleClients().map((row) => row.id)).toEqual([2, 1, 3]);
+
+    // Rechoisir le critère actif inverse le sens, sans second menu.
+    chooseSort(fixture, 'Expiration');
+    expect(page.visibleClients().map((row) => row.id)).toEqual([1, 2, 3]);
+    expect(page.sortLabel()).toBe('Expiration ↓');
+  });
+
+  it('sorts on the membership status by urgency, not alphabetically', async () => {
+    const fixture = await render();
+    const page = fixture.componentInstance as unknown as PageApi;
+
+    chooseSort(fixture, 'Cotisation');
+    expect(page.visibleClients().map((row) => row.status)).toEqual(['expired', 'active', 'none']);
+  });
+
+  /** Clique le bouton portant ce libellé, puis rend la modale ouverte. */
+  function clickAndRead(fixture: ComponentFixture<Adherents>, label: string): ComponentModalConfig {
+    const el = fixture.nativeElement as HTMLElement;
+    const target = Array.from(el.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes(label),
+    ) as HTMLButtonElement;
+    target.click();
+
+    const open = TestBed.inject(ModalService).modals();
+    expect(open.length).toBe(1);
+    return open[0] as ComponentModalConfig;
+  }
+
+  it('opens the edit modal on the client the sheet is showing', async () => {
+    const fixture = await render();
+    const modal = clickAndRead(fixture, 'Modifier');
+
+    expect(modal.component).toBe(ClientEditModal);
+    // La fiche entière, pas seulement l'id : la modale préremplit ses deux
+    // champs sans relire le détail que le store ne garde pas.
+    expect((modal.inputs?.['client'] as ClientDetail).phone).toBe('06 24 31 88 02');
+  });
+
+  it('renews from the sheet, on the selected client', async () => {
+    const fixture = await render();
+    const modal = clickAndRead(fixture, 'Renouveler');
+
+    expect(modal.component).toBe(SubscriptionCreateModal);
+    expect((modal.inputs?.['client'] as ClientRow).id).toBe(1);
   });
 
   it('shows the API error rather than an empty list', async () => {

@@ -26,8 +26,34 @@ import {
 import { Router } from '@angular/router';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ClientsStore } from '#core/store/clients.store';
-import { Btn, Badge, BadgeKind, Avatar, Input, Skeleton, DetailSheet, formatCents } from '@bae/ui';
+import {
+  Btn,
+  Badge,
+  BadgeKind,
+  Avatar,
+  Input,
+  Skeleton,
+  DetailSheet,
+  DropdownService,
+  formatCents,
+} from '@bae/ui';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { ClientEditModal } from '#shared/components/modal/client-edit-modal/client-edit-modal';
+import { SubscriptionCreateModal } from '#shared/components/modal/subscription-create-modal/subscription-create-modal';
 import type { ClientDetail, ClientRow, MembershipStatus } from './adherents.types';
+
+type SortKey = 'name' | 'expiresAt' | 'status';
+type SortDir = 'asc' | 'desc';
+
+const SORT_LABELS: Record<SortKey, string> = {
+  name: 'Nom',
+  expiresAt: 'Expiration',
+  status: 'Cotisation',
+};
+
+/** Ordre d'urgence, pas alphabétique : ce qu'on trie par statut, on le trie
+ *  pour voir d'abord ce qui demande une relance. */
+const STATUS_RANK: Record<MembershipStatus, number> = { expired: 0, active: 1, none: 2 };
 
 interface InfoRow {
   readonly k: string;
@@ -54,9 +80,6 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
   imports: [Btn, Badge, Avatar, Input, Skeleton, LucideDynamicIcon, PageActions, DetailSheet],
   templateUrl: './adherents.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // Sans `block h-full`, le composant n'a pas de hauteur propre : le `h-full`
-  // du gabarit ne résout rien et c'est l'app-shell qui défile en écrasant la
-  // page. Piège déjà tombé sur Stocks puis Logistique.
   host: { class: 'block h-full' },
 })
 export class Adherents implements OnInit {
@@ -66,14 +89,15 @@ export class Adherents implements OnInit {
       icon: this.icDownload,
       kind: 'ghost',
       disabled: true,
-      title: "L'export CSV n'est pas encore branché.",
+      title: "Aucun endpoint d'export : le back ne sait pas encore produire ce fichier.",
       run: () => {},
     },
     {
       label: 'Import liste',
       icon: this.icUpload,
       disabled: true,
-      title: "L'import de liste n'est pas encore branché.",
+      title:
+        'Un compte naît d’une connexion EirbConnect, jamais d’un fichier : reste à décider ce qu’un import créerait.',
       run: () => {},
     },
     {
@@ -81,20 +105,26 @@ export class Adherents implements OnInit {
       icon: this.icPlus,
       kind: 'primary',
       primary: true,
-      disabled: true,
+      disabled: this.selected() === null,
       title:
-        'Un compte se crée par EirbConnect, jamais ici : ce bouton enregistrera une cotisation.',
-      run: () => {},
+        this.selected() === null
+          ? 'Sélectionnez un adhérent : un compte se crée par EirbConnect, jamais ici.'
+          : `Enregistrer une cotisation pour ${this.displayName(this.selected()!)}.`,
+      run: () => this.openSubscription(),
     },
   ]);
 
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
+  private readonly modal = inject(ModalService);
+  private readonly dropdown = inject(DropdownService);
   protected readonly store = inject(ClientsStore);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
   protected readonly searchQuery = signal('');
   protected readonly activeFilter = signal(0);
+  protected readonly sortKey = signal<SortKey>('name');
+  protected readonly sortDir = signal<SortDir>('asc');
   protected readonly selectedId = signal<number | null>(null);
   /** Distinct de `selectedId` : la présélection ci-dessous n'ouvre pas la feuille mobile,
    *  et la fermer ne désélectionne pas — sinon l'effet re-sélectionne aussitôt. */
@@ -192,7 +222,7 @@ export class Adherents implements OnInit {
     const query = this.searchQuery().trim().toLowerCase();
     const filter = this.activeFilter();
 
-    return this.store.clients().filter((row) => {
+    const matching = this.store.clients().filter((row) => {
       if (filter === 1 && row.status !== 'active') return false;
       if (filter === 2 && row.status !== 'expired') return false;
       if (filter === 3 && row.status !== 'none') return false;
@@ -203,7 +233,39 @@ export class Adherents implements OnInit {
         row.membershipNumber.toLowerCase().includes(query)
       );
     });
+
+    const dir = this.sortDir() === 'asc' ? 1 : -1;
+    // Copie : `sort()` réordonne en place, et `store.clients()` est l'état du
+    // store — le trier ici le trierait pour tout le monde.
+    return [...matching].sort((a, b) => dir * this.compare(a, b));
   });
+
+  /**
+   * Les fiches sans date d'expiration restent en queue **dans les deux sens** :
+   * elles ne sont pas « les plus lointaines », elles n'ont pas de date. D'où le
+   * signe inversé en `desc` — l'appelant multiplie déjà le résultat par le sens,
+   * et ces deux-là doivent en sortir indemnes.
+   */
+  private compare(a: ClientRow, b: ClientRow): number {
+    switch (this.sortKey()) {
+      case 'expiresAt': {
+        if (a.expiresAt === b.expiresAt) return 0;
+        if (a.expiresAt === null) return this.sortDir() === 'asc' ? 1 : -1;
+        if (b.expiresAt === null) return this.sortDir() === 'asc' ? -1 : 1;
+        return a.expiresAt < b.expiresAt ? -1 : 1;
+      }
+      case 'status': {
+        const rank = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+        return rank !== 0 ? rank : this.compareNames(a, b);
+      }
+      default:
+        return this.compareNames(a, b);
+    }
+  }
+
+  private compareNames(a: ClientRow, b: ClientRow): number {
+    return this.displayName(a).localeCompare(this.displayName(b), 'fr', { sensitivity: 'base' });
+  }
 
   protected readonly selected = computed<ClientRow | null>(() => {
     const id = this.selectedId();
@@ -261,5 +323,58 @@ export class Adherents implements OnInit {
 
   protected verifyInCaisse(): void {
     this.router.navigate(['/caisse']);
+  }
+
+  protected openSortMenu(event: MouseEvent): void {
+    const current = this.sortKey();
+    this.dropdown.toggle({
+      anchor: event.currentTarget as HTMLElement,
+      placement: 'bottom-end',
+      width: 200,
+      header: 'Trier par',
+      items: (Object.keys(SORT_LABELS) as SortKey[]).map((key) => ({
+        type: 'action' as const,
+        label: SORT_LABELS[key],
+        // Le sens n'a de sens qu'affiché sur le critère actif : ailleurs, il
+        // annoncerait un ordre qui n'est pas celui de la liste.
+        trailing: key === current ? (this.sortDir() === 'asc' ? '↑' : '↓') : undefined,
+        onClick: () => this.applySort(key),
+      })),
+    });
+  }
+
+  /** Rechoisir le critère actif inverse le sens : c'est le seul geste qui le
+   *  change, et il évite un second menu pour deux valeurs. */
+  private applySort(key: SortKey): void {
+    if (this.sortKey() === key) {
+      this.sortDir.update((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    this.sortKey.set(key);
+    this.sortDir.set('asc');
+  }
+
+  protected readonly sortLabel = computed(
+    () => `${SORT_LABELS[this.sortKey()]} ${this.sortDir() === 'asc' ? '↑' : '↓'}`,
+  );
+
+  protected openEdit(): void {
+    const client = this.detail();
+    if (client === null) return;
+    this.modal.open({
+      type: 'component',
+      component: ClientEditModal,
+      inputs: { client, onSaved: () => void this.loadDetail(client.id) },
+    });
+  }
+
+  protected openSubscription(): void {
+    const client = this.selected();
+    if (client === null) return;
+    this.modal.open({
+      type: 'component',
+      component: SubscriptionCreateModal,
+      inputs: { client, onSaved: () => void this.loadDetail(client.id) },
+    });
   }
 }

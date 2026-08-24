@@ -1,0 +1,48 @@
+<bfd-modal-shell
+  [icon]="icEdit"
+  tone="blue"
+  title="Modifier la fiche"
+  [subtitle]="client().name ?? client().email"
+  [width]="480"
+  (close)="close()"
+>
+  <div class="flex flex-col gap-3">
+    <bae-field label="Téléphone" hint="Laisser vide efface le numéro enregistré.">
+      <bae-input
+        type="tel"
+        placeholder="06 12 34 56 78"
+        [value]="phone()"
+        (valueChange)="onPhone($event)"
+      />
+    </bae-field>
+
+    <bae-field
+      label="Note interne"
+      hint="Visible du bureau seulement — allergies, litige en cours, consigne de caisse."
+    >
+      <textarea
+        class="w-full bg-surface-2 border border-border rounded-md p-2.5 text-text text-[12.5px] font-sans outline-none resize-y focus-visible:ring-2 focus-visible:ring-blue/40"
+        rows="3"
+        maxlength="2000"
+        [value]="note()"
+        (input)="onNote($any($event.target).value)"
+      ></textarea>
+    </bae-field>
+
+    <p class="m-0 text-[11px] text-muted">
+      Le nom, l'email, la promotion et l'école viennent d'EirbConnect : les modifier ici serait
+      écrasé à la prochaine connexion de l'adhérent.
+    </p>
+
+    @if (store.saveError(); as message) {
+      <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+    }
+  </div>
+
+  <div modal-footer class="flex-1 flex justify-end gap-2">
+    <bae-btn kind="ghost" size="md" (clicked)="close()">Annuler</bae-btn>
+    <bae-btn kind="primary" size="md" [disabled]="store.saving()" (clicked)="submit()">
+      {{ store.saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </bae-btn>
+  </div>
+</bfd-modal-shell>
