@@ -29,8 +29,17 @@ adhérent n'avait aucun moyen de montrer son adhésion.
 Aucune modification back. Deux défauts trouvés par les tests avant d'exister à l'écran :
 
 - `new Date('2027-01-12')` se lit en UTC puis s'affiche en heure locale — l'échéance reculait
-  d'un jour à l'ouest de Greenwich. `parseISO` corrige. **Le même appel traîne dans
-  `commande.ts:dateOf`**, sur des dates de soirée : à reprendre.
+  d'un jour à l'ouest de Greenwich. `parseISO` corrige.
+
+  Traqué ensuite dans tout le public : seul **`mes-commandes.ts:subscriptionLabel`** l'avait
+  vraiment (il formate `expiresAt`, servi en `YYYY-MM-DD`). `commande.ts:dateOf` ne reçoit que
+  `eventDate`, un ISO **avec fuseau**, donc il était juste — passé à `parseISO` quand même, pour
+  que le prochain format court ne rouvre pas le trou.
+
+  > ⚠️ **Reste ouvert côté dashboard** : `adherents.ts:312` (`formatDate`) fait le même
+  > `new Date` sur `expiresAt`, `subscribedAt` et `registeredAt`, tous servis par `toISODate()`.
+  > Une ligne à changer, non faite parce que hors de la demande.
+
 - « Pas encore su » se rendait comme « pas de cotisation », et une panne réseau aussi : la page
   aurait envoyé racheter une formule déjà payée. Trois états distincts désormais.
 
