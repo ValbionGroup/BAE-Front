@@ -73,9 +73,10 @@
             >
           </div>
           @if (ev) {
-            <div
+            <button
+              type="button"
               (click)="selectEventView(ev.id)"
-              [class]="`flex flex-col gap-0.75 rounded-sm px-1 py-0.5 text-[9.5px] font-medium leading-snug cursor-pointer select-none md:px-1.5 md:py-1 md:text-[11px] ${getEventColor(ev)}`"
+              [class]="`flex w-full flex-col gap-0.75 rounded-sm px-1 py-0.5 text-left text-[9.5px] font-medium leading-snug cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue md:px-1.5 md:py-1 md:text-[11px] ${getEventColor(ev)}`"
             >
               <span class="overflow-hidden text-ellipsis whitespace-nowrap">{{ ev.name }}</span>
               @if (isPresenceLoading(ev)) {
@@ -85,7 +86,7 @@
                   respLabel(ev)
                 }}</span>
               }
-            </div>
+            </button>
           }
         </div>
       }

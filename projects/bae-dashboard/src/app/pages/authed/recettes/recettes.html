@@ -102,10 +102,12 @@
       } @else {
         @for (r of recettes(); track r.id) {
           @let selected = selectedId() === r.id;
-          <div
+          <button
+            type="button"
+            [attr.aria-current]="selected ? 'true' : null"
             (click)="select(r.id)"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1 md:grid-cols-[36px_1fr_90px_100px_100px_110px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 ' +
+              'relative grid w-full cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1 text-left md:grid-cols-[36px_1fr_90px_100px_100px_110px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue ' +
               (selected ? 'bg-surface-2' : '')
             "
           >
@@ -164,7 +166,7 @@
                 —
               }
             </span>
-          </div>
+          </button>
         }
       }
     </div>

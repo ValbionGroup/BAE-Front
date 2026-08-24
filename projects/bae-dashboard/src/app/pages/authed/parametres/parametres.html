@@ -31,10 +31,12 @@
     <div class="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
       @for (opt of themeOptions; track opt.id) {
         @let active = activeTheme() === opt.id;
-        <div
+        <button
+          type="button"
+          [attr.aria-pressed]="active"
           (click)="setTheme(opt.id)"
           [class]="
-            'cursor-pointer rounded-md p-3.5 border-[1.5px] ' +
+            'w-full cursor-pointer rounded-md p-3.5 text-left border-[1.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue ' +
             (active ? 'border-blue' : 'border-border')
           "
           [style.background]="
@@ -51,7 +53,7 @@
           ></svg>
           <div class="text-[13px] font-medium text-text">{{ opt.label }}</div>
           <div class="mt-0.5 text-[11px] text-muted">{{ opt.sub }}</div>
-        </div>
+        </button>
       }
     </div>
   </div>

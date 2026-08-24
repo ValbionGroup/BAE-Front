@@ -65,6 +65,7 @@
           <div
             (click)="select(a.id)"
             (keydown.enter)="select(a.id)"
+            (keydown.space)="$event.preventDefault(); select(a.id)"
             tabindex="0"
             role="button"
             [attr.aria-current]="a.id === selectedId()"

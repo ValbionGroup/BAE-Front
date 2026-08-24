@@ -68,10 +68,19 @@
         @for (e of visibleEvents(); track e.id) {
           @let selected = selectedId() === e.id;
           @let accent = rowAccent(e);
+          <!--
+            `role="button"` plutôt qu'un vrai `<button>` : la ligne contient déjà
+            un bouton d'action, et imbriquer deux contrôles est invalide.
+          -->
           <div
             (click)="select(e.id)"
+            (keydown.enter)="select(e.id)"
+            (keydown.space)="$event.preventDefault(); select(e.id)"
+            tabindex="0"
+            role="button"
+            [attr.aria-current]="selected ? 'true' : null"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1.5 md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 ' +
+              'relative grid cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1.5 md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue ' +
               (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50') +
               (e.status === 'past' ? ' opacity-80' : '')
             "
