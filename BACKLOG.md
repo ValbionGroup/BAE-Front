@@ -36,9 +36,15 @@ Aucune modification back. Deux défauts trouvés par les tests avant d'exister �
   `eventDate`, un ISO **avec fuseau**, donc il était juste — passé à `parseISO` quand même, pour
   que le prochain format court ne rouvre pas le trou.
 
-  > ⚠️ **Reste ouvert côté dashboard** : `adherents.ts:312` (`formatDate`) fait le même
-  > `new Date` sur `expiresAt`, `subscribedAt` et `registeredAt`, tous servis par `toISODate()`.
-  > Une ligne à changer, non faite parce que hors de la demande.
+  Côté dashboard : `adherents.ts` (`formatDate`, sur `expiresAt` / `subscribedAt` /
+  `registeredAt`) et `subscription-create-modal.ts` (l'échéance annoncée, calculée depuis un
+  `<input type=date>`) corrigés de même.
+
+  > ⚠️ **Reste ouvert** : `stocks.store.ts` fait le même `new Date` en **quatre** endroits sur
+  > `expirationDate` et `openedAt` — la colonne est un `@column.date()`, donc servie en
+  > `YYYY-MM-DD`. Trois sont de l'affichage, mais **le quatrième décide du statut DLC**
+  > (`périmé` / `bientôt`), ce qui en fait autre chose qu'un correctif d'une ligne : à faire
+  > avec ses tests de bornes.
 
 - « Pas encore su » se rendait comme « pas de cotisation », et une panne réseau aussi : la page
   aurait envoyé racheter une formule déjà payée. Trois états distincts désormais.
