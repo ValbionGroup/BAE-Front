@@ -11,7 +11,12 @@ export type EventStatus = 'scheduled' | 'ongoing' | 'completed';
 export interface EventData {
   id: string;
   name: string;
-  location: string;
+  /**
+   * ⚠️ **Aucune colonne `location` côté back** : ce champ est toujours absent
+   * des réponses de l'API. Il reste déclaré parce que c'est un manque du back,
+   * pas un champ à retirer de l'écran — mais le type ne le promet plus.
+   */
+  location?: string | null;
   date: Date;
   description?: string;
   duration?: number;
@@ -64,25 +69,22 @@ export interface MenuItem {
   readonly category: string | null;
 }
 
-export interface EventApiDto {
-  id: string;
-  name: string;
-  location: string;
-  date: string;
-  description?: string;
-  duration?: number;
-  status?: EventStatus;
-  assigneeCount?: number;
-  capacity?: number;
-  expectedAttendees?: number | null;
-  payerName?: string | null;
-}
+/**
+ * La même soirée, telle qu'elle arrive sur le fil. **Dérivée** du modèle
+ * applicatif et non redéclarée : les deux listes de champs avaient divergé, et
+ * un ajout se payait en trois éditions dont deux que rien ne signalait si on
+ * les oubliait — les champs sont optionnels, TypeScript ne dit rien.
+ *
+ * Ne restent écrits à la main que les champs dont la **forme** change.
+ */
+export type EventApiDto = Omit<EventData, 'id' | 'date'> & {
+  /** L'API sert l'entier de la clé primaire, pas une chaîne. */
+  readonly id: number;
+  /** ISO 8601. */
+  readonly date: string;
+};
 
-export interface RosterRowApiDto {
-  id: string;
-  name: string;
-  role: string;
-  status: Presence;
-  when: string;
-  late: boolean;
-}
+export type RosterRowApiDto = Omit<RosterRow, 'when'> & {
+  /** ISO 8601. */
+  readonly when: string;
+};

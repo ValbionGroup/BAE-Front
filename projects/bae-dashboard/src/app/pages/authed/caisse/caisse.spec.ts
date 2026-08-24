@@ -323,8 +323,9 @@ describe(Caisse.name, () => {
 
     it('accepte un identifiant de soirée numérique, comme l’API le renvoie', async () => {
       const store = await withCart();
-      // ⚠️ `EventApiDto.id` est typé `string` mais l'API renvoie un nombre : la
-      // session porte donc un nombre. Comparer les chaînes refusait tout QR valide.
+      // ⚠️ `EventApiDto.id` est un nombre — c'est ce que sert l'API — et rien ne
+      // garantit que l'appelant l'ait normalisé : la session peut donc porter un
+      // nombre. Comparer les chaînes refusait tout QR valide.
       store.startSession(7 as never);
       http.expectOne((r) => r.url.includes('/events/7/products')).flush([]);
       http.expectOne((r) => r.method === 'GET' && r.url.includes('/events/7/orders')).flush([]);

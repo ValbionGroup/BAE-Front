@@ -44,34 +44,26 @@ export class EventsService {
     return this.http.post<EventDetail['memberPresence']>(url, { isAvailable: presence });
   }
 
-  private toEventData(dto: EventApiDto): EventData {
-    return {
-      // ⚠️ L'API renvoie un **nombre** là où le type annonce une chaîne. Sans
-      // cette normalisation, `EventData.id` mentait et toute comparaison stricte
-      // avec un identifiant venu d'ailleurs échouait en silence.
-      id: String(dto.id),
-      name: dto.name,
-      location: dto.location,
-      date: new Date(dto.date),
-      description: dto.description,
-      duration: dto.duration,
-      status: dto.status,
-      assigneeCount: dto.assigneeCount,
-      capacity: dto.capacity,
-      expectedAttendees: dto.expectedAttendees,
-      payerName: dto.payerName,
-    };
+  /**
+   * Seuls les deux champs dont la forme change sont écrits ici ; le reste passe
+   * tel quel. Recopier champ par champ, c'était accepter qu'un ajout au modèle
+   * n'arrive jamais jusqu'au store — les champs étant optionnels, l'oubli ne
+   * levait aucune erreur.
+   *
+   * Conséquence assumée : ce que l'API sert en plus (`createdAt`, `updatedAt`)
+   * entre désormais dans le store. Rien ne l'y lit et rien n'y renvoie une
+   * soirée à l'API, donc ces clés y dorment.
+   *
+   * ⚠️ `id` est normalisé en chaîne : l'API sert l'entier de la clé primaire, et
+   * sans cela toute comparaison stricte avec un identifiant venu d'ailleurs
+   * échouait en silence.
+   */
+  private toEventData({ id, date, ...rest }: EventApiDto): EventData {
+    return { ...rest, id: String(id), date: new Date(date) };
   }
 
-  private toRosterRow(dto: RosterRowApiDto): RosterRow {
-    return {
-      id: dto.id,
-      name: dto.name,
-      role: dto.role,
-      status: dto.status,
-      when: new Date(dto.when),
-      late: dto.late,
-    };
+  private toRosterRow({ when, ...rest }: RosterRowApiDto): RosterRow {
+    return { ...rest, when: new Date(when) };
   }
 
   private buildUrl(endpoint: ApiEndPointV1): string {

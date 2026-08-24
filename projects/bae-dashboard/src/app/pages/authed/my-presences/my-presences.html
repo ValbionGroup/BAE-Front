@@ -91,7 +91,7 @@
                   </div>
                   @if (e.description) {
                     <div class="mt-0.75 text-[11.5px] text-muted">{{ e.description }}</div>
-                  } @else {
+                  } @else if (e.location) {
                     <div class="mt-0.75 text-[11.5px] text-muted">Lieu · {{ e.location }}</div>
                   }
                   @if (postes.length > 0) {
