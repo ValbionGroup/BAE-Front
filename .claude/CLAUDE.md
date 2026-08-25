@@ -27,7 +27,9 @@ Stack : Angular 21, NgRx Signals, Tailwind CSS 4, Lucide Icons, date-fns 4, RxJS
   même action fait planter le boot (nom de route auto-dérivé en double). Utiliser
   `router.route(path, ['PUT', 'PATCH'], [ctrl, 'action'])`.
 - Les colonnes `decimal` reviennent en **string** (driver SQL), pas en number — convertir
-  explicitement avant tout calcul.
+  explicitement avant tout calcul. Ne subsistent que des **quantités** : depuis le 2026-08-25,
+  tout montant est un `integer` de centimes, en base comme dans l'API (cf. `BAE-Back/API.md`).
+  Côté front, `formatCents` / `parseEuros` de `@bae/ui` sont la seule frontière de conversion.
 
 > Si une page front existe sans endpoint correspondant, c'est le back qui est incomplet :
 > on ajoute l'endpoint ou on laisse la page en mock, on ne supprime pas le panneau.
