@@ -35,7 +35,17 @@ import { EventsStore } from '#core/store/events.store';
 import { RecipesStore } from '#core/store/recipes.store';
 import { EventDetail, MenuItem } from '#core/models/event.model';
 import type { RecipeProduct } from '#pages/authed/recettes/recipes.types';
-import { ToastService, Btn, Badge, BadgeKind, Input, DropdownService, DropdownItem } from '@bae/ui';
+import {
+  ToastService,
+  Btn,
+  Badge,
+  BadgeKind,
+  Input,
+  DropdownService,
+  DropdownItem,
+  formatCents,
+  parseEuros,
+} from '@bae/ui';
 import { PrintService } from '#core/services/print/print-service';
 
 type TabKey = 'upcoming' | 'preparing' | 'past' | 'all';
@@ -214,15 +224,15 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
     return `${weekday} ${start} — ${endLabel}`;
   }
 
-  protected formatPrice(n: number): string {
-    return n.toFixed(2).replace('.', ',');
+  /** Reçoit des **centimes** : `price`, `unitCost` et `totalCost` en sont tous. */
+  protected formatPrice(cents: number): string {
+    return formatCents(cents);
   }
 
-  /** ⚠️ `line.price` est en centimes, `unitCost` de la même ligne en euros. */
   protected priceOf(eventId: string, line: MenuItem): string {
     const draft = this.pendingPrices().get(`${eventId}:${line.productId}`);
     if (draft !== undefined) return draft;
-    return line.price === 0 ? '' : this.formatPrice(line.price / 100);
+    return line.price === 0 ? '' : this.formatPrice(line.price);
   }
 
   protected unpricedCount(menu: readonly MenuItem[]): number {
@@ -234,9 +244,9 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
   }
 
   /** « — » plutôt qu'un nombre : `unitCost`/`totalCost` valent `null` dès
-   *  qu'un ingrédient de la recette n'a aucun fournisseur prix. */
-  protected formatPriceOrDash(n: number | null): string {
-    return n === null ? '—' : `${this.formatPrice(n)} €`;
+   *  qu'un ingrédient de la recette n'a aucun prix fournisseur. */
+  protected formatPriceOrDash(cents: number | null): string {
+    return cents === null ? '—' : `${this.formatPrice(cents)} €`;
   }
 
   protected eventBorderClass(event: EventDetail): string {
@@ -374,13 +384,12 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
         return copy;
       });
 
-    const euros = Number(value.trim().replace(',', '.'));
-    if (value.trim() === '' || !Number.isFinite(euros) || euros < 0) {
+    const cents = parseEuros(value);
+    if (cents === null) {
       clear();
       return;
     }
 
-    const cents = Math.round(euros * 100);
     if (cents === line.price) {
       clear();
       return;

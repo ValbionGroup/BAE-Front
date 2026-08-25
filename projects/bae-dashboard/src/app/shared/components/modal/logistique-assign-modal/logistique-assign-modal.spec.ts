@@ -57,13 +57,13 @@ describe(LogistiqueAssignModal.name, () => {
   });
 
   describe('prix de vente', () => {
-    /** `cost` en euros, `price` en centimes — c'est tout l'objet de ces tests. */
+    /** `cost` et `price` sont tous deux en **centimes**. */
     function recipe(overrides: Record<string, unknown> = {}) {
       return {
         productId: 3,
         n: 'Hot-dog',
         c: 'Plats',
-        cost: 1.12,
+        cost: 112,
         price: 350,
         priceDraft: null,
         sel: true,
@@ -73,10 +73,12 @@ describe(LogistiqueAssignModal.name, () => {
       } as never;
     }
 
-    it('calcule la marge en euros, sans mélanger centimes et euros', () => {
-      // Le calcul d'avant faisait 350 − 1,12 et affichait « +348,88 € ».
-      expect(component['marginOf'](recipe())).toBeCloseTo(2.38, 5);
-      expect(component['marginOf'](recipe({ price: 50 }))).toBeCloseTo(-0.62, 5);
+    it('calcule la marge sans mélanger les unités', () => {
+      // 3,50 € de vente pour 1,12 € de denrées : 2,38 € de marge.
+      // L'ancienne formule (`price / 100 - cost`) faisait 3,50 − 112 = −108,50.
+      // Sur des entiers, `toBeCloseTo` n'a plus de raison d'être.
+      expect(component['marginOf'](recipe())).toBe(238);
+      expect(component['marginOf'](recipe({ price: 50 }))).toBe(-62);
     });
 
     it('affiche le prix en euros, et vide quand il reste à fixer', () => {
@@ -104,7 +106,8 @@ describe(LogistiqueAssignModal.name, () => {
         recipe({ n: 'Frites', productId: 4, price: 0, q: 50 }),
       ]);
 
-      expect(component['totalRev']()).toBe(350);
+      // 100 portions à 350 centimes : 35 000 centimes, plus aucune division.
+      expect(component['totalRev']()).toBe(35000);
       expect(component['unpricedSelected']()).toBe(1);
     });
   });

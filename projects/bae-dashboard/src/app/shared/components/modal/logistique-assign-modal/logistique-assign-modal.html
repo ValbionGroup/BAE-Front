@@ -147,7 +147,7 @@
       <div>
         <div class="text-[10px] text-muted uppercase tracking-wider">Coût · Revenu prévu</div>
         <div class="mono tnum text-sm font-semibold text-text">
-          {{ totalCost() }} € · <span class="text-ok">{{ totalRev() }} €</span>
+          {{ fmt(totalCost()) }} € · <span class="text-ok">{{ fmt(totalRev()) }} €</span>
         </div>
       </div>
       @if (unpricedSelected() > 0) {

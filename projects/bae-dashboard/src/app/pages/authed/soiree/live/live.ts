@@ -245,7 +245,7 @@ export class SoireeLive implements OnInit {
         const unitCost = costs.get(line.productId);
         if (unitCost === null || unitCost === undefined) return null;
         revenue += line.unitPrice * line.quantity;
-        cost += Math.round(unitCost * 100) * line.quantity;
+        cost += unitCost * line.quantity;
       }
     }
 

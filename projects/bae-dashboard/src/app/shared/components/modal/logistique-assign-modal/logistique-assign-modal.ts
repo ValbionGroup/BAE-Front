@@ -16,7 +16,7 @@ import {
   LucideStar,
   LucideTriangleAlert,
 } from '@lucide/angular';
-import { Btn, Badge, Input, ToastService } from '@bae/ui';
+import { Btn, Badge, Input, ToastService, formatCents, parseEuros } from '@bae/ui';
 import { EventsStore } from '#core/store/events.store';
 import { RecipesStore } from '#core/store/recipes.store';
 import type { MenuItem } from '#core/models/event.model';
@@ -31,16 +31,16 @@ import { ModalShell } from '../modal-shell/modal-shell';
  * la conversion de la maquette : ils sont conservés tels quels pour que le
  * gabarit n'ait pas à changer, seule la **source** des données devient réelle.
  *
- * ⚠️ `cost` est en **euros** (prix fournisseurs, `decimal`) et `price` en
- * **centimes** (`event_products.price`, `integer`). Les soustraire directement
- * donnait une marge fausse d'un facteur 100.
+ * `cost` et `price` sont **tous deux en centimes**. Ils ne l'étaient pas —
+ * `cost` en euros, `price` en centimes — et les soustraire donnait une marge
+ * fausse d'un facteur 100.
  */
 interface Recipe {
   /** Clé réelle pour les écritures. Le gabarit, lui, piste par `n`. */
   readonly productId: number;
   readonly n: string;
   readonly c: string;
-  /** Euros. */
+  /** Centimes. Coût des denrées, arrondi par le serveur. */
   readonly cost: number;
   /** Centimes. Prix de vente pour cette soirée, éditable ici. */
   price: number;
@@ -148,14 +148,14 @@ export class LogistiqueAssignModal {
     };
   }
 
-  /** Marge unitaire en euros. `cost` est en euros, `price` en centimes. */
+  /** Marge unitaire, en **centimes** : une simple soustraction, enfin licite. */
   protected marginOf(recipe: Recipe): number {
-    return recipe.price / 100 - recipe.cost;
+    return recipe.price - recipe.cost;
   }
 
   protected priceOf(recipe: Recipe): string {
     if (recipe.priceDraft !== null) return recipe.priceDraft;
-    return recipe.price === 0 ? '' : this.fmt(recipe.price / 100);
+    return recipe.price === 0 ? '' : this.fmt(recipe.price);
   }
 
   protected onPriceInput(n: string, value: string): void {
@@ -164,11 +164,10 @@ export class LogistiqueAssignModal {
 
   /** Une saisie illisible rend la valeur d'avant, comme sur la page Soirées. */
   protected commitPrice(n: string, value: string): void {
-    const euros = Number(value.trim().replace(',', '.'));
-    const valid = value.trim() !== '' && Number.isFinite(euros) && euros >= 0;
+    const cents = parseEuros(value);
     this.update(n, (r) => ({
       ...r,
-      price: valid ? Math.round(euros * 100) : r.price,
+      price: cents ?? r.price,
       priceDraft: null,
     }));
   }
@@ -203,11 +202,12 @@ export class LogistiqueAssignModal {
   protected readonly selected = computed(() => this.allRecipes().filter((r) => r.sel));
   protected readonly totalSelected = computed(() => this.selected().length);
   protected readonly totalPortions = computed(() => this.selected().reduce((s, r) => s + r.q, 0));
+  /** Totaux en **centimes** : additionner des entiers rend un entier. */
   protected readonly totalCost = computed(() =>
-    Math.round(this.selected().reduce((s, r) => s + r.q * r.cost, 0)),
+    this.selected().reduce((s, r) => s + r.q * r.cost, 0),
   );
   protected readonly totalRev = computed(() =>
-    Math.round(this.selected().reduce((s, r) => s + (r.q * r.price) / 100, 0)),
+    this.selected().reduce((s, r) => s + r.q * r.price, 0),
   );
   /** Une recette cochée sans prix se vendrait gratuitement en caisse. */
   protected readonly unpricedSelected = computed(
@@ -302,7 +302,8 @@ export class LogistiqueAssignModal {
     this.modalService.close(this.id());
   }
 
-  protected fmt(v: number): string {
-    return v.toFixed(2).replace('.', ',');
+  /** Reçoit des **centimes**. */
+  protected fmt(cents: number): string {
+    return formatCents(cents);
   }
 }

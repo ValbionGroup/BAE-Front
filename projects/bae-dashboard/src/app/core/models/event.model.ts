@@ -50,10 +50,13 @@ export interface RosterRow {
 }
 
 /**
- * ⚠️ **Deux unités cohabitent sur cette ligne.** `price` vient de
- * `event_products.price`, un `integer` en centimes ; `unitCost` et `totalCost`
- * sont dérivés des prix fournisseurs (`decimal`), donc en euros. Les formater
- * pareil affiche « 450,00 € » pour un burger à 4,50 €.
+ * `price`, `unitCost` et `totalCost` sont **tous en centimes** — l'unité unique
+ * de l'API depuis le 2026-08-25.
+ *
+ * Deux unités cohabitaient ici : `price` en centimes, `unitCost` et `totalCost`
+ * en euros parce qu'ils dérivaient de prix fournisseurs décimaux. Les formater
+ * pareil affichait « 450,00 € » pour un burger à 4,50 €, et les soustraire
+ * donnait une marge fausse d'un facteur 100.
  */
 export interface MenuItem {
   readonly productId: number;
@@ -62,9 +65,13 @@ export interface MenuItem {
   readonly quantity: number;
   /** Centimes. `0` = aucun prix fixé. */
   readonly price: number;
-  /** Euros. */
+  /**
+   * Centimes, arrondis par le serveur. `null` dès qu'un ingrédient de la
+   * recette n'a aucun prix fournisseur : additionner ce qu'on sait donnerait un
+   * coût faussement rassurant.
+   */
   readonly unitCost: number | null;
-  /** Euros. */
+  /** Centimes, arrondis par le serveur. `null` dans les mêmes cas. */
   readonly totalCost: number | null;
   readonly category: string | null;
 }
