@@ -21,7 +21,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { LogistiqueStore } from '#core/store/logistique.store';
-import { Badge, Skeleton, Btn, ToastService } from '@bae/ui';
+import { Badge, Skeleton, Btn, ToastService, formatCents } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { VoucherCreateModal } from '#shared/components/modal/voucher-create-modal/voucher-create-modal';
 import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/voucher-edit-modal';
@@ -340,8 +340,9 @@ export class Logistique implements OnInit {
     void this.store.refresh();
   }
 
-  protected formatPrice(value: number): string {
-    return value.toFixed(2).replace('.', ',');
+  /** Reçoit des **centimes** : tous les montants de l'API en sont. */
+  protected formatPrice(cents: number): string {
+    return formatCents(cents);
   }
 
   protected cellClass(cell: CartCell): string {

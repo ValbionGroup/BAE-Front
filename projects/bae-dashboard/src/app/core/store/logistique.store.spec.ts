@@ -28,8 +28,8 @@ function shoppingList(overrides: Partial<ApiShoppingList> = {}): ApiShoppingList
         needQty: 140,
         stockQty: 0,
         missingQty: 140,
-        suppliers: [{ id: 3, name: 'Leclerc', price: 2.75 }],
-        bestSupplier: { id: 3, name: 'Leclerc', price: 2.75 },
+        suppliers: [{ id: 3, name: 'Leclerc', price: 275 }],
+        bestSupplier: { id: 3, name: 'Leclerc', price: 275 },
         bestPrice: 2.75,
       },
     ],
@@ -51,7 +51,7 @@ function voucher(overrides: Partial<ApiVoucher> = {}): ApiVoucher {
     id: 1,
     supplierId: 3,
     supplier: { id: 3, name: 'Leclerc' },
-    value: 50,
+    value: 5000,
     expiresAt: '2026-12-31',
     condition: 'à partir de 80 €',
     usedAt: null,
@@ -185,7 +185,7 @@ describe(LogistiqueStore.name, () => {
 
     const created = store.createVoucher({
       supplierId: 3,
-      value: 10,
+      value: 1000,
       expiresAt: '2026-06-30',
       condition: null,
     });
@@ -202,7 +202,7 @@ describe(LogistiqueStore.name, () => {
 
     const created = store.createVoucher({
       supplierId: 3,
-      value: 10,
+      value: 1000,
       expiresAt: '2026-01-01',
       condition: null,
     });
@@ -217,7 +217,7 @@ describe(LogistiqueStore.name, () => {
 
     const created = store.createVoucher({
       supplierId: 3,
-      value: 10,
+      value: 1000,
       expiresAt: '2026-06-30',
       condition: null,
     });
@@ -279,22 +279,23 @@ describe(LogistiqueStore.name, () => {
   });
 
   it('edits a voucher and reflects the server-computed fields', async () => {
-    await loadWith([voucher({ id: 1, value: 50 })]);
+    await loadWith([voucher({ id: 1, value: 5000 })]);
 
-    const updated = store.updateVoucher(1, { value: 80 });
+    const updated = store.updateVoucher(1, { value: 8000 });
     expect(store.savingVoucherIds()).toEqual([1]);
 
-    http.expectOne(`${baseUrl}/vouchers/1`).flush(voucher({ id: 1, value: 80, warn: true }));
+    http.expectOne(`${baseUrl}/vouchers/1`).flush(voucher({ id: 1, value: 8000, warn: true }));
     const ok = await updated;
 
     expect(ok).toBe(true);
-    expect(store.vouchers()[0].value).toBe(80);
+    expect(store.vouchers()[0].value).toBe(8000);
+    expect(Number.isInteger(store.vouchers()[0].value)).toBe(true);
     expect(store.vouchers()[0].warn).toBe(true);
     expect(store.savingVoucherIds()).toEqual([]);
   });
 
   it('reports the API message and keeps the old row when an edit is refused', async () => {
-    await loadWith([voucher({ id: 1, value: 50 })]);
+    await loadWith([voucher({ id: 1, value: 5000 })]);
 
     const updated = store.updateVoucher(1, { value: -5 });
     http
@@ -303,7 +304,7 @@ describe(LogistiqueStore.name, () => {
     const ok = await updated;
 
     expect(ok).toBe(false);
-    expect(store.vouchers()[0].value).toBe(50);
+    expect(store.vouchers()[0].value).toBe(5000);
     expect(store.voucherError()).toBe('Valeur invalide.');
     expect(store.voucherErrorId()).toBe(1);
   });
@@ -341,7 +342,7 @@ describe(LogistiqueStore.name, () => {
 
     const created = store.createVoucher({
       supplierId: 3,
-      value: 10,
+      value: 1000,
       expiresAt: '2026-06-30',
       condition: null,
     });

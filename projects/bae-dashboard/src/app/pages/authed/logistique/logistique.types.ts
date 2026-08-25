@@ -24,6 +24,7 @@ export interface ApiGood {
   readonly suppliers: readonly ApiSupplierPrice[];
   /** `null` when no supplier prices this good. */
   readonly bestSupplier: ApiSupplierPrice | null;
+  /** En **centimes**. */
   readonly bestPrice: number | null;
 }
 
@@ -38,6 +39,7 @@ export interface ApiVoucher {
   readonly id: number;
   readonly supplierId: number | null;
   readonly supplier: { readonly id: number; readonly name: string } | null;
+  /** En **centimes**. */
   readonly value: number;
   /** `YYYY-MM-DD` — une DATE, jamais nulle : la colonne est `NOT NULL`. */
   readonly expiresAt: string;
@@ -156,6 +158,7 @@ export interface ApiShoppingLine {
   readonly missingQty: number;
   readonly suppliers: readonly ApiShoppingSupplier[];
   readonly bestSupplier: ApiShoppingSupplier | null;
+  /** En **centimes**. */
   readonly bestPrice: number | null;
 }
 

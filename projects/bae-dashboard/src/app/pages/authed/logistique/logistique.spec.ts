@@ -16,12 +16,12 @@ import { VoucherEditModal } from '#shared/components/modal/voucher-edit-modal/vo
 import { PrintService } from '#core/services/print/print-service';
 import type { ApiShoppingList, ApiShoppingLine, ApiVoucher } from './logistique.types';
 
-/** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 €. */
+/** Le bon que rend `renderLoaded()` — id 1, Leclerc, 50 € (5000 centimes). */
 const VOUCHER: ApiVoucher = {
   id: 1,
   supplierId: 3,
   supplier: { id: 3, name: 'Leclerc' },
-  value: 50,
+  value: 5000,
   expiresAt: '2026-12-31',
   condition: null,
   usedAt: null,
@@ -194,8 +194,8 @@ describe(Logistique.name, () => {
       shoppingList({
         lines: [shoppingLine()],
         lineCount: 4,
-        optimumTotal: 42.5,
-        savings: 5.25,
+        optimumTotal: 4250,
+        savings: 525,
       }),
     );
 
@@ -294,20 +294,20 @@ describe(Logistique.name, () => {
             id: 1,
             name: 'Saucisses',
             suppliers: [
-              { id: 3, name: 'Leclerc', price: 4.95 },
-              { id: 1, name: 'Auchan', price: 5.4 },
+              { id: 3, name: 'Leclerc', price: 495 },
+              { id: 1, name: 'Auchan', price: 540 },
             ],
-            bestSupplier: { id: 3, name: 'Leclerc', price: 4.95 },
+            bestSupplier: { id: 3, name: 'Leclerc', price: 495 },
             bestPrice: 4.95,
           }),
           shoppingLine({
             id: 2,
             name: 'Pain',
             suppliers: [
-              { id: 3, name: 'Leclerc', price: 2.75 },
-              { id: 2, name: 'Carrefour', price: 2.9 },
+              { id: 3, name: 'Leclerc', price: 275 },
+              { id: 2, name: 'Carrefour', price: 290 },
             ],
-            bestSupplier: { id: 3, name: 'Leclerc', price: 2.75 },
+            bestSupplier: { id: 3, name: 'Leclerc', price: 275 },
             bestPrice: 2.75,
           }),
         ],
@@ -322,8 +322,8 @@ describe(Logistique.name, () => {
 
   it('marque une enseigne à couverture incomplète', () => {
     const totals = [
-      { id: 3, name: 'Leclerc', total: 385, fullCoverage: true },
-      { id: 4, name: 'Auchan', total: 90, fullCoverage: false },
+      { id: 3, name: 'Leclerc', total: 38500, fullCoverage: true },
+      { id: 4, name: 'Auchan', total: 9000, fullCoverage: false },
     ] as never;
     // Auchan est « moins chère » seulement parce qu'elle compte moins de
     // lignes : la colonne doit le dire, pas laisser croire au meilleur prix.
@@ -339,13 +339,13 @@ describe(Logistique.name, () => {
       shoppingList({
         lines: [
           shoppingLine({
-            suppliers: [{ id: 4, name: 'Auchan', price: 9 }],
-            bestSupplier: { id: 4, name: 'Auchan', price: 9 },
-            bestPrice: 9,
+            suppliers: [{ id: 4, name: 'Auchan', price: 900 }],
+            bestSupplier: { id: 4, name: 'Auchan', price: 900 },
+            bestPrice: 900,
           }),
         ],
         lineCount: 1,
-        supplierTotals: [{ id: 4, name: 'Auchan', total: 9, fullCoverage: false }],
+        supplierTotals: [{ id: 4, name: 'Auchan', total: 900, fullCoverage: false }],
       }),
     );
 
@@ -357,7 +357,7 @@ describe(Logistique.name, () => {
   });
 
   it('affiche l’économie multi-enseigne, et « — » quand elle est indécidable', async () => {
-    expect(component['savingsLabel'](12.8)).toContain('12,80');
+    expect(component['savingsLabel'](1280)).toContain('12,80');
     // null = aucune enseigne ne couvre toute la liste, donc aucune comparaison
     // honnête possible.
     expect(component['savingsLabel'](null)).toBe('—');
