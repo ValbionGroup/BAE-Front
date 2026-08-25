@@ -34,6 +34,7 @@ export interface MySubscription {
   readonly subscribedAt: string;
   readonly expiresAt: string;
   readonly status: 'active' | 'expired';
+  /** En **centimes**, comme `totalCents` d'une précommande. */
   readonly amount: number | null;
   readonly paymentMethod: string | null;
 }

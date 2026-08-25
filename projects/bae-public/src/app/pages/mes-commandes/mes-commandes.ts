@@ -80,7 +80,8 @@ export class MesCommandes {
     return formatCents(cents);
   }
 
-  protected euros(amount: number | null): string {
-    return amount === null ? '—' : amount.toFixed(2).replace('.', ',');
+  /** Reçoit des **centimes**, comme `price()` juste au-dessus. */
+  protected euros(cents: number | null): string {
+    return cents === null ? '—' : formatCents(cents);
   }
 }

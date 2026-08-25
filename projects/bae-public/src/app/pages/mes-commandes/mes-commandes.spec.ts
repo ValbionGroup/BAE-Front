@@ -38,7 +38,7 @@ const SUBSCRIPTIONS: MySubscription[] = [
     subscribedAt: '2025-09-03',
     expiresAt: '2027-09-03',
     status: 'active',
-    amount: 42,
+    amount: 4200,
     paymentMethod: 'lydia',
   },
 ];
@@ -82,11 +82,11 @@ describe(MesCommandes.name, () => {
   });
 
   /**
-   * `totalCents` est en centimes, `amount` (issu de `transactions.amount`) est
-   * en euros. Les deux montants sont affichés côte à côte : les confondre
-   * afficherait 0,42 € pour une cotisation de 42 €.
+   * `totalCents` et `amount` (issu de `transactions.amount`) sont désormais
+   * **tous deux en centimes**. Ils ne l'étaient pas, et sont affichés côte à
+   * côte : la cotisation s'affichait 0,42 € pour 42 €.
    */
-  it('respecte les deux unités monétaires de l’API', async () => {
+  it('affiche précommande et cotisation dans la même unité', async () => {
     await mount();
 
     expect(host.textContent).toContain('7,00 €');
