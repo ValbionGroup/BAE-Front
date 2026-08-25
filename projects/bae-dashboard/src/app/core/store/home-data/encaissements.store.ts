@@ -45,6 +45,7 @@ const initialState: EncaissementsState = {
   limit: DEFAULT_LIMIT,
 };
 
+/** `v1` (espèces) et `v2` (Lydia) sont des totaux **en centimes**. */
 interface EventBucket {
   readonly label: string;
   readonly time: number;

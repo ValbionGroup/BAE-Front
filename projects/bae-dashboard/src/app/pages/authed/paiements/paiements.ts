@@ -183,8 +183,8 @@ export class Paiements implements OnInit {
     })),
   );
 
-  protected formatMoney(value: number): string {
-    return formatMoney(value);
+  protected formatMoney(cents: number): string {
+    return formatMoney(cents);
   }
 
   private async refreshPayments(): Promise<void> {
@@ -217,8 +217,17 @@ export class Paiements implements OnInit {
   }
 }
 
-function formatMoney(value: number): string {
-  return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/**
+ * Formate des **centimes**, séparateur de milliers compris.
+ *
+ * `formatCents` de `@bae/ui` sert juste à côté pour `payment.amountCents` : les
+ * deux disent la même chose, celui-ci groupe les milliers en plus.
+ */
+function formatMoney(cents: number): string {
+  return (cents / 100).toLocaleString('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatWhen(iso: string | null): string {

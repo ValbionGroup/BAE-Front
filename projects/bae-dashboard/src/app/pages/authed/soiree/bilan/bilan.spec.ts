@@ -20,7 +20,7 @@ function summary(overrides: Partial<EventSummary> = {}): EventSummary {
     sponsoredCents: 600,
     payerName: 'BDE',
     receivableByCategory: [{ label: 'Staff BDE', dueCents: 600 }],
-    cashedByMethod: [{ method: 'cash', amount: 4, count: 2 }],
+    cashedByMethod: [{ method: 'cash', amount: 400, count: 2 }],
     lines: [],
     ...overrides,
   } as EventSummary;
@@ -68,6 +68,24 @@ describe(SoireeBilan.name, () => {
   it('nomme explicitement un payeur manquant plutôt que de laisser un vide', () => {
     component['summary'].set(summary({ payerName: null }));
     expect(component['receivable']()!.payerName).toBe('payeur non renseigné');
+  });
+
+  it('additionne les encaissements en centimes et les affiche en euros', () => {
+    // `amount` arrivait en euros là où `revenueCents` arrivait en centimes, sur
+    // la même charge utile : l'écart affiché valait 100 fois la recette.
+    component['summary'].set(
+      summary({
+        revenueCents: 1000,
+        cashedByMethod: [
+          { method: 'cash', amount: 400, count: 2 },
+          { method: 'lydia', amount: 600, count: 1 },
+        ],
+      }),
+    );
+
+    expect(component['cashedTotal']()).toBe(1000);
+    expect(component['gap']()).toBe(0);
+    expect(component['cashed']()[0].amount).toBe('4,00');
   });
 
   it('annonce la part à recouvrer dans le KPI de recette', () => {

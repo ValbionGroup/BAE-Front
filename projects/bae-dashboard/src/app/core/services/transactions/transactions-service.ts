@@ -16,6 +16,7 @@ export interface ApiTransaction {
   /** Payment method. NOT a caisse/précommande channel — the API has no such split. */
   type: TransactionType;
   /** `decimal(10,2)` already coerced to a number server-side — do not re-parse. */
+  /** En **centimes**, comme tout montant de l'API. */
   amount: number;
   /** Flattened from the first attached order; null when no order carries an event. */
   eventId: number | null;

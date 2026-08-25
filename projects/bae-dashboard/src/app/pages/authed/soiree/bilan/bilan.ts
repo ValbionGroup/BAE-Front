@@ -85,23 +85,24 @@ export class SoireeBilan implements OnInit {
     const summary = this.summary();
     if (summary === null) return [];
 
-    const revenue = summary.revenueCents / 100;
-    const average = summary.orderCount > 0 ? revenue / summary.orderCount : 0;
-
-    const sponsored = summary.sponsoredCents / 100;
+    const averageCents =
+      summary.orderCount > 0 ? Math.round(summary.revenueCents / summary.orderCount) : 0;
 
     return [
       {
         label: 'Recette',
-        value: `${money(revenue)} €`,
-        detail: sponsored > 0 ? `dont ${money(sponsored)} € à recouvrer` : 'valeur au prix public',
+        value: `${money(summary.revenueCents)} €`,
+        detail:
+          summary.sponsoredCents > 0
+            ? `dont ${money(summary.sponsoredCents)} € à recouvrer`
+            : 'valeur au prix public',
       },
       {
         label: 'Commandes',
         value: String(summary.orderCount),
         detail: `${summary.cancelledCount} annulée(s)`,
       },
-      { label: 'Panier moyen', value: `${money(average)} €`, detail: 'recette / commandes' },
+      { label: 'Panier moyen', value: `${money(averageCents)} €`, detail: 'recette / commandes' },
       {
         label: 'Invendus',
         value: String(summary.lines.reduce((total, line) => total + line.unsoldQty, 0)),
@@ -126,7 +127,7 @@ export class SoireeBilan implements OnInit {
   protected readonly gap = computed(() => {
     const summary = this.summary();
     if (summary === null) return 0;
-    return this.cashedTotal() - summary.revenueCents / 100;
+    return this.cashedTotal() - summary.revenueCents;
   });
 
   /** Non nul = une association doit de l'argent au BAE sur cette soirée. */
@@ -136,11 +137,11 @@ export class SoireeBilan implements OnInit {
 
     return {
       payerName: summary.payerName ?? 'payeur non renseigné',
-      total: money(summary.sponsoredCents / 100),
-      cashed: money(summary.cashedCents / 100),
+      total: money(summary.sponsoredCents),
+      cashed: money(summary.cashedCents),
       categories: summary.receivableByCategory.map((entry) => ({
         label: entry.label,
-        due: money(entry.dueCents / 100),
+        due: money(entry.dueCents),
       })),
     };
   });
@@ -160,7 +161,7 @@ export class SoireeBilan implements OnInit {
         produced: line.producedQty,
         sold: line.soldQty,
         unsold: line.unsoldQty,
-        revenue: money(line.revenueCents / 100),
+        revenue: money(line.revenueCents),
       })),
   );
 
@@ -188,8 +189,17 @@ export class SoireeBilan implements OnInit {
   }
 }
 
-function money(value: number): string {
-  return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/**
+ * Formate des **centimes** en euros, séparateur de milliers compris.
+ *
+ * Conservé plutôt que remplacé par `formatCents` de `@bae/ui` : celui-ci fait un
+ * simple `toFixed`, et une recette de soirée se lit mal en « 1234,56 ».
+ */
+function money(cents: number): string {
+  return (cents / 100).toLocaleString('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 /** Une date invalide part en dernier plutôt que de désordonner tout le tri. */
