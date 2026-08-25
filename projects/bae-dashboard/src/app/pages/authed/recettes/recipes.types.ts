@@ -18,7 +18,11 @@ export interface RecipeProduct {
   readonly isVegetarian: boolean;
   readonly category: string | null;
   readonly ingredientCount: number;
+  /** Centimes. Dernier prix de vente connu, `null` si jamais vendu. */
   readonly lastPrice: number | null;
+  /** Centimes, arrondis par le serveur — même unité que `lastPrice`, donc
+   *  `lastPrice - cost` est une marge juste. Ce ne l'était pas : `cost` venait
+   *  des prix fournisseurs décimaux, donc en euros. */
   readonly cost: number | null;
 }
 

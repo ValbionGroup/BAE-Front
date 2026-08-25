@@ -15,8 +15,8 @@ function product(overrides: Partial<RecipeProduct> = {}): RecipeProduct {
     isVegetarian: true,
     category: 'Dessert',
     ingredientCount: 2,
-    lastPrice: 3,
-    cost: 1,
+    lastPrice: 300,
+    cost: 100,
     ...overrides,
   };
 }
@@ -96,5 +96,14 @@ describe(RecipesStore.name, () => {
     expect(await pending).toBe(false);
     expect(store.deleteError()).toBe('Cette recette est utilisée par 2 commandes.');
     expect(store.products()).toHaveLength(1);
+  });
+
+  it('expose coût et prix dans la même unité', async () => {
+    // `cost` arrivait en euros et `lastPrice` en centimes sur la même ligne :
+    // leur soustraction affichait une marge fausse d'un facteur 100.
+    await loadWith([product({ cost: 120, lastPrice: 250 })]);
+
+    const row = store.products()[0];
+    expect(row.lastPrice! - row.cost!).toBe(130);
   });
 });

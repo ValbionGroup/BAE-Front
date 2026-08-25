@@ -21,7 +21,7 @@ import {
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RecipesStore } from '#core/store/recipes.store';
 import { PrintService } from '#core/services/print/print-service';
-import { Btn, Badge, Input, Skeleton, ToastService, DetailSheet } from '@bae/ui';
+import { Btn, Badge, Input, Skeleton, ToastService, DetailSheet, formatCents } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { RecipeEditModal } from '#shared/components/modal/recipe-edit-modal/recipe-edit-modal';
 import type { RecipeIngredient, RecipeProduct } from './recipes.types';
@@ -257,13 +257,15 @@ export class Recettes {
     this.searchQuery.set(q);
   }
 
-  protected formatPrice(n: number): string {
-    return Number(n).toFixed(2).replace('.', ',');
+  /** Reçoit des **centimes**. */
+  protected formatPrice(cents: number): string {
+    return formatCents(cents);
   }
 
   private toRow(p: RecipeProduct): RecetteRow {
-    const cout = p.cost !== null ? Number(p.cost) : null;
-    const prix = p.lastPrice !== null ? Number(p.lastPrice) : null;
+    // Plus de coercion : les deux arrivent en centimes entiers.
+    const cout = p.cost;
+    const prix = p.lastPrice;
     return {
       id: p.id,
       nom: p.name,
