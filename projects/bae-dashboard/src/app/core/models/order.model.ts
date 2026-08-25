@@ -1,4 +1,5 @@
 export type OrderStatus = 'pending' | 'in_progress' | 'ready' | 'completed' | 'cancelled';
+export type PaymentMethod = 'cash' | 'lydia' | 'card';
 
 export interface OrderLine {
   readonly productId: number;

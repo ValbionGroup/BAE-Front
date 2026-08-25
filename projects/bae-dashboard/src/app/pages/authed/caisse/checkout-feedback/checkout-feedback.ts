@@ -47,14 +47,10 @@ export class CheckoutFeedback {
   protected readonly formatCents = formatCents;
 
   constructor() {
-    // Un succès s'efface seul pour ne pas bloquer la commande suivante ; un
-    // refus reste tant qu'il n'est pas lu.
     effect(() => {
       const order = this.order();
       const pickup = this.pickup();
       clearTimeout(this.timer);
-      // Un retrait reste plus longtemps : le caissier lit une liste d'articles,
-      // là où une confirmation d'encaissement tient dans un numéro.
       if (order) this.timer = setTimeout(() => this.dismissed.emit(), 6000);
       else if (pickup) this.timer = setTimeout(() => this.dismissed.emit(), 12000);
     });

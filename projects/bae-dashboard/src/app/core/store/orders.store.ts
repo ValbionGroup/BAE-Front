@@ -10,7 +10,7 @@ import {
 } from '#core/services/orders/orders-service';
 import { PreOrdersService } from '#core/services/pre-orders/pre-orders-service';
 import type { LoadingStatus } from '#core/models/global.model';
-import type { Order, OrderStatus } from '#core/models/order.model';
+import type { Order, OrderStatus, PaymentMethod } from '#core/models/order.model';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
 import { messageOf } from '@bae/ui';
 
@@ -18,15 +18,7 @@ interface OrdersState {
   loading: LoadingStatus;
   loadError: string | null;
   orders: Order[];
-  /**
-   * Les précommandes de la soirée, **à part des commandes**.
-   *
-   * Deux listes plutôt qu'une fusionnée : tout ce qui compte l'argent et les
-   * temps du service (`cashedCents`, `averagePrepSeconds`, `marginPercent`,
-   * `cadence`) lit `orders`. Les garder séparées fait que ces compteurs
-   * excluent les précommandes **par construction**, sans qu'aucun d'eux n'ait à
-   * y penser — l'oubli d'un seul filtre aurait suffi à fausser la recette.
-   */
+  /** Les précommandes de la soirée, **à part des commandes**. */
   preOrders: PreOrderTicket[];
   sellable: ApiSellableLine[];
   /** Soirée actuellement chargée, pour ne pas mélanger deux services. */
@@ -73,26 +65,17 @@ export const OrdersStore = signalStore(
   { providedIn: 'root' },
   withState(initial),
   withComputed((store) => ({
-    // Du plus ancien au plus récent : en cuisine, ce qui attend depuis le plus
-    // longtemps doit être en haut de colonne, sans avoir à faire défiler.
     pending: computed(() => byOldest(store.orders(), 'pending')),
     inProgress: computed(() => byOldest(store.orders(), 'in_progress')),
     ready: computed(() => byOldest(store.orders(), 'ready')),
 
-    /**
-     * ⚠️ Seules les précommandes **dues** entrent dans « En attente ». Les
-     * autres existent en base mais n'ont rien à faire sous les yeux de la
-     * cuisine : une file qui affiche des tickets à préparer dans trois heures
-     * n'est plus une file, c'est une liste.
-     */
     pendingPreOrders: computed(() =>
       byPickup(store.preOrders(), 'pending').filter((ticket) => ticket.due),
     ),
-    // Une fois démarrée, une précommande reste visible quoi qu'il arrive : elle
-    // est physiquement sur le plan de travail.
+
     inProgressPreOrders: computed(() => byPickup(store.preOrders(), 'in_progress')),
     readyPreOrders: computed(() => byPickup(store.preOrders(), 'ready')),
-    /** Ce que la cuisine a en charge — les trois colonnes non terminales. */
+
     activeCount: computed(
       () =>
         store.orders().filter((o) => o.status !== 'completed' && o.status !== 'cancelled').length,
@@ -122,9 +105,6 @@ export const OrdersStore = signalStore(
           loading: 'loaded',
         });
 
-        // Chargées à part, et l'échec est absorbé : une précommande manquante
-        // gêne le comptoir, une file de commandes vide arrête le service. Le
-        // chemin critique ne doit pas dépendre de l'accessoire.
         try {
           patchState(store, { preOrders: await lastValueFrom(preOrdersSvc.list(eventId)) });
         } catch {
@@ -138,11 +118,6 @@ export const OrdersStore = signalStore(
       }
     }
 
-    /**
-     * Insère ou remplace une commande — le même chemin sert au retour d'un appel
-     * et à un message poussé par le serveur, de sorte qu'un aller-retour local
-     * et une diffusion ne puissent pas produire deux états différents.
-     */
     function upsert(order: Order): void {
       patchState(store, (state) => {
         const known = state.orders.some((o) => o.id === order.id);
@@ -169,14 +144,6 @@ export const OrdersStore = signalStore(
       load,
       upsert,
       upsertPreOrder,
-
-      /**
-       * Relit le vendable seul, après une vente ou une production.
-       *
-       * Silencieux à dessein : un échec ici laisse la grille sur des chiffres
-       * légèrement anciens, ce qui est sans gravité. Poser `loadError`
-       * afficherait un refus rouge sur une caisse qui vient de réussir sa vente.
-       */
       async refreshSellable(eventId: string): Promise<void> {
         try {
           patchState(store, { sellable: await lastValueFrom(svc.sellable(eventId)) });
@@ -238,7 +205,7 @@ export const OrdersStore = signalStore(
         eventId: string,
         lines: readonly CheckoutLine[],
         clientId?: number | null,
-        paymentMethod: 'cash' | 'lydia' = 'cash',
+        paymentMethod: PaymentMethod = 'cash',
         sponsorshipCategoryId?: number | null,
       ): Promise<Order | null> {
         try {

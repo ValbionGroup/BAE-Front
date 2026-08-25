@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnInit, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideArrowRight,
   LucideChevronDown,
@@ -20,13 +30,12 @@ import { EventsStore } from '#core/store/events.store';
 import { MenuItem } from '#core/models/event.model';
 import { Btn, Badge, Kbd, formatCents } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
-import {
-  PaymentModal,
-  type PaymentMethod,
-} from '#shared/components/modal/payment-modal/payment-modal';
+import { PaymentModal } from '#shared/components/modal/payment-modal/payment-modal';
+import type { PaymentMethod } from '#core/models/order.model';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
 import type { Buyer, ScannedCategory } from '#core/services/buyers/buyers-service';
+import { WebsocketService } from '#core/services/websocket/websocket-service';
 
 @Component({
   selector: 'bfd-caisse',
@@ -40,6 +49,8 @@ export class Caisse implements OnInit {
   private readonly events = inject(EventsStore);
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modalService = inject(ModalService);
+  private readonly realtime = inject(WebsocketService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
     effect(() => {
@@ -57,13 +68,6 @@ export class Caisse implements OnInit {
      * La caisse suit la soirée en cours, sans geste d'ouverture : demander de
      * « lancer la session » alors que la soirée tourne déjà était une formalité
      * vide, et la seule façon de se tromper de soirée.
-     *
-     * ⚠️ Ici et non dans le store : `startSession()` déclenche deux chargements
-     * HTTP, qu'on ne veut pas voir partir depuis les autres pages — le store est
-     * `providedIn: 'root'`.
-     *
-     * La fermeture compte autant que l'ouverture : une soirée clôturée sort
-     * d'`activeEvent`, et la caisse ne doit pas continuer d'encaisser dessus.
      */
     effect(() => {
       const active = this.events.activeEvent();
@@ -74,6 +78,32 @@ export class Caisse implements OnInit {
       }
 
       if (this.store.sessionEventId() !== active.id) this.store.startSession(active.id);
+    });
+
+    /**
+     * L'issue d'un paiement par carte arrive par le websocket de la soirée : le
+     * terminal répond à SumUp, SumUp appelle le webhook, le serveur diffuse.
+     * Aucun sondage n'est fait ici — la caisse attend d'être prévenue.
+     */
+    effect(() => {
+      const eventId = this.store.sessionEventId();
+      if (!eventId) return;
+      untracked(() => void this.realtime.subscribeToEvent(eventId));
+    });
+
+    this.realtime.messages$.pipe(takeUntilDestroyed()).subscribe((message) => {
+      if (message.type !== 'card_payment.updated') return;
+
+      this.store.settleCardPayment(
+        message.payload.orderRef,
+        message.payload.status,
+        message.payload.order,
+      );
+    });
+
+    this.destroyRef.onDestroy(() => {
+      const eventId = this.store.sessionEventId();
+      if (eventId) void this.realtime.unsubscribeFromEvent(eventId);
     });
   }
 
@@ -118,8 +148,6 @@ export class Caisse implements OnInit {
   }
 
   protected onCategoryPicked(category: ScannedCategory): void {
-    // Le refus passe par le grand bandeau, pas par un toast : en plein rush, il
-    // doit se voir sans être cherché.
     if (!this.store.applyCategory(category)) return;
     this.pickingBuyer.set(false);
   }
@@ -128,10 +156,6 @@ export class Caisse implements OnInit {
   protected openPayment(): void {
     if (this.store.itemCount() === 0) return;
 
-    // Une commande entièrement prise en charge ne fait entrer aucun argent :
-    // demander « espèces ou Lydia ? » pour zéro euro est un geste de plus qui
-    // n'arbitre rien. La commande part quand même — c'est elle qui porte la
-    // créance du payeur.
     if (this.store.chargedTotal() === 0) {
       void this.checkout('cash');
       return;
@@ -162,15 +186,7 @@ export class Caisse implements OnInit {
     this.store.addToCart(item);
   }
 
-  /**
-   * Les raccourcis annoncés en pied de page.
-   *
-   * ⚠️ Ils sont posés sur `document`, donc ils entendent tout. Ce que la garde
-   * écarte : la frappe dans un champ (la recherche d'acheteur), une modale
-   * ouverte (le paiement a ses propres touches), et `Entrée` sur un bouton
-   * déjà ciblé — sans quoi la validation native et ce gestionnaire ouvriraient
-   * deux modales de paiement.
-   */
+  /** Les raccourcis annoncés en pied de page. */
   protected onKey(event: KeyboardEvent): void {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (this.modalService.modals().length > 0 || this.pickingBuyer()) return;
@@ -189,7 +205,7 @@ export class Caisse implements OnInit {
         return;
 
       case '+':
-      case '=': // même touche sans majuscule sur un clavier français
+      case '=':
         event.preventDefault();
         this.adjustActive(1);
         return;
@@ -222,12 +238,6 @@ export class Caisse implements OnInit {
     return this.store.stockByProduct().get(productId)?.level === 'low';
   }
 
-  /**
-   * ⚠️ Un bouton désactivé n'explique rien de lui-même, et au comptoir on
-   * cliquera dessus plusieurs fois avant de comprendre. L'infobulle distingue
-   * les deux causes : plus rien n'a été produit, ou le panier détient déjà tout
-   * ce qui restait.
-   */
   protected soldOutHint(productId: number): string | null {
     if (this.store.canAdd(productId)) return null;
     return this.store.remainingFor(productId) === 0 &&

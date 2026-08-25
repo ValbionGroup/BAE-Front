@@ -1,5 +1,6 @@
 import { Order } from '#core/models/order.model';
 import { PreOrderTicket } from '#core/models/pre-order.model';
+import type { CardPaymentStatus } from '#core/services/payments/card-payments-service';
 
 /**
  * Les diffusions du canal `events/:id/orders`, toutes porteuses de l'objet complet.
@@ -12,4 +13,12 @@ export type WsMessage =
   | { type: 'order.created'; payload: Order }
   | { type: 'order.updated'; payload: Order }
   | { type: 'order.cancelled'; payload: Order }
-  | { type: 'pre_order.updated'; payload: PreOrderTicket };
+  | { type: 'pre_order.updated'; payload: PreOrderTicket }
+  | {
+      type: 'card_payment.updated';
+      payload: {
+        orderRef: string;
+        status: CardPaymentStatus;
+        order: Order | null;
+      };
+    };

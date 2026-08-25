@@ -1,5 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { PaymentModal, type PaymentMethod } from './payment-modal';
+import { ModalService } from '../modal.service';
 
 describe(PaymentModal.name, () => {
   let fixture: ComponentFixture<PaymentModal>;
@@ -7,7 +11,10 @@ describe(PaymentModal.name, () => {
 
   beforeEach(async () => {
     paid = [];
-    await TestBed.configureTestingModule({ imports: [PaymentModal] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [PaymentModal],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PaymentModal);
     fixture.componentRef.setInput('id', 'm1');
@@ -72,5 +79,57 @@ describe(PaymentModal.name, () => {
 
     expect(text()).toContain('Montant insuffisant');
     expect(text()).toContain('2,50');
+  });
+
+  /**
+   * Le défaut visé : refermer l'écran d'attente **avant** que le paiement ait
+   * commencé.
+   *
+   * `cardPayment()` vaut `null` à deux moments opposés — « pas encore démarré »
+   * et « conclu ». Les confondre faisait disparaître la modale à l'instant même
+   * du clic, si bien que « Présentez la carte », puis « Vérifier l'état »,
+   * n'étaient jamais visibles.
+   */
+  it('garde l’écran d’attente ouvert le temps que le terminal démarre', async () => {
+    const modals = TestBed.inject(ModalService);
+    const closed: string[] = [];
+    modals.close = (id: string) => void closed.push(id);
+
+    // Un `onConfirm` qui ne se résout jamais : le paiement est « en vol ».
+    fixture.componentRef.setInput('onConfirm', () => new Promise<void>(() => {}));
+    fixture.detectChanges();
+
+    fixture.componentInstance['choose']('card');
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(closed).toEqual([]);
+    expect(text()).toContain('Présentez la carte');
+  });
+
+  /**
+   * Le défaut visé : un filet invisible. « Vérifier l'état » est le seul moyen
+   * de conclure un paiement quand le webhook n'arrive pas — s'il ne s'affiche
+   * jamais, une carte débitée reste sans commande.
+   */
+  it('propose de vérifier l’état après vingt secondes d’attente', async () => {
+    vi.useFakeTimers();
+    try {
+      fixture.componentRef.setInput('onConfirm', () => new Promise<void>(() => {}));
+      fixture.detectChanges();
+
+      fixture.componentInstance['choose']('card');
+      fixture.detectChanges();
+      expect(text()).not.toContain('Vérifier l’état');
+
+      vi.advanceTimersByTime(20_000);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance['canRecheck']()).toBe(true);
+      expect(text()).toContain('Vérifier l’état');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -529,6 +529,7 @@ export class SoireeLive implements OnInit {
         this.orders.upsertPreOrder(message.payload);
         return;
       }
+      if (message.type === 'card_payment.updated') return;
       this.orders.upsert(message.payload);
     });
 

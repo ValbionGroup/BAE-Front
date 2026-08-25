@@ -1,7 +1,7 @@
 <bfd-modal-shell
   [icon]="icCash"
   tone="blue"
-  [title]="step() === 'cash' ? 'Paiement en espèces' : 'Moyen de paiement'"
+  [title]="titleOf(step())"
   [width]="420"
   (close)="cancel()"
 >
@@ -20,7 +20,7 @@
 
       <div class="grid grid-cols-2 gap-2">
         <bae-btn
-          kind="primary"
+          kind="secondary"
           size="lg"
           [full]="true"
           [icon]="icCash"
@@ -32,12 +32,44 @@
           kind="secondary"
           size="lg"
           [full]="true"
+          [icon]="icCard"
+          [disabled]="submitting()"
+          (clicked)="choose('card')"
+          >CB</bae-btn
+        >
+        <bae-btn
+          class="col-span-2"
+          kind="primary"
+          size="lg"
+          [full]="true"
           [icon]="icLydia"
           [disabled]="true"
           title="L'encaissement Lydia attend l'accès à leur API."
           >Lydia</bae-btn
         >
       </div>
+    } @else if (step() === 'card') {
+      <div
+        class="flex flex-col items-center gap-3 rounded-md border border-blue bg-blue-soft/20 px-3 py-6"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="text-[15px] font-semibold text-text">Présentez la carte</div>
+        <div class="text-[12.5px] text-text-2">
+          Le paiement se fait sur le terminal. Cet écran se referme tout seul.
+        </div>
+      </div>
+
+      @if (canRecheck()) {
+        <div class="flex flex-col gap-1.5">
+          <p class="text-[11.5px] text-muted">
+            Le terminal met plus de temps que d’habitude à répondre.
+          </p>
+          <bae-btn kind="secondary" size="sm" [full]="true" (clicked)="recheck()">
+            Vérifier l’état du paiement
+          </bae-btn>
+        </div>
+      }
     } @else {
       <div class="flex flex-col gap-1.5">
         <label for="given" class="text-[12px] font-medium text-text">Montant remis</label>
@@ -56,7 +88,6 @@
         </div>
       </div>
 
-      <!-- Pavé de coupures : on tape ce que le client pose, ça s'additionne. -->
       <div class="grid grid-cols-3 gap-1.5">
         @for (amount of denominations; track amount) {
           <button
@@ -76,10 +107,6 @@
         <bae-btn kind="ghost" size="sm" (clicked)="clearGiven()">Effacer</bae-btn>
       </div>
 
-      <!-- Le rendu occupe la place du total : c'est le seul chiffre que la
-           personne au comptoir doit lire à cet instant. -->
-      <!-- ⚠️ Test explicite contre `null` : `@if (x; as y)` traiterait un rendu
-           de 0 comme absent, or le compte juste est le cas le plus fréquent. -->
       @let change = changeCents();
       @if (change === null) {
         <div class="rounded-md border border-dashed border-border-s px-3 py-3 text-center">
@@ -112,7 +139,9 @@
   </div>
 
   <div class="flex flex-1 justify-end gap-2" modal-footer>
-    @if (step() === 'cash') {
+    @if (step() === 'card') {
+      <bae-btn kind="ghost" (clicked)="cancelCard()">Annuler le paiement</bae-btn>
+    } @else if (step() === 'cash') {
       <bae-btn kind="ghost" [disabled]="submitting()" (clicked)="back()">Retour</bae-btn>
       <bae-btn kind="primary" [disabled]="!canConfirmCash()" (clicked)="pay('cash')">
         Encaisser {{ formatCents(totalCents()) }} €

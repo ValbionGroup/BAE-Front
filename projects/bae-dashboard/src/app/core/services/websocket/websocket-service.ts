@@ -4,21 +4,21 @@ import { Transmit, type Subscription } from '@adonisjs/transmit-client';
 import { WsMessage } from '#core/models/ws-message.model';
 import { toOrder, type ApiOrder } from '#core/services/orders/orders-service';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
+import type { CardPaymentStatus } from '#core/services/payments/card-payments-service';
 import { API_BASE_URL } from '@bae/ui';
 
-/**
- * Formes diffusées par le back (`orders_realtime.ts`) sur le canal d'une soirée.
- *
- * ⚠️ La charge utile ne s'appelle pas pareil selon l'événement (`order` contre
- * `preOrder`) : lire aveuglément `message.order` sur une diffusion de
- * précommande donnait un `undefined` qui explosait dans `toOrder`.
- */
+/** Formes diffusées par le back (`orders_realtime.ts`) sur le canal d'une soirée. */
 type OrdersBroadcast =
   | {
       readonly event: 'order.created' | 'order.updated' | 'order.cancelled';
       readonly order: ApiOrder;
     }
-  | { readonly event: 'pre_order.updated'; readonly preOrder: PreOrderTicket };
+  | { readonly event: 'pre_order.updated'; readonly preOrder: PreOrderTicket }
+  | {
+      readonly event: 'card_payment.updated';
+      readonly cardPayment: { orderRef: string; status: CardPaymentStatus };
+      readonly order: ApiOrder | null;
+    };
 
 @Injectable({ providedIn: 'root' })
 export class WebsocketService {
@@ -30,7 +30,6 @@ export class WebsocketService {
   private transmit?: Transmit;
   private readonly subscriptions = new Map<string, Subscription>();
 
-  /** `EventSource` n'existe ni sous jsdom ni en rendu serveur. */
   isSupported(): boolean {
     return typeof globalThis !== 'undefined' && 'EventSource' in globalThis;
   }
@@ -38,11 +37,6 @@ export class WebsocketService {
   initialize(): void {
     if (this.transmit || !this.isSupported()) return;
 
-    // ⚠️ Plus aucun en-tête à poser : le jeton vit dans un cookie `httpOnly`.
-    // Transmit crée déjà ses requêtes avec `credentials: 'include'` et son
-    // `EventSource` avec `withCredentials: true` — le cookie part donc seul, y
-    // compris vers une autre origine. Les hooks `beforeSubscribe` /
-    // `beforeUnsubscribe` n'ont plus d'objet et ont été retirés.
     this.transmit = new Transmit({
       baseUrl: this.baseUrl.replace(/\/v1$/, ''),
     });
@@ -68,11 +62,21 @@ export class WebsocketService {
     await subscription.create();
 
     subscription.onMessage<OrdersBroadcast>((message) => {
-      this._messages$.next(
-        message.event === 'pre_order.updated'
-          ? { type: message.event, payload: message.preOrder }
-          : { type: message.event, payload: toOrder(message.order) },
-      );
+      if (message.event === 'pre_order.updated') {
+        this._messages$.next({ type: message.event, payload: message.preOrder });
+        return;
+      }
+      if (message.event === 'card_payment.updated') {
+        this._messages$.next({
+          type: message.event,
+          payload: {
+            ...message.cardPayment,
+            order: message.order ? toOrder(message.order) : null,
+          },
+        });
+        return;
+      }
+      this._messages$.next({ type: message.event, payload: toOrder(message.order) });
     });
   }
 

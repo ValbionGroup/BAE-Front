@@ -2,9 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
-import { Order, OrderStatus } from '#core/models/order.model';
-
-// Les clés arrivent en camelCase : l'apiResponseCaseInterceptor convertit.
+import { Order, OrderStatus, PaymentMethod } from '#core/models/order.model';
 
 export interface ApiOrderLine {
   readonly productId: number;
@@ -25,7 +23,6 @@ export interface ApiOrder {
   readonly updatedAt: string | null;
 }
 
-/** Ce qu'il reste à vendre, par recette. */
 export interface ApiSellableLine {
   readonly productId: number;
   readonly productName: string;
@@ -76,7 +73,7 @@ export class OrdersService {
     eventId: string,
     lines: readonly CheckoutLine[],
     clientId?: number | null,
-    paymentMethod: 'cash' | 'lydia' = 'cash',
+    paymentMethod: PaymentMethod = 'cash',
     sponsorshipCategoryId?: number | null,
   ): Observable<ApiOrder> {
     return this.http.post<ApiOrder>(`${this.baseUrl}/events/${eventId}/orders`, {
