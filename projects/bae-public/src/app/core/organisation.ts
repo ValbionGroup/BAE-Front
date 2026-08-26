@@ -17,15 +17,6 @@ export const ORGANISATION = {
   email: 'bae.enseirb@gmail.com',
 } as const;
 
-/**
- * Deux rôles qu'EirbWare cumulait jusqu'au 2026-08-26 et qu'il ne faut plus
- * confondre : l'hébergement est passé chez Dyjix, mais EirbConnect — donc toute
- * l'authentification — reste opéré par EirbWare. Une phrase des pages légales
- * parle de l'un ou de l'autre, jamais des deux.
- *
- * La bascule est présentée comme provisoire : un retour de l'hébergement chez
- * EirbWare consiste à réécrire ce seul objet.
- */
 export const HOSTING_PROVIDER = {
   name: 'Dyjix',
   legalName: 'Dyjix SAS',
