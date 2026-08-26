@@ -16,6 +16,7 @@ import {
   LucideCalendar,
   LucideCheck,
   LucideDynamicIcon,
+  LucideLink2,
   LucidePlus,
   LucideScanLine,
   LucideTrash2,
@@ -29,10 +30,18 @@ import { BarcodeScannerService } from '#core/services/barcode/barcode-scanner-se
 import { Btn, Badge, Field, Input, ToastService, messageOf } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { GoodPickerModal } from '#shared/components/modal/good-picker-modal/good-picker-modal';
 import type { StockProduct } from '../stocks.types';
 
-/** `goodId` à `null` : code non rattaché, la ligne propose la création et ne
- *  part pas en stock. */
+/**
+ * Une ligne de la session, dans l'un de **trois** états :
+ *
+ * - `goodId` à `null` — code non rattaché : la ligne propose de le rattacher ou
+ *   de créer l'aliment, et ne part pas en stock ;
+ * - `goodId` posé et `attachPending` — l'aliment est choisi mais le code n'est
+ *   pas encore écrit : il le sera à la validation, jamais avant ;
+ * - `goodId` posé seul — l'API connaissait déjà le code.
+ */
 export interface ScanLine {
   readonly barcode: string;
   readonly goodId: number | null;
@@ -40,6 +49,8 @@ export interface ScanLine {
   readonly quantity: number;
   /** `YYYY-MM-DD`, ou `''` tant que la DLC n'est pas saisie. */
   readonly expirationDate: string;
+  /** Rattachement décidé ici, pas encore envoyé au serveur. */
+  readonly attachPending: boolean;
 }
 
 import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
@@ -102,6 +113,7 @@ export class StocksScanner {
   protected readonly icAlert = LucideTriangleAlert;
   protected readonly icCalendar = LucideCalendar;
   protected readonly icPlus = LucidePlus;
+  protected readonly icLink = LucideLink2;
   protected readonly icTrash = LucideTrash2;
 
   private readonly cameraStarted = signal(false);
@@ -122,6 +134,11 @@ export class StocksScanner {
 
   protected readonly unknownCount = computed(
     () => this.lines().filter((line) => line.goodId === null).length,
+  );
+
+  /** Rattachements décidés, encore à écrire — le bandeau les annonce. */
+  protected readonly pendingAttachCount = computed(
+    () => this.lines().filter((line) => line.attachPending).length,
   );
 
   protected onManualCode(value: string): void {
@@ -158,6 +175,7 @@ export class StocksScanner {
           name: good?.name ?? 'Produit inconnu',
           quantity: 1,
           expirationDate: '',
+          attachPending: false,
         },
         ...lines,
       ]);
@@ -189,28 +207,57 @@ export class StocksScanner {
     this.saveError.set(null);
   }
 
+  /**
+   * Le code inconnu a deux issues, et le choix par défaut est le rattachement :
+   * créer d'emblée fabriquait un doublon dès qu'un aliment déjà au catalogue se
+   * présentait sous un second conditionnement.
+   */
+  protected resolveUnknown(barcode: string): void {
+    this.modals.open({
+      type: 'component',
+      component: GoodPickerModal,
+      inputs: {
+        barcode,
+        picked: (product: StockProduct) => this.attach(barcode, product, true),
+        createInstead: () => this.createUnknown(barcode),
+      },
+    });
+  }
+
   protected createUnknown(barcode: string): void {
     this.modals.open({
       type: 'component',
       component: GoodCreateModal,
       inputs: {
         barcode,
-        created: (product: StockProduct) => this.attach(barcode, product),
+        created: (product: StockProduct) => this.attach(barcode, product, false),
       },
     });
   }
 
   /**
-   * Rattache le produit tout juste créé à la ligne qui l'a demandé.
+   * Rattache un produit à la ligne qui l'a demandé.
    *
-   * Sans cela la ligne resterait « à créer » : elle ne connaît que le code, et
-   * `POST /goods` ne dit à personne qu'il vient de le rattacher.
+   * `pending` distingue les deux origines : une **création** a déjà posé le code
+   * en base (`POST /goods` le porte), alors qu'un **rattachement** à un aliment
+   * existant reste à écrire — d'où le report à la validation. Sans ce drapeau,
+   * la validation reposterait le code d'un produit qui l'a déjà et se ferait
+   * refuser par sa propre contrainte d'unicité.
    */
-  private attach(barcode: string, product: StockProduct): void {
+  private attach(barcode: string, product: StockProduct, pending: boolean): void {
     this.lines.update((lines) =>
       lines.map((line) =>
-        line.barcode === barcode ? { ...line, goodId: product.id, name: product.name } : line,
+        line.barcode === barcode
+          ? { ...line, goodId: product.id, name: product.name, attachPending: pending }
+          : line,
       ),
+    );
+  }
+
+  /** Le code est écrit : une reprise après échec du lot ne doit pas le reposter. */
+  private markAttached(barcode: string): void {
+    this.lines.update((lines) =>
+      lines.map((line) => (line.barcode === barcode ? { ...line, attachPending: false } : line)),
     );
   }
 
@@ -227,6 +274,18 @@ export class StocksScanner {
     let saved = 0;
     let failed: string | null = null;
     for (const line of this.ready()) {
+      // Le code d'abord : un lot entré sur une denrée dont le rattachement vient
+      // d'être refusé porterait sur le mauvais aliment.
+      if (line.attachPending) {
+        try {
+          await lastValueFrom(this.svc.attachBarcode(line.goodId as number, line.barcode));
+          this.markAttached(line.barcode);
+        } catch (error) {
+          failed = messageOf(error, "Ce code-barres n'a pas pu être rattaché.");
+          continue;
+        }
+      }
+
       try {
         await lastValueFrom(
           this.svc.createBatch({
@@ -238,6 +297,8 @@ export class StocksScanner {
         this.remove(line.barcode);
         saved += 1;
       } catch (error) {
+        // Le rattachement qui vient de réussir, lui, reste acquis : c'est une
+        // information juste, et `markAttached` évite qu'une reprise le repose.
         failed = messageOf(error, "Certains lots n'ont pas pu être enregistrés.");
       }
     }

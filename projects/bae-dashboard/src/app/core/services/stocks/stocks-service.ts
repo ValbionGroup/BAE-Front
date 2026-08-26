@@ -69,6 +69,9 @@ export interface ApiCreatedGood {
   readonly unit: string;
   readonly brand: string | null;
   readonly categoryId: number;
+  /** Tous les codes de la denrée : un aliment se vend sous plusieurs
+   *  conditionnements, donc sous plusieurs EAN. Vide si aucun. */
+  readonly barcodes: readonly string[];
 }
 
 /** Contrainte `goods_unit_check` : un enum en base, pas du texte libre. */
@@ -88,8 +91,8 @@ export interface CreateGoodPayload {
   readonly unit: GoodUnit;
   readonly brand: string;
   readonly categoryId: number;
-  /** `null` quand le produit n'a pas été créé depuis un scan. */
-  readonly barcode: string | null;
+  /** Vide quand le produit n'a pas été créé depuis un scan. */
+  readonly barcodes: readonly string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -110,9 +113,18 @@ export class StocksService {
   }
 
   /** Liste vide si le code n'est rattaché à rien : réponse normale, pas une
-   *  erreur — c'est elle qui déclenche la création. */
+   *  erreur — c'est elle qui déclenche le rattachement ou la création. */
   findByBarcode(barcode: string): Observable<ApiCreatedGood[]> {
     return this.http.get<ApiCreatedGood[]>(`${this.baseUrl}/goods`, { params: { barcode } });
+  }
+
+  /** Rattache un code lu à une denrée déjà au catalogue. Refus `E_BARCODE_TAKEN`
+   *  si une autre denrée l'a pris entre le scan et la validation. */
+  attachBarcode(goodId: number, code: string): Observable<{ goodId: number; code: string }> {
+    return this.http.post<{ goodId: number; code: string }>(
+      `${this.baseUrl}/goods/${goodId}/barcodes`,
+      { code },
+    );
   }
 
   /** Entre un lot en stock. `expirationDate` est un `YYYY-MM-DD`, ou `null`. */

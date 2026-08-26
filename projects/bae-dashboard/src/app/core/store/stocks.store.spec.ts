@@ -126,7 +126,7 @@ describe(StocksStore.name, () => {
       unit: 'pcs',
       brand: '',
       categoryId: 2,
-      barcode: null,
+      barcodes: [],
     });
     http.expectOne(`${baseUrl}/goods`).flush({
       id: 9,
@@ -134,7 +134,7 @@ describe(StocksStore.name, () => {
       unit: 'pcs',
       brand: '',
       categoryId: 2,
-      barcode: null,
+      barcodes: [],
     });
     await created;
 
@@ -150,7 +150,7 @@ describe(StocksStore.name, () => {
       unit: 'pcs',
       brand: '',
       categoryId: 2,
-      barcode: null,
+      barcodes: [],
     });
     http
       .expectOne(`${baseUrl}/goods`)
@@ -178,7 +178,7 @@ describe(StocksStore.name, () => {
       unit: 'pcs',
       brand: '',
       categoryId: 2,
-      barcode: null,
+      barcodes: [],
     });
     http
       .expectOne(`${baseUrl}/goods`)

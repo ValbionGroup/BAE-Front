@@ -77,7 +77,7 @@ export class GoodCreateModal {
       // `''` et non `null` : la colonne est `NOT NULL` côté base.
       brand: this.brand().trim(),
       categoryId: Number(this.categoryId()),
-      barcode: this.barcode(),
+      barcodes: this.barcode() ? [this.barcode() as string] : [],
     });
 
     if (!product) return;
