@@ -10,6 +10,12 @@ import { findA11yViolations } from '@bae/ui/testing';
 
 const baseUrl = 'http://api.test/v1';
 const returnsUrl = `${baseUrl}/events/9/production-returns`;
+/**
+ * ⚠️ La modale ne rend pas que des denrées : elle **clôture**. Le toast disait
+ * « Soirée clôturée » alors que rien n'appelait `/settle` — la soirée restait
+ * ouverte, la caisse aussi. C'est cet appel qui fait de ce modal la clôture.
+ */
+const settleUrl = `${baseUrl}/events/9/settle`;
 
 /** Deux denrées prélevées, rien encore rendu. */
 const RETURNABLE = [
@@ -59,6 +65,13 @@ describe(ProductionReturnModal.name, () => {
     await fixture.whenStable();
   }
 
+  /** Répond à la clôture, qui suit toujours les retours. */
+  function flushSettle(): void {
+    http
+      .expectOne(settleUrl)
+      .flush({ settled: 0, alreadySettled: 0, totalDelta: 0, status: 'completed' });
+  }
+
   /**
    * Le défaut visé : lire `eventId()` à un moment où l'input n'est pas encore
    * posé. La modale n'émettait alors aucune requête et affichait son message
@@ -84,7 +97,59 @@ describe(ProductionReturnModal.name, () => {
 
     const submitted = component['submit']();
     http.expectNone(returnsUrl);
+    flushSettle();
     await submitted;
+  });
+
+  /**
+   * La clôture proprement dite : les retours d'abord, `/settle` ensuite.
+   *
+   * L'ordre n'est pas indifférent — le serveur refuse les écritures de service
+   * sur une soirée `completed`, donc clôturer avant recréditerait dans le vide.
+   */
+  it('rend les denrées puis clôture la soirée', async () => {
+    await loadReturnable();
+    const closeSpy = vi.spyOn(TestBed.inject(ModalService), 'close');
+
+    component['setQuantity'](12, '5');
+
+    const submitted = component['submit']();
+    http.expectOne(returnsUrl).flush({ credited: 5 });
+    await fixture.whenStable();
+    flushSettle();
+    await submitted;
+
+    expect(component['error']()).toBeNull();
+    expect(closeSpy).toHaveBeenCalledWith('modal-id');
+  });
+
+  /**
+   * Le cas qui ferait le plus de dégâts en silence : les retours passent, la
+   * clôture non. La modale doit rester ouverte **et** dire que les denrées,
+   * elles, sont bien enregistrées — les resaisir les créditerait deux fois.
+   */
+  it('garde la modale ouverte quand la clôture échoue, sans nier les retours', async () => {
+    await loadReturnable();
+    const closeSpy = vi.spyOn(TestBed.inject(ModalService), 'close');
+
+    component['setQuantity'](12, '5');
+
+    const submitted = component['submit']();
+    http.expectOne(returnsUrl).flush({ credited: 5 });
+    await fixture.whenStable();
+    http
+      .expectOne(settleUrl)
+      .flush(
+        { code: 'E_EVENT_CLOSED', message: 'Cette soirée est clôturée.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await submitted;
+
+    expect(closeSpy).not.toHaveBeenCalled();
+    // Les deux moitiés : la raison du serveur, et le sort des denrées déjà
+    // créditées. `messageOf` seul ne rendait que la première.
+    expect(component['error']()).toContain('Cette soirée est clôturée.');
+    expect(component['error']()).toContain('ne les ressaisissez pas');
   });
 
   /**

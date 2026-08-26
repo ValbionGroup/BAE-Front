@@ -8,6 +8,10 @@ import { Caisse } from './caisse';
 import { CaisseStore } from '#core/store/caisse.store';
 import { EventsStore } from '#core/store/events.store';
 import { ModalService } from '#shared/components/modal/modal.service';
+import { WebsocketService } from '#core/services/websocket/websocket-service';
+import type { WsMessage } from '#core/models/ws-message.model';
+import { STOCK_AUDIT_MS } from '#shared/utils/stock-level';
+import { Subject } from 'rxjs';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -92,6 +96,31 @@ describe(Caisse.name, () => {
   });
 
   /**
+   * Le chemin réel de la clôture, celui qui manquait : `closeEvent` patche
+   * `status` **sur place** après la réponse du serveur. Sans ce patch il aurait
+   * fallu recharger la page pour que la caisse se ferme — et le comptoir a
+   * continué d'encaisser sur une soirée clôturée pendant tout ce temps.
+   */
+  it('referme la caisse dès que la clôture aboutit, sans rechargement', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    expect(store.sessionActive()).toBe(true);
+
+    const closing = TestBed.inject(EventsStore).closeEvent('7');
+    http
+      .expectOne((r) => r.url.endsWith('/events/7/settle'))
+      .flush({ settled: 0, alreadySettled: 0, totalDelta: 0, status: 'completed' });
+    await closing;
+    fixture.detectChanges();
+
+    expect(store.sessionActive()).toBe(false);
+  });
+
+  /**
    * ⚠️ `startSession` ne remettait à zéro ni l'acheteur ni la catégorie de prise
    * en charge. Inoffensif tant que l'ouverture était manuelle et unique ; avec
    * une ouverture automatique qui peut enchaîner deux soirées, la remise du BDE
@@ -118,7 +147,7 @@ describe(Caisse.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain("Aucune soirée n'est programmée");
+    expect(text).toContain("Aucune soirée n'est ouverte");
     expect(text).not.toContain('Lancer la session');
   });
 
@@ -139,7 +168,7 @@ describe(Caisse.name, () => {
     fixture.detectChanges();
 
     expect(store.todayEvent()).toBeNull();
-    expect(fixture.nativeElement.textContent as string).toContain("Aucune soirée n'est programmée");
+    expect(fixture.nativeElement.textContent as string).toContain("Aucune soirée n'est ouverte");
   });
 
   /** Une soirée explicitement ouverte prime, même si une autre est datée du jour. */
@@ -159,19 +188,41 @@ describe(Caisse.name, () => {
   /**
    * `new Date()` sur une date absente donne `Invalid Date`, dont `getTime()`
    * vaut `NaN` : un comparateur qui rend `NaN` laisse le tri ne rien
-   * réordonner, et n'importe quelle soirée peut sortir en tête.
+   * réordonner, et n'importe quelle soirée peut sortir en tête. Le départage ne
+   * porte plus que sur des soirées **ouvertes**, mais il porte toujours.
    */
   it('does not let an unparseable date decide which soirée wins', async () => {
     const store = TestBed.inject(CaisseStore);
     http
       .expectOne((r) => r.url.endsWith('/events'))
       .flush([
-        { id: '40', name: 'Sans date', date: null, status: 'scheduled' },
-        { id: '41', name: 'Ce soir', date: atHour(0), status: 'scheduled' },
+        { id: '40', name: 'Sans date', date: null, status: 'ongoing' },
+        { id: '41', name: 'Ce soir', date: atHour(0), status: 'ongoing' },
       ]);
     await settle();
 
     expect(store.todayEvent()?.name).toBe('Ce soir');
+  });
+
+  /**
+   * ⚠️ **Le défaut rapporté le 2026-08-26.** Une soirée simplement programmée
+   * pour aujourd'hui ouvrait la caisse toute seule, à minuit, sans que personne
+   * ne l'ait lancée — « la caisse est active avec la prochaine soirée comme si
+   * elle était ouverte ». La règle de repli « non clôturée, datée
+   * d'aujourd'hui » avait sa raison d'être tant que rien ne pouvait ouvrir une
+   * soirée ; depuis `POST /events/:id/open`, elle rend l'ouverture décorative.
+   */
+  it('n’ouvre pas la caisse sur une soirée du jour que personne n’a lancée', async () => {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '50', name: 'Prévue ce soir', date: atHour(0), status: 'scheduled' }]);
+    await settle();
+    fixture.detectChanges();
+
+    expect(store.todayEvent()).toBeNull();
+    expect(store.sessionActive()).toBe(false);
+    expect(fixture.nativeElement.textContent as string).not.toContain('Prévue ce soir');
   });
 
   /**
@@ -221,7 +272,7 @@ describe(Caisse.name, () => {
         { id: '8', name: 'Gala lointain', date: atHour(400), status: 'scheduled' },
         { id: '9', name: 'Hier', date: atHour(-1), status: 'scheduled' },
         { id: '10', name: 'Clôturée ce soir', date: atHour(0), status: 'completed' },
-        { id: '11', name: 'Ce soir', date: atHour(0), status: 'scheduled' },
+        { id: '11', name: 'Ce soir', date: atHour(0), status: 'ongoing' },
       ]);
     await settle();
 
@@ -648,5 +699,71 @@ describe(Caisse.name, () => {
       expect(event.defaultPrevented).toBe(false);
       expect(store.activeCategory()).toBeNull();
     });
+  });
+});
+
+/**
+ * La caisse ne relisait le stock qu'après **ses propres** encaissements. Deux
+ * comptoirs sur la même soirée se croyaient donc chacun seul : `canAdd`
+ * autorisait de vendre un article que l'autre venait d'épuiser, jusqu'au
+ * rechargement de la page.
+ */
+describe(`${Caisse.name} — le stock suit les ventes des autres postes`, () => {
+  class FakeRealtime {
+    readonly bus = new Subject<WsMessage>();
+    readonly messages$ = this.bus.asObservable();
+    subscribeToEvent(): Promise<void> {
+      return Promise.resolve();
+    }
+    unsubscribeFromEvent(): Promise<void> {
+      return Promise.resolve();
+    }
+  }
+
+  let fixture: ComponentFixture<Caisse>;
+  let http: HttpTestingController;
+  let realtime: FakeRealtime;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    realtime = new FakeRealtime();
+    await TestBed.configureTestingModule({
+      imports: [Caisse],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WebsocketService, useValue: realtime },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Caisse);
+    http = TestBed.inject(HttpTestingController);
+    await fixture.whenStable();
+
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '7', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    fixture.detectChanges();
+    await settle();
+    // La session s'ouvre par un `effect` : vider ce qu'elle déclenche, sinon la
+    // `/sellable` d'ouverture se compte comme une relecture temps réel.
+    for (const request of http.match(() => true)) request.flush([]);
+    await settle();
+  });
+
+  afterEach(() => {
+    TestBed.inject(CaisseStore).endSession();
+  });
+
+  it('relit le stock quand un autre poste encaisse', async () => {
+    realtime.bus.next({
+      type: 'order.created',
+      payload: { id: 99, lines: [] } as never,
+    });
+    await new Promise((resolve) => setTimeout(resolve, STOCK_AUDIT_MS + 120));
+
+    expect(http.match((r) => r.url.includes('/events/7/sellable')).length).toBe(1);
   });
 });

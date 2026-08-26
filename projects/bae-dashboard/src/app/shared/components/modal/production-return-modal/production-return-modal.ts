@@ -16,6 +16,7 @@ import {
   type ReturnableGood,
 } from '#core/services/production/production-service';
 import { PrintService } from '#core/services/print/print-service';
+import { EventsStore } from '#core/store/events.store';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -29,6 +30,10 @@ interface ReturnLine {
 }
 
 /**
+ * **La clôture de soirée**, et pas seulement les retours de denrées : ce modal
+ * enregistre ce qui n'a pas servi, puis appelle `EventsStore.closeEvent`, qui
+ * consolide les points et passe la soirée en `completed`.
+ *
  * Fin de soirée : ce qui n'a pas servi repart en réserve, ou au rebut.
  *
  * ⚠️ **Le rebut n'écrit rien, et l'écran le dit.** La sortie de stock a eu lieu
@@ -58,6 +63,7 @@ export class ProductionReturnModal {
   private readonly production = inject(ProductionService);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
+  private readonly events = inject(EventsStore);
 
   protected readonly icPackage = LucidePackageOpen;
   protected readonly icDownload = LucideDownload;
@@ -141,6 +147,31 @@ export class ProductionReturnModal {
       if (credits.length > 0) {
         await lastValueFrom(this.production.commitReturns(this.eventId(), credits));
       }
+
+      // La clôture elle-même, et l'unique appelant de `closeEvent`.
+      //
+      // ⚠️ Le toast disait « Soirée clôturée » alors que **rien** n'était
+      // clôturé : ce modal ne faisait que rendre les denrées. Rien n'appelait
+      // `/settle`, `events.status` ne bougeait pas, la caisse restait ouverte.
+      //
+      // L'ordre compte : les retours d'abord, la clôture ensuite. Le serveur
+      // refuse les écritures de service sur une soirée `completed`, donc
+      // clôturer avant recréditerait dans le vide.
+      const closed = await this.events.closeEvent(this.eventId());
+      if (!closed.ok) {
+        // ⚠️ **Composer, pas choisir.** `messageOf` préfère le message du
+        // serveur au repli : dire seulement « la clôture a échoué » laisserait
+        // croire que rien n'a été écrit, et l'opérateur ressaisirait ses
+        // comptages — deuxième crédit sur les mêmes denrées.
+        const reason = messageOf(closed.error, 'La clôture a échoué.');
+        this.error.set(
+          credits.length > 0
+            ? `${reason} Les retours, eux, sont enregistrés : ne les ressaisissez pas.`
+            : reason,
+        );
+        return;
+      }
+
       const discarded = this.discardedCount();
       this.toast.show({
         type: 'success',

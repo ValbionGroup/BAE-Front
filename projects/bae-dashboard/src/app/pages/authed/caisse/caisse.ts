@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, auditTime } from 'rxjs';
 import {
   LucideArrowRight,
   LucideChevronDown,
@@ -36,6 +37,7 @@ import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
 import type { Buyer, ScannedCategory } from '#core/services/buyers/buyers-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
+import { STOCK_AUDIT_MS } from '#shared/utils/stock-level';
 
 @Component({
   selector: 'bfd-caisse',
@@ -51,6 +53,9 @@ export class Caisse implements OnInit {
   private readonly modalService = inject(ModalService);
   private readonly realtime = inject(WebsocketService);
   private readonly destroyRef = inject(DestroyRef);
+
+  /** Les ventes venues du fil, regroupées avant relecture — cf. `STOCK_AUDIT_MS`. */
+  private readonly soldSomething = new Subject<void>();
 
   constructor() {
     effect(() => {
@@ -92,6 +97,15 @@ export class Caisse implements OnInit {
     });
 
     this.realtime.messages$.pipe(takeUntilDestroyed()).subscribe((message) => {
+      // Une vente encaissée **ailleurs** — un second comptoir, la cuisine qui
+      // annule — change ce qui reste à vendre ici. La caisse ne relisait le
+      // stock qu'après ses propres encaissements : deux postes se croyaient
+      // chacun seul, et `canAdd` laissait vendre un article déjà épuisé.
+      if (message.type === 'order.created' || message.type === 'order.cancelled') {
+        this.soldSomething.next();
+        return;
+      }
+
       if (message.type !== 'card_payment.updated') return;
 
       this.store.settleCardPayment(
@@ -101,14 +115,24 @@ export class Caisse implements OnInit {
       );
     });
 
+    this.soldSomething
+      .pipe(auditTime(STOCK_AUDIT_MS), takeUntilDestroyed())
+      .subscribe(() => this.store.refreshStock());
+
     this.destroyRef.onDestroy(() => {
       const eventId = this.store.sessionEventId();
       if (eventId) void this.realtime.unsubscribeFromEvent(eventId);
     });
   }
 
+  /**
+   * `refresh()` et non `load()` : un écran de service doit relire l'état des
+   * soirées à chaque entrée. `load()` sort sans rien faire une fois le
+   * dictionnaire chargé, si bien qu'une soirée clôturée ailleurs restait « en
+   * cours » ici jusqu'à un rechargement complet de la page.
+   */
   ngOnInit(): void {
-    void this.events.load();
+    void this.events.refresh();
   }
 
   /** « cotisation valide jusqu'au … » de la maquette, alimenté par le fast pass. */

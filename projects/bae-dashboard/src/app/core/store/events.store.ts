@@ -1,7 +1,7 @@
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { computed, inject } from '@angular/core';
 import { EventsService } from '#core/services/events/events-service';
-import { EventDetail, MenuItem, Presence, RosterRow } from '#core/models/event.model';
+import { EventDetail, EventStatus, MenuItem, Presence, RosterRow } from '#core/models/event.model';
 import { LogistiqueService } from '#core/services/logistique/logistique-service';
 import { lastValueFrom } from 'rxjs';
 import { LoadingStatus } from '#core/models/global.model';
@@ -22,6 +22,14 @@ import { messageOf } from '@bae/ui';
  * compiling and behaving exactly as before; those that care read `ok`.
  */
 export type PresenceUpdateResult = { ok: true } | { ok: false; error: unknown };
+
+/**
+ * Même forme, et pour la même raison : les deux écritures d'état répondent 409
+ * avec une phrase française lisible (`E_EVENT_ALREADY_OPEN`, `E_EVENT_CLOSED`)
+ * que l'écran doit montrer. Une promesse rejetée serait avalée par les
+ * appelants qui n'attendent pas.
+ */
+export type EventStatusResult = PresenceUpdateResult;
 
 interface EventsState {
   readonly loading: LoadingStatus;
@@ -75,16 +83,6 @@ function earliest(events: readonly EventDetail[]): EventDetail | null {
   return [...datable].sort((a, b) => a.date.getTime() - b.date.getTime())[0];
 }
 
-/** Même jour civil, dans le fuseau du navigateur — celui de la personne au comptoir. */
-function isSameDay(a: Date, b: Date): boolean {
-  if (!isValidDate(a) || !isValidDate(b)) return false;
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
 export const EventsStore = signalStore(
   { providedIn: 'root' },
   withState<EventsState>(initialState),
@@ -95,40 +93,37 @@ export const EventsStore = signalStore(
      * **La** soirée du service en cours — source unique pour la vue live, la
      * caisse et les commandes.
      *
-     * Deux règles, dans cet ordre :
+     * Une seule règle : une soirée **explicitement `ongoing`**, c'est-à-dire que
+     * quelqu'un a ouverte. `null` sinon, et les écrans doivent alors **le dire**
+     * plutôt que d'en inventer une.
      *
-     * 1. une soirée explicitement `ongoing` — le bureau l'a ouverte, elle prime ;
-     * 2. sinon, une soirée non clôturée **datée d'aujourd'hui**.
+     * ⚠️ **Il y avait une seconde règle, et c'était un piège** : « sinon, une
+     * soirée non clôturée datée d'aujourd'hui ». Elle avait sa raison d'être —
+     * rien ne pouvait ouvrir une soirée, alors la date en tenait lieu. Depuis
+     * que `POST /events/:id/open` existe, elle rend l'ouverture décorative : la
+     * caisse s'ouvrait **d'elle-même à minuit** le jour de la soirée, sur une
+     * soirée que personne n'avait lancée, et l'écran affichait un comptoir prêt
+     * à encaisser. C'est le défaut rapporté — « la page live et la caisse sont
+     * actives avec la prochaine soirée comme si elle était ouverte ».
      *
-     * `null` sinon, et les écrans doivent alors **le dire** plutôt que d'en
-     * inventer une.
+     * Le chemin pour entrer dans le service passe désormais par l'état vide de
+     * `soiree/live`, qui propose d'ouvrir les soirées d'hier ou d'aujourd'hui.
+     *
+     * Effet de bord voulu : une soirée qui **déborde minuit** ne se ferme plus
+     * toute seule. `ongoing` ne regarde pas la date.
      *
      * ⚠️ **Surtout pas « la plus proche à venir ».** C'est ce qu'une première
      * version faisait, et la caisse proposait alors d'encaisser sur une soirée
-     * de 2027. Le nom de `CaisseStore.todayEvent` et le texte de son état vide
-     * (« Aucune soirée n'est programmée pour aujourd'hui ») disaient déjà la
-     * bonne règle. Préparer une soirée future est le rôle de la Logistique, pas
+     * de 2027. Préparer une soirée future est le rôle de la Logistique, pas
      * celui d'un écran de service.
      *
      * ⚠️ Cette dérivation vit ici et nulle part ailleurs. Deux calculs séparés
      * finiraient par diverger, et on encaisserait sur une soirée pendant qu'on
      * produirait pour une autre.
-     *
-     * Elle remplace `EventsService.currentActiveEvent`, qui était un
-     * `computed(() => null)` inconditionnel — et rendait la caisse
-     * **inatteignable depuis toujours**, quel que soit l'état des soirées.
      */
     const activeEvent = computed<EventDetail | null>(() => {
-      const all = allEvents();
-
-      const ongoing = all.filter((event) => event.status === 'ongoing');
-      if (ongoing.length > 0) return earliest(ongoing);
-
-      const now = new Date();
-      const today = all.filter(
-        (event) => event.status !== 'completed' && isSameDay(event.date, now),
-      );
-      return today.length > 0 ? earliest(today) : null;
+      const ongoing = allEvents().filter((event) => event.status === 'ongoing');
+      return ongoing.length > 0 ? earliest(ongoing) : null;
     });
 
     return {
@@ -197,9 +192,49 @@ export const EventsStore = signalStore(
       }
     }
 
+    /**
+     * Le seul écrivain de `status` côté front, et **la** raison pour laquelle
+     * clôturer ferme enfin quelque chose : `activeEvent` recalcule, l'`effect`
+     * de la caisse appelle `endSession()`, la vue live se vide. Sans ce patch il
+     * faudrait recharger la page pour voir l'état changer.
+     */
+    function patchStatus(eventId: string, status: EventStatus): void {
+      const current = store.events()[eventId];
+      if (!current) return;
+      patchState(store, {
+        events: { ...store.events(), [eventId]: { ...current, status } },
+      });
+    }
+
     return {
       getEventById(id: string): EventDetail | undefined {
         return store.events()[id];
+      },
+
+      /** `scheduled` → `ongoing`. Le serveur tient l'unicité de la soirée ouverte. */
+      async openEvent(eventId: string): Promise<EventStatusResult> {
+        try {
+          await lastValueFrom(eventService.open(eventId));
+          patchStatus(eventId, 'ongoing');
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error };
+        }
+      },
+
+      /**
+       * La clôture : consolide les points et passe la soirée en `completed`, en
+       * un appel. Le patch local n'a lieu qu'après un succès serveur — fermer
+       * l'écran sur une clôture refusée serait le mensonge d'avant, en pire.
+       */
+      async closeEvent(eventId: string): Promise<EventStatusResult> {
+        try {
+          await lastValueFrom(eventService.settle(eventId));
+          patchStatus(eventId, 'completed');
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error };
+        }
       },
 
       async load() {
@@ -213,6 +248,16 @@ export const EventsStore = signalStore(
         }
       },
 
+      /**
+       * Relit la liste, quel que soit l'état du cache — contrairement à
+       * `load()`, qui sort sans rien faire une fois chargé.
+       *
+       * ⚠️ Les écrans de service (`soiree/live`, `caisse`) doivent appeler
+       * **celle-ci**. Avec `load()`, le dictionnaire n'était lu qu'une fois par
+       * chargement de page : une soirée clôturée depuis un autre onglet, un
+       * autre poste ou `node ace event:unsettle` restait « en cours » à l'écran
+       * jusqu'à un F5, et le comptoir continuait d'encaisser dessus.
+       */
       async refresh() {
         patchState(store, { loading: 'refreshing' });
         try {

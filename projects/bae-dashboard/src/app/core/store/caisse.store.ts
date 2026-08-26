@@ -258,6 +258,19 @@ export const CaisseStore = signalStore(
         endSession(): void {
           patchState(store, { ...clearedSession, sessionEventId: null });
         },
+
+        /**
+         * Relit ce qui reste à vendre.
+         *
+         * La caisse le faisait après **ses** encaissements, jamais après ceux
+         * d'un autre poste : deux comptoirs sur la même soirée se croyaient
+         * chacun seul, et `canAdd` autorisait de vendre un article que l'autre
+         * venait d'épuiser.
+         */
+        refreshStock(): void {
+          const eventId = store.sessionEventId();
+          if (eventId) void ordersStore.refreshSellable(eventId);
+        },
         dismissFeedback(): void {
           patchState(store, { lastOrder: null, checkoutError: null, errorTitle: null });
         },

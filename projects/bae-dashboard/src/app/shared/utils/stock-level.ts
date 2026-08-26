@@ -42,3 +42,16 @@ export function stockLevelOf(remainingQty: number, producedQty: number): StockLe
 export function blocksSale(level: StockLevel): boolean {
   return level === 'out';
 }
+
+/**
+ * Fenêtre de regroupement des relectures de stock déclenchées par le fil temps
+ * réel, partagée par la vue live et la caisse — les deux dérivent du **même**
+ * `sellable`, et deux cadences différentes leur feraient afficher deux stocks.
+ *
+ * ⚠️ À utiliser avec `auditTime`, **jamais** `debounceTime` : un `debounce`
+ * repousse son échéance à chaque nouvelle vente, donc un service soutenu — une
+ * commande toutes les 400 ms au coup de feu — ne relirait jamais le stock.
+ * C'est précisément quand il bouge le plus vite qu'il cesserait de se
+ * rafraîchir. `auditTime` garantit une relecture par fenêtre entamée.
+ */
+export const STOCK_AUDIT_MS = 500;

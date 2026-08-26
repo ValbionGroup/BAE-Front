@@ -122,7 +122,9 @@ export class Paiements implements OnInit {
   }
 
   ngOnInit(): void {
-    void this.events.load();
+    // `refresh()` : ces écrans suivent la soirée en cours, et `load()` ne relit
+    // rien une fois le dictionnaire chargé.
+    void this.events.refresh();
     void this.refreshPayments();
   }
 

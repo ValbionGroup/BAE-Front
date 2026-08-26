@@ -10,13 +10,14 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { lastValueFrom } from 'rxjs';
+import { Subject, auditTime, lastValueFrom } from 'rxjs';
 import {
   LucideBell,
   LucideCheck,
   LucideClock,
   LucideDynamicIcon,
   LucideLock,
+  LucidePlay,
   LucideScanLine,
   LucideTriangleAlert,
   LucideZap,
@@ -33,19 +34,27 @@ import {
 import { ModalService } from '#shared/components/modal/modal.service';
 import { ProductionRunModal } from '#shared/components/modal/production-run-modal/production-run-modal';
 import { ProductionReturnModal } from '#shared/components/modal/production-return-modal/production-return-modal';
-import { Btn, Badge, Logo, formatCents } from '@bae/ui';
+import { Btn, Badge, Logo, ToastService, formatCents, messageOf } from '@bae/ui';
 import { OrdersStore } from '#core/store/orders.store';
 import { APP_VERSION } from '#app/app-version';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { nextStatus, type Order, type OrderStatus } from '#core/models/order.model';
 import type { PreOrderTicket } from '#core/models/pre-order.model';
-import { stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
+import { STOCK_AUDIT_MS, stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
 
 const WATCH_ORDER_SECONDS = 180;
 const LATE_ORDER_SECONDS = 300;
 const RANK: Record<StockLevel, number> = { out: 0, low: 1, unknown: 2, ok: 3 };
 const AUTONOMY_MIN_MINUTES = 10;
 const AUTONOMY_MIN_SALES = 5;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Minuit local du jour de `date`, ou `NaN` si la date est illisible. */
+function startOfDay(date: Date): number {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy.getTime();
+}
 
 function autonomyOf(remainingQty: number, soldQty: number, minutes: number): string | null {
   if (remainingQty <= 0) return null;
@@ -136,6 +145,7 @@ export class SoireeLive implements OnInit {
   private readonly production = inject(ProductionService);
   private readonly modal = inject(ModalService);
   private readonly realtime = inject(WebsocketService);
+  private readonly toast = inject(ToastService);
 
   private readonly permissions = inject(Store).selectSignal(selectPermissions);
 
@@ -153,14 +163,51 @@ export class SoireeLive implements OnInit {
 
   protected readonly canCancel = computed<boolean>(() => this.has('order:delete'));
 
+  /** Ouvrir relève de la préparation, clôturer de la consolidation des points. */
+  protected readonly canOpen = computed<boolean>(() => this.has('event:write'));
+
   protected readonly icBell = LucideBell;
   protected readonly icScan = LucideScanLine;
   protected readonly icLock = LucideLock;
+  protected readonly icPlay = LucidePlay;
   protected readonly icAlert = LucideTriangleAlert;
   protected readonly icClock = LucideClock;
 
   protected readonly currentEvent = this.events.activeEvent;
   protected readonly currentEventId = this.events.activeEventId;
+
+  /**
+   * De quoi entrer dans le cycle de vie quand l'écran n'a rien à piloter.
+   *
+   * C'est **le seul chemin d'entrée dans le service** : `activeEvent` ne retient
+   * qu'une soirée `ongoing`, donc une soirée programmée pour ce soir n'ouvre
+   * rien tant que personne ne l'a lancée d'ici.
+   *
+   * Hier y figure autant qu'aujourd'hui, pour **le passage de minuit** : une
+   * soirée d'hier 22 h jamais ouverte doit rester lançable à 00 h 30.
+   *
+   * ⚠️ La fenêtre est **hier ou aujourd'hui, en jours civils**, et non « les 24
+   * dernières heures » : une fenêtre glissante donne un résultat différent selon
+   * l'heure à laquelle on la calcule — une soirée d'hier 22 h en sort à 22 h 01
+   * le lendemain. Jamais au-delà d'aujourd'hui : préparer une soirée à venir
+   * reste le rôle de la Logistique.
+   */
+  protected readonly openable = computed(() => {
+    const today = startOfDay(new Date());
+    const yesterday = today - DAY_MS;
+
+    return this.events
+      .allEvents()
+      .filter((event) => {
+        if (event.status !== 'scheduled') return false;
+        const day = startOfDay(event.date);
+        return day === today || day === yesterday;
+      })
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+  });
+
+  /** Refus serveur de la dernière ouverture — un 409 mérite d'être lu. */
+  protected readonly openError = signal<string | null>(null);
 
   protected readonly productionLines = signal<readonly ProductionLine[]>([]);
   protected readonly productionStatus = signal<'init' | 'loading' | 'loaded' | 'error'>('init');
@@ -192,6 +239,16 @@ export class SoireeLive implements OnInit {
   );
 
   protected readonly orders = inject(OrdersStore);
+
+  /**
+   * Signale qu'une vente vient de changer ce qui reste à vendre.
+   *
+   * ⚠️ Le stock **n'est pas dérivable des commandes reçues** : `sellable` vient
+   * du serveur, qui croise les lancements de production et les ventes non
+   * annulées. Le recalculer ici à partir des tickets donnerait un second chiffre
+   * qui dériverait du premier.
+   */
+  private readonly soldSomething = new Subject<void>();
 
   protected readonly cashedCents = computed(() =>
     this.orders
@@ -445,8 +502,14 @@ export class SoireeLive implements OnInit {
 
   protected readonly formatCents = formatCents;
 
+  /**
+   * `refresh()` et non `load()` : un écran de service doit relire l'état des
+   * soirées à chaque entrée. `load()` sort sans rien faire une fois le
+   * dictionnaire chargé, si bien qu'une soirée clôturée ailleurs restait « en
+   * cours » ici jusqu'à un rechargement complet de la page.
+   */
   ngOnInit(): void {
-    void this.events.load();
+    void this.events.refresh();
   }
 
   protected async refreshProduction(eventId?: string): Promise<void> {
@@ -482,18 +545,45 @@ export class SoireeLive implements OnInit {
     });
   }
 
+  /**
+   * Ouvre la soirée : c'est ce geste, et lui seul, qui met le comptoir et la
+   * cuisine en service. `activeEvent` ne retient que les soirées `ongoing`, et
+   * `ongoing` ne regarde pas la date — une soirée ouverte reste pilotable après
+   * minuit.
+   */
+  protected async openNight(eventId: string): Promise<void> {
+    this.openError.set(null);
+    const result = await this.events.openEvent(eventId);
+
+    if (result.ok) {
+      this.toast.show({ type: 'success', title: 'Soirée ouverte' });
+      return;
+    }
+    // Les deux : le bandeau pour l'état vide, où le refus explique pourquoi la
+    // soirée choisie n'a pas pu être ouverte ; le toast pour l'en-tête, qui n'a
+    // pas la place de porter une phrase.
+    const message = messageOf(result.error, "L'ouverture de la soirée a échoué.");
+    this.openError.set(message);
+    this.toast.show({ type: 'error', title: 'Ouverture refusée', message });
+  }
+
+  /**
+   * ⚠️ L'identifiant est capturé **avant** la clôture : une fois la soirée
+   * `completed`, `activeEvent` vaut `null` et il n'y aurait plus rien à passer
+   * au bilan.
+   */
   protected closeNight(): void {
     const event = this.currentEvent();
     if (!event) return;
+    const eventId = event.id;
     this.modal.open({
       type: 'component',
       component: ProductionReturnModal,
       inputs: {
-        eventId: event.id,
+        eventId,
         eventName: event.name,
         onDone: () => {
-          void this.refreshProduction();
-          this.router.navigate(['/soiree/bilan']);
+          void this.router.navigate(['/soiree/bilan', eventId]);
         },
       },
     });
@@ -529,8 +619,25 @@ export class SoireeLive implements OnInit {
         this.orders.upsertPreOrder(message.payload);
         return;
       }
+      // Un paiement par carte abouti diffuse **aussi** un `order.created` ; s'en
+      // servir ici compterait la vente deux fois.
       if (message.type === 'card_payment.updated') return;
+
       this.orders.upsert(message.payload);
+
+      // ⚠️ Le panneau de production restait figé sur les chiffres du chargement
+      // de la page : les ventes arrivaient bien en cuisine, mais « il reste 12 »
+      // ne bougeait pas et la rupture n'apparaissait qu'après un F5. Seules la
+      // création et l'annulation déplacent le vendable — un changement de statut
+      // en cuisine, non.
+      if (message.type === 'order.created' || message.type === 'order.cancelled') {
+        this.soldSomething.next();
+      }
+    });
+
+    this.soldSomething.pipe(auditTime(STOCK_AUDIT_MS), takeUntilDestroyed()).subscribe(() => {
+      const id = this.currentEventId();
+      if (id) void this.orders.refreshSellable(id);
     });
 
     const interval = setInterval(() => this.now.set(Date.now()), 1000);

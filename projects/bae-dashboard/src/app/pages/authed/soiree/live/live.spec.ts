@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -7,6 +7,11 @@ import { provideMockStore } from '@ngrx/store/testing';
 
 import { SoireeLive } from './live';
 import { OrdersStore } from '#core/store/orders.store';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { WebsocketService } from '#core/services/websocket/websocket-service';
+import type { WsMessage } from '#core/models/ws-message.model';
+import { Subject } from 'rxjs';
+import { STOCK_AUDIT_MS } from '#shared/utils/stock-level';
 import { Permission } from '#core/models/permission.model';
 
 /** La page charge par promesses nues ; en zoneless, Angular ne les suit pas. */
@@ -88,7 +93,7 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain("Aucune soirée en cours aujourd'hui");
+    expect(text).toContain('Aucune soirée ouverte');
   });
 
   /** Le bug rapporté : la vue live et la caisse ne doivent jamais désigner une
@@ -101,7 +106,7 @@ describe(SoireeLive.name, () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain("Aucune soirée en cours aujourd'hui");
+    expect(text).toContain('Aucune soirée ouverte');
     expect(text).not.toContain('Demain soir');
   });
 
@@ -334,13 +339,179 @@ describe(SoireeLive.name, () => {
   });
 });
 
+describe(`${SoireeLive.name} — le cycle de vie de la soirée`, () => {
+  let component: SoireeLive;
+  let fixture: ComponentFixture<SoireeLive>;
+  let http: HttpTestingController;
+  let router: Router;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [SoireeLive],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideMockStore({
+          initialState: {
+            auth: {
+              permissions: [
+                'order:serve',
+                'order:write',
+                'stock:write',
+                'event:settle',
+                'event:write',
+              ],
+            },
+          },
+        }),
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SoireeLive);
+    component = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
+    await fixture.whenStable();
+  });
+
+  /** Sert la liste des soirées, puis vide les requêtes de suite. */
+  async function withEvents(events: unknown[]): Promise<void> {
+    http.expectOne((r) => r.url.endsWith('/events')).flush(events);
+    await settle();
+    for (const request of http.match(() => true)) request.flush([]);
+    await settle();
+    fixture.detectChanges();
+  }
+
+  const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+  /**
+   * ⚠️ **Le défaut rapporté le 2026-08-26.** Une soirée simplement programmée
+   * pour aujourd'hui pilotait la page et ouvrait la caisse — « comme si elle
+   * était ouverte » — parce que `activeEvent` retombait sur « non clôturée,
+   * datée d'aujourd'hui ». Cette règle avait sa raison d'être tant que rien ne
+   * pouvait ouvrir une soirée ; elle rendait l'ouverture décorative.
+   *
+   * Elle n'est proposée à l'ouverture qu'à cet endroit, dans l'état vide.
+   */
+  it('ne pilote pas une soirée du jour que personne n’a ouverte', async () => {
+    await withEvents([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'scheduled' }]);
+
+    expect(text()).toContain('Aucune soirée à piloter');
+    expect(text()).not.toContain('LIVE · Soirée en cours');
+    expect(text()).not.toContain('Clôturer la soirée');
+    // Le chemin d'entrée : elle est offerte à l'ouverture, pas pilotée.
+    expect(text()).toContain('Ouvrir');
+  });
+
+  it('ouvre la soirée, et le comptoir bascule en service', async () => {
+    await withEvents([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'scheduled' }]);
+
+    const opening = component['openNight']('2');
+    const request = http.expectOne((r) => r.url.endsWith('/events/2/open'));
+    expect(request.request.method).toBe('POST');
+    request.flush({ id: 2, name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' });
+    await opening;
+    for (const pending of http.match(() => true)) pending.flush([]);
+    await settle();
+    fixture.detectChanges();
+
+    expect(text()).toContain('LIVE · Soirée en cours');
+    expect(text()).toContain('Clôturer la soirée');
+  });
+
+  /**
+   * Le 409 d'unicité — « une autre soirée est déjà ouverte » — porte le nom de
+   * la coupable. L'avaler laisserait l'opérateur devant un bouton qui ne fait
+   * rien.
+   */
+  it('montre le refus du serveur plutôt que de l’avaler', async () => {
+    await withEvents([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'scheduled' }]);
+
+    const opening = component['openNight']('2');
+    http
+      .expectOne((r) => r.url.endsWith('/events/2/open'))
+      .flush(
+        { code: 'E_EVENT_ALREADY_OPEN', message: '« Soirée d’avant » est déjà ouverte.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await opening;
+
+    expect(component['openError']()).toContain('déjà ouverte');
+  });
+
+  /**
+   * **Le passage de minuit.** Une soirée d'hier soir jamais ouverte sort de
+   * `activeEvent` à 00 h 00 et emporte la caisse en plein service. L'écran vide
+   * doit offrir de l'ouvrir — c'est le seul moyen de la fixer.
+   */
+  it('propose d’ouvrir une soirée d’hier soir restée planifiée', async () => {
+    await withEvents([
+      { id: '7', name: 'Soirée d’hier', date: atHour(-1, 22), status: 'scheduled' },
+    ]);
+
+    expect(text()).toContain('Aucune soirée à piloter');
+    expect(text()).toContain('Soirée d’hier');
+    expect(text()).toContain('Ouvrir');
+  });
+
+  /** Une soirée de la semaine prochaine ne s'ouvre pas depuis l'écran de service. */
+  it('n’offre pas d’ouvrir une soirée à venir', async () => {
+    await withEvents([{ id: '8', name: 'Gala de fin', date: atHour(9), status: 'scheduled' }]);
+
+    expect(text()).toContain('Aucune soirée à piloter');
+    expect(text()).not.toContain('Gala de fin');
+  });
+
+  /**
+   * ⚠️ La caisse renvoie ici pour ouvrir la soirée. Si cet écran se contente de
+   * dire « une soirée doit être ouverte par le bureau », les deux pages se
+   * renvoient l'une à l'autre et l'opérateur tourne en rond. L'état vide doit
+   * dire **pourquoi** il est vide.
+   */
+  it('dit qu’aucune soirée n’est programmée plutôt que de renvoyer ailleurs', async () => {
+    await withEvents([{ id: '8', name: 'Gala de fin', date: atHour(9), status: 'scheduled' }]);
+
+    expect(text()).toContain("Aucune soirée n'est programmée aujourd'hui");
+  });
+
+  /**
+   * ⚠️ L'identifiant doit être capturé **avant** la clôture : une fois la soirée
+   * `completed`, `activeEvent` vaut `null`, et un bilan sans cible retombe sur
+   * son heuristique — celle qui affichait une soirée de 2027 sans commandes.
+   */
+  it('emmène au bilan de la soirée qu’elle vient de clôturer', async () => {
+    await withEvents([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+
+    const modal = TestBed.inject(ModalService);
+    const openSpy = vi.spyOn(modal, 'open').mockReturnValue('modal-id');
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    component['closeNight']();
+
+    const config = openSpy.mock.calls[0][0] as unknown as {
+      inputs: { eventId: string; onDone: () => void };
+    };
+    const inputs = config.inputs;
+    expect(inputs.eventId).toBe('2');
+
+    inputs.onDone();
+    expect(navigate).toHaveBeenCalledWith(['/soiree/bilan', '2']);
+  });
+});
+
 describe(`${SoireeLive.name} — ce que la cuisine a le droit de faire`, () => {
   /**
    * Rend la page avec une soirée en cours et le jeu de permissions donné.
    * Les requêtes de suite (commandes, production, précommandes) sont vidées en
    * bloc : ce groupe ne teste que les boutons.
    */
-  async function render(permissions: Permission[]): Promise<ComponentFixture<SoireeLive>> {
+  async function render(
+    permissions: Permission[],
+    events: unknown[] = [{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }],
+  ): Promise<ComponentFixture<SoireeLive>> {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [SoireeLive],
@@ -356,9 +527,7 @@ describe(`${SoireeLive.name} — ce que la cuisine a le droit de faire`, () => {
     const http = TestBed.inject(HttpTestingController);
     await fixture.whenStable();
 
-    http
-      .expectOne((r) => r.url.endsWith('/events'))
-      .flush([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    http.expectOne((r) => r.url.endsWith('/events')).flush(events);
     await settle();
     for (const request of http.match(() => true)) request.flush([]);
     await settle();
@@ -397,5 +566,144 @@ describe(`${SoireeLive.name} — ce que la cuisine a le droit de faire`, () => {
     const fixture = await render(['order:serve', 'order:write']);
 
     expect(text(fixture)).toContain('Ouvrir la caisse');
+  });
+
+  /**
+   * Sans `event:write`, pas de bouton — mais l'écran doit dire que c'est un
+   * droit qui manque, et non laisser croire qu'aucune soirée n'existe.
+   */
+  it('explique l’absence de bouton à qui ne peut pas ouvrir', async () => {
+    const fixture = await render(
+      ['order:serve'],
+      [{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'scheduled' }],
+    );
+
+    expect(text(fixture)).toContain('Aucune soirée à piloter');
+    expect(text(fixture)).toContain("droit d'écriture sur les soirées");
+    // La soirée n'est pas proposée : c'est son nom, et non le mot « ouvrir »,
+    // qui signale la ligne — la phrase d'explication le contient elle-même.
+    expect(text(fixture)).not.toContain('Soirée BBQ');
+  });
+});
+
+/** Un fil temps réel qu'un test peut alimenter. */
+class FakeRealtime {
+  readonly bus = new Subject<WsMessage>();
+  readonly messages$ = this.bus.asObservable();
+  subscribeToEvent(): Promise<void> {
+    return Promise.resolve();
+  }
+  unsubscribeFromEvent(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+function order(id: number) {
+  return {
+    id,
+    number: id,
+    status: 'pending',
+    clientName: 'Anonyme',
+    totalCents: 250,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    lines: [{ productId: 1, productName: 'Hot-dog', quantity: 1, unitPrice: 250 }],
+  } as never;
+}
+
+describe(`${SoireeLive.name} — le stock suit les ventes sans rechargement`, () => {
+  let fixture: ComponentFixture<SoireeLive>;
+  let http: HttpTestingController;
+  let realtime: FakeRealtime;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    realtime = new FakeRealtime();
+    await TestBed.configureTestingModule({
+      imports: [SoireeLive],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WebsocketService, useValue: realtime },
+        provideMockStore({
+          initialState: { auth: { permissions: ['order:serve', 'order:write', 'stock:write'] } },
+        }),
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SoireeLive);
+    http = TestBed.inject(HttpTestingController);
+    await fixture.whenStable();
+
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '2', name: 'Soirée BBQ', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    // ⚠️ Vider **deux fois**, de part et d'autre de la détection de changement :
+    // le chargement de la soirée part d'un `effect`, qui ne tourne qu'à ce
+    // moment-là. Sans la seconde vidange, la requête `/sellable` d'ouverture
+    // reste en vol et se compte comme une relecture temps réel.
+    for (const request of http.match(() => true)) request.flush([]);
+    await settle();
+    fixture.detectChanges();
+    await settle();
+    for (const request of http.match(() => true)) request.flush([]);
+    await settle();
+  });
+
+  const sellableRequests = () => http.match((r) => r.url.includes('/events/2/sellable'));
+
+  /**
+   * ⚠️ **Le défaut rapporté.** Les ventes arrivaient bien en cuisine — la file
+   * de tickets se remplissait — mais `sellable` n'était relu qu'au chargement de
+   * la page et après un lancement de production. « Il reste 12 » ne bougeait
+   * donc jamais, et la rupture n'apparaissait qu'après un F5.
+   */
+  it('relit le stock quand une vente arrive sur le fil', async () => {
+    realtime.bus.next({ type: 'order.created', payload: order(1) });
+    await new Promise((resolve) => setTimeout(resolve, STOCK_AUDIT_MS + 120));
+
+    expect(sellableRequests().length).toBe(1);
+  });
+
+  /** Une annulation rend la marchandise : elle compte autant qu'une vente. */
+  it('relit le stock quand une commande est annulée', async () => {
+    realtime.bus.next({ type: 'order.cancelled', payload: order(2) });
+    await new Promise((resolve) => setTimeout(resolve, STOCK_AUDIT_MS + 120));
+
+    expect(sellableRequests().length).toBe(1);
+  });
+
+  /** Un passage en cuisine ne déplace rien de vendable : pas de requête. */
+  it('ne relit rien pour un simple changement de statut en cuisine', async () => {
+    realtime.bus.next({ type: 'order.updated', payload: order(3) });
+    await new Promise((resolve) => setTimeout(resolve, STOCK_AUDIT_MS + 120));
+
+    expect(sellableRequests().length).toBe(0);
+  });
+
+  /**
+   * ⚠️ **Ce que `debounceTime` aurait cassé.** Un flux soutenu repousse sans
+   * cesse l'échéance d'un `debounce`, qui n'émettrait donc jamais — au coup de
+   * feu, précisément. `auditTime` relit une fois par fenêtre entamée.
+   */
+  it('relit malgré un flux continu de ventes, là où un debounce ne relirait jamais', async () => {
+    const stop = Date.now() + STOCK_AUDIT_MS * 2;
+    while (Date.now() < stop) {
+      realtime.bus.next({ type: 'order.created', payload: order(Date.now()) });
+      await new Promise((resolve) => setTimeout(resolve, STOCK_AUDIT_MS / 4));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    expect(sellableRequests().length).toBeGreaterThanOrEqual(1);
+  });
+
+  /** Une rafale ne déclenche pas une requête par vente. */
+  it('regroupe une rafale en une seule relecture', async () => {
+    for (let i = 0; i < 8; i++) realtime.bus.next({ type: 'order.created', payload: order(i) });
+    await new Promise((resolve) => setTimeout(resolve, STOCK_AUDIT_MS + 120));
+
+    expect(sellableRequests().length).toBe(1);
   });
 });

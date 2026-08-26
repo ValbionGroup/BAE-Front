@@ -12,6 +12,28 @@ import {
 import { API_BASE_URL } from '@bae/ui';
 import { ApiEndPointV1 } from '#core/models/endpoint.model';
 
+/** Ce que `POST /events/:id/settle` rend : le compte de la consolidation. */
+export interface SettleSummary {
+  /** Affectations consolidées par cet appel. `0` = déjà clôturée. */
+  readonly settled: number;
+  readonly alreadySettled: number;
+  readonly totalDelta: number;
+  readonly status: 'completed';
+}
+
+/**
+ * ⚠️ **`new Date(null)` vaut le 1ᵉʳ janvier 1970, pas une date invalide.** La
+ * coercition de `null` en `0` fait d'une soirée sans date la plus ancienne de
+ * toutes — donc la gagnante de `earliest()`. Le garde-fou `isValidDate` de
+ * `EventsStore` était écrit pour ce cas et ne l'attrapait pas : il ne voyait
+ * qu'une date parfaitement valide.
+ *
+ * `undefined` et la chaîne vide donnent bien `Invalid Date` ; seul `null` ment.
+ */
+function parseEventDate(date: string | null | undefined): Date {
+  return date === null || date === undefined ? new Date(Number.NaN) : new Date(date);
+}
+
 @Injectable({ providedIn: 'root' })
 export class EventsService {
   private readonly http = inject(HttpClient);
@@ -29,6 +51,28 @@ export class EventsService {
     return this.http
       .get<RosterRowApiDto[]>(url)
       .pipe(map((dtos) => dtos.map((d) => this.toRosterRow(d))));
+  }
+
+  /**
+   * Ouvre la soirée — `status: 'ongoing'`.
+   *
+   * ⚠️ Le serveur refuse en 409 (`E_EVENT_ALREADY_OPEN`) s'il en existe déjà une
+   * ouverte, et (`E_EVENT_CLOSED`) si celle-ci est clôturée. Les deux portent un
+   * message lisible : l'appelant doit l'afficher, pas l'avaler.
+   */
+  open(id: string): Observable<EventData> {
+    const url = this.buildUrl(ApiEndPointV1.EVENT_OPEN).replace(':id', id);
+    return this.http.post<EventApiDto>(url, {}).pipe(map((dto) => this.toEventData(dto)));
+  }
+
+  /**
+   * Clôture la soirée : consolide les points **et** passe `status: 'completed'`.
+   * Un seul appel, idempotent — le serveur fait les deux dans la même
+   * transaction. La marche arrière est `node ace event:unsettle`.
+   */
+  settle(id: string): Observable<SettleSummary> {
+    const url = this.buildUrl(ApiEndPointV1.EVENT_SETTLE).replace(':id', id);
+    return this.http.post<SettleSummary>(url, {});
   }
 
   fetchPresenceForEvent(id: string): Observable<EventDetail['memberPresence']> {
@@ -59,7 +103,7 @@ export class EventsService {
    * échouait en silence.
    */
   private toEventData({ id, date, ...rest }: EventApiDto): EventData {
-    return { ...rest, id: String(id), date: new Date(date) };
+    return { ...rest, id: String(id), date: parseEventDate(date) };
   }
 
   private toRosterRow({ when, ...rest }: RosterRowApiDto): RosterRow {

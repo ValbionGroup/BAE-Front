@@ -87,8 +87,12 @@ export interface MenuItem {
 export type EventApiDto = Omit<EventData, 'id' | 'date'> & {
   /** L'API sert l'entier de la clé primaire, pas une chaîne. */
   readonly id: number;
-  /** ISO 8601. */
-  readonly date: string;
+  /**
+   * ISO 8601. `null` est possible en pratique — la colonne est `notNullable`,
+   * mais rien côté front ne l'oblige, et `new Date(null)` vaut 1970 plutôt
+   * qu'`Invalid Date`. Cf. `parseEventDate` dans `events-service.ts`.
+   */
+  readonly date: string | null;
 };
 
 export type RosterRowApiDto = Omit<RosterRow, 'when'> & {
