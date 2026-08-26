@@ -1,8 +1,9 @@
 # BAE — état des tâches restantes
 
-> **Dernière mise à jour : 2026-08-24.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
-> code** au 2026-08-23, et la tâche 27 livrée le 2026-08-24. Les blocs B à I datent du 2026-08-20
-> et n'ont **pas** été rejoués : les traiter comme une piste, pas comme un état.
+> **Dernière mise à jour : 2026-08-26.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
+> code** au 2026-08-23, la tâche 27 livrée le 2026-08-24, le cycle de vie de la soirée le
+> 2026-08-26. Les blocs B à I datent du 2026-08-20 et n'ont **pas** été rejoués : les traiter comme
+> une piste, pas comme un état.
 
 Ce document a un défaut connu, qui est celui qu'il reproche aux deux HANDOFF : c'est un journal, et
 un lot ultérieur ferme des points sans les rayer sur place. Entre le 20 et le 21 août, **seize
@@ -12,6 +13,102 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 ---
 
 ## ✅ Livré
+
+### 2026-08-26 — le cycle de vie d'une soirée, de l'ouverture au bilan
+
+Clôturer une soirée ne la clôturait pas : on revenait sur `soiree/live` avec la soirée en cours, la
+caisse ouverte, et `events.status` inchangé en base. Le bilan qui suivait était vide.
+
+Toute la mécanique réactive était pourtant en place et juste — `EventsStore.activeEvent` privilégie
+une soirée `ongoing`, la caisse ouvre et ferme sa session par un `effect` qui la suit, la vue live
+se vide. **Il manquait les deux écritures** qui font tourner la roue.
+
+| #   | Cause racine                                                                                                                                                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A   | `closeNight()` ouvrait `ProductionReturnModal`, qui postait `/production-returns`, affichait « Soirée clôturée » et naviguait. **Aucun appel à `/settle`**, aucun `status`.                                                                |
+| B   | `POST /events/:id/settle` consolidait les points mais **ne touchait jamais `events.status`**. Le §6.4 du HANDOFF laissait le choix « endpoint **ou** passage de `status` » ; seule la moitié « points » avait été faite.                   |
+| C   | Le front n'avait **aucun moyen** d'écrire `status` — donc pas d'ouverture non plus, et la règle « `ongoing` prime » n'a jamais pu être vraie.                                                                                              |
+| D   | `SoireeBilan.target` visait « la dernière `completed` **par date** ». En base c'était une soirée de **2027 sans menu ni commande** : tous les KPI à zéro. Indépendant de A–C, et il y aurait survécu.                                      |
+| E   | `EventFactory` tirait `status` **au hasard** : sept soirées `ongoing` en dev, la plus ancienne captant caisse et vue live en permanence.                                                                                                   |
+| F   | `event_summary_service` faisait `entry.amount += row.amount` **sans `Number()`** : une colonne numérique revient en chaîne, `0 + '8.50'` vaut `'08.50'`. « Encaissé par moyen » était une concaténation. Un test le disait déjà, en rouge. |
+
+| Portée    | Livré                                                                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Back**  | `settle` passe `status = 'completed'` dans la même transaction que les points. Idempotent.                                                                  |
+| **Back**  | `POST /events/:id/open` (`event:write`) — la seule porte vers `ongoing`, avec l'invariant **au plus une soirée ouverte** (409 `E_EVENT_ALREADY_OPEN`).      |
+| **Back**  | `status` **retiré** de `eventUpdateValidator` : un PATCH générique contournait l'invariant.                                                                 |
+| **Back**  | `assertEventOpen` sur `priceCart` (espèces **et** carte) et `commitProduction` — 409 `E_EVENT_CLOSED`. Pas sur les retours : ils font partie de la clôture. |
+| **Back**  | `event:unsettle` remet la soirée en service, ou en `scheduled` si une autre est ouverte.                                                                    |
+| **Back**  | `EventFactory` déduit `status` de la date ; le seeder étale 1 clôturée à J-7, 1 du jour ouverte, 8 à venir.                                                 |
+| **Front** | `EventsStore.openEvent` / `closeEvent` patchent `status` sur place — c'est **ce patch** qui ferme la caisse et vide la vue live sans rechargement.          |
+| **Front** | `soiree/live` : « Ouvrir la soirée » sur une soirée préparée, et l'état vide propose enfin celles d'hier soir restées planifiées (le passage de minuit).    |
+| **Front** | `ProductionReturnModal` **est** la clôture : retours puis `/settle`. Le toast ne ment plus.                                                                 |
+| **Front** | `soiree/bilan/:id` + sélecteur des soirées clôturées ; à défaut, la dernière clôturée **dont la date est passée**.                                          |
+
+#### Suite du même jour — l'ouverture explicite n'ouvrait rien
+
+Signalé après coup : « la page live et la caisse sont actives avec la prochaine soirée comme si elle
+était ouverte ». Deux causes, indépendantes de tout ce qui précède.
+
+- **`activeEvent` retombait sur « non clôturée, datée d'aujourd'hui ».** Cette règle avait sa raison
+  d'être tant que **rien** ne pouvait ouvrir une soirée : la date en tenait lieu. Depuis
+  `POST /events/:id/open`, elle rendait l'ouverture décorative — la caisse s'ouvrait d'elle-même à
+  minuit, le jour de la soirée, sur une soirée que personne n'avait lancée. **`activeEvent` ne
+  retient plus que `ongoing`.** Effet voulu : une soirée ouverte qui **déborde minuit** ne se ferme
+  plus toute seule, `ongoing` ne regardant pas la date. Le chemin d'entrée est l'état vide de
+  `soiree/live`, qui propose les soirées d'hier et d'aujourd'hui encore programmées.
+- **`EventsStore.load()` ne relit jamais** : il sort dès que `loading === 'loaded'`. Les écrans de
+  service en tenaient un instantané par chargement de page, si bien qu'une soirée clôturée depuis un
+  autre onglet, un autre poste ou `event:unsettle` restait « en cours » à l'écran. `soiree/live`,
+  `caisse`, `precommandes-admin` et `paiements` appellent désormais **`refresh()`**.
+
+Trouvé en passant, et vieux : **`new Date(null)` vaut le 1ᵉʳ janvier 1970**, pas `Invalid Date`. Une
+soirée sans date était donc la plus ancienne de toutes, et gagnait `earliest()`. Le garde-fou
+`isValidDate` était écrit pour ce cas et ne voyait qu'une date parfaitement valide ; l'ancien filtre
+sur le jour le masquait. `EventsService` normalise désormais `null` en `Invalid Date`.
+
+Enfin, les deux écrans se renvoyaient l'un à l'autre : la caisse disait « ouvrez depuis la vue
+live », et la vue live « une soirée doit être ouverte par le bureau ». L'état vide de `soiree/live`
+dit maintenant **pourquoi** il est vide — soirée ouvrable et bouton, aucune soirée programmée
+aujourd'hui, ou droit `event:write` manquant.
+
+#### Suite (2) — le stock ne suivait pas les ventes
+
+Signalé ensuite : « lorsqu'il n'y a plus rien à vendre il faut actualiser la page pour le voir ».
+
+`sellable` — ce qui reste vendable, croisé côté serveur entre les lancements de production et les
+ventes non annulées — n'était relu qu'**au chargement de la page**, après un lancement de
+production, et par la caisse après **ses propres** encaissements. Le fil temps réel apportait bien
+les commandes (les tickets tombaient en cuisine), mais personne ne rafraîchissait le stock : « il
+reste 12 » ne bougeait pas et la rupture n'apparaissait qu'après un F5.
+
+`soiree/live` et `caisse` relisent désormais `sellable` sur `order.created` et `order.cancelled` —
+les deux seuls messages qui déplacent le vendable ; un changement de statut en cuisine, non. Un
+paiement par carte abouti diffuse **aussi** un `order.created`, il est donc couvert sans traitement
+propre.
+
+Corrigé du même geste à la caisse, où c'était pire : deux comptoirs sur la même soirée se croyaient
+chacun seul, et `canAdd` autorisait de vendre un article que l'autre venait d'épuiser.
+
+⚠️ **`auditTime`, jamais `debounceTime`** (`STOCK_AUDIT_MS`, dans `shared/utils/stock-level`). Un
+`debounce` repousse son échéance à chaque nouvelle vente : un service soutenu — une commande toutes
+les 400 ms au coup de feu — ne relirait **jamais** le stock, précisément quand il bouge le plus
+vite. Un test tient cette différence, et il a été vérifié qu'il tombe si l'on repasse à
+`debounceTime`.
+
+Deux pièges qui ont coûté une passe chacun, et qui valent au-delà de ce lot :
+
+- **`messageOf(error, repli)` préfère le message du serveur.** Sur un échec de clôture après des
+  retours déjà écrits, il ne restait que « cette soirée est clôturée » — l'opérateur ressaisissait
+  ses comptages et créditait deux fois. Il faut **composer** les deux moitiés, pas choisir.
+- **Une fenêtre glissante de 24 h n'est pas déterministe.** « Ouvrable » se calcule en **jours
+  civils** (hier ou aujourd'hui) : une soirée d'hier 22 h sortait de la fenêtre à 22 h 01 le
+  lendemain, donc le test passait ou non selon l'heure d'exécution.
+
+⚠️ **Dette restante, non traitée :** `transactions.amount` est `integer` (centimes) dans la
+migration depuis `c40ccbf`, mais la base de dev porte encore un `numeric(10,2)` en **euros** — la
+migration a été modifiée sur place et jamais rejouée. Le bilan additionne donc des euros face à des
+centimes en dev. Le code est juste ; c'est la base qui a dérivé.
 
 ### 2026-08-24 — le FastPass accessible depuis le site public
 
