@@ -6,6 +6,8 @@ import {
   type ApiCategory,
   type ApiStockItem,
   type CreateGoodPayload,
+  type ApiGoodPrices,
+  type ApiNamedRef,
 } from '#core/services/stocks/stocks-service';
 import type { LoadingStatus } from '#core/models/global.model';
 import { messageOf, parseApiDate, settle } from '@bae/ui';
@@ -186,6 +188,58 @@ export const StocksStore = signalStore(
             })
           : null,
       }));
+    },
+
+    /**
+     * Les tarifs d'une denrée. Non stockés dans l'état : le panneau de détail
+     * est ouvert sur **une** denrée à la fois, et les mémoriser toutes ferait
+     * vieillir des prix que personne ne regarde — même raison que `getBatches`.
+     */
+    async getSupplierPrices(goodId: number): Promise<ApiGoodPrices | null> {
+      try {
+        return await lastValueFrom(svc.getSupplierPrices(goodId));
+      } catch {
+        return null;
+      }
+    },
+
+    async listSuppliers(): Promise<readonly ApiNamedRef[]> {
+      try {
+        return await lastValueFrom(svc.getSuppliers());
+      } catch {
+        return [];
+      }
+    },
+
+    /**
+     * ⚠️ `priceCents` est en **centimes** : la conversion depuis les euros
+     * saisis appartient à l'écran, par `parseEuros`. Le refus voyage dans la
+     * valeur résolue — patron d'`EventsStore`, pour qu'un 403 ou un 404 soit
+     * montré plutôt qu'avalé.
+     */
+    async setSupplierPrice(
+      goodId: number,
+      supplierId: number,
+      priceCents: number,
+    ): Promise<{ ok: true } | { ok: false; error: unknown }> {
+      try {
+        await lastValueFrom(svc.setSupplierPrice(goodId, supplierId, priceCents));
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    },
+
+    async removeSupplierPrice(
+      goodId: number,
+      supplierId: number,
+    ): Promise<{ ok: true } | { ok: false; error: unknown }> {
+      try {
+        await lastValueFrom(svc.removeSupplierPrice(goodId, supplierId));
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error };
+      }
     },
   })),
 );

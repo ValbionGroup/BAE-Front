@@ -32,6 +32,30 @@ export interface ApiStockBatch {
   openedAt: string | null;
 }
 
+/** Une enseigne et son tarif pour une denrée (pivot `good_suppliers`). */
+export interface ApiSupplierPrice {
+  readonly id: number;
+  readonly name: string;
+  /** ⚠️ **Centimes**, par unité de stock (`goods.unit`). */
+  readonly price: number;
+}
+
+/** `GET /goods/:id` — la fiche d'une denrée, tarifs compris. */
+export interface ApiGoodPrices {
+  readonly id: number;
+  readonly name: string;
+  readonly unit: string;
+  readonly suppliers: readonly ApiSupplierPrice[];
+  readonly bestSupplier: ApiSupplierPrice | null;
+  readonly bestPrice: number | null;
+}
+
+/** Une entité de référence réduite à son identité — ici, une enseigne. */
+export interface ApiNamedRef {
+  readonly id: number;
+  readonly name: string;
+}
+
 /** `GET /categories` — alimente le sélecteur de la modale de création. */
 export interface ApiCategory {
   readonly id: number;
@@ -98,6 +122,33 @@ export class StocksService {
     expirationDate: string | null;
   }): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/stock-batches`, payload);
+  }
+
+  /**
+   * Les tarifs d'une denrée chez ses enseignes, **triés du moins cher au plus
+   * cher** par l'API. Le premier est le prix de référence : c'est lui que
+   * `bestSupplierPrice` sert au coût de recette, à la liste de courses et au
+   * bilan de soirée.
+   *
+   * ⚠️ Les prix sont en **centimes**, comme tout montant de l'API.
+   */
+  getSupplierPrices(goodId: number): Observable<ApiGoodPrices> {
+    return this.http.get<ApiGoodPrices>(`${this.baseUrl}/goods/${goodId}`);
+  }
+
+  /** Pose ou corrige — la même route fait les deux, c'est le même geste. */
+  setSupplierPrice(goodId: number, supplierId: number, priceCents: number): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/goods/${goodId}/suppliers/${supplierId}`, {
+      priceCents,
+    });
+  }
+
+  removeSupplierPrice(goodId: number, supplierId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/goods/${goodId}/suppliers/${supplierId}`);
+  }
+
+  getSuppliers(): Observable<ApiNamedRef[]> {
+    return this.http.get<ApiNamedRef[]>(`${this.baseUrl}/suppliers`);
   }
 
   getBatches(goodsId: number, showEmpty = false): Observable<ApiStockBatch[]> {

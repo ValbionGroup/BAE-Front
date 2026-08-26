@@ -8,6 +8,7 @@ import {
   inject,
   signal,
   viewChild,
+  untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -25,8 +26,23 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { StocksStore } from '#core/store/stocks.store';
-import { Btn, Badge, Card, Checkbox, Toggle, Input, DetailSheet } from '@bae/ui';
+import {
+  Btn,
+  Badge,
+  Card,
+  Checkbox,
+  Toggle,
+  Input,
+  DetailSheet,
+  ToastService,
+  formatCents,
+  messageOf,
+} from '@bae/ui';
+import { Store } from '@ngrx/store';
+import { selectPermissions } from '#core/store/auth/auth.selector';
+import type { ApiGoodPrices } from '#core/services/stocks/stocks-service';
 import { ModalService } from '#shared/components/modal/modal.service';
+import { SupplierPriceModal } from '#shared/components/modal/supplier-price-modal/supplier-price-modal';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
 import { PrintService } from '#core/services/print/print-service';
 import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
@@ -46,6 +62,8 @@ export class Stocks implements OnInit {
   private readonly router = inject(Router);
   private readonly store = inject(StocksStore);
   private readonly modal = inject(ModalService);
+  private readonly toast = inject(ToastService);
+  private readonly permissions = inject(Store).selectSignal(selectPermissions);
   private readonly printService = inject(PrintService);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
@@ -80,6 +98,21 @@ export class Stocks implements OnInit {
         this.batchesLoading.set(false);
       });
     });
+
+    // Les tarifs suivent la denrée sélectionnée, et se rechargent après chaque
+    // écriture — d'où `pricesVersion`, incrémenté par les gestes du panneau.
+    effect(() => {
+      const id = this.selectedId();
+      this.pricesVersion();
+      if (id === null) return;
+      untracked(() => void this.loadPrices(id));
+    });
+  }
+
+  private async loadPrices(goodId: number): Promise<void> {
+    this.pricesLoading.set(true);
+    this.prices.set(await this.store.getSupplierPrices(goodId));
+    this.pricesLoading.set(false);
   }
 
   ngOnInit(): void {
@@ -117,6 +150,70 @@ export class Stocks implements OnInit {
   protected readonly sortDir = signal<SortDir>('asc');
 
   protected readonly selectedId = signal<number | null>(null);
+
+  /** Tarifs de la denrée sélectionnée ; `null` tant qu'on n'a rien lu. */
+  protected readonly prices = signal<ApiGoodPrices | null>(null);
+  protected readonly pricesLoading = signal(false);
+  /** Bumpé après chaque écriture pour forcer la relecture. */
+  private readonly pricesVersion = signal(0);
+
+  /** Frontière unique de conversion centimes → euros à l'affichage. */
+  protected readonly formatCents = formatCents;
+
+  protected readonly canPrice = computed<boolean>(() => this.permissions().includes('good:write'));
+
+  /** « Prix par kg » — l'unité est dite en clair, parce que rien ne normalise
+   *  les conditionnements : `pricing_service` compare les prix bruts. */
+  protected readonly priceUnitLabel = computed(() => {
+    const unit = this.prices()?.unit ?? this.selectedProduct()?.unit ?? '';
+    return unit === '' ? 'Prix' : `Prix par ${unit}`;
+  });
+
+  protected openPriceEditor(supplierId: number | null): void {
+    const good = this.prices();
+    if (!good) return;
+    this.modal.open({
+      type: 'component',
+      component: SupplierPriceModal,
+      inputs: {
+        goodId: good.id,
+        goodName: good.name,
+        unitLabel: this.priceUnitLabel(),
+        supplierId,
+        current:
+          supplierId === null ? null : (good.suppliers.find((s) => s.id === supplierId) ?? null),
+        taken: good.suppliers.map((s) => s.id),
+        onDone: () => this.pricesVersion.update((v) => v + 1),
+      },
+    });
+  }
+
+  protected confirmRemovePrice(supplierId: number, supplierName: string): void {
+    const good = this.prices();
+    if (!good) return;
+    this.modal.open({
+      type: 'delete',
+      title: 'Retirer le tarif',
+      message: `« ${supplierName} » ne proposera plus de prix pour ${good.name}.`,
+      details:
+        'Si c’était le prix de référence, le coût de recette et la liste de courses passeront au suivant le moins cher.',
+      onConfirm: () => void this.removePrice(good.id, supplierId, supplierName),
+    });
+  }
+
+  private async removePrice(goodId: number, supplierId: number, name: string): Promise<void> {
+    const result = await this.store.removeSupplierPrice(goodId, supplierId);
+    if (!result.ok) {
+      this.toast.show({
+        type: 'error',
+        title: 'Retrait refusé',
+        message: messageOf(result.error, 'Le tarif n’a pas pu être retiré.'),
+      });
+      return;
+    }
+    this.pricesVersion.update((v) => v + 1);
+    this.toast.show({ type: 'success', title: 'Tarif retiré', message: `« ${name} ».` });
+  }
   protected readonly selectedBatches = signal<readonly StockBatchRow[]>([]);
   protected readonly batchesLoading = signal(false);
   protected readonly showEmptyBatches = signal(false);

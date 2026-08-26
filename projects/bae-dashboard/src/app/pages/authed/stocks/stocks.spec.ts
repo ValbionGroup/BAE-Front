@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
+import { provideMockStore } from '@ngrx/store/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Stocks } from './stocks';
@@ -15,7 +16,13 @@ describe(Stocks.name, () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Stocks],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // La page lit les permissions pour conditionner les gestes de tarif.
+        provideMockStore({ initialState: { auth: { permissions: ['stock:read', 'good:write'] } } }),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Stocks);
@@ -149,5 +156,75 @@ describe(Stocks.name, () => {
 
     expect(downloadSpy).toHaveBeenCalledWith('/stock-batches/labels/pdf?ids=7', expect.any(String));
     vi.restoreAllMocks();
+  });
+
+  /**
+   * Le panneau de tarifs. ⚠️ L'assertion qui compte est le badge « Référence » :
+   * c'est le seul endroit de l'application qui dise **quel** prix décide du coût
+   * de recette, de la liste de courses et du bilan.
+   */
+  it('montre les tarifs, du moins cher au plus cher, et nomme la référence', async () => {
+    http
+      .expectOne((r) => r.url.endsWith('/stocks'))
+      .flush([
+        {
+          id: 7,
+          name: 'Farine T55',
+          unit: 'kg',
+          brand: null,
+          categoryId: null,
+          categoryName: null,
+          supplierId: null,
+          totalRemainingQty: 0,
+          batchCount: 0,
+          nearestExpirationDate: null,
+          expiredBatchCount: 0,
+          soonBatchCount: 0,
+        },
+      ]);
+    http.expectOne((r) => r.url.endsWith('/categories')).flush([]);
+    await fixture.whenStable();
+
+    (component as unknown as { select(id: number): void }).select(7);
+    await fixture.whenStable();
+    // La sélection déclenche deux effects : les lots et les tarifs. On vide.
+    for (const request of http.match(() => true)) request.flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    component['prices'].set({
+      id: 7,
+      name: 'Farine T55',
+      unit: 'kg',
+      suppliers: [
+        { id: 2, name: 'Metro', price: 220 },
+        { id: 1, name: 'Leclerc', price: 400 },
+      ],
+      bestSupplier: { id: 2, name: 'Metro', price: 220 },
+      bestPrice: 220,
+    });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Metro');
+    expect(text).toContain('2,20');
+    expect(text).toContain('Référence');
+  });
+
+  /** L'unité est dite en clair : rien ne normalise les conditionnements. */
+  it('annonce le prix comme étant celui de l’unité de stock', async () => {
+    http.expectOne((r) => r.url.endsWith('/stocks')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/categories')).flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    component['prices'].set({
+      id: 7,
+      name: 'Farine T55',
+      unit: 'kg',
+      suppliers: [],
+      bestSupplier: null,
+      bestPrice: null,
+    });
+
+    expect(component['priceUnitLabel']()).toBe('Prix par kg');
   });
 });

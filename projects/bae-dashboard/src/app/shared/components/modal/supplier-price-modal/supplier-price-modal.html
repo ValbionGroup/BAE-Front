@@ -1,0 +1,57 @@
+<bfd-modal-shell
+  [icon]="icEuro"
+  tone="blue"
+  [title]="title()"
+  [subtitle]="goodName()"
+  [width]="460"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    @if (!editing()) {
+      <bae-field label="Enseigne">
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="chosen()"
+          (change)="onChosen($any($event.target).value)"
+        >
+          <option value="">Choisir une enseigne…</option>
+          @for (supplier of suppliers(); track supplier.id) {
+            <option [value]="supplier.id">{{ supplier.name }}</option>
+          }
+        </select>
+      </bae-field>
+
+      @if (suppliers().length === 0) {
+        <p class="text-[11.5px] text-muted">
+          Toutes les enseignes connues tarifent déjà cette denrée. En créer une nouvelle se fait
+          depuis les Référentiels.
+        </p>
+      }
+    }
+
+    <!-- L'unité est dite en clair : rien ne normalise les conditionnements. -->
+    <bae-field [label]="unitLabel()" hint="En euros, pour une unité de stock">
+      <bae-input
+        placeholder="ex. 4,95"
+        [value]="amount()"
+        [invalid]="submitted() && cents() === null"
+        (valueChange)="onAmount($event)"
+      />
+    </bae-field>
+
+    @if (submitted() && cents() === null) {
+      <p class="text-[11.5px] text-danger">Un prix positif est attendu, par exemple 4,95.</p>
+    }
+
+    @if (error(); as message) {
+      <p class="text-[11.5px] text-danger" role="alert">{{ message }}</p>
+    }
+
+    <div class="mt-1 flex justify-end gap-2">
+      <bae-btn kind="secondary" size="sm" (clicked)="cancel()">Annuler</bae-btn>
+      <bae-btn kind="primary" size="sm" [disabled]="busy()" (clicked)="submit()">
+        Enregistrer
+      </bae-btn>
+    </div>
+  </div>
+</bfd-modal-shell>

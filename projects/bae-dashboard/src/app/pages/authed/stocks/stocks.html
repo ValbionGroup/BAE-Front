@@ -284,6 +284,58 @@
           </div>
         </div>
 
+        <!-- Tarifs par enseigne -->
+        <div class="mb-4">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-[12px] font-semibold text-text">{{ priceUnitLabel() }}</span>
+            @if (canPrice()) {
+              <bae-btn kind="secondary" size="sm" (clicked)="openPriceEditor(null)">
+                Ajouter un tarif
+              </bae-btn>
+            }
+          </div>
+
+          @if (pricesLoading()) {
+            <div class="py-3 text-center text-[12px] text-muted">Chargement des tarifs…</div>
+          } @else if (prices(); as good) {
+            @if (good.suppliers.length === 0) {
+              <p class="m-0 text-[11.5px] text-muted">
+                Aucune enseigne ne tarife cette denrée. Sans tarif, le coût des recettes qui
+                l'emploient reste inconnu.
+              </p>
+            } @else {
+              <div class="flex flex-col gap-1.5">
+                @for (price of good.suppliers; track price.id) {
+                  <div
+                    class="flex items-center gap-2 rounded-md border border-border-s bg-surface-2 px-3 py-2"
+                  >
+                    <span class="flex-1 text-[12.5px] text-text">{{ price.name }}</span>
+                    <span class="mono tnum text-[12.5px] text-text">
+                      {{ formatCents(price.price) }} €
+                    </span>
+                    <!-- Le moins cher décide du coût de recette, de la liste de
+                         courses et du bilan : le dire, sinon rien ne le montre. -->
+                    @if (good.bestSupplier && good.bestSupplier.id === price.id) {
+                      <bae-badge kind="ok">Référence</bae-badge>
+                    }
+                    @if (canPrice()) {
+                      <bae-btn kind="ghost" size="sm" (clicked)="openPriceEditor(price.id)"
+                        >Modifier</bae-btn
+                      >
+                      <bae-btn
+                        kind="ghost"
+                        size="sm"
+                        (clicked)="confirmRemovePrice(price.id, price.name)"
+                        >Retirer</bae-btn
+                      >
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+
         <!-- Lots -->
         <div>
           <div class="mb-2 flex items-center justify-between">
