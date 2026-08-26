@@ -1,0 +1,102 @@
+<div class="h-full min-h-0 overflow-y-auto p-[22px]">
+  @if (tabs().length === 0) {
+    <!-- Le garde de route laisse passer dès une lecture : ce cas ne devrait pas
+         survenir, mais un écran muet vaut mieux qu'un écran qui ment. -->
+    <div class="text-xs text-muted">Aucune liste de référence ne vous est accessible.</div>
+  } @else {
+    <div class="mb-4 flex items-center gap-1.5" role="tablist">
+      @for (tab of tabs(); track tab.key) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeTab() === tab.key"
+          class="rounded-md px-3 py-1.5 text-[12.5px] font-medium"
+          [class.bg-surface-2]="activeTab() === tab.key"
+          [class.text-text]="activeTab() === tab.key"
+          [class.text-muted]="activeTab() !== tab.key"
+          (click)="setTab(tab.key)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    @if (store.loading() === 'loading') {
+      <div class="text-xs text-muted">Chargement…</div>
+    } @else if (store.loadError(); as message) {
+      <div class="text-xs text-danger" role="alert">{{ message }}</div>
+    } @else {
+      @switch (activeTab()) {
+        @case ('categories') {
+          <bae-card [padding]="0" class="block">
+            <div
+              class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
+            >
+              <span class="flex-1">Catégories de denrées</span>
+            </div>
+            @if (store.categories().length === 0) {
+              <div class="px-4 py-6 text-xs text-muted">Aucune catégorie.</div>
+            } @else {
+              @for (category of store.categories(); track category.id) {
+                <div
+                  class="flex items-center gap-3 border-b border-border-s px-4 py-2.5 last:border-0"
+                >
+                  <span class="flex-1 text-[12.5px] text-text">{{ category.name }}</span>
+                  <!-- Le compteur explique d'avance ce qu'une suppression déclasserait. -->
+                  <bae-badge kind="neutral">{{ category.goodsCount }} denrée(s)</bae-badge>
+                </div>
+              }
+            }
+          </bae-card>
+        }
+        @case ('suppliers') {
+          <bae-card [padding]="0" class="block">
+            <div
+              class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
+            >
+              <span class="flex-1">Enseignes</span>
+            </div>
+            @if (store.suppliers().length === 0) {
+              <div class="px-4 py-6 text-xs text-muted">Aucune enseigne.</div>
+            } @else {
+              @for (supplier of store.suppliers(); track supplier.id) {
+                <div
+                  class="flex items-center gap-3 border-b border-border-s px-4 py-2.5 last:border-0"
+                >
+                  <span class="flex-1 text-[12.5px] text-text">{{ supplier.name }}</span>
+                  <!-- Ces deux compteurs sont exactement ce que `destroy` refuse. -->
+                  <bae-badge kind="neutral">{{ supplier.pricedGoodsCount }} prix</bae-badge>
+                  <bae-badge kind="neutral">{{ supplier.voucherCount }} bon(s)</bae-badge>
+                </div>
+              }
+            }
+          </bae-card>
+        }
+        @case ('jobs') {
+          <bae-card [padding]="0" class="block">
+            <div
+              class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
+            >
+              <span class="flex-1">Postes</span>
+            </div>
+            @if (store.jobs().length === 0) {
+              <div class="px-4 py-6 text-xs text-muted">Aucun poste.</div>
+            } @else {
+              @for (job of store.jobs(); track job.id) {
+                <div
+                  class="flex items-center gap-3 border-b border-border-s px-4 py-2.5 last:border-0"
+                >
+                  <span class="flex-1 text-[12.5px] text-text">{{ job.name }}</span>
+                  <bae-badge kind="blue">{{ periodLabel(job.type) }}</bae-badge>
+                  <span class="w-[40%] truncate text-[11.5px] text-muted">
+                    {{ job.description ?? '—' }}
+                  </span>
+                </div>
+              }
+            }
+          </bae-card>
+        }
+      }
+    }
+  }
+</div>

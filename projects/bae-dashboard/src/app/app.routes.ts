@@ -175,6 +175,12 @@ export const routes: Routes = [
         ],
       },
       {
+        path: AppRoutes.referentiels,
+        canActivate: [permissionGuardFor(AppRoutes.referentiels)],
+        loadComponent: () =>
+          import('#pages/authed/referentiels/referentiels').then((m) => m.Referentiels),
+      },
+      {
         path: AppRoutes.paiements,
         canActivate: [permissionGuardFor(AppRoutes.paiements)],
         loadComponent: () => import('#pages/authed/paiements/paiements').then((m) => m.Paiements),

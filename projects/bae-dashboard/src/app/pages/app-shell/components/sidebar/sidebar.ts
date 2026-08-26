@@ -10,6 +10,7 @@ import {
   LucideEuro,
   LucideHouse,
   LucideIconInput,
+  LucideLibrary,
   LucideLogOut,
   LucidePackage,
   LucidePartyPopper,
@@ -59,6 +60,7 @@ const NAV: readonly NavGroup[] = [
       { id: 'recettes', route: AppRoutes.recettes, label: 'Recettes', icon: LucideChefHat },
       { id: 'coord', route: AppRoutes.coordination, label: 'Coordination', icon: LucideUsers },
       { id: 'log', route: AppRoutes.logistique, label: 'Logistique', icon: LucideTruck },
+      { id: 'ref', route: AppRoutes.referentiels, label: 'Référentiels', icon: LucideLibrary },
     ],
   },
   {

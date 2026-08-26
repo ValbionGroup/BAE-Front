@@ -192,6 +192,7 @@ describe('Sidebar — ce que chaque rôle voit', () => {
       'Recettes',
       'Coordination',
       'Logistique',
+      'Référentiels',
       'Caisse',
       'Précommandes',
       'Pilotage soirée',
