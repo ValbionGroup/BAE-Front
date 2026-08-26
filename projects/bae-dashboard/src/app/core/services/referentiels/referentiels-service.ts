@@ -25,6 +25,16 @@ export interface ApiSupplier {
   readonly voucherCount: number;
 }
 
+/**
+ * Le référentiel de **vente** — « Plats / Desserts / Boissons ». À ne pas
+ * confondre avec `ApiCategory`, qui classe les denrées pour le stockage.
+ */
+export interface ApiProductCategory {
+  readonly id: number;
+  readonly name: string;
+  readonly productsCount: number;
+}
+
 export interface ApiJob {
   readonly id: number;
   readonly name: string;
@@ -42,6 +52,7 @@ export interface ReferentielsSnapshot {
   readonly categories: ApiCategory[];
   readonly suppliers: ApiSupplier[];
   readonly jobs: ApiJob[];
+  readonly productCategories: ApiProductCategory[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -56,6 +67,7 @@ export class ReferentielsService {
       categories: this.http.get<ApiCategory[]>(`${this.baseUrl}/categories`),
       suppliers: this.http.get<ApiSupplier[]>(`${this.baseUrl}/suppliers`),
       jobs: this.http.get<ApiJob[]>(`${this.baseUrl}/jobs`),
+      productCategories: this.http.get<ApiProductCategory[]>(`${this.baseUrl}/product-categories`),
     });
   }
 
@@ -81,6 +93,20 @@ export class ReferentielsService {
 
   deleteSupplier(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/suppliers/${id}`);
+  }
+
+  createProductCategory(name: string): Observable<ApiProductCategory> {
+    return this.http.post<ApiProductCategory>(`${this.baseUrl}/product-categories`, { name });
+  }
+
+  updateProductCategory(id: number, name: string): Observable<ApiProductCategory> {
+    return this.http.patch<ApiProductCategory>(`${this.baseUrl}/product-categories/${id}`, {
+      name,
+    });
+  }
+
+  deleteProductCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/product-categories/${id}`);
   }
 
   createJob(input: JobInput): Observable<ApiJob> {

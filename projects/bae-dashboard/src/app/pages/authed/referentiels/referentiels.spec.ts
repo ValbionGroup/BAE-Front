@@ -45,6 +45,9 @@ describe(Referentiels.name, () => {
     http
       .expectOne(`${baseUrl}/jobs`)
       .flush([{ id: 3, name: 'Grill', type: 'during', description: null }]);
+    http
+      .expectOne(`${baseUrl}/product-categories`)
+      .flush([{ id: 4, name: 'Desserts', productsCount: 2 }]);
     await settle();
     fixture.detectChanges();
   }
@@ -160,5 +163,53 @@ describe(Referentiels.name, () => {
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelectorAll('[data-action="delete"]').length).toBe(1);
     expect(text()).toContain('Ajouter');
+  });
+
+  it('montre les quatre onglets à qui porte les quatre lectures', async () => {
+    await render(['category:read', 'supplier:read', 'job:read', 'product:read']);
+
+    expect(text()).toContain('Catégories');
+    expect(text()).toContain('Enseignes');
+    expect(text()).toContain('Postes');
+    expect(text()).toContain('Catégories de recettes');
+  });
+
+  /**
+   * ⚠️ Deux onglets homonymes se ressemblent trop pour qu'on sache lequel
+   * ouvrir : chacun dit à quoi il sert.
+   */
+  it('distingue les deux référentiels de catégories par leur usage', async () => {
+    await render(['category:read', 'product:read', 'supplier:read', 'job:read']);
+
+    expect(text()).toContain('pour le stockage');
+
+    fixture.componentInstance['setTab']('productCategories');
+    fixture.detectChanges();
+    expect(text()).toContain('pour le menu et la caisse');
+  });
+
+  it('ouvre l’onglet des recettes à qui ne porte que product:read', async () => {
+    await render(['product:read']);
+
+    expect(text()).toContain('Catégories de recettes');
+    expect(text()).not.toContain('Enseignes');
+    expect(text()).toContain('Desserts');
+  });
+
+  /** Le compteur annonce ce que la suppression déclasserait, sans rien détruire. */
+  it('annonce ce qu’une suppression de catégorie de recettes va déclasser', async () => {
+    await render(['product:read', 'product:delete', 'category:read']);
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('m');
+
+    fixture.componentInstance['confirmDeleteProductCategory']({
+      id: 4,
+      name: 'Desserts',
+      productsCount: 2,
+    });
+
+    const config = open.mock.calls[0][0] as unknown as { details: string };
+    expect(config.details).toContain('2');
+    expect(config.details).toContain('sans catégorie');
+    expect(config.details).toContain('ne sont pas supprimées');
   });
 });

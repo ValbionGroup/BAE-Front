@@ -34,24 +34,29 @@ describe('ReferentielsStore', () => {
     categories: unknown[] = [],
     suppliers: unknown[] = [],
     jobs: unknown[] = [],
+    productCategories: unknown[] = [],
   ): void {
     http.expectOne(`${baseUrl}/categories`).flush(categories);
     http.expectOne(`${baseUrl}/suppliers`).flush(suppliers);
     http.expectOne(`${baseUrl}/jobs`).flush(jobs);
+    // ⚠️ Quatrième liste depuis le 2026-08-26 : les catégories de recettes.
+    http.expectOne(`${baseUrl}/product-categories`).flush(productCategories);
   }
 
-  it('charge les trois listes en une fois', async () => {
+  it('charge les quatre listes en une fois', async () => {
     const loaded = store.load();
     flushAll(
       [{ id: 1, name: 'Boissons', goodsCount: 3 }],
       [{ id: 2, name: 'Metro', pricedGoodsCount: 4, voucherCount: 1 }],
       [{ id: 3, name: 'Grill', type: 'during', description: null }],
+      [{ id: 4, name: 'Desserts', productsCount: 2 }],
     );
     await loaded;
 
     expect(store.categories()[0].goodsCount).toBe(3);
     expect(store.suppliers()[0].voucherCount).toBe(1);
     expect(store.jobs()[0].name).toBe('Grill');
+    expect(store.productCategories()[0].productsCount).toBe(2);
     expect(store.loading()).toBe('loaded');
   });
 
@@ -85,7 +90,7 @@ describe('ReferentielsStore', () => {
     http.expectNone(`${baseUrl}/categories`);
   });
 
-  it('relit les trois listes après une suppression aboutie', async () => {
+  it('relit les quatre listes après une suppression aboutie', async () => {
     const loaded = store.load();
     flushAll([{ id: 1, name: 'Boissons', goodsCount: 0 }]);
     await loaded;

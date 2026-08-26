@@ -88,6 +88,7 @@ describe('permissionFor', () => {
       'category:read',
       'supplier:read',
       'job:read',
+      'product:read',
     ]);
   });
 

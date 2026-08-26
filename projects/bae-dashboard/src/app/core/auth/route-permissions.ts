@@ -26,7 +26,7 @@ export const ROUTE_PERMISSIONS = {
   [AppRoutes.soireeBilan]: 'event:settle',
   [AppRoutes.paiements]: 'transaction:read',
   [AppRoutes.equipe]: 'role:read',
-  [AppRoutes.referentiels]: ['category:read', 'supplier:read', 'job:read'],
+  [AppRoutes.referentiels]: ['category:read', 'supplier:read', 'job:read', 'product:read'],
 } as const satisfies Readonly<Record<string, Permission | readonly Permission[]>>;
 
 export type GuardedRoute = keyof typeof ROUTE_PERMISSIONS;

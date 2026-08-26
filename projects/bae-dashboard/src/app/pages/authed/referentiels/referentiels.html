@@ -21,6 +21,12 @@
       }
     </div>
 
+    <!-- Deux onglets s'appellent « Catégories » : ce sous-titre est ce qui les
+         distingue. Sans lui, on ne sait pas lequel ouvrir. -->
+    @if (activeHint(); as hint) {
+      <p class="mb-3 text-[11.5px] text-muted">{{ hint }}</p>
+    }
+
     @if (store.loading() === 'loading') {
       <div class="text-xs text-muted">Chargement…</div>
     } @else if (store.loadError(); as message) {
@@ -65,6 +71,57 @@
                       [icon]="icTrash"
                       data-action="delete"
                       (clicked)="confirmDeleteCategory(category)"
+                      >Supprimer</bae-btn
+                    >
+                  }
+                </div>
+              }
+            }
+          </bae-card>
+        }
+        @case ('productCategories') {
+          <bae-card [padding]="0" class="block">
+            <div
+              class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
+            >
+              <span class="flex-1">Catégories de recettes</span>
+              @if (canWriteProductCategories()) {
+                <bae-btn
+                  kind="primary"
+                  size="sm"
+                  [icon]="icPlus"
+                  (clicked)="createProductCategory()"
+                >
+                  Ajouter
+                </bae-btn>
+              }
+            </div>
+            @if (store.productCategories().length === 0) {
+              <div class="px-4 py-6 text-xs text-muted">Aucune catégorie de recettes.</div>
+            } @else {
+              @for (category of store.productCategories(); track category.id) {
+                <div
+                  class="flex items-center gap-3 border-b border-border-s px-4 py-2.5 last:border-0"
+                >
+                  <span class="flex-1 text-[12.5px] text-text">{{ category.name }}</span>
+                  <!-- Le compteur explique d'avance ce qu'une suppression déclasserait. -->
+                  <bae-badge kind="neutral">{{ category.productsCount }} recette(s)</bae-badge>
+                  @if (canWriteProductCategories()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icPencil"
+                      (clicked)="editProductCategory(category)"
+                      >Modifier</bae-btn
+                    >
+                  }
+                  @if (canDeleteProductCategories()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icTrash"
+                      data-action="delete"
+                      (clicked)="confirmDeleteProductCategory(category)"
                       >Supprimer</bae-btn
                     >
                   }

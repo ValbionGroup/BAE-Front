@@ -17,19 +17,43 @@ import { JobEditModal } from '#shared/components/modal/job-edit-modal/job-edit-m
 import type {
   ApiCategory,
   ApiJob,
+  ApiProductCategory,
   ApiSupplier,
 } from '#core/services/referentiels/referentiels-service';
 import { selectPermissions } from '#core/store/auth/auth.selector';
 import type { Permission } from '#core/models/permission.model';
 import { JOB_PERIOD_LABELS, type JobPeriod } from '#core/models/job-period.model';
 
-type Tab = 'categories' | 'suppliers' | 'jobs';
+type Tab = 'categories' | 'suppliers' | 'jobs' | 'productCategories';
 
-/** Chaque onglet est conditionné à sa propre lecture. */
-const TABS: readonly { readonly key: Tab; readonly label: string; readonly read: Permission }[] = [
-  { key: 'categories', label: 'Catégories', read: 'category:read' },
-  { key: 'suppliers', label: 'Enseignes', read: 'supplier:read' },
-  { key: 'jobs', label: 'Postes', read: 'job:read' },
+/**
+ * Chaque onglet est conditionné à sa propre lecture.
+ *
+ * ⚠️ Deux d'entre eux s'appellent « Catégories » et « Catégories de recettes » —
+ * trop proches pour qu'on sache lequel ouvrir. Le `hint` dit à quoi chacun sert,
+ * et il est affiché : les denrées se classent pour le **stockage**, les recettes
+ * pour le **menu et la caisse**.
+ */
+const TABS: readonly {
+  readonly key: Tab;
+  readonly label: string;
+  readonly hint: string;
+  readonly read: Permission;
+}[] = [
+  {
+    key: 'categories',
+    label: 'Catégories',
+    hint: 'des denrées, pour le stockage',
+    read: 'category:read',
+  },
+  { key: 'suppliers', label: 'Enseignes', hint: 'où l’on achète', read: 'supplier:read' },
+  { key: 'jobs', label: 'Postes', hint: 'tenus pendant une soirée', read: 'job:read' },
+  {
+    key: 'productCategories',
+    label: 'Catégories de recettes',
+    hint: 'des recettes, pour le menu et la caisse',
+    read: 'product:read',
+  },
 ];
 
 /**
@@ -72,6 +96,8 @@ export class Referentiels implements OnInit {
   protected readonly canDeleteCategories = computed(() => this.has('category:delete'));
   protected readonly canWriteSuppliers = computed(() => this.has('supplier:write'));
   protected readonly canDeleteSuppliers = computed(() => this.has('supplier:delete'));
+  protected readonly canWriteProductCategories = computed(() => this.has('product:write'));
+  protected readonly canDeleteProductCategories = computed(() => this.has('product:delete'));
   protected readonly canWriteJobs = computed(() => this.has('job:write'));
   protected readonly canDeleteJobs = computed(() => this.has('job:delete'));
 
@@ -91,6 +117,11 @@ export class Referentiels implements OnInit {
     if (requested !== null && readable.some((tab) => tab.key === requested)) return requested;
     return readable[0]?.key ?? null;
   });
+
+  /** Le sous-titre de l'onglet ouvert, qui dit à quoi il sert. */
+  protected readonly activeHint = computed(
+    () => this.tabs().find((tab) => tab.key === this.activeTab())?.hint ?? '',
+  );
 
   protected setTab(tab: Tab): void {
     this.requestedTab.set(tab);
@@ -154,6 +185,38 @@ export class Referentiels implements OnInit {
   protected editSupplier(supplier: ApiSupplier): void {
     this.openNamed('Modifier l’enseigne', '', supplier.name, (name) =>
       this.store.updateSupplier(supplier.id, name),
+    );
+  }
+
+  protected createProductCategory(): void {
+    this.openNamed('Nouvelle catégorie de recettes', 'ex. Desserts', '', (name) =>
+      this.store.createProductCategory(name),
+    );
+  }
+
+  protected editProductCategory(category: ApiProductCategory): void {
+    this.openNamed('Modifier la catégorie', '', category.name, (name) =>
+      this.store.updateProductCategory(category.id, name),
+    );
+  }
+
+  protected confirmDeleteProductCategory(category: ApiProductCategory): void {
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer la catégorie de recettes',
+      message: `« ${category.name} » sera retirée de la liste.`,
+      details:
+        category.productsCount > 0
+          ? `${category.productsCount} recette(s) deviendront sans catégorie. Elles ne sont pas supprimées.`
+          : 'Aucune recette n’y est classée.',
+      onConfirm: () => void this.deleteProductCategory(category.id, category.name),
+    });
+  }
+
+  protected async deleteProductCategory(id: number, name: string): Promise<void> {
+    this.report(
+      await this.store.deleteProductCategory(id),
+      `« ${name} » n’est plus dans la liste.`,
     );
   }
 
