@@ -1,0 +1,175 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*-*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/${{ github.repository_name }}
+
+jobs:
+  create-env:
+    name: Create environment file
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate environment.ts
+        env:
+          API_URL: ${{ vars.BAE_API_URL }}
+          PUBLIC_APP_URL: ${{ vars.BAE_PUBLIC_APP_URL }}
+        run: |
+          set -euo pipefail
+
+          # nginx serves the bundle without proxying the API, so a missing URL
+          # would ship an image whose every request goes nowhere.
+          if [ -z "$API_URL" ]; then
+            echo "::error::Repository variable BAE_API_URL is not set."
+            exit 1
+          fi
+
+          if [ -z "$PUBLIC_APP_URL" ]; then
+            echo "::error::Repository variable BAE_PUBLIC_APP_URL is not set."
+            exit 1
+          fi
+
+          mkdir -p projects/bae-ui/src/environment
+          cat > projects/bae-ui/src/environment/environment.ts <<EOF
+          export const environment = {
+            production: true,
+            apiUrl: '$API_URL',
+            publicAppUrl: '$PUBLIC_APP_URL',
+          };
+          EOF
+
+      - name: Upload environment file
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment
+          path: projects/bae-ui/src/environment/environment.ts
+          retention-days: 1
+
+  build-and-push-dashboard:
+    name: Build and push dashboard image
+    needs: [create-env]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get environment file
+        uses: actions/download-artifact@v4
+        with:
+          name: environment
+          path: projects/bae-ui/src/environment
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-dashboard
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.dashboard
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build-and-push.outputs.digest }}
+          push-to-registry: true
+
+  build-and-push-public:
+    name: Build and push public image
+    needs: [create-env]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get environment file
+        uses: actions/download-artifact@v4
+        with:
+          name: environment
+          path: projects/bae-ui/src/environment
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-public
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.public
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build-and-push.outputs.digest }}
+          push-to-registry: true
