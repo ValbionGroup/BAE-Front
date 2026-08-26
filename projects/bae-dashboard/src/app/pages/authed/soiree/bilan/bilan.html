@@ -114,6 +114,32 @@
         </bae-card>
       }
 
+      <!-- Le pendant non recouvrable : ce que le BAE a choisi d'offrir. Sans ce
+           bloc, la somme n'apparaîtrait nulle part et le manque à gagner se
+           lirait comme une erreur de caisse. -->
+      @if (granted(); as offered) {
+        <bae-card class="mt-4 block">
+          <div class="mb-2.5 text-[13px] font-semibold text-text">Offert par le BAE</div>
+
+          <div class="mono tnum text-[26px] font-semibold text-text-2">{{ offered.total }} €</div>
+          <p class="mt-1 text-[11px] text-muted">
+            Pris en charge en interne : cette somme ne sera jamais refacturée et n'apparaît pas sur
+            le justificatif.
+          </p>
+
+          <ul class="mt-3 flex flex-col gap-1.5">
+            @for (category of offered.categories; track category.label) {
+              <li
+                class="flex items-center justify-between rounded-md border border-border-s bg-surface-2 px-3 py-2 text-[12.5px]"
+              >
+                <span class="text-text-2">{{ category.label }}</span>
+                <span class="mono tnum font-semibold text-text">{{ category.granted }} €</span>
+              </li>
+            }
+          </ul>
+        </bae-card>
+      }
+
       <bae-card [padding]="0" class="mt-4 block">
         <div class="border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text">
           Par produit

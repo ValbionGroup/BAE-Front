@@ -61,7 +61,7 @@ describe(SponsorshipCategoriesModal.name, () => {
     await menu;
 
     for (const request of http.match((r) => r.url.includes('sponsorship-categories'))) {
-      request.flush([{ id: 3, eventId: 7, label: 'Staff BDE', prices: [] }]);
+      request.flush([{ id: 3, eventId: 7, label: 'Staff BDE', mode: 'external', prices: [] }]);
     }
     // `reload()` est asynchrone : sans ce tour de boucle, `categories()` est
     // encore vide et `save()` sortirait sans rien envoyer.
@@ -115,5 +115,46 @@ describe(SponsorshipCategoriesModal.name, () => {
     );
     expect(request.request.body).toEqual({ prices: [{ productId: 1, priceCents: 200 }] });
     request.flush({ id: 3, eventId: 7, label: 'Staff BDE', prices: [] });
+  });
+
+  it('crée la catégorie avec le mode choisi', async () => {
+    await seed();
+    component['newLabel'].set('Invités du BAE');
+    component['newMode'].set('internal');
+
+    const added = component['addCategory']();
+    const request = http.expectOne(`${baseUrl}/events/7/sponsorship-categories`);
+    expect(request.request.body).toEqual({ label: 'Invités du BAE', mode: 'internal' });
+    request.flush({ id: 4, eventId: 7, label: 'Invités du BAE', mode: 'internal', prices: [] });
+    await added;
+
+    // Le mode revient à son défaut : la catégorie suivante n'hérite pas d'un
+    // choix qui ne la concerne pas.
+    expect(component['newMode']()).toBe('external');
+  });
+
+  /**
+   * Le défaut visé : un refus du serveur avalé en silence. Le mode se verrouille
+   * dès la première vente, et l'écran ne sait pas si des commandes existent —
+   * si le 409 n'est pas affiché, le sélecteur semble simplement ne rien faire.
+   */
+  it('affiche le refus du serveur quand le mode est verrouillé', async () => {
+    await seed();
+
+    const switched = component['switchMode']('internal');
+    http.expectOne(`${baseUrl}/events/7/sponsorship-categories/3`).flush(
+      {
+        message:
+          'Des commandes ont été passées sur cette catégorie : son mode ne peut plus changer.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await switched;
+
+    expect(component['error']()).toBe(
+      'Des commandes ont été passées sur cette catégorie : son mode ne peut plus changer.',
+    );
+    // La catégorie garde son mode d'origine : l'écran ne doit pas mentir.
+    expect(component['selected']()!.mode).toBe('external');
   });
 });

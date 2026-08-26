@@ -184,10 +184,18 @@ export class SoireeBilan implements OnInit {
       {
         label: 'Recette',
         value: `${money(summary.revenueCents)} €`,
+        // Les deux natures se disent séparément : « à recouvrer » seul devenait
+        // faux dès qu'une catégorie interne existait, et présentait comme une
+        // créance ce que le BAE avait décidé d'offrir.
+        detail: detailOf(summary) ?? 'valeur au prix public',
+      },
+      {
+        label: 'Recette nette',
+        value: `${money(summary.netRevenueCents)} €`,
         detail:
-          summary.sponsoredCents > 0
-            ? `dont ${money(summary.sponsoredCents)} € à recouvrer`
-            : 'valeur au prix public',
+          summary.grantedCents > 0
+            ? `${money(summary.grantedCents)} € offerts par le BAE`
+            : 'rien offert sur cette soirée',
       },
       {
         label: 'Commandes',
@@ -222,18 +230,38 @@ export class SoireeBilan implements OnInit {
     return this.cashedTotal() - summary.revenueCents;
   });
 
-  /** Non nul = une association doit de l'argent au BAE sur cette soirée. */
+  /**
+   * Non nul = une association doit de l'argent au BAE sur cette soirée.
+   *
+   * ⚠️ Conditionné à `receivableCents`, **pas** à `sponsoredCents` : une soirée
+   * entièrement offerte par le BAE a un écart consenti non nul mais personne à
+   * réclamer, et le bloc s'ouvrirait sur « payeur non renseigné ».
+   */
   protected readonly receivable = computed(() => {
     const summary = this.summary();
-    if (summary === null || summary.sponsoredCents === 0) return null;
+    if (summary === null || summary.receivableCents === 0) return null;
 
     return {
       payerName: summary.payerName ?? 'payeur non renseigné',
-      total: money(summary.sponsoredCents),
+      total: money(summary.receivableCents),
       cashed: money(summary.cashedCents),
       categories: summary.receivableByCategory.map((entry) => ({
         label: entry.label,
         due: money(entry.dueCents),
+      })),
+    };
+  });
+
+  /** Ce que le BAE a offert, par catégorie — le pendant non recouvrable. */
+  protected readonly granted = computed(() => {
+    const summary = this.summary();
+    if (summary === null || summary.grantedCents === 0) return null;
+
+    return {
+      total: money(summary.grantedCents),
+      categories: summary.grantedByCategory.map((entry) => ({
+        label: entry.label,
+        granted: money(entry.grantedCents),
       })),
     };
   });
@@ -292,6 +320,18 @@ function money(cents: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+/**
+ * Le détail du KPI de recette, qui doit nommer les deux natures de l'écart
+ * consenti : ce qu'un tiers doit, et ce que le BAE a offert. Les confondre
+ * présentait une perte sèche comme une créance à venir.
+ */
+function detailOf(summary: EventSummary): string | null {
+  const parts: string[] = [];
+  if (summary.receivableCents > 0) parts.push(`${money(summary.receivableCents)} € à recouvrer`);
+  if (summary.grantedCents > 0) parts.push(`${money(summary.grantedCents)} € offerts`);
+  return parts.length === 0 ? null : `dont ${parts.join(' · ')}`;
 }
 
 /** « 18 août » — assez pour distinguer deux soirées dans une liste déroulante. */

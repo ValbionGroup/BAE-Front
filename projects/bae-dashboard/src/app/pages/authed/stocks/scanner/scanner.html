@@ -96,7 +96,10 @@
         <div class="mt-0.5 text-[11.5px] text-muted">
           {{ lines().length }} article{{ lines().length > 1 ? 's' : '' }}
           @if (unknownCount() > 0) {
-            · {{ unknownCount() }} à créer
+            · {{ unknownCount() }} à rattacher
+          }
+          @if (pendingAttachCount() > 0) {
+            · {{ pendingAttachCount() }} code{{ pendingAttachCount() > 1 ? 's' : '' }} à enregistrer
           }
         </div>
       </div>
@@ -133,7 +136,9 @@
               >{{ line.name }}</span
             >
             @if (line.goodId === null) {
-              <bae-badge kind="warn">À créer</bae-badge>
+              <bae-badge kind="warn">Inconnu</bae-badge>
+            } @else if (line.attachPending) {
+              <bae-badge kind="blue">Code à enregistrer</bae-badge>
             }
             <span class="flex-1"></span>
             <button
@@ -148,7 +153,15 @@
           <div class="mono mt-1 text-[10.5px] text-muted">{{ line.barcode }}</div>
 
           @if (line.goodId === null) {
-            <div class="mt-2.5">
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              <bae-btn
+                kind="primary"
+                size="sm"
+                [icon]="icLink"
+                (clicked)="resolveUnknown(line.barcode)"
+              >
+                Rattacher à un aliment
+              </bae-btn>
               <bae-btn
                 kind="outline"
                 size="sm"

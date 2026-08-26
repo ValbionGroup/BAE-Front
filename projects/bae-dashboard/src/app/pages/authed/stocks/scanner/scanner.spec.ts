@@ -15,7 +15,13 @@ const baseUrl = 'http://api.test/v1';
  *  chemin que la caméra, qui n'existe pas sous jsdom. */
 interface ScannerInternals {
   onBarcode(code: string): Promise<void>;
-  lines(): readonly { barcode: string; goodId: number | null; quantity: number }[];
+  lines(): readonly {
+    barcode: string;
+    goodId: number | null;
+    quantity: number;
+    attachPending: boolean;
+  }[];
+  resolveUnknown(barcode: string): void;
   ready(): readonly unknown[];
   bump(barcode: string, delta: number): void;
   validate(): Promise<void>;
@@ -219,6 +225,9 @@ describe(StocksScanner.name, () => {
     // jamais en stock, alors que le produit existe désormais.
     expect(scanner.lines()[0]).toMatchObject({ goodId: 42, name: 'Cornichons' });
     expect(scanner.ready()).toHaveLength(1);
+    // `POST /goods` a déjà posé le code : le reposter à la validation le ferait
+    // refuser par sa propre contrainte d'unicité.
+    expect(scanner.lines()[0].attachPending).toBe(false);
   });
 
   it('keeps a refused line in the session and says so', async () => {
@@ -241,5 +250,98 @@ describe(StocksScanner.name, () => {
     expect(scanner.saveError()).toBe('Quantité invalide.');
     // Elle reste à l'écran : la perdre effacerait un scan sans rien enregistrer.
     expect(scanner.lines()).toHaveLength(1);
+  });
+
+  /** Amène une ligne inconnue jusqu'au rattachement décidé, non écrit. */
+  async function pendingAttach(barcode = '0000000000000', goodId = 42): Promise<void> {
+    const opened = vi.spyOn(TestBed.inject(ModalService), 'open');
+    const scanned = scanner.onBarcode(barcode);
+    flushLookup(barcode, null);
+    await scanned;
+
+    scanner.resolveUnknown(barcode);
+    const config = opened.mock.calls.at(-1)?.at(0) as unknown as {
+      inputs: { picked: (p: unknown) => void };
+    };
+    config.inputs.picked({ id: goodId, name: 'Nutella' });
+    opened.mockRestore();
+  }
+
+  it('attaches an unknown code to an existing good without writing anything yet', async () => {
+    await pendingAttach();
+
+    expect(scanner.lines()[0]).toMatchObject({ goodId: 42, name: 'Nutella', attachPending: true });
+    expect(scanner.ready()).toHaveLength(1);
+    // Rien ne part avant la validation : quitter le scanner ne doit laisser
+    // aucune trace en base.
+    http.expectNone((r) => r.url.includes('/barcodes'));
+  });
+
+  it('writes the barcode before the batch it belongs to', async () => {
+    await pendingAttach();
+
+    const validated = scanner.validate();
+
+    const attach = http.expectOne(`${baseUrl}/goods/42/barcodes`);
+    expect(attach.request.body).toEqual({ code: '0000000000000' });
+    // L'ordre est la garantie : un lot entré avant que le code soit accepté
+    // porterait sur un aliment que le serveur peut encore refuser.
+    http.expectNone(`${baseUrl}/stock-batches`);
+    attach.flush({ goodId: 42, code: '0000000000000' });
+    await tick();
+
+    http.expectOne(`${baseUrl}/stock-batches`).flush({ id: 1 });
+    await tick();
+    http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    await validated;
+
+    expect(scanner.lines()).toHaveLength(0);
+  });
+
+  it('enters no batch when the barcode is refused', async () => {
+    await pendingAttach();
+
+    const validated = scanner.validate();
+    http
+      .expectOne(`${baseUrl}/goods/42/barcodes`)
+      .flush(
+        { message: 'Ce code-barres est déjà associé à un autre produit.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await tick();
+
+    // Le lot ne part pas sur une denrée contestée.
+    http.expectNone(`${baseUrl}/stock-batches`);
+    await validated;
+
+    expect(scanner.saveError()).toBe('Ce code-barres est déjà associé à un autre produit.');
+    expect(scanner.lines()).toHaveLength(1);
+  });
+
+  it('does not repost a barcode already written when the batch failed', async () => {
+    await pendingAttach();
+
+    const first = scanner.validate();
+    http.expectOne(`${baseUrl}/goods/42/barcodes`).flush({ goodId: 42, code: '0000000000000' });
+    await tick();
+    http
+      .expectOne(`${baseUrl}/stock-batches`)
+      .flush({ message: 'Quantité invalide.' }, { status: 422, statusText: 'x' });
+    await first;
+
+    // Le rattachement est acquis : le reposter le ferait refuser par la
+    // contrainte d'unicité, et la reprise resterait bloquée pour toujours.
+    expect(scanner.lines()[0].attachPending).toBe(false);
+
+    const second = scanner.validate();
+    http.expectNone((r) => r.url.includes('/barcodes'));
+    http.expectOne(`${baseUrl}/stock-batches`).flush({ id: 1 });
+    await tick();
+    http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    await second;
+
+    expect(scanner.lines()).toHaveLength(0);
   });
 });

@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
+import type { SponsorshipMode } from '../sponsorships/sponsorships-service';
 
 export interface BuyerFastPass {
   readonly label: string;
@@ -40,6 +41,8 @@ export interface ScannedCategory {
   readonly id: number;
   readonly eventId: number;
   readonly label: string;
+  /** `internal` : c'est le BAE qui offre l'écart, il n'y a pas de payeur. */
+  readonly mode: SponsorshipMode;
   readonly payerName: string | null;
   readonly prices: readonly { readonly productId: number; readonly priceCents: number }[];
 }
