@@ -325,22 +325,24 @@ Vérifié : plus aucun `div` cliquable inerte dans les trois projets.
 | `config/mail.ts` : aucun SMTP fourni.                                                                                              | Demande externe pure.                                                 |
 | `goods` : pas de colonne de méthode de stockage. `events` : pas de colonne `type`. Pas de contrainte unique `(user_id, event_id)`. | Tâches 44, 58, 46.                                                    |
 
-### 2026-08-26 — l'hébergement quitte EirbWare pour Dyjix
+### 2026-08-26 — l'hébergement passe chez Dyjix, **pour le moment**
 
 **EirbWare reste, mais pour EirbConnect seulement** : le Keycloak / SSO continue d'être opéré par
 eux. C'est **l'hébergement** qui change — [Dyjix](https://dyjix.eu/), hébergeur français (VPS KVM et
 NVMe, serveurs dédiés, datacenters Paris / Tours / Marseille, anti-DDoS, VPS compatibles Docker).
 
-Trois conséquences dans le dépôt, à traiter quand la bascule sera décidée :
+⚠️ **Le retour chez EirbWare n'est pas exclu** — c'est une bascule provisoire. Cela décide de ce
+qu'il faut faire, et surtout de ce qu'il ne faut **pas** faire :
 
-| #   | Conséquence                                                                                                                                                                                                                                                                                                                                                                                                |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a   | **Les deux `Dockerfile` peuvent fusionner.** Le README dit explicitement qu'ils sont dédoublés parce que « le workflow réutilisable Eirbware n'accepte pas de `build_args`, seulement un chemin de `file` ». Vérifié : `Dockerfile.dashboard` et `Dockerfile.public` ne diffèrent que par **trois lignes**, toutes le nom du projet. Un `ARG PROJECT` les remplace — dès lors que la contrainte disparaît. |
-| b   | **`.github/workflows/build-and-deploy.yml.eirbware` devient mort.** Déjà neutralisé par son extension ; à supprimer plutôt qu'à laisser croire qu'il décrit le déploiement.                                                                                                                                                                                                                                |
-| c   | **Les domaines de production sont à refixer** avant de demander quoi que ce soit à EirbWare (tâche 101) : les URI de callback et de post-logout se déclarent sur les domaines réels.                                                                                                                                                                                                                       |
+| Ce qu'on pourrait croire à faire                                                                                                                                                                                                                                                                  | Décision                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Fusionner les deux `Dockerfile`.** Le README dit qu'ils sont dédoublés parce que « le workflow réutilisable Eirbware n'accepte pas de `build_args`, seulement un chemin de `file` ». Vérifié : ils ne diffèrent que par **trois lignes**, toutes le nom du projet — un `ARG PROJECT` suffirait. | ❌ **Ne pas le faire.** La contrainte peut revenir, et le dédoublement serait à refaire. Le coût de le garder est nul ; celui de l'aller-retour ne l'est pas. |
+| **Supprimer `.github/workflows/build-and-deploy.yml.eirbware`.**                                                                                                                                                                                                                                  | ❌ **Le garder tel quel**, neutralisé par son extension. C'est la recette de déploiement du jour où l'on y retourne.                                          |
+| **Refixer les domaines de production.**                                                                                                                                                                                                                                                           | ✅ **À faire**, et c'est le préalable de la tâche 101 : les URI de callback et de post-logout se déclarent sur les domaines réels.                            |
 
 ⚠️ Ne pas confondre les deux rôles qu'EirbWare tenait. Le dépôt les mélange en douze endroits (« les
-demandes EirbWare » du §30.1 de `HANDOFF2`) ; seules celles qui portent sur **EirbConnect** restent.
+demandes EirbWare » du §30.1 de `HANDOFF2`) ; seules celles qui portent sur **EirbConnect** restent
+d'actualité — les autres sont suspendues, pas annulées.
 
 ### Rejoué le 2026-08-26 — bloc B et C
 
