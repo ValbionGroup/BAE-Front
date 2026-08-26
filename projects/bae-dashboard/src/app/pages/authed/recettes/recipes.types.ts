@@ -53,4 +53,10 @@ export interface RecipeWritePayload {
   readonly description: string | null;
   readonly recipe: string | null;
   readonly goods: readonly RecipeIngredientInput[];
+  /**
+   * La catégorie de **vente** — celle qui décide de l'onglet de la caisse.
+   * `null` déclasse explicitement ; l'omettre laisserait la recette telle
+   * qu'elle est, mais la modale l'envoie toujours.
+   */
+  readonly productCategoryId: number | null;
 }

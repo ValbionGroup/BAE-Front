@@ -28,6 +28,8 @@ export interface ApiRecipeDetail {
   readonly isVegetarian: boolean | null;
   readonly description: string | null;
   readonly recipe: string | null;
+  /** La catégorie de **vente** ; `null` = non classée, ce n'est pas une anomalie. */
+  readonly productCategoryId: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

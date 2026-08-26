@@ -11,6 +11,8 @@ const baseUrl = 'http://api.test/v1';
  *  modale du dépôt. */
 interface ModalApi {
   onName(value: string): void;
+  onCategoryId(value: string): void;
+  categoryId(): string;
   addLine(): void;
   setGood(key: string, goodId: string): void;
   setQuantity(key: string, quantity: string): void;
@@ -64,7 +66,18 @@ describe(RecipeEditModal.name, () => {
     fixture.detectChanges();
     // Catalogue d'ingrédients, chargé par `StocksStore` à l'ouverture.
     http.expectOne(`${baseUrl}/stocks`).flush([stockItem(10, 'Farine'), stockItem(11, 'Sucre')]);
-    http.expectOne(`${baseUrl}/categories`).flush([]);
+    // ⚠️ **Deux** requêtes `/categories` : `StocksStore` la demande pour le
+    // sélecteur d'ingrédients, `ReferentielsStore` pour les référentiels. Un
+    // `expectOne` échouerait sur « found 2 requests ».
+    for (const request of http.match(`${baseUrl}/categories`)) request.flush([]);
+    // ⚠️ `ReferentielsStore.load()` charge les **quatre** listes de référence : le
+    // sélecteur de catégorie n'en lit qu'une, mais les trois autres partent
+    // quand même. Sans cette vidange, `http.verify()` échoue sur tout le fichier.
+    http.expectOne(`${baseUrl}/suppliers`).flush([]);
+    http.expectOne(`${baseUrl}/jobs`).flush([]);
+    http
+      .expectOne(`${baseUrl}/product-categories`)
+      .flush([{ id: 4, name: 'Desserts', productsCount: 0 }]);
     return fixture;
   }
 
@@ -198,5 +211,61 @@ describe(RecipeEditModal.name, () => {
     await tick();
     http.expectOne(`${baseUrl}/products/summary`).flush([]);
     await submitted;
+  });
+
+  /**
+   * ⚠️ La colonne est **nullable** : « sans catégorie » n'est pas une anomalie,
+   * et doit partir en `null`, jamais en chaîne vide — `productValidator` la
+   * refuserait, et une chaîne vide s'afficherait comme une catégorie muette.
+   */
+  it('envoie null quand aucune catégorie n’est choisie', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Crêpe');
+
+    const submitted = modal.submit();
+    const request = http.expectOne(`${baseUrl}/products`);
+    expect(request.request.body.productCategoryId).toBeNull();
+    request.flush({ id: 9, name: 'Crêpe' });
+    await tick();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+    await submitted;
+  });
+
+  it('envoie l’identifiant de la catégorie choisie', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Crêpe');
+    modal.onCategoryId('4');
+
+    const submitted = modal.submit();
+    const request = http.expectOne(`${baseUrl}/products`);
+    expect(request.request.body.productCategoryId).toBe(4);
+    request.flush({ id: 9, name: 'Crêpe' });
+    await tick();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+    await submitted;
+  });
+
+  /** À la modification, le sélecteur s'ouvre sur la catégorie déjà posée. */
+  it('reprend la catégorie de la recette à la modification', async () => {
+    const fixture = open(7);
+    const modal = api(fixture);
+
+    http.expectOne(`${baseUrl}/products/7`).flush({
+      id: 7,
+      name: 'Crêpe Nutella',
+      isVegetarian: true,
+      description: null,
+      recipe: null,
+      productCategoryId: 4,
+    });
+    http.expectOne(`${baseUrl}/products/7/ingredients`).flush([]);
+    await tick();
+    fixture.detectChanges();
+
+    expect(modal.categoryId()).toBe('4');
   });
 });

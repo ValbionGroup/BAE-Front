@@ -27,6 +27,22 @@
         />
       </bae-field>
 
+      <!-- La catégorie de **vente** : c'est elle qui décide de l'onglet sous
+           lequel la recette apparaîtra en caisse. Sans catégorie, la recette
+           tombe dans « Sans catégorie » — un cas normal, pas une anomalie. -->
+      <bae-field label="Catégorie" hint="Détermine l'onglet de la caisse">
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="categoryId()"
+          (change)="onCategoryId($any($event.target).value)"
+        >
+          <option value="">Sans catégorie</option>
+          @for (category of referentiels.productCategories(); track category.id) {
+            <option [value]="category.id">{{ category.name }}</option>
+          }
+        </select>
+      </bae-field>
+
       <bae-toggle
         label="Recette végétarienne"
         [on]="isVegetarian()"

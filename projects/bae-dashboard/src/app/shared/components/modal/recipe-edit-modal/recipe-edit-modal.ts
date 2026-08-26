@@ -17,6 +17,7 @@ import {
 import { Btn, Field, Input, Toggle, ToastService } from '@bae/ui';
 import { RecipesStore } from '#core/store/recipes.store';
 import { StocksStore } from '#core/store/stocks.store';
+import { ReferentielsStore } from '#core/store/referentiels.store';
 import type { RecipeWritePayload } from '#pages/authed/recettes/recipes.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
@@ -86,6 +87,8 @@ export class RecipeEditModal {
   private readonly toast = inject(ToastService);
   protected readonly store = inject(RecipesStore);
   protected readonly stocks = inject(StocksStore);
+  /** Alimente le sélecteur de catégorie de vente. */
+  protected readonly referentiels = inject(ReferentielsStore);
 
   protected readonly icChef = LucideChefHat;
   protected readonly icPlus = LucidePlus;
@@ -101,6 +104,13 @@ export class RecipeEditModal {
   protected readonly method = signal('');
   protected readonly lines = signal<readonly IngredientLine[]>([]);
 
+  /** `''` = « Sans catégorie ». Une recette non classée est un cas normal. */
+  protected readonly categoryId = signal<string>('');
+
+  protected onCategoryId(value: string): void {
+    this.categoryId.set(value);
+  }
+
   protected readonly detailLoading = signal(false);
   protected readonly detailError = signal(false);
 
@@ -110,6 +120,10 @@ export class RecipeEditModal {
   constructor() {
     this.store.clearSaveError();
     void this.stocks.load();
+    // ⚠️ Charge les **quatre** listes de référence, dont une seule sert ici. Le
+    // store est `providedIn: 'root'` et `load()` est gardé : une fois chargé, la
+    // modale suivante ne redemande rien.
+    void this.referentiels.load();
 
     effect(() => {
       const id = this.recipeId();
@@ -122,6 +136,9 @@ export class RecipeEditModal {
           this.isVegetarian.set(detail.isVegetarian ?? false);
           this.description.set(detail.description ?? '');
           this.method.set(detail.recipe ?? '');
+          this.categoryId.set(
+            detail.productCategoryId === null ? '' : String(detail.productCategoryId),
+          );
           this.lines.set(
             ingredients.map((ingredient) => ({
               key: crypto.randomUUID(),
@@ -239,6 +256,9 @@ export class RecipeEditModal {
       isVegetarian: this.isVegetarian(),
       description: emptyToNull(this.description()),
       recipe: emptyToNull(this.method()),
+      // Chaîne vide = « Sans catégorie » : la colonne est nullable et
+      // `productValidator` refuserait une chaîne.
+      productCategoryId: this.categoryId() === '' ? null : Number(this.categoryId()),
       goods: this.lines().map((line) => ({
         goodId: Number(line.goodId),
         // `parseQuantity`, pas `Number` : la virgule décimale donnerait `NaN`.
