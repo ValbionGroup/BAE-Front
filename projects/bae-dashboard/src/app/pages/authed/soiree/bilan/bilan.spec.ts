@@ -17,10 +17,14 @@ function summary(overrides: Partial<EventSummary> = {}): EventSummary {
     orderCount: 2,
     cancelledCount: 0,
     revenueCents: 1000,
+    netRevenueCents: 1000,
     cashedCents: 400,
     sponsoredCents: 600,
+    receivableCents: 600,
+    grantedCents: 0,
     payerName: 'BDE',
     receivableByCategory: [{ label: 'Staff BDE', dueCents: 600 }],
+    grantedByCategory: [],
     cashedByMethod: [{ method: 'cash', amount: 400, count: 2 }],
     lines: [],
     ...overrides,
@@ -52,8 +56,52 @@ describe(SoireeBilan.name, () => {
   });
 
   it('n’affiche aucune créance quand rien n’est pris en charge', () => {
-    component['summary'].set(summary({ sponsoredCents: 0, receivableByCategory: [] }));
+    component['summary'].set(
+      summary({ sponsoredCents: 0, receivableCents: 0, receivableByCategory: [] }),
+    );
     expect(component['receivable']()).toBeNull();
+  });
+
+  /**
+   * Le défaut visé : le bloc « À recouvrer auprès de … » s'ouvrait sur une
+   * soirée entièrement offerte par le BAE, où l'écart consenti n'est nul pour
+   * personne mais n'est dû par personne non plus.
+   */
+  it('n’ouvre aucune créance sur une soirée entièrement offerte', () => {
+    component['summary'].set(
+      summary({
+        sponsoredCents: 600,
+        receivableCents: 0,
+        grantedCents: 600,
+        payerName: null,
+        receivableByCategory: [],
+        grantedByCategory: [{ label: 'Invités du BAE', grantedCents: 600 }],
+      }),
+    );
+
+    expect(component['receivable']()).toBeNull();
+    expect(component['granted']()).toEqual({
+      total: '6,00',
+      categories: [{ label: 'Invités du BAE', granted: '6,00' }],
+    });
+  });
+
+  it('ne retient en créance que la part réellement refacturable', () => {
+    component['summary'].set(
+      summary({
+        revenueCents: 2250,
+        netRevenueCents: 1750,
+        sponsoredCents: 1100,
+        receivableCents: 600,
+        grantedCents: 500,
+        receivableByCategory: [{ label: 'Staff BDE', dueCents: 600 }],
+        grantedByCategory: [{ label: 'Invités du BAE', grantedCents: 500 }],
+      }),
+    );
+
+    // Les 500 offerts ne doivent pas gonfler ce qu'on réclame au BDE.
+    expect(component['receivable']()!.total).toBe('6,00');
+    expect(component['granted']()!.total).toBe('5,00');
   });
 
   it('ventile la créance par catégorie et nomme le payeur', () => {

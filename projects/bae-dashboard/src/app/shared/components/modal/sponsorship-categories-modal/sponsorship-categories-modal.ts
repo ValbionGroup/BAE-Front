@@ -14,8 +14,10 @@ import { EventsStore } from '#core/store/events.store';
 import type { MenuItem } from '#core/models/event.model';
 import {
   SponsorshipsService,
+  SPONSORSHIP_MODE_LABELS,
   type PriceEntry,
   type SponsorshipCategory,
+  type SponsorshipMode,
 } from '#core/services/sponsorships/sponsorships-service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
@@ -60,6 +62,9 @@ export class SponsorshipCategoriesModal {
   protected readonly selectedId = signal<number | null>(null);
   protected readonly rows = signal<readonly GridRow[]>([]);
   protected readonly newLabel = signal('');
+  /** Externe par défaut : refacturer reste le cas courant. */
+  protected readonly newMode = signal<SponsorshipMode>('external');
+  protected readonly modeLabels = SPONSORSHIP_MODE_LABELS;
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly qrToken = signal<string | null>(null);
@@ -170,12 +175,43 @@ export class SponsorshipCategoriesModal {
     this.busy.set(true);
     this.error.set(null);
     try {
-      const created = await lastValueFrom(this.service.create(this.eventId(), label));
+      const created = await lastValueFrom(
+        this.service.create(this.eventId(), label, this.newMode()),
+      );
       this.categories.update((all) => [...all, created]);
       this.newLabel.set('');
+      this.newMode.set('external');
       this.select(created.id);
     } catch (error) {
       this.error.set(messageOf(error, 'Impossible de créer cette catégorie.'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected onNewMode(value: string): void {
+    this.newMode.set(value as SponsorshipMode);
+  }
+
+  /**
+   * Le serveur refuse la bascule dès la première vente (`409 E_CATEGORY_IN_USE`)
+   * : on laisse le geste disponible et on affiche son refus, plutôt que de
+   * désactiver le bouton sur une supposition — l'écran ne sait pas si des
+   * commandes existent.
+   */
+  protected async switchMode(mode: SponsorshipMode): Promise<void> {
+    const category = this.selected();
+    if (!category || this.busy() || category.mode === mode) return;
+
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const updated = await lastValueFrom(
+        this.service.update(this.eventId(), category.id, { mode }),
+      );
+      this.categories.update((all) => all.map((c) => (c.id === updated.id ? updated : c)));
+    } catch (error) {
+      this.error.set(messageOf(error, 'Impossible de changer le mode de cette catégorie.'));
     } finally {
       this.busy.set(false);
     }

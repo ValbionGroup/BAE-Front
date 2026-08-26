@@ -8,6 +8,7 @@ import { OrdersStore } from '#core/store/orders.store';
 import { blocksSale, stockLevelOf, type StockLevel } from '#shared/utils/stock-level';
 import type { Buyer } from '#core/services/buyers/buyers-service';
 import type { ScannedCategory } from '#core/services/buyers/buyers-service';
+import type { SponsorshipMode } from '#core/services/sponsorships/sponsorships-service';
 import type { Order } from '#core/models/order.model';
 import type { PaymentMethod } from '#core/models/order.model';
 import { CardPaymentsService } from '#core/services/payments/card-payments-service';
@@ -26,6 +27,8 @@ export interface AppliedCategory {
   readonly id: number;
   readonly label: string;
   readonly eventId: string;
+  /** `internal` : le BAE offre l'écart, `payerName` n'a alors aucun sens. */
+  readonly mode: SponsorshipMode;
   readonly payerName: string | null;
   readonly priceByProduct: ReadonlyMap<number, number>;
 }
@@ -293,6 +296,7 @@ export const CaisseStore = signalStore(
               id: scanned.id,
               label: scanned.label,
               eventId: String(scanned.eventId),
+              mode: scanned.mode,
               payerName: scanned.payerName,
               priceByProduct: new Map(scanned.prices.map((p) => [p.productId, p.priceCents])),
             },

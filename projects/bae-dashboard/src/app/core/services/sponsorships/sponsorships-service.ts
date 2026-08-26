@@ -9,10 +9,23 @@ export interface CategoryPrice {
   readonly priceCents: number;
 }
 
+/**
+ * `external` : un tiers rembourse l'écart, réclamé sur le justificatif.
+ * `internal` : le BAE l'offre — l'écart part en manque à gagner et n'est
+ * jamais recouvré.
+ */
+export type SponsorshipMode = 'external' | 'internal';
+
+export const SPONSORSHIP_MODE_LABELS: Readonly<Record<SponsorshipMode, string>> = {
+  external: 'Refacturée à un tiers',
+  internal: 'Offerte par le BAE',
+};
+
 export interface SponsorshipCategory {
   readonly id: number;
   readonly eventId: number;
   readonly label: string;
+  readonly mode: SponsorshipMode;
   readonly prices: readonly CategoryPrice[];
 }
 
@@ -33,17 +46,23 @@ export class SponsorshipsService {
     );
   }
 
-  create(eventId: string, label: string): Observable<SponsorshipCategory> {
+  create(eventId: string, label: string, mode: SponsorshipMode): Observable<SponsorshipCategory> {
     return this.http.post<SponsorshipCategory>(
       `${this.baseUrl}/events/${eventId}/sponsorship-categories`,
-      { label },
+      { label, mode },
     );
   }
 
-  rename(eventId: string, categoryId: number, label: string): Observable<SponsorshipCategory> {
+  /** Renommer reste libre ; basculer le mode est refusé dès la première vente
+   *  (`409 E_CATEGORY_IN_USE`). */
+  update(
+    eventId: string,
+    categoryId: number,
+    changes: { label?: string; mode?: SponsorshipMode },
+  ): Observable<SponsorshipCategory> {
     return this.http.patch<SponsorshipCategory>(
       `${this.baseUrl}/events/${eventId}/sponsorship-categories/${categoryId}`,
-      { label },
+      changes,
     );
   }
 

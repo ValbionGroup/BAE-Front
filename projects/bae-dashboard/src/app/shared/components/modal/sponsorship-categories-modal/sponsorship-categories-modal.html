@@ -29,6 +29,9 @@
         >
           <div class="font-medium">{{ category.label }}</div>
           <div class="mt-0.5 text-[11px] text-muted">
+            {{ modeLabels[category.mode] }}
+          </div>
+          <div class="mt-0.5 text-[11px] text-muted">
             {{ category.prices.length }} article{{ category.prices.length > 1 ? 's' : '' }} tarifé{{
               category.prices.length > 1 ? 's' : ''
             }}
@@ -42,20 +45,34 @@
         </div>
       }
 
-      <div class="mt-1 flex gap-1.5">
-        <bae-input
-          placeholder="Staff BDE"
-          size="sm"
-          [value]="newLabel()"
-          (valueChange)="newLabel.set($event)"
-        />
-        <bae-btn
-          kind="secondary"
-          size="sm"
-          [icon]="icPlus"
-          [disabled]="busy()"
-          (clicked)="addCategory()"
-        />
+      <div class="mt-1 flex flex-col gap-1.5">
+        <div class="flex gap-1.5">
+          <bae-input
+            placeholder="Staff BDE"
+            size="sm"
+            [value]="newLabel()"
+            (valueChange)="newLabel.set($event)"
+          />
+          <bae-btn
+            kind="secondary"
+            size="sm"
+            [icon]="icPlus"
+            [disabled]="busy()"
+            (clicked)="addCategory()"
+          />
+        </div>
+        <!-- Le mode se choisit ici parce qu'il se verrouille à la première
+             vente : le corriger après coup peut devenir impossible. -->
+        <label class="sr-only" for="new-category-mode">Prise en charge</label>
+        <select
+          id="new-category-mode"
+          class="h-8 w-full rounded-md border border-border-s bg-surface px-2 text-[12px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="newMode()"
+          (change)="onNewMode($any($event.target).value)"
+        >
+          <option value="external">{{ modeLabels.external }}</option>
+          <option value="internal">{{ modeLabels.internal }}</option>
+        </select>
       </div>
     </div>
 
@@ -63,6 +80,19 @@
       @if (selected(); as category) {
         <div class="mb-2.5 flex items-center gap-2">
           <div class="flex-1 text-[13px] font-semibold text-text">{{ category.label }}</div>
+          <label class="sr-only" [attr.for]="'category-mode-' + category.id">
+            Prise en charge de {{ category.label }}
+          </label>
+          <select
+            [id]="'category-mode-' + category.id"
+            class="h-8 rounded-md border border-border-s bg-surface px-2 text-[12px] text-text focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-60"
+            [value]="category.mode"
+            [disabled]="busy()"
+            (change)="switchMode($any($event.target).value)"
+          >
+            <option value="external">{{ modeLabels.external }}</option>
+            <option value="internal">{{ modeLabels.internal }}</option>
+          </select>
           <bae-btn kind="ghost" size="sm" [icon]="icQr" (clicked)="showQr()">QR</bae-btn>
           <bae-btn kind="ghost" size="sm" (clicked)="rotateQr()">Régénérer</bae-btn>
           <bae-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="removeCategory()" />

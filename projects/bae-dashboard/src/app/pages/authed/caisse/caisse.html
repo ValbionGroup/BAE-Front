@@ -178,8 +178,14 @@
             </span>
             <div class="min-w-0 flex-1">
               <div class="truncate text-[12.5px] font-medium text-warn">{{ tier.label }}</div>
+              <!-- Interne : personne ne rembourse, c'est le BAE qui offre. Afficher
+                   « payeur non renseigné » ferait croire à un oubli de saisie. -->
               <div class="text-[10.5px] text-text-2">
-                Remboursé par {{ tier.payerName ?? 'payeur non renseigné' }}
+                @if (tier.mode === 'internal') {
+                  Offert par le BAE
+                } @else {
+                  Remboursé par {{ tier.payerName ?? 'payeur non renseigné' }}
+                }
               </div>
             </div>
             <bae-btn kind="ghost" size="sm" (clicked)="store.clearCategory()">Retirer</bae-btn>

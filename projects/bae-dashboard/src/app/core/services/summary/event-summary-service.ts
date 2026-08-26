@@ -14,7 +14,10 @@ export interface SummaryLine {
   /** Valeur au prix public. */
   readonly revenueCents: number;
   readonly cashedCents: number;
+  /** L'écart consenti : `receivableCents + grantedCents`. */
   readonly sponsoredCents: number;
+  readonly receivableCents: number;
+  readonly grantedCents: number;
   /** Produit et non vendu — ce qui reste sur les bras. */
   readonly unsoldQty: number;
 }
@@ -41,17 +44,33 @@ export interface ReceivableByCategory {
   readonly dueCents: number;
 }
 
+export interface GrantedByCategory {
+  readonly label: string;
+  readonly grantedCents: number;
+}
+
 export interface EventSummary {
   readonly eventId: number;
   readonly orderCount: number;
   readonly cancelledCount: number;
   /** Valeur au prix public : `cashedCents + sponsoredCents`. */
   readonly revenueCents: number;
+  /** `revenueCents` moins ce que le BAE a offert — ce qu'il peut encore toucher. */
+  readonly netRevenueCents: number;
   readonly cashedCents: number;
-  /** À recouvrer auprès du payeur — pas du chiffre d'affaires perdu. */
+  /**
+   * L'écart total consenti, **des deux natures** : `receivableCents +
+   * grantedCents`. Le présenter seul comme « à recouvrer » serait faux dès
+   * qu'une catégorie interne existe.
+   */
   readonly sponsoredCents: number;
+  /** À recouvrer auprès du payeur — une créance, pas une perte. */
+  readonly receivableCents: number;
+  /** Offert par le BAE : du chiffre d'affaires perdu, jamais refacturé. */
+  readonly grantedCents: number;
   readonly payerName: string | null;
   readonly receivableByCategory: readonly ReceivableByCategory[];
+  readonly grantedByCategory: readonly GrantedByCategory[];
   readonly cashedByMethod: readonly CashedByMethod[];
   readonly lines: readonly SummaryLine[];
 }
