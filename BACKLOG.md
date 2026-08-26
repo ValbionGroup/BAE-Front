@@ -71,6 +71,43 @@ faire » — il n'existe pas d'écran pour le suivre.
 
 Back : **709 tests, 0 échec**. Front : **1 008 tests, 0 échec**. Typecheck vert des deux côtés.
 
+### 2026-08-26 — l'URL journalisée ne porte plus de secret (tâche 36)
+
+`request_logger_middleware` écrivait `ctx.request.url(true)`, **query string comprise**, dans
+`logs.url` **et** dans `logs.message`. Un `GET /v1/auth/keycloak/callback?code=…&state=…` laissait
+donc le code d'autorisation SSO en clair dans deux colonnes, lisibles avec `log:read`.
+`redactResponseBody` n'y pouvait rien : elle ne nettoie que le _corps_.
+
+**Le correctif n'est pas une liste de routes.** `redactUrl` (`log_redaction_service`) rédige par
+**nom de paramètre**, sur toutes les URL — une route oubliée ne fuit donc pas. Le message dérive de
+l'URL déjà rédigée, ce qui interdit à la deuxième colonne de diverger de la première.
+
+#### Les noms de paramètres se comparent en entier, pas en sous-chaîne
+
+`SECRET_KEY_PATTERNS` (le corps) matche en sous-chaîne, et c'est correct pour des clés de JSON.
+Appliqué tel quel à une query string, `code` aurait avalé **`barcode`** : `GET /v1/goods?barcode=…`
+serait devenu illisible pour protéger un code-barres. `SECRET_QUERY_PARAMS` est donc un `Set` de
+noms **entiers** (`code`, `state`, `session_state`, `nonce`, `signature`, `key`, `id_token`,
+`access_token`, `refresh_token`), doublé du filet en sous-chaîne d'`isSecretKey` — qui, lui,
+rattrape `accessToken` sans toucher à `barcode`.
+
+Un test de garde fige ce piège : « keeps ordinary query parameters readable » **passait déjà** avec
+le bouchon. Il ne prouvait rien au rouge ; il casse si la rédaction s'élargit.
+
+#### Ce que le test de bout en bout ne fait pas
+
+Il ne joue **pas** le vrai callback SSO : le contrôleur va chercher l'IdP, injoignable depuis
+l'hôte (`AggregateError` sur `internalConnectMultiple`). Empoisonner une route ordinaire avec
+`?code=…` prouve mieux la propriété visée — la rédaction est route-agnostique, donc elle vaut aussi
+pour les routes auxquelles personne n'a pensé. Le callback est couvert côté unitaire
+(`isSecretUrl('/v1/auth/keycloak/callback')`, ajouté à `SECRET_URL_PATTERNS` comme le demandait
+`H1 §9.9`).
+
+⚠️ **Les lignes déjà écrites ne sont pas nettoyées** — c'est la tâche **35**, et elle est sans objet
+sur la base de dev. Sur une base réelle, la fuite reste lisible tant que la purge n'a pas eu lieu.
+
+Back : **710 tests, 0 échec**, typecheck vert.
+
 ### 2026-08-26 — les recettes ont leur propre catégorie
 
 Une recette portait la catégorie de son **ingrédient principal**, par dérivation
@@ -549,7 +586,7 @@ d'intégrité, tous vérifiés sur la base et l'API de dev.
 
 | Rang  | #               | Pourquoi celle-ci d'abord                                                                                                  |
 | ----- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1     | **36**          | Fuite de secret **prouvée** : le code d'autorisation SSO atterrit en clair dans `logs.url` et `logs.message`.              |
+| ~~1    ~~ | ~~**36**         ~~ | ✅ **Fait le 2026-08-26.** Fuite fermée, voir « Livré » ci-dessus. Le rang 2 devient le suivant à prendre.              |
 | ~~2~~ | ~~**46 + 47**~~ | ✅ **Fait le 2026-08-26**, la 47 par un arbitrage plutôt que par du code. Le rang 3 (**34**) devient le suivant à prendre. |
 | 3     | **34**          | Réduite à une ligne : `job:read` sur `GET /v1/assignments`, la dernière route membre sans permission.                      |
 | 4     | **63**          | Le coût du manque de base de test est mesuré : 14 échecs de bruit, et un vrai bug caché dedans pendant des semaines.       |
@@ -587,7 +624,7 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | ~~33~~ | ~~Garder `DELETE /events/:id` et `DELETE /jobs/:id`~~                                                                                                                                                                                                                                                                                                                                       | ✅ **Faite** (2026-08-26) : `event:delete` et `job:delete` sur les deux routes.                                                                                                                                                                                       |
 | 34     | Généraliser les gardes de permission au reste de l'API                                                                                                                                                                                                                                                                                                                                      | **Réduite à une ligne** (2026-08-26) : `GET /v1/assignments` (`coordination.ts:24`) est la seule route membre sans permission ; un `job:read` suffit. Reste **préalable à la tâche 48**.                                                                              |
 | 35     | Purger les `logs` d'avant le 2026-08-06 (jetons d'accès en clair dans `meta.response`, lisibles avec `log:read`)                                                                                                                                                                                                                                                                            | **Sans objet sur la base de dev** (2026-08-26 : plus ancienne entrée au 2026-08-10, aucun `oat_` dans `meta`). Reste à faire **avant la première mise en production**, sur une base réelle. `H1 §8`                                                                   |
-| 36     | ⚠️ **Fuite prouvée le 2026-08-26.** `request_logger_middleware` stocke `ctx.request.url(true)` — query string comprise — dans `logs.url` **et** dans `logs.message` ; `redactResponseBody` ne nettoie que le _corps_, et pour quatre URL seulement. Un `GET /v1/auth/keycloak/callback?code=…` laisse le code d'autorisation SSO **en clair, dans deux colonnes**, lisible avec `log:read`. | Oui, et **prioritaire**. Le correctif ne se limite pas à `SECRET_URL_PATTERNS` : celui-ci ne couvre que le corps. Il faut rédiger l'URL et le message. `H1 §9.9`                                                                                                      |
+| ~~36~~ | ~~Rédiger l'URL journalisée : le code d'autorisation SSO en clair dans `logs.url` et `logs.message`~~ | ✅ **Fait le 2026-08-26.** `redactUrl` dans `log_redaction_service`, appelé par `request_logger_middleware` ; le message dérive de l'URL rédigée. 5 tests.                                                                                                      |
 | 37     | Rappel de péremption des stocks (`verb: 'stock.expiring'`)                                                                                                                                                                                                                                                                                                                                  | Oui — « presque gratuit » depuis le lot mailer. Le mail ne partira pas sans SMTP (tâche 100), le code est écrivable. `H1 §0 quindecies` (P1)                                                                                                                          |
 | 38     | Ajouter des `recordEvent()` sur les gestes qui le méritent (3 émetteurs aujourd'hui)                                                                                                                                                                                                                                                                                                        | Oui. `H1 §0 octodecies`                                                                                                                                                                                                                                               |
 | 39     | Endpoint permettant au **bureau** de fixer la présence d'un autre membre — doit contourner son propre verrou, donc gardé par permission                                                                                                                                                                                                                                                     | Oui. `H1 §7.3`                                                                                                                                                                                                                                                        |
