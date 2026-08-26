@@ -18,6 +18,35 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 
 ## ✅ Livré
 
+### 2026-08-26 — la dernière route membre sans garde (tâche 34)
+
+`GET /v1/assignments` porte désormais `job:read`. Le choix de la permission n'en est pas un :
+`assignment:read` n'existe pas au catalogue, et `/events/:id/assignments/pdf` — **la même donnée,
+lue autrement** — l'exigeait déjà.
+
+#### Un test figeait le trou comme s'il était une règle
+
+`coordination_authorization.spec.ts` portait « leaves the read-only assignment index open to any
+member », sans un mot de justification. Ce n'était pas une exigence, c'était l'état du code
+transcrit en assertion — le genre de test qui transforme une dette en spécification et rend le
+correctif indistinguable d'une régression.
+
+Deux faits ont tranché, tous deux vérifiés :
+
+- `loadAll()` du front fait **sept** appels, dont quatre exigent déjà `job:read` (`/jobs`,
+  `/event-jobs`, `/responses`, `/preferences`). Qui ouvre la page de coordination a donc déjà la
+  permission : la garde ne ferme rien qui était ouvert **en pratique**.
+- Un membre ordinaire lit ses propres créneaux par `/v1/account/assignments` (`Assignments.mine`),
+  qui reste sans garde. Fermer l'index ne le prive de rien.
+
+Le test a été **remplacé, pas supprimé** : il vérifie maintenant les deux moitiés ensemble — index
+refusé (403), créneaux personnels servis (200). C'est cette séparation-là qui mérite d'être figée.
+
+Le commentaire de `start/routes/events.ts` qui désignait le trou (« contrairement à /assignments
+(GET), qui n'en porte aucune ») est devenu faux et a été réécrit dans le même commit.
+
+Back : **706 tests, 0 échec**, typecheck vert. Aucun changement côté front.
+
 ### 2026-08-26 — les recettes ont leur propre catégorie
 
 Une recette portait la catégorie de son **ingrédient principal**, par dérivation
@@ -494,14 +523,14 @@ c'est exactement le défaut que ce document se reproche en tête. L'ordre à jou
 Rejoué dans le code, pas déduit. Les trois premières sont des correctifs de sécurité ou
 d'intégrité, tous vérifiés sur la base et l'API de dev.
 
-| Rang | #           | Pourquoi celle-ci d'abord                                                                                                             |
-| ---- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | **36**      | Fuite de secret **prouvée** : le code d'autorisation SSO atterrit en clair dans `logs.url` et `logs.message`.                         |
-| 2    | **46 + 47** | Le plafond de précommandes n'est appliqué **nulle part**, et rien n'empêche un compte de le consommer entier. Les deux vont ensemble. |
-| 3    | **34**      | Réduite à une ligne : `job:read` sur `GET /v1/assignments`, la dernière route membre sans permission.                                 |
-| 4    | **63**      | Le coût du manque de base de test est mesuré : 14 échecs de bruit, et un vrai bug caché dedans pendant des semaines.                  |
-| 5    | **58**      | Sans `db:seed` au déploiement, `/v1/vouchers` répond 403 à tout le monde en production — administrateurs compris.                     |
-| 6    | **35**      | Purge des vieux logs, **avant la première mise en production** (sans objet sur la base de dev).                                       |
+| Rang  | #           | Pourquoi celle-ci d'abord                                                                                                             |
+| ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | **36**      | Fuite de secret **prouvée** : le code d'autorisation SSO atterrit en clair dans `logs.url` et `logs.message`.                         |
+| 2     | **46 + 47** | Le plafond de précommandes n'est appliqué **nulle part**, et rien n'empêche un compte de le consommer entier. Les deux vont ensemble. |
+| ~~3~~ | ~~**34**~~  | ✅ **Fait le 2026-08-26.** Le rang 4 (**63**, base de test dédiée) devient le suivant à prendre.                                      |
+| 4     | **63**      | Le coût du manque de base de test est mesuré : 14 échecs de bruit, et un vrai bug caché dedans pendant des semaines.                  |
+| 5     | **58**      | Sans `db:seed` au déploiement, `/v1/vouchers` répond 403 à tout le monde en production — administrateurs compris.                     |
+| 6     | **35**      | Purge des vieux logs, **avant la première mise en production** (sans objet sur la base de dev).                                       |
 
 Ensuite, sans blocage et par valeur décroissante : **60 / 61 / 62** (seeders non idempotents, et
 `product_furniture_seeder` qui fausse la liste de courses avec 5 nappes par hot-dog), **42**
@@ -532,7 +561,7 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | ~~31~~ | ~~Protéger `RolesController.destroy` / `DELETE /roles/:id`~~                                                                                                                                                                                                                                                                                                                                                                  | ✅ **Faite** (constatée le 2026-08-26) : `acquireRbacLock` + `assertNoLockout`, route gardée par `role:delete`.                                                                                                                                                       |
 | ~~32~~ | ~~Garder `/vouchers` par permission~~                                                                                                                                                                                                                                                                                                                                                                                         | ✅ **Faite** (2026-08-26) : `voucher:read` / `voucher:write` / `voucher:delete` sur les cinq routes.                                                                                                                                                                  |
 | ~~33~~ | ~~Garder `DELETE /events/:id` et `DELETE /jobs/:id`~~                                                                                                                                                                                                                                                                                                                                                                         | ✅ **Faite** (2026-08-26) : `event:delete` et `job:delete` sur les deux routes.                                                                                                                                                                                       |
-| 34     | Généraliser les gardes de permission au reste de l'API                                                                                                                                                                                                                                                                                                                                                                        | **Réduite à une ligne** (2026-08-26) : `GET /v1/assignments` (`coordination.ts:24`) est la seule route membre sans permission ; un `job:read` suffit. Reste **préalable à la tâche 48**.                                                                              |
+| ~~34~~ | ~~Généraliser les gardes de permission au reste de l'API~~                                                                                                                                                                                                                                                                                                                                                                    | ✅ **Fait le 2026-08-26.** `job:read` sur `GET /v1/assignments`, la dernière route membre sans garde.                                                                                                                                                                 |
 | 35     | Purger les `logs` d'avant le 2026-08-06 (jetons d'accès en clair dans `meta.response`, lisibles avec `log:read`)                                                                                                                                                                                                                                                                                                              | **Sans objet sur la base de dev** (2026-08-26 : plus ancienne entrée au 2026-08-10, aucun `oat_` dans `meta`). Reste à faire **avant la première mise en production**, sur une base réelle. `H1 §8`                                                                   |
 | 36     | ⚠️ **Fuite prouvée le 2026-08-26.** `request_logger_middleware` stocke `ctx.request.url(true)` — query string comprise — dans `logs.url` **et** dans `logs.message` ; `redactResponseBody` ne nettoie que le _corps_, et pour quatre URL seulement. Un `GET /v1/auth/keycloak/callback?code=…` laisse le code d'autorisation SSO **en clair, dans deux colonnes**, lisible avec `log:read`.                                   | Oui, et **prioritaire**. Le correctif ne se limite pas à `SECRET_URL_PATTERNS` : celui-ci ne couvre que le corps. Il faut rédiger l'URL et le message. `H1 §9.9`                                                                                                      |
 | 37     | Rappel de péremption des stocks (`verb: 'stock.expiring'`)                                                                                                                                                                                                                                                                                                                                                                    | Oui — « presque gratuit » depuis le lot mailer. Le mail ne partira pas sans SMTP (tâche 100), le code est écrivable. `H1 §0 quindecies` (P1)                                                                                                                          |
