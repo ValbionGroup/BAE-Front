@@ -122,7 +122,7 @@ export class Contact {
     {
       icon: LucideShield,
       name: 'Adhésion / cotisation',
-      value: 'tresorerie.bae@enseirb-matmeca.fr',
+      value: ORGANISATION.email,
     },
   ];
 }

@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 
 import { Contact } from './contact';
 import { SessionStore } from '../../core/session.store';
+import { ORGANISATION } from '../../core/organisation';
 
 describe(Contact.name, () => {
   let fixture: ComponentFixture<Contact>;
@@ -55,9 +56,11 @@ describe(Contact.name, () => {
     [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Envoyer'));
 
   it('affiche les trois canaux de contact', () => {
-    expect(host.textContent).toContain('bureau.alternants@enseirb-matmeca.fr');
+    // Email et « Adhésion / cotisation » pointent vers la même boîte depuis le
+    // 2026-08-25 : les libellés restent distincts, l'adresse ne l'est plus.
+    expect(host.textContent).toContain(ORGANISATION.email);
     expect(host.textContent).toContain('Permanence');
-    expect(host.textContent).toContain('tresorerie.bae@enseirb-matmeca.fr');
+    expect(host.textContent).toContain('Adhésion / cotisation');
   });
 
   /**
@@ -75,7 +78,7 @@ describe(Contact.name, () => {
 
     expect(host.querySelector('textarea')?.disabled).toBe(true);
     expect(host.textContent).toContain('Connectez-vous');
-    expect(host.textContent).toContain('bureau.alternants@enseirb-matmeca.fr');
+    expect(host.textContent).toContain(ORGANISATION.email);
   });
 
   it('emmène vers EirbConnect depuis le formulaire', async () => {

@@ -14,7 +14,7 @@ export const ORGANISATION = {
   city: 'Talence',
   declaredOn: '12 août 2003',
   publisher: 'Pierre-Emmanuel Legoueix',
-  email: 'bureau.alternants@enseirb-matmeca.fr',
+  email: 'bae.enseirb@gmail.com',
 } as const;
 
 export const HOSTING_PROVIDER = {
