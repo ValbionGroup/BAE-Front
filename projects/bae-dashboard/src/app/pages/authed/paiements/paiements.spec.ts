@@ -45,9 +45,9 @@ describe(Paiements.name, () => {
   });
 
   /**
-   * Les deux tables de cette page ne parlent pas la même unité :
-   * `transactions.amount` est en euros, `payments.amount_cents` en centimes.
-   * Les confondre afficherait « 1500 € » pour quinze euros.
+   * Les deux tables de cette page parlent enfin la même unité : depuis le
+   * 2026-08-25, `transactions.amount` et `payments.amount_cents` sont tous deux
+   * des centimes. Les afficher bruts donnerait « 1500 € » pour quinze euros.
    */
   it('renders payment amounts in euros, not raw cents', async () => {
     const fixture = TestBed.createComponent(Paiements);

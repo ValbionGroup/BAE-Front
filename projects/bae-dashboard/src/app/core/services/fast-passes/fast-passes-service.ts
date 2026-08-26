@@ -11,13 +11,13 @@ interface FastPassApiRow {
   readonly price: number;
 }
 
-/** `duration` est en **années**, `price` en **euros** — pas en centimes. */
+/** `duration` est en **années**, `price` en **centimes** entiers. */
 export interface FastPassRow {
   readonly id: number;
   readonly label: string;
   readonly description: string | null;
   readonly durationYears: number;
-  readonly priceEuros: number;
+  readonly priceCents: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -33,7 +33,7 @@ export class FastPassesService {
           label: row.label,
           description: row.description,
           durationYears: row.duration,
-          priceEuros: Number(row.price),
+          priceCents: row.price,
         })),
       ),
     );

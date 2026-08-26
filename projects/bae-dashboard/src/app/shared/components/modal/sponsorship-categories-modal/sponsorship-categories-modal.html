@@ -99,7 +99,7 @@
               >
                 <span class="text-text">{{ row.name }}</span>
                 <span class="mono tnum text-right text-muted"
-                  >{{ fmt(row.listPrice / 100) }} €</span
+                  >{{ fmt(row.listPrice) }} €</span
                 >
                 <div class="flex items-center justify-end gap-1.5">
                   @if (row.price === 0) {
@@ -114,7 +114,7 @@
                     [id]="'cat-price-' + row.productId"
                     type="text"
                     inputmode="decimal"
-                    [placeholder]="fmt(row.listPrice / 100) + ' — public'"
+                    [placeholder]="fmt(row.listPrice) + ' — public'"
                     [value]="priceText(row)"
                     (input)="onPriceInput(row.productId, $any($event.target).value)"
                     (change)="commitPrice(row.productId, $any($event.target).value)"

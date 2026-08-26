@@ -23,8 +23,8 @@ const CLIENT: ClientRow = {
 
 /** Servi dans le désordre exprès : `GET /fast-passes` n'ordonne rien. */
 const PLANS = [
-  { id: 2, label: 'Scolarité', description: null, duration: 3, price: 35 },
-  { id: 1, label: 'Annuelle', description: null, duration: 1, price: 15 },
+  { id: 2, label: 'Scolarité', description: null, duration: 3, price: 3500 },
+  { id: 1, label: 'Annuelle', description: null, duration: 1, price: 1500 },
 ];
 
 describe(SubscriptionCreateModal.name, () => {
@@ -162,7 +162,9 @@ describe(SubscriptionCreateModal.name, () => {
 
     submit(fixture);
     const request = http.expectOne(`${baseUrl}/subscriptions`);
-    expect(request.request.body.payment).toEqual({ amount: 12.5, type: 'cash' });
+    // 12,50 € saisis partent en 1250 centimes : `transactions.amount` est un
+    // `integer`, et le validator du back refuse toute décimale.
+    expect(request.request.body.payment).toEqual({ amount: 1250, type: 'cash' });
 
     request.flush({});
     await flushReload(fixture);

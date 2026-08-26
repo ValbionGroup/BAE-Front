@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideBadgeCheck } from '@lucide/angular';
-import { Btn, Field, Input, ToastService, parseApiDate } from '@bae/ui';
+import { Btn, Field, Input, ToastService, parseApiDate, formatCents, parseEuros } from '@bae/ui';
 import { ClientsStore } from '#core/store/clients.store';
 import {
   FastPassesService,
@@ -13,9 +13,12 @@ import { ModalShell } from '../modal-shell/modal-shell';
 type PaymentType = 'cash' | 'lydia';
 
 /**
- * Un renouvellement **ajoute une ligne**, il n'en modifie aucune. Le montant est
- * en euros (`transactions.amount` est un `decimal(10,2)`), et le paiement est
+ * Un renouvellement **ajoute une ligne**, il n'en modifie aucune. Le paiement est
  * facultatif : sans lui, aucune transaction n'est créée.
+ *
+ * ⚠️ Le champ se saisit en **euros** mais part en **centimes entiers** :
+ * `transactions.amount` est un `integer`, et le validator refuse toute décimale.
+ * Envoyer 15 au lieu de 1500 enregistrerait une cotisation de quinze centimes.
  */
 @Component({
   selector: 'bfd-subscription-create-modal',
@@ -72,16 +75,11 @@ export class SubscriptionCreateModal {
     const edited = this.amountEdit();
     if (edited !== null) return edited;
     const plan = this.selectedPlan();
-    return plan === null ? '' : plan.priceEuros.toFixed(2).replace('.', ',');
+    return plan === null ? '' : formatCents(plan.priceCents);
   });
 
-  /** `Number` ne lit pas la virgule décimale. */
-  protected readonly parsedAmount = computed(() => {
-    const raw = this.amount().trim().replace(',', '.');
-    if (raw === '') return null;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-  });
+  /** Saisie en euros, envoyée en **centimes**. `parseEuros` lit la virgule. */
+  protected readonly parsedAmount = computed(() => parseEuros(this.amount()));
 
   /** Le back ajoute `duration` **années** à la date de souscription. */
   protected readonly expiresAt = computed<string | null>(() => {

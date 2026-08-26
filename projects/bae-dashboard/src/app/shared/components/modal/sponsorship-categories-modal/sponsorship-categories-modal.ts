@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
 import { LucideHandCoins, LucidePlus, LucideQrCode, LucideTrash2 } from '@lucide/angular';
-import { Btn, Input, QrCode, ToastService } from '@bae/ui';
+import { Btn, Input, QrCode, ToastService, formatCents, parseEuros } from '@bae/ui';
 import { EventsStore } from '#core/store/events.store';
 import type { MenuItem } from '#core/models/event.model';
 import {
@@ -127,7 +127,7 @@ export class SponsorshipCategoriesModal {
 
   protected priceText(row: GridRow): string {
     if (row.draft !== null) return row.draft;
-    return row.price === null ? '' : this.fmt(row.price / 100);
+    return row.price === null ? '' : this.fmt(row.price);
   }
 
   protected onPriceInput(productId: number, value: string): void {
@@ -142,13 +142,13 @@ export class SponsorshipCategoriesModal {
       return;
     }
 
-    const euros = Number(trimmed.replace(',', '.'));
-    if (!Number.isFinite(euros) || euros < 0) {
+    const cents = parseEuros(trimmed);
+    if (cents === null) {
       this.update(productId, (row) => ({ ...row, draft: null }));
       return;
     }
 
-    this.update(productId, (row) => ({ ...row, price: Math.round(euros * 100), draft: null }));
+    this.update(productId, (row) => ({ ...row, price: cents, draft: null }));
   }
 
   protected fillAll(fraction: number): void {
@@ -261,7 +261,8 @@ export class SponsorshipCategoriesModal {
     this.modalService.close(this.id());
   }
 
-  protected fmt(value: number): string {
-    return value.toFixed(2).replace('.', ',');
+  /** Reçoit des **centimes** : `price` et `listPrice` en sont tous deux. */
+  protected fmt(cents: number): string {
+    return formatCents(cents);
   }
 }
