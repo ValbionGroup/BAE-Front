@@ -18,6 +18,41 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 
 ## ✅ Livré
 
+### 2026-08-26 — les recettes ont leur propre catégorie
+
+Une recette portait la catégorie de son **ingrédient principal**, par dérivation
+(`primaryCategoryName`). Deux problèmes : le vocabulaire était celui du **stockage**
+(« Frais / Sec ») là où le menu et la caisse ont besoin de celui de la **vente**
+(« Plats / Desserts »), et **aucune recette n'avait de catégorie** — les 5 rendaient `null`.
+
+| Portée    | Livré                                                                                                                                   |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Back**  | Table `product_categories` + `products.product_category_id` en **`SET NULL`** : supprimer une catégorie déclasse, ne détruit rien.      |
+| **Back**  | CRUD gardé par `product:*`, avec compteur d'usage en agrégat groupé.                                                                    |
+| **Back**  | `category` change de **source**, pas de **forme** : toujours le nom, `string \| null`. Aucun consommateur front n'a bougé.              |
+| **Back**  | `primaryCategoryName` supprimé, **et sa copie privée** dans `ProductsController` — ferme la **tâche 41**.                               |
+| **Back**  | `ProductsController.store` / `update` passent de `request.all()` à un validateur. Le nom sans nom rend **422** et non plus 400.         |
+| **Front** | Quatrième onglet dans Référentiels, avec un sous-titre par onglet — « Catégories » et « Catégories de recettes » se ressemblaient trop. |
+| **Front** | Sélecteur de catégorie dans `RecipeEditModal`, option « Sans catégorie » qui envoie `null`.                                             |
+
+#### Ce que le backlog disait de faux — tâche 43
+
+La tâche 43 affirme que `fetchOrCreateMany` « n'insère jamais ». **C'est faux**, et deux tests le
+prouvent désormais : relancer `08_good_seeder` crée bien les catégories.
+
+Le vrai défaut est plus étroit : c'est un _fetch-or-create_, pas un _upsert_. Il **ne reclasse
+jamais** une denrée déjà en base — `category_id` restait `NULL` sans un mot, et comme la catégorie
+des recettes en dérivait, toutes les recettes étaient sans catégorie. `08_good_seeder` passe à
+`updateOrCreateMany` ; les 10 denrées sont classées.
+
+⚠️ Le reste de la tâche 43 (les 8 permissions d'un ancien nommage) n'a pas été vérifié.
+
+#### Un piège de CI, trouvé au passage
+
+`database/schema.ts` est **auto-généré** par `migration:run`, il n'était pas dans `.prettierignore`,
+et `ci.yml` lance `pnpm format:check`. Le générateur émet les `$columns` sur une ligne, Prettier les
+éclate : **chaque migration aurait cassé la CI**. Le fichier est ignoré désormais.
+
 ### 2026-08-26 — l'écriture ouverte sur trois référentiels
 
 Catégories de denrées, enseignes et postes étaient en lecture seule **côté front uniquement** : le
@@ -504,7 +539,7 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | 38     | Ajouter des `recordEvent()` sur les gestes qui le méritent (3 émetteurs aujourd'hui)                                                                                                                                                                                                                                                                                                                                          | Oui. `H1 §0 octodecies`                                                                                                                                                                                                                                               |
 | 39     | Endpoint permettant au **bureau** de fixer la présence d'un autre membre — doit contourner son propre verrou, donc gardé par permission                                                                                                                                                                                                                                                                                       | Oui. `H1 §7.3`                                                                                                                                                                                                                                                        |
 | 40     | Table d'**événements de scan** (qui, quoi, quand, quelle soirée), distincte de `received_quantity`                                                                                                                                                                                                                                                                                                                            | Oui. Base de l'historique client et de la fidélité. `H1 §11`                                                                                                                                                                                                          |
-| 41     | Faire consommer `product_category_service` par `ProductsController` (copie privée `primaryCategoryName`)                                                                                                                                                                                                                                                                                                                      | Oui — non migré parce que le fichier était pris par un autre chantier. `H1 §0 septies`                                                                                                                                                                                |
+| ~~41~~ | ~~Faire consommer `product_category_service` par `ProductsController`~~                                                                                                                                                                                                                                                                                                                                                       | ✅ **Faite** (2026-08-26) : les deux définitions ont disparu avec la dérivation elle-même — la catégorie d'une recette est désormais une colonne.                                                                                                                     |
 | 42     | Centraliser côté back le calcul d'expiration d'une cotisation (`subscribed_at + duration`), aujourd'hui recalculé dans chaque écran                                                                                                                                                                                                                                                                                           | Oui. Deux consommateurs. `H1 §4.1`                                                                                                                                                                                                                                    |
 | 43     | Élaguer le seeder de permissions (`fetchOrCreateMany` n'insère jamais) **et** nettoyer les 8 permissions rescapées d'un ancien nommage (l'enregistrement échoue en 422)                                                                                                                                                                                                                                                       | Oui, le SQL de nettoyage est fourni dans le handoff. `H1 §0 octodecies`                                                                                                                                                                                               |
 | 44     | Colonne de **méthode de stockage** sur `goods` (frigo / congélateur / sec / cave) + le champ dans l'écran                                                                                                                                                                                                                                                                                                                     | Oui, une migration d'une colonne. C'est aussi la colonne « Emplacement » de la maquette stocks. `H2 §18.2` (P1)                                                                                                                                                       |
