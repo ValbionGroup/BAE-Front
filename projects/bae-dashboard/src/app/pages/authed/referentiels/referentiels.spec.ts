@@ -3,7 +3,10 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideMockStore } from '@ngrx/store/testing';
-import { API_BASE_URL } from '@bae/ui';
+import { API_BASE_URL, ToastService } from '@bae/ui';
+import { vi } from 'vitest';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { ReferentielsStore } from '#core/store/referentiels.store';
 import { Referentiels } from './referentiels';
 import type { Permission } from '#core/models/permission.model';
 
@@ -88,5 +91,74 @@ describe(Referentiels.name, () => {
     await render(['job:read']);
 
     expect(text()).toContain('Soirée');
+  });
+
+  /** Une suppression de catégorie déclasse, elle ne détruit pas : l'écran le dit. */
+  it('annonce ce qu’une suppression de catégorie va déclasser', async () => {
+    await render(['category:read', 'category:delete', 'supplier:read', 'job:read']);
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('m');
+
+    fixture.componentInstance['confirmDeleteCategory']({ id: 1, name: 'Boissons', goodsCount: 3 });
+
+    const config = open.mock.calls[0][0] as unknown as { details: string };
+    expect(config.details).toContain('3');
+    expect(config.details).toContain('sans catégorie');
+    expect(config.details).toContain('ne sont pas supprimées');
+  });
+
+  /**
+   * ⚠️ Le refus porte une phrase que l'utilisateur doit lire — « 1 bon d'achat
+   * rattaché à Metro ». L'avaler laisserait un bouton qui ne fait rien, et
+   * l'opérateur conclurait à une panne.
+   */
+  it('affiche le refus du serveur quand l’enseigne est encore utilisée', async () => {
+    await render(['supplier:read', 'supplier:delete', 'category:read', 'job:read']);
+    vi.spyOn(TestBed.inject(ReferentielsStore), 'deleteSupplier').mockResolvedValue({
+      ok: false,
+      error: {
+        error: {
+          code: 'E_SUPPLIER_IN_USE',
+          message: '1 bon(s) d’achat rattaché(s) à « Metro » : retirez-les d’abord.',
+        },
+      },
+    });
+    const toast = vi.spyOn(TestBed.inject(ToastService), 'show').mockReturnValue('t');
+
+    await fixture.componentInstance['deleteSupplier'](2, 'Metro');
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        message: expect.stringContaining('bon(s) d’achat'),
+      }),
+    );
+  });
+
+  /** Sans la permission, pas de bouton — on ne propose pas ce qui sera refusé. */
+  it('ne propose ni écriture ni suppression sans les permissions', async () => {
+    await render(['supplier:read', 'category:read', 'job:read']);
+    fixture.componentInstance['setTab']('suppliers');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(text()).toContain('Metro');
+    expect(host.querySelectorAll('[data-action="delete"]').length).toBe(0);
+    expect(text()).not.toContain('Ajouter');
+  });
+
+  it('propose les gestes à qui porte les droits', async () => {
+    await render([
+      'supplier:read',
+      'supplier:write',
+      'supplier:delete',
+      'category:read',
+      'job:read',
+    ]);
+    fixture.componentInstance['setTab']('suppliers');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelectorAll('[data-action="delete"]').length).toBe(1);
+    expect(text()).toContain('Ajouter');
   });
 });

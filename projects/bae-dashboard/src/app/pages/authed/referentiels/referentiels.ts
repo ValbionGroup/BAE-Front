@@ -7,10 +7,18 @@ import {
   signal,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { LucideDynamicIcon, LucidePencil } from '@lucide/angular';
-import { Badge, Btn, Card } from '@bae/ui';
+import { LucideDynamicIcon, LucidePencil, LucidePlus, LucideTrash2 } from '@lucide/angular';
+import { Badge, Btn, Card, ToastService, messageOf } from '@bae/ui';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { ReferentielsStore } from '#core/store/referentiels.store';
+import { ReferentielsStore, type WriteResult } from '#core/store/referentiels.store';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { NamedEntityModal } from '#shared/components/modal/named-entity-modal/named-entity-modal';
+import { JobEditModal } from '#shared/components/modal/job-edit-modal/job-edit-modal';
+import type {
+  ApiCategory,
+  ApiJob,
+  ApiSupplier,
+} from '#core/services/referentiels/referentiels-service';
 import { selectPermissions } from '#core/store/auth/auth.selector';
 import type { Permission } from '#core/models/permission.model';
 import { JOB_PERIOD_LABELS, type JobPeriod } from '#core/models/job-period.model';
@@ -49,8 +57,12 @@ export class Referentiels implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   protected readonly store = inject(ReferentielsStore);
   private readonly permissions = inject(Store).selectSignal(selectPermissions);
+  private readonly modal = inject(ModalService);
+  private readonly toast = inject(ToastService);
 
   protected readonly icPencil = LucidePencil;
+  protected readonly icPlus = LucidePlus;
+  protected readonly icTrash = LucideTrash2;
 
   private has(permission: Permission): boolean {
     return this.permissions().includes(permission);
@@ -101,5 +113,137 @@ export class Referentiels implements OnInit {
 
   ngOnInit(): void {
     void this.store.load();
+  }
+
+  // ————— Écritures —————
+
+  /** Ouvre la modale « entité nommée » pour une création ou un renommage. */
+  private openNamed(
+    title: string,
+    placeholder: string,
+    initial: string,
+    save: (name: string) => Promise<WriteResult>,
+  ): void {
+    this.modal.open({
+      type: 'component',
+      component: NamedEntityModal,
+      inputs: { title, placeholder, initial, save, onDone: () => this.announceSaved() },
+    });
+  }
+
+  private announceSaved(): void {
+    this.toast.show({ type: 'success', title: 'Enregistré' });
+  }
+
+  protected createCategory(): void {
+    this.openNamed('Nouvelle catégorie', 'ex. Surgelés', '', (name) =>
+      this.store.createCategory(name),
+    );
+  }
+
+  protected editCategory(category: ApiCategory): void {
+    this.openNamed('Modifier la catégorie', '', category.name, (name) =>
+      this.store.updateCategory(category.id, name),
+    );
+  }
+
+  protected createSupplier(): void {
+    this.openNamed('Nouvelle enseigne', 'ex. Metro', '', (name) => this.store.createSupplier(name));
+  }
+
+  protected editSupplier(supplier: ApiSupplier): void {
+    this.openNamed('Modifier l’enseigne', '', supplier.name, (name) =>
+      this.store.updateSupplier(supplier.id, name),
+    );
+  }
+
+  protected createJob(): void {
+    this.modal.open({
+      type: 'component',
+      component: JobEditModal,
+      inputs: { job: null, onDone: () => this.announceSaved() },
+    });
+  }
+
+  protected editJob(job: ApiJob): void {
+    this.modal.open({
+      type: 'component',
+      component: JobEditModal,
+      inputs: { job, onDone: () => this.announceSaved() },
+    });
+  }
+
+  // ————— Suppressions —————
+
+  /**
+   * ⚠️ Chaque `details` dit ce que la suppression rencontrera. Les trois cas
+   * diffèrent, et c'est tout le propos de cet écran :
+   *
+   * - une **catégorie** déclasse ses denrées (`SET NULL`), elle n'en perd aucune ;
+   * - une **enseigne** est refusée si des bons d'achat ou des prix y sont
+   *   rattachés — le serveur ne cède pas, la FK est en CASCADE derrière ;
+   * - un **poste** est refusé s'il est demandé par une soirée, classé dans les
+   *   vœux d'un membre, ou tenu sur une soirée consolidée.
+   */
+  protected confirmDeleteCategory(category: ApiCategory): void {
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer la catégorie',
+      message: `« ${category.name} » sera retirée de la liste.`,
+      details:
+        category.goodsCount > 0
+          ? `${category.goodsCount} denrée(s) deviendront sans catégorie. Elles ne sont pas supprimées.`
+          : 'Aucune denrée n’y est classée.',
+      onConfirm: () => void this.deleteCategory(category.id, category.name),
+    });
+  }
+
+  protected async deleteCategory(id: number, name: string): Promise<void> {
+    this.report(await this.store.deleteCategory(id), `« ${name} » n’est plus dans la liste.`);
+  }
+
+  protected confirmDeleteSupplier(supplier: ApiSupplier): void {
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer l’enseigne',
+      message: `« ${supplier.name} » sera retirée de la liste.`,
+      details: 'Refusé si des bons d’achat ou des prix y sont rattachés.',
+      onConfirm: () => void this.deleteSupplier(supplier.id, supplier.name),
+    });
+  }
+
+  protected async deleteSupplier(id: number, name: string): Promise<void> {
+    this.report(await this.store.deleteSupplier(id), `« ${name} » n’est plus dans la liste.`);
+  }
+
+  protected confirmDeleteJob(job: ApiJob): void {
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer le poste',
+      message: `« ${job.name} » sera retiré de la liste.`,
+      details:
+        'Refusé si une soirée en a besoin, si un membre l’a classé dans ses vœux, ou s’il a été tenu sur une soirée consolidée.',
+      onConfirm: () => void this.deleteJob(job.id, job.name),
+    });
+  }
+
+  protected async deleteJob(id: number, name: string): Promise<void> {
+    this.report(await this.store.deleteJob(id), `« ${name} » n’est plus dans la liste.`);
+  }
+
+  /**
+   * ⚠️ Le refus du serveur est **montré**, jamais avalé : sans lui, le bouton
+   * semblerait ne rien faire et l'opérateur conclurait à une panne.
+   */
+  private report(result: WriteResult, success: string): void {
+    if (result.ok) {
+      this.toast.show({ type: 'success', title: 'Supprimé', message: success });
+      return;
+    }
+    this.toast.show({
+      type: 'error',
+      title: 'Suppression refusée',
+      message: messageOf(result.error, 'La suppression a échoué.'),
+    });
   }
 }

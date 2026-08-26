@@ -33,6 +33,11 @@
               class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
             >
               <span class="flex-1">Catégories de denrées</span>
+              @if (canWriteCategories()) {
+                <bae-btn kind="primary" size="sm" [icon]="icPlus" (clicked)="createCategory()">
+                  Ajouter
+                </bae-btn>
+              }
             </div>
             @if (store.categories().length === 0) {
               <div class="px-4 py-6 text-xs text-muted">Aucune catégorie.</div>
@@ -44,6 +49,25 @@
                   <span class="flex-1 text-[12.5px] text-text">{{ category.name }}</span>
                   <!-- Le compteur explique d'avance ce qu'une suppression déclasserait. -->
                   <bae-badge kind="neutral">{{ category.goodsCount }} denrée(s)</bae-badge>
+                  @if (canWriteCategories()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icPencil"
+                      (clicked)="editCategory(category)"
+                      >Modifier</bae-btn
+                    >
+                  }
+                  @if (canDeleteCategories()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icTrash"
+                      data-action="delete"
+                      (clicked)="confirmDeleteCategory(category)"
+                      >Supprimer</bae-btn
+                    >
+                  }
                 </div>
               }
             }
@@ -55,6 +79,11 @@
               class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
             >
               <span class="flex-1">Enseignes</span>
+              @if (canWriteSuppliers()) {
+                <bae-btn kind="primary" size="sm" [icon]="icPlus" (clicked)="createSupplier()">
+                  Ajouter
+                </bae-btn>
+              }
             </div>
             @if (store.suppliers().length === 0) {
               <div class="px-4 py-6 text-xs text-muted">Aucune enseigne.</div>
@@ -67,6 +96,25 @@
                   <!-- Ces deux compteurs sont exactement ce que `destroy` refuse. -->
                   <bae-badge kind="neutral">{{ supplier.pricedGoodsCount }} prix</bae-badge>
                   <bae-badge kind="neutral">{{ supplier.voucherCount }} bon(s)</bae-badge>
+                  @if (canWriteSuppliers()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icPencil"
+                      (clicked)="editSupplier(supplier)"
+                      >Modifier</bae-btn
+                    >
+                  }
+                  @if (canDeleteSuppliers()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icTrash"
+                      data-action="delete"
+                      (clicked)="confirmDeleteSupplier(supplier)"
+                      >Supprimer</bae-btn
+                    >
+                  }
                 </div>
               }
             }
@@ -78,6 +126,11 @@
               class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
             >
               <span class="flex-1">Postes</span>
+              @if (canWriteJobs()) {
+                <bae-btn kind="primary" size="sm" [icon]="icPlus" (clicked)="createJob()">
+                  Ajouter
+                </bae-btn>
+              }
             </div>
             @if (store.jobs().length === 0) {
               <div class="px-4 py-6 text-xs text-muted">Aucun poste.</div>
@@ -88,9 +141,24 @@
                 >
                   <span class="flex-1 text-[12.5px] text-text">{{ job.name }}</span>
                   <bae-badge kind="blue">{{ periodLabel(job.type) }}</bae-badge>
-                  <span class="w-[40%] truncate text-[11.5px] text-muted">
+                  <span class="w-[30%] truncate text-[11.5px] text-muted">
                     {{ job.description ?? '—' }}
                   </span>
+                  @if (canWriteJobs()) {
+                    <bae-btn kind="ghost" size="sm" [icon]="icPencil" (clicked)="editJob(job)"
+                      >Modifier</bae-btn
+                    >
+                  }
+                  @if (canDeleteJobs()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icTrash"
+                      data-action="delete"
+                      (clicked)="confirmDeleteJob(job)"
+                      >Supprimer</bae-btn
+                    >
+                  }
                 </div>
               }
             }
