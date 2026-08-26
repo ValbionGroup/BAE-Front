@@ -17,6 +17,7 @@ import {
   LucideCheck,
   LucideDynamicIcon,
   LucideLink2,
+  LucidePackageSearch,
   LucidePlus,
   LucideScanLine,
   LucideTrash2,
@@ -40,10 +41,18 @@ import type { StockProduct } from '../stocks.types';
  *   de créer l'aliment, et ne part pas en stock ;
  * - `goodId` posé et `attachPending` — l'aliment est choisi mais le code n'est
  *   pas encore écrit : il le sera à la validation, jamais avant ;
- * - `goodId` posé seul — l'API connaissait déjà le code.
+ * - `goodId` posé seul — l'API connaissait déjà le code, ou la ligne a été
+ *   ajoutée à la main.
+ *
+ * ⚠️ La clé est `id`, **pas** `barcode` : une ligne ajoutée sans code n'en a
+ * aucun, et deux lignes sans code seraient confondues par une clé `null`.
+ * `barcode` reste ce qui regroupe les relectures d'une même étiquette, rien de
+ * plus.
  */
 export interface ScanLine {
-  readonly barcode: string;
+  readonly id: string;
+  /** `null` pour une denrée désignée à la main — le vrac n'a pas d'EAN. */
+  readonly barcode: string | null;
   readonly goodId: number | null;
   readonly name: string;
   readonly quantity: number;
@@ -114,6 +123,7 @@ export class StocksScanner {
   protected readonly icCalendar = LucideCalendar;
   protected readonly icPlus = LucidePlus;
   protected readonly icLink = LucideLink2;
+  protected readonly icPackageSearch = LucidePackageSearch;
   protected readonly icTrash = LucideTrash2;
 
   private readonly cameraStarted = signal(false);
@@ -160,7 +170,7 @@ export class StocksScanner {
 
     const existing = this.lines().find((line) => line.barcode === barcode);
     if (existing) {
-      this.bump(barcode, 1);
+      this.bump(existing.id, 1);
       return;
     }
 
@@ -170,6 +180,7 @@ export class StocksScanner {
       const good = found[0] ?? null;
       this.lines.update((lines) => [
         {
+          id: crypto.randomUUID(),
           barcode,
           goodId: good?.id ?? null,
           name: good?.name ?? 'Produit inconnu',
@@ -184,22 +195,57 @@ export class StocksScanner {
     }
   }
 
-  protected bump(barcode: string, delta: number): void {
+  /**
+   * Ajoute une denrée désignée à la main, dans la session courante.
+   *
+   * Aucun regroupement : sans code, deux ajouts du même aliment sont deux lots,
+   * chacun avec sa DLC — c'est le cas de deux sacs de farine achetés à des dates
+   * différentes.
+   */
+  protected addWithoutBarcode(product: { id: number; name: string }): void {
+    this.lines.update((lines) => [
+      {
+        id: crypto.randomUUID(),
+        barcode: null,
+        goodId: product.id,
+        name: product.name,
+        quantity: 1,
+        expirationDate: '',
+        // La denrée existe déjà : il n'y a aucun code à rattacher.
+        attachPending: false,
+      },
+      ...lines,
+    ]);
+  }
+
+  /** Le picker sert ici sans code : `barcode` à `null` change son vocabulaire. */
+  protected pickWithoutBarcode(): void {
+    this.modals.open({
+      type: 'component',
+      component: GoodPickerModal,
+      inputs: {
+        barcode: null,
+        picked: (product: StockProduct) => this.addWithoutBarcode(product),
+      },
+    });
+  }
+
+  protected bump(lineId: string, delta: number): void {
     this.lines.update((lines) =>
       lines.map((line) =>
-        line.barcode === barcode ? { ...line, quantity: Math.max(1, line.quantity + delta) } : line,
+        line.id === lineId ? { ...line, quantity: Math.max(1, line.quantity + delta) } : line,
       ),
     );
   }
 
-  protected setExpiration(barcode: string, value: string): void {
+  protected setExpiration(lineId: string, value: string): void {
     this.lines.update((lines) =>
-      lines.map((line) => (line.barcode === barcode ? { ...line, expirationDate: value } : line)),
+      lines.map((line) => (line.id === lineId ? { ...line, expirationDate: value } : line)),
     );
   }
 
-  protected remove(barcode: string): void {
-    this.lines.update((lines) => lines.filter((line) => line.barcode !== barcode));
+  protected remove(lineId: string): void {
+    this.lines.update((lines) => lines.filter((line) => line.id !== lineId));
   }
 
   protected clearAll(): void {
@@ -212,25 +258,29 @@ export class StocksScanner {
    * créer d'emblée fabriquait un doublon dès qu'un aliment déjà au catalogue se
    * présentait sous un second conditionnement.
    */
-  protected resolveUnknown(barcode: string): void {
+  protected resolveUnknown(lineId: string): void {
+    const barcode = this.lines().find((line) => line.id === lineId)?.barcode;
+    if (!barcode) return;
     this.modals.open({
       type: 'component',
       component: GoodPickerModal,
       inputs: {
         barcode,
-        picked: (product: StockProduct) => this.attach(barcode, product, true),
-        createInstead: () => this.createUnknown(barcode),
+        picked: (product: StockProduct) => this.attach(lineId, product, true),
+        createInstead: () => this.createUnknown(lineId),
       },
     });
   }
 
-  protected createUnknown(barcode: string): void {
+  protected createUnknown(lineId: string): void {
+    const barcode = this.lines().find((line) => line.id === lineId)?.barcode;
+    if (!barcode) return;
     this.modals.open({
       type: 'component',
       component: GoodCreateModal,
       inputs: {
         barcode,
-        created: (product: StockProduct) => this.attach(barcode, product, false),
+        created: (product: StockProduct) => this.attach(lineId, product, false),
       },
     });
   }
@@ -244,10 +294,10 @@ export class StocksScanner {
    * la validation reposterait le code d'un produit qui l'a déjà et se ferait
    * refuser par sa propre contrainte d'unicité.
    */
-  private attach(barcode: string, product: StockProduct, pending: boolean): void {
+  private attach(lineId: string, product: StockProduct, pending: boolean): void {
     this.lines.update((lines) =>
       lines.map((line) =>
-        line.barcode === barcode
+        line.id === lineId
           ? { ...line, goodId: product.id, name: product.name, attachPending: pending }
           : line,
       ),
@@ -255,9 +305,9 @@ export class StocksScanner {
   }
 
   /** Le code est écrit : une reprise après échec du lot ne doit pas le reposter. */
-  private markAttached(barcode: string): void {
+  private markAttached(lineId: string): void {
     this.lines.update((lines) =>
-      lines.map((line) => (line.barcode === barcode ? { ...line, attachPending: false } : line)),
+      lines.map((line) => (line.id === lineId ? { ...line, attachPending: false } : line)),
     );
   }
 
@@ -276,10 +326,12 @@ export class StocksScanner {
     for (const line of this.ready()) {
       // Le code d'abord : un lot entré sur une denrée dont le rattachement vient
       // d'être refusé porterait sur le mauvais aliment.
-      if (line.attachPending) {
+      // `attachPending` n'est posé que par le rattachement d'un code lu : une
+      // ligne sans code ne passe jamais par ici.
+      if (line.attachPending && line.barcode !== null) {
         try {
           await lastValueFrom(this.svc.attachBarcode(line.goodId as number, line.barcode));
-          this.markAttached(line.barcode);
+          this.markAttached(line.id);
         } catch (error) {
           failed = messageOf(error, "Ce code-barres n'a pas pu être rattaché.");
           continue;
@@ -294,7 +346,7 @@ export class StocksScanner {
             expirationDate: line.expirationDate === '' ? null : line.expirationDate,
           }),
         );
-        this.remove(line.barcode);
+        this.remove(line.id);
         saved += 1;
       } catch (error) {
         // Le rattachement qui vient de réussir, lui, reste acquis : c'est une

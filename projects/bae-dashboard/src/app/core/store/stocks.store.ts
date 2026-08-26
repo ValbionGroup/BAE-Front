@@ -157,6 +157,44 @@ export const StocksStore = signalStore(
       }
     },
 
+    /**
+     * Entre un lot en stock — l'ajout **sans code-barres**, celui de la modale
+     * d'entrée manuelle comme celui du scanner.
+     *
+     * Le `refresh()` n'est pas décoratif : la page affiche des agrégats par
+     * denrée (`totalQty`, `batchCount`, les KPIs), que le POST ne renvoie pas.
+     * Sans lui, le lot existe en base et le tableau montre les quantités d'avant.
+     */
+    async createBatch(payload: {
+      goodId: number;
+      quantity: number;
+      expirationDate: string | null;
+    }): Promise<{ ok: true } | { ok: false; error: unknown }> {
+      try {
+        await lastValueFrom(svc.createBatch(payload));
+        await this.refresh();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    },
+
+    /** Sortie partielle d'un lot. Le refus voyage dans la valeur résolue —
+     *  patron de `setSupplierPrice` — pour que l'écran montre pourquoi. */
+    async removeFromBatch(payload: {
+      goodId: number;
+      stockBatchId: number;
+      quantity: number;
+    }): Promise<{ ok: true } | { ok: false; error: unknown }> {
+      try {
+        await lastValueFrom(svc.removeFromBatch(payload));
+        await this.refresh();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    },
+
     async discardBatch(goodsId: number, batchId: number, remainingQty: number): Promise<void> {
       await lastValueFrom(svc.discardBatch(goodsId, batchId, remainingQty));
       const items = await lastValueFrom(svc.getAll());

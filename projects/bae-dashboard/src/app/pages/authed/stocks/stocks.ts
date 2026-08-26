@@ -18,6 +18,8 @@ import {
   LucideDynamicIcon,
   LucideFunnel,
   LucidePackage,
+  LucidePackageMinus,
+  LucidePackagePlus,
   LucidePlus,
   LucideScanLine,
   LucideSearch,
@@ -44,6 +46,8 @@ import type { ApiGoodPrices } from '#core/services/stocks/stocks-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { SupplierPriceModal } from '#shared/components/modal/supplier-price-modal/supplier-price-modal';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
+import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
 import { PrintService } from '#core/services/print/print-service';
 import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
@@ -124,6 +128,12 @@ export class Stocks implements OnInit {
 
   protected readonly pageActions = computed<readonly PageAction[]>(() => [
     { label: 'Scanner', icon: this.icScan, run: () => this.openScanner() },
+    {
+      label: 'Entrée',
+      icon: this.icEntry,
+      testId: 'stock-entry',
+      run: () => this.openStockEntry(),
+    },
     { label: 'Inventaire', icon: this.icDownload, run: () => this.printInventory() },
     {
       label: 'Produit',
@@ -143,6 +153,8 @@ export class Stocks implements OnInit {
   protected readonly icSort = LucideArrowDownUp;
   protected readonly icTrash = LucideTrash2;
   protected readonly icPackage = LucidePackage;
+  protected readonly icEntry = LucidePackagePlus;
+  protected readonly icExit = LucidePackageMinus;
 
   protected readonly searchQuery = signal('');
   protected readonly activeCategory = signal('Tous');
@@ -324,6 +336,49 @@ export class Stocks implements OnInit {
     void this.router.navigate(['/stocks/scanner']);
   }
 
+  /**
+   * Entrée de stock **sans code-barres**. Ouverte depuis la topbar, elle
+   * demande la denrée ; ouverte depuis le panneau, elle reprend celle qui y est
+   * sélectionnée — le même geste, un pas de moins.
+   */
+  protected openStockEntry(): void {
+    this.modal.open({
+      type: 'component',
+      component: StockEntryModal,
+      inputs: {
+        goodId: this.selectedId(),
+        onDone: () => void this.reloadBatches(),
+      },
+    });
+  }
+
+  protected openStockExit(batch: StockBatchRow): void {
+    const product = this.selectedProduct();
+    if (!product) return;
+    this.modal.open({
+      type: 'component',
+      component: StockExitModal,
+      inputs: {
+        goodId: product.id,
+        goodName: product.name,
+        unit: product.unit,
+        batch,
+        onDone: () => void this.reloadBatches(),
+      },
+    });
+  }
+
+  /**
+   * Les agrégats du tableau sont rafraîchis par le store ; les lots du panneau,
+   * eux, ne le sont par personne — l'effect ne réagit qu'à `selectedId` et
+   * `showEmptyBatches`, que l'écriture ne change pas.
+   */
+  private async reloadBatches(): Promise<void> {
+    const id = this.selectedId();
+    if (id === null) return;
+    this.selectedBatches.set(await this.store.getBatches(id, this.showEmptyBatches()));
+  }
+
   protected openCreateGood(): void {
     this.modal.open({ type: 'component', component: GoodCreateModal, inputs: {} });
   }
@@ -387,9 +442,7 @@ export class Stocks implements OnInit {
     const product = this.selectedProduct();
     if (!product) return;
     await this.store.discardBatch(product.id, batch.id, batch.remainingQty);
-    // l'effect se déclenche sur selectedId + showEmptyBatches, mais on force un reload
-    const batches = await this.store.getBatches(product.id, this.showEmptyBatches());
-    this.selectedBatches.set(batches);
+    await this.reloadBatches();
   }
 
   protected async select(id: number): Promise<void> {

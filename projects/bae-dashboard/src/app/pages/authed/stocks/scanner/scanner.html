@@ -77,6 +77,10 @@
           />
         </div>
         <bae-btn kind="secondary" size="md" (clicked)="submitManual()">Ajouter</bae-btn>
+        <!-- L'autre porte : ce qui n'a pas de code du tout. -->
+        <bae-btn kind="ghost" size="md" [icon]="icPackageSearch" (clicked)="pickWithoutBarcode()">
+          Sans code
+        </bae-btn>
       </div>
     </div>
   </div>
@@ -120,9 +124,9 @@
         </div>
       }
 
-      @for (line of lines(); track line.barcode) {
+      @for (line of lines(); track line.id) {
         <div
-          [attr.data-testid]="'scan-line-' + line.barcode"
+          [attr.data-testid]="'scan-line-' + line.id"
           [class]="
             'mb-2 rounded-md border p-3 ' +
             (line.goodId === null ? 'border-warn bg-warn-soft/40' : 'border-border-s bg-surface-2')
@@ -145,29 +149,23 @@
               type="button"
               class="cursor-pointer text-muted hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
               [attr.aria-label]="'Retirer ' + line.name + ' de la session'"
-              (click)="remove(line.barcode)"
+              (click)="remove(line.id)"
             >
               <svg [lucideIcon]="icTrash" [size]="14" aria-hidden="true"></svg>
             </button>
           </div>
-          <div class="mono mt-1 text-[10.5px] text-muted">{{ line.barcode }}</div>
+          @if (line.barcode; as code) {
+            <div class="mono mt-1 text-[10.5px] text-muted">{{ code }}</div>
+          } @else {
+            <div class="mt-1 text-[10.5px] text-muted italic">Sans code-barres</div>
+          }
 
           @if (line.goodId === null) {
             <div class="mt-2.5 flex flex-wrap gap-2">
-              <bae-btn
-                kind="primary"
-                size="sm"
-                [icon]="icLink"
-                (clicked)="resolveUnknown(line.barcode)"
-              >
+              <bae-btn kind="primary" size="sm" [icon]="icLink" (clicked)="resolveUnknown(line.id)">
                 Rattacher à un aliment
               </bae-btn>
-              <bae-btn
-                kind="outline"
-                size="sm"
-                [icon]="icPlus"
-                (clicked)="createUnknown(line.barcode)"
-              >
+              <bae-btn kind="outline" size="sm" [icon]="icPlus" (clicked)="createUnknown(line.id)">
                 Créer le produit
               </bae-btn>
             </div>
@@ -180,7 +178,7 @@
                     class="inline-flex h-full w-8 cursor-pointer items-center justify-center text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
                     [disabled]="line.quantity <= 1"
                     [attr.aria-label]="'Un de moins de ' + line.name"
-                    (click)="bump(line.barcode, -1)"
+                    (click)="bump(line.id, -1)"
                   >
                     −
                   </button>
@@ -191,7 +189,7 @@
                     type="button"
                     class="inline-flex h-full w-8 cursor-pointer items-center justify-center text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
                     [attr.aria-label]="'Un de plus de ' + line.name"
-                    (click)="bump(line.barcode, 1)"
+                    (click)="bump(line.id, 1)"
                   >
                     +
                   </button>
@@ -201,7 +199,7 @@
                 <bae-input
                   type="date"
                   [value]="line.expirationDate"
-                  (valueChange)="setExpiration(line.barcode, $event)"
+                  (valueChange)="setExpiration(line.id, $event)"
                 />
               </bae-field>
             </div>

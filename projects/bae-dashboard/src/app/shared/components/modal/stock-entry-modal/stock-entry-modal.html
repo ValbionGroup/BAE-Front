@@ -1,0 +1,100 @@
+<bfd-modal-shell
+  [icon]="icEntry"
+  tone="blue"
+  title="Entrée de stock"
+  subtitle="Sans code-barres — le vrac, les fûts et les dons n'en portent pas"
+  [width]="480"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    @if (picked(); as product) {
+      <div
+        class="flex items-center gap-2 rounded-md border border-border-s bg-surface-2 px-3 py-2.5"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-[13px] font-semibold text-text">{{ product.name }}</div>
+          <div class="truncate text-[11.5px] text-muted">
+            {{ product.categoryName }} · en stock {{ product.totalQty }} {{ product.unit }}
+          </div>
+        </div>
+        @if (!locked()) {
+          <bae-btn kind="ghost" size="sm" (clicked)="clearPick()">Changer</bae-btn>
+        }
+      </div>
+    } @else {
+      <bae-field label="Denrée">
+        <bae-input
+          placeholder="Chercher par nom, marque ou catégorie…"
+          [value]="query()"
+          [invalid]="submitted() && picked() === null"
+          (valueChange)="onQuery($event)"
+        />
+      </bae-field>
+
+      <div class="-mt-1 flex max-h-56 flex-col gap-1 overflow-y-auto">
+        @for (product of results(); track product.id) {
+          <button
+            type="button"
+            class="flex items-center gap-2 rounded-md border border-transparent px-2.5 py-2 text-left hover:border-border-s hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+            (click)="choose(product)"
+          >
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-[12.5px] font-semibold text-text">
+                {{ product.name }}
+              </span>
+              <span class="block truncate text-[11px] text-muted">
+                {{ product.categoryName }}
+                @if (product.brand) {
+                  · {{ product.brand }}
+                }
+              </span>
+            </span>
+            <span class="tnum shrink-0 text-[11.5px] text-muted">
+              {{ product.totalQty }} {{ product.unit }}
+            </span>
+          </button>
+        } @empty {
+          <p class="px-2.5 py-2 text-[11.5px] text-muted">
+            Aucune denrée ne correspond. Une denrée qui n'existe pas encore se crée depuis « Produit
+            ».
+          </p>
+        }
+      </div>
+
+      @if (truncated()) {
+        <p class="-mt-1 text-[11px] text-muted">
+          Seules les {{ results().length }} premières sont listées — affine la recherche.
+        </p>
+      }
+    }
+
+    <bae-field label="Quantité" [hint]="picked() ? 'En ' + picked()!.unit : null">
+      <bae-input
+        placeholder="ex. 12"
+        [value]="quantity()"
+        [invalid]="submitted() && qty() === null"
+        (valueChange)="onQuantity($event)"
+      />
+    </bae-field>
+
+    @if (submitted() && qty() === null) {
+      <p class="-mt-1 text-[11.5px] text-danger">Une quantité positive est attendue.</p>
+    }
+
+    <!-- Optionnelle : tout ne périme pas, et un lot sans DLC reste un lot. -->
+    <bae-field label="DLC" hint="Facultative — laisse vide si la denrée ne périme pas">
+      <bae-input type="date" [value]="expiration()" (valueChange)="onExpiration($event)" />
+    </bae-field>
+
+    @if (error(); as message) {
+      <p class="text-[11.5px] text-danger" role="alert">{{ message }}</p>
+    }
+
+    <div class="mt-1 flex justify-end gap-2">
+      <bae-btn kind="secondary" size="sm" (clicked)="cancel()">Annuler</bae-btn>
+      <bae-btn kind="primary" size="sm" [disabled]="busy()" (clicked)="submit()">
+        Entrer en stock
+      </bae-btn>
+    </div>
+  </div>
+</bfd-modal-shell>

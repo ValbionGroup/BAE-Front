@@ -7,6 +7,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Stocks } from './stocks';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { PrintService } from '#core/services/print/print-service';
+import { ModalService } from '#shared/components/modal/modal.service';
+import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
+import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
 
 describe(Stocks.name, () => {
   let component: Stocks;
@@ -227,4 +230,98 @@ describe(Stocks.name, () => {
 
     expect(component['priceUnitLabel']()).toBe('Prix par kg');
   });
+
+  /**
+   * L'entrée manuelle est l'autre porte du stock : le scanner ne sait rien
+   * faire d'un sac de farine en vrac, d'un fût ou d'un don — rien de tout cela
+   * ne porte d'EAN.
+   */
+  it('ouvre l’entrée de stock sans denrée imposée depuis la topbar', () => {
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('id');
+
+    component['openStockEntry']();
+
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        component: StockEntryModal,
+        inputs: expect.objectContaining({ goodId: null }),
+      }),
+    );
+    vi.restoreAllMocks();
+  });
+
+  it('préremplit la denrée quand l’entrée part du panneau', async () => {
+    await selectFirstProduct();
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('id');
+
+    component['openStockEntry']();
+
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({ inputs: expect.objectContaining({ goodId: 1 }) }),
+    );
+    vi.restoreAllMocks();
+  });
+
+  it('ouvre la sortie partielle sur le lot désigné', async () => {
+    await selectFirstProduct();
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('id');
+
+    const batch = component['selectedBatches']()[0];
+    component['openStockExit'](batch);
+
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        component: StockExitModal,
+        inputs: expect.objectContaining({ goodId: 1, unit: 'pcs', batch }),
+      }),
+    );
+    vi.restoreAllMocks();
+  });
+
+  /** Charge la page, sélectionne la première denrée et sert ses lots. */
+  async function selectFirstProduct(): Promise<void> {
+    http
+      .expectOne((r) => r.url.endsWith('/stocks'))
+      .flush([
+        {
+          id: 1,
+          name: 'Saucisses',
+          unit: 'pcs',
+          brand: null,
+          categoryId: 2,
+          categoryName: 'Frais',
+          supplierId: null,
+          totalRemainingQty: 14,
+          batchCount: 1,
+          nearestExpirationDate: null,
+          expiredBatchCount: 0,
+          soonBatchCount: 0,
+        },
+      ]);
+    http.expectOne((r) => r.url.endsWith('/categories')).flush([{ id: 2, name: 'Frais' }]);
+    await fixture.whenStable();
+
+    void component['select'](1);
+    // `whenStable()` laisse l'effect qui suit `selectedId` émettre sa requête.
+    await fixture.whenStable();
+    http
+      .expectOne((r) => r.url.includes('/stocks/1/batches'))
+      .flush([
+        {
+          id: 42,
+          goodsId: 1,
+          restockId: null,
+          label: 'L26-4',
+          initialQty: 14,
+          remainingQty: 14,
+          expirationDate: null,
+          openedAt: null,
+        },
+      ]);
+    http.match((r) => r.url.endsWith('/goods/1')).forEach((r) => r.flush({ suppliers: [] }));
+    // La page charge ses lots par une promesse nue : en zoneless, l'ordonnanceur
+    // est au repos avant que la chaîne n'aboutisse.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fixture.detectChanges();
+  }
 });

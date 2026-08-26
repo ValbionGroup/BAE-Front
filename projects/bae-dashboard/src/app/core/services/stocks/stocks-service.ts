@@ -168,6 +168,27 @@ export class StocksService {
     return this.http.get<ApiStockBatch[]>(`${this.baseUrl}/stocks/${goodsId}/batches`, { params });
   }
 
+  /**
+   * Sort une quantité d'un lot précis — le geste de la sortie partielle.
+   *
+   * ⚠️ `movementType` n'est pas un paramètre : une **entrée** en stock passe par
+   * un lot (`createBatch`), qui porte sa DLC et son étiquette. Un mouvement `in`
+   * ajouterait de la quantité à un lot sans dire d'où elle vient.
+   *
+   * L'API refuse en 422 `E_STOCK_INSUFFICIENT` une quantité supérieure au
+   * restant, et `E_BATCH_MISMATCH` un lot d'une autre denrée.
+   */
+  removeFromBatch(payload: {
+    goodId: number;
+    stockBatchId: number;
+    quantity: number;
+  }): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/stock-movements`, {
+      ...payload,
+      movementType: 'out',
+    });
+  }
+
   discardBatch(goodsId: number, batchId: number, remainingQty: number): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/stocks/${goodsId}/batches/${batchId}/discard`, {
       remainingQty,

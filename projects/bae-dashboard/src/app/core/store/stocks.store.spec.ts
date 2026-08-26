@@ -189,4 +189,58 @@ describe(StocksStore.name, () => {
     expect(store.createError()).toBe('Unité invalide.');
     expect(store.products()).toHaveLength(0);
   });
+
+  /** Laisse le `refresh()` enchaîné sur la réponse émettre ses requêtes. */
+  function tick(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('enters a batch in stock and refreshes the aggregates behind it', async () => {
+    await loadWith([item({ totalRemainingQty: 12, batchCount: 1 })]);
+
+    const entered = store.createBatch({ goodId: 1, quantity: 6, expirationDate: '2026-11-04' });
+    const req = http.expectOne(`${baseUrl}/stock-batches`);
+    expect(req.request.body).toEqual({ goodId: 1, quantity: 6, expirationDate: '2026-11-04' });
+    req.flush({ id: 30 });
+    await tick();
+
+    // Sans ce rechargement, le tableau garde les 12 d'avant : la ligne du lot
+    // n'est pas ce que la page affiche, ce sont les agrégats par denrée.
+    http.expectOne(`${baseUrl}/stocks`).flush([item({ totalRemainingQty: 18, batchCount: 2 })]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await entered;
+
+    expect(result).toEqual({ ok: true });
+    expect(store.products()[0]).toMatchObject({ totalQty: 18, batchCount: 2 });
+  });
+
+  it('takes a quantity out of a batch and refreshes', async () => {
+    await loadWith([item({ totalRemainingQty: 12 })]);
+
+    const removed = store.removeFromBatch({ goodId: 1, stockBatchId: 42, quantity: 4 });
+    http.expectOne(`${baseUrl}/stock-movements`).flush({ id: 7 });
+    await tick();
+    http.expectOne(`${baseUrl}/stocks`).flush([item({ totalRemainingQty: 8 })]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await removed;
+
+    expect(result).toEqual({ ok: true });
+    expect(store.products()[0].totalQty).toBe(8);
+  });
+
+  /** Le refus voyage dans la valeur résolue — patron de `setSupplierPrice` —
+   *  pour que l'écran montre `E_STOCK_INSUFFICIENT` au lieu de l'avaler. */
+  it('hands a refused withdrawal back instead of refreshing', async () => {
+    await loadWith([item({ totalRemainingQty: 12 })]);
+
+    const removed = store.removeFromBatch({ goodId: 1, stockBatchId: 42, quantity: 99 });
+    http.expectOne(`${baseUrl}/stock-movements`).flush(
+      { code: 'E_STOCK_INSUFFICIENT', message: 'Ce lot ne porte plus que 12 unité(s).' },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    const result = await removed;
+
+    expect(result.ok).toBe(false);
+    expect(store.products()[0].totalQty).toBe(12);
+  });
 });
