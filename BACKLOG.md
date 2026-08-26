@@ -18,6 +18,52 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 
 ## ✅ Livré
 
+### 2026-08-26 — l'écriture ouverte sur trois référentiels
+
+Catégories de denrées, enseignes et postes étaient en lecture seule **côté front uniquement** : le
+back portait déjà un CRUD complet et gardé pour les trois, et rien ne l'atteignait. Pour les postes,
+`createJob` / `updateJob` / `deleteJob` existaient dans `coordination-service.ts` et **n'étaient
+appelés nulle part** — du code mort.
+
+Nouvel écran **Référentiels** (groupe _Préparation_), trois onglets, chacun conditionné à sa propre
+lecture et chaque geste à son propre droit d'écriture.
+
+| Portée    | Livré                                                                                                                                                                                                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Back**  | Validateurs Vine sur catégories et enseignes. `CategoriesController` fusionnait `request.all()` : **toute clé de la charge utile passait dans le modèle**, `id` compris.                                                                                                    |
+| **Back**  | `Suppliers.destroy` refuse en 409 `E_SUPPLIER_IN_USE`. `good_suppliers` et `vouchers` sont en **CASCADE** : supprimer une enseigne **détruisait ses bons d'achat**, et seule l'absence de bouton l'empêchait.                                                               |
+| **Back**  | `Jobs.destroy` étendu : le garde ne couvrait que les affectations consolidées, alors que `event_jobs`, `job_eligible_members` et `member_job_preferences` sont en CASCADE — **les vœux des membres partaient en silence**. Code `E_JOB_IN_USE`, distinct d'`E_JOB_SETTLED`. |
+| **Back**  | Compteurs d'usage sur `GET /categories` et `GET /suppliers`, en agrégats groupés — `SuppliersController.index` interdit les `preload`. C'est eux qui rendent un refus compréhensible **avant** le clic.                                                                     |
+| **Front** | `ROUTE_PERMISSIONS` accepte désormais **une permission ou une liste**, lue « au moins une ». Voir l'encadré ci-dessous.                                                                                                                                                     |
+| **Front** | `ReferentielsStore` — les trois listes, et le patron `{ ok, error }` d'`EventsStore` pour que les 409 s'affichent au lieu d'être avalés.                                                                                                                                    |
+| **Front** | Deux modales : une pour les entités à un seul nom (catégories, enseignes), une pour les postes qui portent en plus période et description.                                                                                                                                  |
+
+#### Une route à plusieurs permissions — pourquoi la source, et pas le garde
+
+`permissionFor()` alimente **deux** consommateurs : `permissionGuardFor` et `Sidebar.visible()`.
+Ajouter une variante « au moins une » réservée au garde aurait laissé le menu en désaccord avec la
+page — entrée visible pour qui ne peut pas entrer, ou l'inverse. La liste vit donc dans
+`ROUTE_PERMISSIONS`, et `permissionFor` rend un `readonly Permission[]` que les deux lisent. Les
+onze routes historiques gardent une permission unique : un tableau d'un élément se lit pareil.
+
+#### Ce qui existait déjà — tâche 79 à rayer
+
+L'édition des **recettes** est livrée depuis un lot antérieur : `PUT /products/:id` porte le tableau
+`goods`, et `RecipeEditModal` compose les ingrédients. La tâche 79 (« le lot le moins cher du CDC »)
+figurait comme ouverte.
+
+#### Trois pièges, dont un rattrapé de justesse
+
+- **Un test existant dépendait de l'ancienne cascade.** `settled_credit_durability / still deletes a
+job whose assignments were never consolidated` attachait le poste à une soirée dans sa fixture.
+  Corrigé **en détachant d'abord**, jamais en affaiblissant le garde. ⚠️ Il n'a été vu que par la
+  comparaison de base de référence : la suite était passée de 13 à 14 échecs, invisible sur une
+  suite qui n'est pas verte, et mes filtres ciblés ne l'atteignaient pas.
+- **`JOB_PERIOD_LABELS` existait déjà**, avec « Préparation / Soirée / Nettoyage » — le modèle
+  interdit explicitement de redéclarer ces chaînes ailleurs.
+- **`messageOf` lit `error.error.message`**, la forme que produit `apiEnvelopeInterceptor`. Un mock
+  plat retombe silencieusement sur le message de repli, et le test n'affirme plus rien.
+
 ### 2026-08-26 — le cycle de vie d'une soirée, de l'ouverture au bilan
 
 Clôturer une soirée ne la clôturait pas : on revenait sur `soiree/live` avec la soirée en cours, la
