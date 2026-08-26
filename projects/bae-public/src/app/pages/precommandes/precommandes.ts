@@ -26,6 +26,7 @@ import {
   Skeleton,
   buildPickupSlots,
   formatCents,
+  messageOf,
   type PickupSlot,
 } from '@bae/ui';
 
@@ -185,13 +186,22 @@ export class Precommandes {
           if (payment.mobileUrl === null) this.fail();
           else this.navigation.go(payment.mobileUrl);
         },
-        error: () => this.fail(),
+        error: (error: unknown) => this.fail(error),
       });
   }
 
-  private fail(): void {
+  /**
+   * Sans argument, le repli : c'est le cas d'une réponse sans lien Lydia, où
+   * réessayer est effectivement le bon conseil. Avec une erreur, le message de
+   * l'API l'emporte — un refus comme « vous avez déjà une précommande » ne
+   * cédera à aucun nombre de tentatives, et le conseil générique enverrait le
+   * client tourner en rond.
+   */
+  private fail(error?: unknown): void {
     this.submitting.set(false);
-    this.checkoutError.set('Le paiement n’a pas pu être ouvert. Réessayez dans un instant.');
+    this.checkoutError.set(
+      messageOf(error, 'Le paiement n’a pas pu être ouvert. Réessayez dans un instant.'),
+    );
   }
 
   protected chooseSlot(value: string): void {
