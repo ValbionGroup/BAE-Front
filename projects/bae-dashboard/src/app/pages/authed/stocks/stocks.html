@@ -69,7 +69,11 @@
         </span>
         <span class="flex-1"></span>
         <bae-btn kind="ghost" size="sm" (clicked)="clearSelection()">Annuler</bae-btn>
-        <bae-btn kind="danger" size="sm" [icon]="icTrash">Supprimer</bae-btn>
+        @if (canDelete()) {
+          <bae-btn kind="danger" size="sm" [icon]="icTrash" (clicked)="confirmDeleteGoods()"
+            >Supprimer</bae-btn
+          >
+        }
       </div>
     }
 

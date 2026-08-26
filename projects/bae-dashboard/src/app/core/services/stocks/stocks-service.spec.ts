@@ -44,4 +44,34 @@ describe(StocksService.name, () => {
     });
     req.flush({ id: 1 });
   });
+
+  it('supprime une denrée par son id', () => {
+    service.deleteGood(7).subscribe();
+
+    const req = http.expectOne(`${baseUrl}/goods/7`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
+
+  /**
+   * ⚠️ La même route sert les tarifs **et** les recettes qui utilisent la
+   * denrée : `GET /goods/:id` renvoie la fiche entière, `products` compris.
+   * C'est ce champ qui permet de dire ce qu'une suppression amputerait.
+   */
+  it('lit la fiche complète d’une denrée, recettes comprises', async () => {
+    let detail: { products: readonly { name: string }[] } | undefined;
+    service.getGood(7).subscribe((value) => (detail = value));
+
+    http.expectOne(`${baseUrl}/goods/7`).flush({
+      id: 7,
+      name: 'Farine T55',
+      unit: 'kg',
+      suppliers: [],
+      bestSupplier: null,
+      bestPrice: null,
+      products: [{ id: 3, name: 'Crêpes' }],
+    });
+
+    expect(detail?.products.map((p) => p.name)).toEqual(['Crêpes']);
+  });
 });

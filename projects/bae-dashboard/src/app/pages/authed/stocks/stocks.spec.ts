@@ -1,12 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { provideMockStore } from '@ngrx/store/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Stocks } from './stocks';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { PrintService } from '#core/services/print/print-service';
+import { StocksStore } from '#core/store/stocks.store';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
@@ -24,7 +25,11 @@ describe(Stocks.name, () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         // La page lit les permissions pour conditionner les gestes de tarif.
-        provideMockStore({ initialState: { auth: { permissions: ['stock:read', 'good:write'] } } }),
+        provideMockStore({
+          initialState: {
+            auth: { permissions: ['stock:read', 'good:write', 'good:delete'] },
+          },
+        }),
       ],
     }).compileComponents();
 
@@ -204,6 +209,7 @@ describe(Stocks.name, () => {
       ],
       bestSupplier: { id: 2, name: 'Metro', price: 220 },
       bestPrice: 220,
+      products: [],
     });
     fixture.detectChanges();
 
@@ -226,6 +232,7 @@ describe(Stocks.name, () => {
       suppliers: [],
       bestSupplier: null,
       bestPrice: null,
+      products: [],
     });
 
     expect(component['priceUnitLabel']()).toBe('Prix par kg');
@@ -324,4 +331,81 @@ describe(Stocks.name, () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     fixture.detectChanges();
   }
+
+  /**
+   * ⚠️ L'API ne refuse jamais la suppression d'une denrée : la cascade emporte
+   * les lots, leur historique et **la ligne de la denrée dans chaque recette**.
+   * Ce décompte est le seul endroit de l'application qui le dise.
+   */
+  it('annonce les lots et les recettes que la suppression emporterait', async () => {
+    await selectFirstProduct();
+    vi.spyOn(TestBed.inject(StocksStore), 'getGoodUsage').mockResolvedValue({
+      recipeNames: ['Crêpes', 'Gâteau'],
+      complete: true,
+    });
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('id');
+
+    component['toggleSelect'](1);
+    await component['confirmDeleteGoods']();
+
+    const config = open.mock.calls.at(0)?.at(0) as unknown as {
+      type: string;
+      details?: string;
+      message: string;
+    };
+    expect(config.type).toBe('delete');
+    expect(config.message).toContain('Saucisses');
+    expect(config.details).toContain('1 lot');
+    expect(config.details).toContain('Crêpes');
+    expect(config.details).toContain('Gâteau');
+    vi.restoreAllMocks();
+  });
+
+  /** Un relevé incomplet se dit, il ne se tait pas. */
+  it('avertit quand les recettes n’ont pas pu être lues', async () => {
+    await selectFirstProduct();
+    vi.spyOn(TestBed.inject(StocksStore), 'getGoodUsage').mockResolvedValue({
+      recipeNames: [],
+      complete: false,
+    });
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('id');
+
+    component['toggleSelect'](1);
+    await component['confirmDeleteGoods']();
+
+    const config = open.mock.calls.at(0)?.at(0) as unknown as { details?: string };
+    expect(config.details).toContain('n’a pas pu être vérifié');
+    vi.restoreAllMocks();
+  });
+
+  it('supprime, vide la sélection et referme le panneau ouvert', async () => {
+    await selectFirstProduct();
+    vi.spyOn(TestBed.inject(StocksStore), 'getGoodUsage').mockResolvedValue({
+      recipeNames: [],
+      complete: true,
+    });
+    const remove = vi
+      .spyOn(TestBed.inject(StocksStore), 'deleteGoods')
+      .mockResolvedValue({ deleted: 1, error: null });
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('id');
+
+    component['toggleSelect'](1);
+    await component['confirmDeleteGoods']();
+    const config = open.mock.calls.at(0)?.at(0) as unknown as { onConfirm: () => void };
+    config.onConfirm();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(remove).toHaveBeenCalledWith([1]);
+    expect(component['selectedIds']().size).toBe(0);
+    // Le panneau montrait la denrée qui vient de partir : le laisser ouvert
+    // afficherait les lots d'un produit qui n'existe plus.
+    expect(component['selectedId']()).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it('n’offre pas la suppression sans le droit good:delete', () => {
+    TestBed.inject(MockStore).setState({ auth: { permissions: ['stock:read'] } });
+
+    expect(component['canDelete']()).toBe(false);
+  });
 });

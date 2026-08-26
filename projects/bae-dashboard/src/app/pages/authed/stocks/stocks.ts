@@ -42,7 +42,7 @@ import {
 } from '@bae/ui';
 import { Store } from '@ngrx/store';
 import { selectPermissions } from '#core/store/auth/auth.selector';
-import type { ApiGoodPrices } from '#core/services/stocks/stocks-service';
+import type { ApiGoodDetail } from '#core/services/stocks/stocks-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { SupplierPriceModal } from '#shared/components/modal/supplier-price-modal/supplier-price-modal';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
@@ -164,7 +164,7 @@ export class Stocks implements OnInit {
   protected readonly selectedId = signal<number | null>(null);
 
   /** Tarifs de la denrée sélectionnée ; `null` tant qu'on n'a rien lu. */
-  protected readonly prices = signal<ApiGoodPrices | null>(null);
+  protected readonly prices = signal<ApiGoodDetail | null>(null);
   protected readonly pricesLoading = signal(false);
   /** Bumpé après chaque écriture pour forcer la relecture. */
   private readonly pricesVersion = signal(0);
@@ -173,6 +173,11 @@ export class Stocks implements OnInit {
   protected readonly formatCents = formatCents;
 
   protected readonly canPrice = computed<boolean>(() => this.permissions().includes('good:write'));
+
+  /** Sans le droit, l'écran ne propose pas un geste que l'API refusera en 403. */
+  protected readonly canDelete = computed<boolean>(() =>
+    this.permissions().includes('good:delete'),
+  );
 
   /** « Prix par kg » — l'unité est dite en clair, parce que rien ne normalise
    *  les conditionnements : `pricing_service` compare les prix bruts. */
@@ -415,6 +420,73 @@ export class Stocks implements OnInit {
         return next;
       });
     }
+  }
+
+  /**
+   * Demande confirmation avant de supprimer les denrées sélectionnées, en
+   * disant **ce que la cascade emporte**.
+   *
+   * ⚠️ L'API ne refuse jamais : `DELETE /goods/:id` détruit les lots, leur
+   * historique de mouvements, les tarifs, les codes-barres et la ligne de la
+   * denrée dans chaque recette qui l'utilise. Cet écran est le seul endroit de
+   * l'application qui l'annonce — le relevé des recettes coûte une requête par
+   * denrée, et c'est le prix d'une recette qu'on n'ampute pas en silence.
+   */
+  protected async confirmDeleteGoods(): Promise<void> {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0) return;
+
+    const products = this.store.products().filter((p) => ids.includes(p.id));
+    const batchCount = products.reduce((sum, p) => sum + p.batchCount, 0);
+    const usage = await this.store.getGoodUsage(ids);
+
+    const lines: string[] = [];
+    if (batchCount > 0) {
+      lines.push(`${batchCount} lot${batchCount > 1 ? 's' : ''} et leur historique de mouvements`);
+    }
+    if (usage.recipeNames.length > 0) {
+      lines.push(`l’ingrédient dans : ${usage.recipeNames.join(', ')}`);
+    }
+    if (!usage.complete) {
+      lines.push('⚠️ l’usage en recette n’a pas pu être vérifié pour toutes les denrées');
+    }
+
+    this.modal.open({
+      type: 'delete',
+      title: `Supprimer ${ids.length} denrée${ids.length > 1 ? 's' : ''}`,
+      message: products.map((p) => p.name).join(', '),
+      details:
+        lines.length > 0
+          ? `Cela supprimera aussi ${lines.join(' · ')}.`
+          : 'Aucun lot ni aucune recette n’en dépend.',
+      onConfirm: () => void this.deleteSelectedGoods(ids),
+    });
+  }
+
+  private async deleteSelectedGoods(ids: readonly number[]): Promise<void> {
+    const { deleted, error } = await this.store.deleteGoods(ids);
+
+    this.clearSelection();
+    // Le panneau montrait peut-être une denrée qui vient de partir : le laisser
+    // ouvert afficherait les lots d'un produit qui n'existe plus.
+    if (this.selectedId() !== null && ids.includes(this.selectedId() as number)) {
+      this.selectedId.set(null);
+      this.selectedBatches.set([]);
+    }
+
+    this.toast.show(
+      error
+        ? {
+            type: 'error',
+            title: 'Suppression incomplète',
+            message: messageOf(error, 'Certaines denrées n’ont pas pu être supprimées.'),
+          }
+        : {
+            type: 'success',
+            title: `${deleted} denrée${deleted > 1 ? 's' : ''} supprimée${deleted > 1 ? 's' : ''}`,
+            message: 'Le catalogue est à jour.',
+          },
+    );
   }
 
   protected clearSelection(): void {

@@ -243,4 +243,73 @@ describe(StocksStore.name, () => {
     expect(result.ok).toBe(false);
     expect(store.products()[0].totalQty).toBe(12);
   });
+
+  it('supprime chaque denrée sélectionnée, puis recharge une seule fois', async () => {
+    await loadWith([item({ id: 1 }), item({ id: 2, name: 'Farine' })]);
+
+    const deleted = store.deleteGoods([1, 2]);
+    http.expectOne(`${baseUrl}/goods/1`).flush(null);
+    await tick();
+    http.expectOne(`${baseUrl}/goods/2`).flush(null);
+    await tick();
+
+    // Un seul rechargement pour tout le lot : deux suppressions ne justifient
+    // pas deux allers-retours sur la liste entière.
+    http.expectOne(`${baseUrl}/stocks`).flush([]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await deleted;
+
+    expect(result).toEqual({ deleted: 2, error: null });
+    expect(store.products()).toHaveLength(0);
+  });
+
+  /** Un refus ne doit pas emporter les suivants — patron de `validate()`. */
+  it('poursuit après un refus et le remonte', async () => {
+    await loadWith([item({ id: 1 }), item({ id: 2, name: 'Farine' })]);
+
+    const deleted = store.deleteGoods([1, 2]);
+    http
+      .expectOne(`${baseUrl}/goods/1`)
+      .flush({ code: 'E_FORBIDDEN', message: 'Droit manquant.' }, { status: 403, statusText: 'x' });
+    await tick();
+    http.expectOne(`${baseUrl}/goods/2`).flush(null);
+    await tick();
+    http.expectOne(`${baseUrl}/stocks`).flush([item({ id: 1 })]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await deleted;
+
+    expect(result.deleted).toBe(1);
+    expect(result.error).not.toBeNull();
+  });
+
+  /**
+   * Ce que la modale de suppression doit annoncer : la cascade emporte la
+   * ligne de la denrée dans chaque recette, en silence côté API.
+   */
+  it('nomme les recettes que la suppression amputerait', async () => {
+    await loadWith([item({ id: 1 }), item({ id: 2 })]);
+
+    const usage = store.getGoodUsage([1, 2]);
+    http.expectOne(`${baseUrl}/goods/1`).flush({ products: [{ id: 3, name: 'Crêpes' }] });
+    http
+      .expectOne(`${baseUrl}/goods/2`)
+      .flush({ products: [{ id: 3, name: 'Crêpes' }, { id: 4, name: 'Gâteau' }] });
+    const result = await usage;
+
+    // Dédupliqué : deux denrées d'une même recette ne la citent pas deux fois.
+    expect(result.recipeNames).toEqual(['Crêpes', 'Gâteau']);
+    expect(result.complete).toBe(true);
+  });
+
+  /** Ne pas pouvoir lire les recettes ne doit pas bloquer un ménage. */
+  it('signale un relevé incomplet plutôt que d’échouer', async () => {
+    await loadWith([item({ id: 1 })]);
+
+    const usage = store.getGoodUsage([1]);
+    http.expectOne(`${baseUrl}/goods/1`).flush(null, { status: 500, statusText: 'x' });
+    const result = await usage;
+
+    expect(result.complete).toBe(false);
+    expect(result.recipeNames).toEqual([]);
+  });
 });
