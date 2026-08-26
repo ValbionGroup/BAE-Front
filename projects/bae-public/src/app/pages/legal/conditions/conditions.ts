@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import {
   HOSTING_PROVIDER,
+  IDENTITY_PROVIDER,
   LEGAL_UPDATED_AT,
   ORGANISATION,
   ORGANISATION_FULL_ADDRESS,
@@ -28,6 +29,7 @@ import { LegalLayout, type LegalTocEntry } from '../legal-layout/legal-layout';
 export class Conditions {
   protected readonly org = ORGANISATION;
   protected readonly host = HOSTING_PROVIDER;
+  protected readonly idp = IDENTITY_PROVIDER;
   protected readonly payment = PAYMENT_PROVIDER;
   protected readonly site = SITE;
   protected readonly address = ORGANISATION_FULL_ADDRESS;
@@ -44,6 +46,23 @@ export class Conditions {
     { label: 'Association déclarée le', value: ORGANISATION.declaredOn },
     { label: 'Responsable de la publication', value: ORGANISATION.publisher },
     { label: 'Contact', value: ORGANISATION.email, mailto: true },
+  ];
+
+  /**
+   * L'article 6-III de la LCEN exige de l'hébergeur les mêmes identifiants que
+   * de l'éditeur — dénomination, immatriculation, siège, téléphone. Ils sont
+   * présentés dans le même tableau que ceux du BAE pour qu'on les lise de la
+   * même façon.
+   */
+  protected readonly hosting: readonly LegalFact[] = [
+    { label: 'Dénomination', value: HOSTING_PROVIDER.legalName },
+    { label: 'Forme juridique', value: HOSTING_PROVIDER.legalForm },
+    { label: 'SIREN', value: HOSTING_PROVIDER.siren, mono: true },
+    { label: 'SIRET du siège', value: HOSTING_PROVIDER.siret, mono: true },
+    { label: 'RCS', value: HOSTING_PROVIDER.rcs },
+    { label: 'TVA intracommunautaire', value: HOSTING_PROVIDER.vat, mono: true },
+    { label: 'Siège social', value: HOSTING_PROVIDER.address },
+    { label: 'Téléphone', value: HOSTING_PROVIDER.phone, mono: true },
   ];
 
   protected readonly toc: readonly LegalTocEntry[] = [

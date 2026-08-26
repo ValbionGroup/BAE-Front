@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import {
   HOSTING_PROVIDER,
+  IDENTITY_PROVIDER,
   LEGAL_UPDATED_AT,
   ORGANISATION,
   PAYMENT_PROVIDER,
@@ -25,6 +26,7 @@ import { LegalLayout, type LegalTocEntry } from '../legal-layout/legal-layout';
 export class Confidentialite {
   protected readonly org = ORGANISATION;
   protected readonly host = HOSTING_PROVIDER;
+  protected readonly idp = IDENTITY_PROVIDER;
   protected readonly payment = PAYMENT_PROVIDER;
   protected readonly updatedAt = LEGAL_UPDATED_AT;
 

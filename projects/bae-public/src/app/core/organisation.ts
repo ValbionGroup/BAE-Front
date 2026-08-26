@@ -17,8 +17,32 @@ export const ORGANISATION = {
   email: 'bae.enseirb@gmail.com',
 } as const;
 
+/**
+ * Deux rôles qu'EirbWare cumulait jusqu'au 2026-08-26 et qu'il ne faut plus
+ * confondre : l'hébergement est passé chez Dyjix, mais EirbConnect — donc toute
+ * l'authentification — reste opéré par EirbWare. Une phrase des pages légales
+ * parle de l'un ou de l'autre, jamais des deux.
+ *
+ * La bascule est présentée comme provisoire : un retour de l'hébergement chez
+ * EirbWare consiste à réécrire ce seul objet.
+ */
 export const HOSTING_PROVIDER = {
+  name: 'Dyjix',
+  legalName: 'Dyjix SAS',
+  legalForm: 'société par actions simplifiée',
+  siren: '909 519 191',
+  siret: '909 519 191 00011',
+  rcs: 'Paris',
+  vat: 'FR62909519191',
+  address: '149 avenue du Maine, 75014 Paris',
+  phone: '+33 1 89 16 28 08',
+  site: 'dyjix.eu',
+  dataCentres: 'Paris, Tours et Marseille',
+} as const;
+
+export const IDENTITY_PROVIDER = {
   name: 'EirbWare',
+  service: 'EirbConnect',
   legalForm: 'association déclarée régie par la loi du 1er juillet 1901',
   rna: 'W332007985',
   address: 'ENSEIRB-MATMECA, 1 rue du Docteur Albert Schweitzer, 33400 Talence',
@@ -30,10 +54,10 @@ export const PAYMENT_PROVIDER = {
 } as const;
 
 export const SITE = {
-  domain: 'order.bae.eirb.fr',
-  url: 'https://order.bae.eirb.fr',
+  domain: 'bae.valbion.com',
+  url: 'https://bae.valbion.com',
   codeLicense: 'PolyForm Noncommercial 1.0.0',
 } as const;
 
-export const LEGAL_UPDATED_AT = '21 août 2026';
+export const LEGAL_UPDATED_AT = '26 août 2026';
 export const ORGANISATION_FULL_ADDRESS = `${ORGANISATION.streetComplement}, ${ORGANISATION.street}, ${ORGANISATION.postalCode} ${ORGANISATION.city}`;
