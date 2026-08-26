@@ -129,11 +129,16 @@ export class Sidebar {
     return m.role || 'Aucun rôle';
   });
 
+  /**
+   * ⚠️ Même règle que le garde de route, et depuis la **même** source :
+   * `permissionFor` rend la liste des permissions dont **une seule** suffit.
+   * Deux lectures divergentes afficheraient une entrée que la page refuse.
+   */
   private visible(items: readonly NavItem[]): readonly NavItem[] {
     const held = this.permissions();
     return items.filter((item) => {
       const required = permissionFor(item.route);
-      return required === null || held.includes(required);
+      return required.length === 0 || required.some((needed) => held.includes(needed));
     });
   }
 

@@ -3,8 +3,9 @@ import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { Router, UrlTree, type CanActivateFn } from '@angular/router';
 import { Observable } from 'rxjs';
 
-import { permissionGuard } from './permission-guard';
+import { permissionGuard, permissionGuardAny } from './permission-guard';
 import { AppRoutes } from '#app/app-routes.const';
+import { permissionFor } from '#core/auth/route-permissions';
 
 // `provideMockStore` emits synchronously on subscribe, so capturing the
 // value inside `.subscribe()` keeps these assertions synchronous.
@@ -68,5 +69,59 @@ describe('permissionGuard', () => {
 
     expect(settled).toBe(true);
     expect(result).toBe(true);
+  });
+});
+
+/**
+ * ⚠️ `permissionFor` alimente **deux** consommateurs : le garde de route et
+ * `Sidebar.visible()`. Une règle « au moins une » réservée au garde laisserait
+ * le menu en désaccord avec la page — entrée visible pour qui ne peut pas
+ * entrer, ou l'inverse. Elle vit donc dans la source, pas dans ses lecteurs.
+ */
+describe('permissionFor', () => {
+  it('rend un tableau d’un élément pour une route à permission unique', () => {
+    expect(permissionFor(AppRoutes.stocks)).toEqual(['stock:read']);
+  });
+
+  it('rend la liste entière pour une route qui en accepte plusieurs', () => {
+    expect(permissionFor(AppRoutes.referentiels)).toEqual([
+      'category:read',
+      'supplier:read',
+      'job:read',
+    ]);
+  });
+
+  it('rend un tableau vide pour une route non gardée', () => {
+    expect(permissionFor(AppRoutes.analyse)).toEqual([]);
+  });
+});
+
+describe('permissionGuardAny', () => {
+  it('laisse passer qui ne porte qu’une des permissions attendues', () => {
+    TestBed.configureTestingModule({
+      providers: [provideMockStore({ initialState: { auth: { permissions: ['job:read'] } } })],
+    });
+
+    expect(run(permissionGuardAny(['category:read', 'supplier:read', 'job:read']))).toBe(true);
+  });
+
+  it('refuse qui n’en porte aucune', () => {
+    TestBed.configureTestingModule({
+      providers: [provideMockStore({ initialState: { auth: { permissions: ['stock:read'] } } })],
+    });
+    const router = TestBed.inject(Router);
+
+    expect(run(permissionGuardAny(['category:read', 'supplier:read', 'job:read']))).toEqual(
+      router.createUrlTree([AppRoutes.home]),
+    );
+  });
+
+  /** Une liste vide = route non gardée : laisser passer, ne pas tout refuser. */
+  it('laisse passer quand aucune permission n’est exigée', () => {
+    TestBed.configureTestingModule({
+      providers: [provideMockStore({ initialState: { auth: { permissions: [] } } })],
+    });
+
+    expect(run(permissionGuardAny([]))).toBe(true);
   });
 });

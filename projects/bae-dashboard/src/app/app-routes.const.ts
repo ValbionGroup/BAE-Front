@@ -7,6 +7,7 @@ export const AppRoutes = {
   stocksScanner: 'stocks/scanner',
   recettes: 'recettes',
   coordination: 'coordination',
+  referentiels: 'referentiels',
   logistique: 'logistique',
   caisse: 'caisse',
   precommandesAdmin: 'precommandes',
