@@ -164,6 +164,14 @@ export const routes: Routes = [
             loadComponent: () =>
               import('#pages/authed/soiree/bilan/bilan').then((m) => m.SoireeBilan),
           },
+          {
+            // La clôture navigue ici avec la soirée qu'elle vient de fermer.
+            // Sans paramètre, le bilan devait deviner sa cible — et se trompait.
+            path: 'bilan/:id',
+            canActivate: [permissionGuardFor(AppRoutes.soireeBilan)],
+            loadComponent: () =>
+              import('#pages/authed/soiree/bilan/bilan').then((m) => m.SoireeBilan),
+          },
         ],
       },
       {

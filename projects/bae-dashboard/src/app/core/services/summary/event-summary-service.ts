@@ -21,7 +21,11 @@ export interface SummaryLine {
 
 export interface CashedByMethod {
   readonly method: string;
-  /** ⚠️ En **euros** : c'est l'unité de `transactions.amount`. */
+  /**
+   * ⚠️ En **centimes**, comme `revenueCents` et `cashedCents`. Ce commentaire
+   * annonçait des euros : `transactions.amount` était un `decimal` en euros,
+   * c'est un entier de centimes depuis le passage à l'unité unique.
+   */
   readonly amount: number;
   readonly count: number;
 }
