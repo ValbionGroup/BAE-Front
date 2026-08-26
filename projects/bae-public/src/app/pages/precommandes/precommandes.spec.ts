@@ -246,6 +246,36 @@ describe(Precommandes.name, () => {
     expect(navigation.go).toHaveBeenCalledWith('https://lydia.test/pay/ref-1');
   });
 
+  /**
+   * Le défaut visé : « Réessayez dans un instant » sur un refus qui ne cédera
+   * jamais. Le back refuse une seconde précommande sur la même soirée ; réessayer
+   * la refusera autant de fois, et le client n'apprend nulle part pourquoi.
+   */
+  it('affiche le refus du serveur plutôt qu’un conseil de réessayer', async () => {
+    await mount();
+    await addTo('Hot-dog classique', 1);
+
+    validateButton()?.click();
+    await fixture.whenStable();
+
+    http
+      .expectOne((r) => r.url.endsWith('/account/pre-orders'))
+      .flush(
+        {
+          code: 'E_PRE_ORDER_ALREADY_PLACED',
+          message: 'Vous avez déjà une précommande pour cette soirée.',
+        },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('déjà une précommande');
+    expect(host.textContent).not.toContain('Réessayez dans un instant');
+  });
+
   const slotSelect = (): HTMLSelectElement | null =>
     host.querySelector<HTMLSelectElement>('#pickup-slot');
 
