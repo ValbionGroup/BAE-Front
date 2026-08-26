@@ -97,4 +97,18 @@ describe(JobEditModal.name, () => {
 
     expect(component['error']()).toContain('Poste encore rattaché');
   });
+
+  /**
+   * ⚠️ Le test qui compte porte sur le **DOM**, pas sur le signal : `type()`
+   * était juste depuis toujours, et le `<select>` affichait quand même
+   * « Préparation ». Un `[value]` sur un `<select>` ne peut pas retenir une
+   * valeur dont l'`<option>` n'existe pas encore quand Angular l'applique.
+   */
+  it('présélectionne la période du poste dans le select rendu', async () => {
+    await render({ id: 7, name: 'Grill', type: 'before', description: '' });
+    fixture.detectChanges();
+
+    const select = (fixture.nativeElement as HTMLElement).querySelector('select');
+    expect(select?.value).toBe('before');
+  });
 });

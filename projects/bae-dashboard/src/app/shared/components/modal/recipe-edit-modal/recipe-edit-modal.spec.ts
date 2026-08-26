@@ -268,4 +268,55 @@ describe(RecipeEditModal.name, () => {
 
     expect(modal.categoryId()).toBe('4');
   });
+
+  /**
+   * ⚠️ Le pendant DOM du test au-dessus. `categoryId()` valait déjà « 4 » et le
+   * `<select>` affichait quand même « Sans catégorie » : un `[value]` sur un
+   * `<select>` s'applique **avant** que les `<option>` du `@for` n'existent, et
+   * une valeur sans option correspondante est jetée par le navigateur. Ici les
+   * catégories arrivent après le détail de la recette, donc plus rien ne
+   * réapplique la valeur.
+   */
+  it('présélectionne la catégorie de la recette dans le select rendu', async () => {
+    const fixture = open(7);
+
+    http.expectOne(`${baseUrl}/products/7`).flush({
+      id: 7,
+      name: 'Crêpe Nutella',
+      isVegetarian: true,
+      description: null,
+      recipe: null,
+      productCategoryId: 4,
+    });
+    http.expectOne(`${baseUrl}/products/7/ingredients`).flush([]);
+    await tick();
+    fixture.detectChanges();
+
+    const select = (fixture.nativeElement as HTMLElement).querySelector('select');
+    expect(select?.value).toBe('4');
+  });
+
+  /** Même piège sur les lignes d'ingrédients : leur `<select>` liste le
+   *  catalogue, chargé lui aussi séparément. */
+  it('présélectionne l’ingrédient de chaque ligne dans le select rendu', async () => {
+    const fixture = open(7);
+
+    http.expectOne(`${baseUrl}/products/7`).flush({
+      id: 7,
+      name: 'Crêpe Nutella',
+      isVegetarian: true,
+      description: null,
+      recipe: null,
+      productCategoryId: null,
+    });
+    http
+      .expectOne(`${baseUrl}/products/7/ingredients`)
+      .flush([{ id: 11, name: 'Sucre', quantity: 2, instruction: null }]);
+    await tick();
+    fixture.detectChanges();
+
+    const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select');
+    // Le premier est celui de la catégorie ; le second, la ligne d'ingrédient.
+    expect(selects[1]?.value).toBe('11');
+  });
 });

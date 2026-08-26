@@ -156,6 +156,20 @@ export class RecipeEditModal {
     });
   }
 
+  /**
+   * Forme numérique de `categoryId()`, pour le `[selected]` de chaque `<option>`
+   * — les gabarits Angular ne peuvent pas appeler `Number(...)` directement.
+   */
+  protected readonly categoryIdNumber = computed(() => {
+    const raw = this.categoryId();
+    return raw === '' ? null : Number(raw);
+  });
+
+  /** Même office pour les lignes d'ingrédients, dont le `goodId` est une chaîne. */
+  protected sameGood(lineGoodId: string, goodId: number): boolean {
+    return lineGoodId !== '' && Number(lineGoodId) === goodId;
+  }
+
   protected onName(value: string): void {
     this.name.set(value);
   }
