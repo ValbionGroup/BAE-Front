@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { findA11yViolations } from '@bae/ui/testing';
 
-import { ORGANISATION } from '../../core/organisation';
+import { HOSTING_PROVIDER, ORGANISATION } from '../../core/organisation';
 import { Conditions } from './conditions/conditions';
 import { Confidentialite } from './confidentialite/confidentialite';
 
@@ -112,6 +112,26 @@ describe('Pages légales', () => {
       ORGANISATION.city,
     ]) {
       expect(text, `identifiant absent des mentions légales : ${identifier}`).toContain(identifier);
+    }
+  });
+
+  /**
+   * Le même article exige de l'hébergeur sa dénomination, son adresse et son
+   * téléphone. L'hébergement a déjà bougé une fois (EirbWare → Dyjix, août
+   * 2026) et la bascule est annoncée comme provisoire : c'est exactement le
+   * genre de mention qui se périme sans que rien ne le signale.
+   */
+  it('Conditions — publie les coordonnées de l’hébergeur exigées par la LCEN', async () => {
+    const host = await render(Conditions);
+    const text = squash(host.textContent);
+
+    for (const identifier of [
+      HOSTING_PROVIDER.legalName,
+      HOSTING_PROVIDER.siret,
+      HOSTING_PROVIDER.address,
+      HOSTING_PROVIDER.phone,
+    ]) {
+      expect(text, `coordonnée absente des mentions légales : ${identifier}`).toContain(identifier);
     }
   });
 });

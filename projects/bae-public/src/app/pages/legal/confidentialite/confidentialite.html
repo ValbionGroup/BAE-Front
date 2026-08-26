@@ -87,13 +87,20 @@
         applique sa propre politique de confidentialité aux données bancaires que vous lui confiez ;
       </li>
       <li>
-        <strong>{{ host.name }}</strong
-        >, qui héberge l’infrastructure du site et opère EirbConnect, le service par lequel vous
-        vous connectez ;
+        <strong>{{ host.legalName }}</strong
+        >, qui héberge l’infrastructure du site : sous-traitant au sens de l’article 28 du règlement
+        général sur la protection des données, il n’exploite les données pour aucune finalité propre
+        ;
       </li>
       <li>
-        <strong>Bordeaux INP</strong>, dont le CAS authentifie votre compte en amont d’EirbConnect :
-        l’école sait que vous vous êtes authentifié, elle ne sait pas ce que vous avez commandé.
+        <strong>{{ idp.name }}</strong
+        >, qui opère {{ idp.service }}, le service par lequel vous vous connectez ;
+      </li>
+      <li>
+        <strong>Bordeaux INP</strong>, dont le CAS authentifie votre compte en amont d’{{
+          idp.service
+        }}
+        : l’école sait que vous vous êtes authentifié, elle ne sait pas ce que vous avez commandé.
       </li>
     </ul>
     <div class="mt-2.5">
@@ -113,8 +120,15 @@
       Où elles sont hébergées
     </h2>
     <p>
-      Les données sont hébergées en France, sur l’infrastructure de {{ host.name }}. Le
-      {{ org.acronym }} ne transfère aucune donnée personnelle hors de l’Union européenne.
+      Les données sont hébergées en France, sur l’infrastructure de {{ host.legalName }},
+      {{ host.legalForm }} dont le siège est situé {{ host.address }} et dont les centres de données
+      se trouvent à {{ host.dataCentres }}. Le {{ org.acronym }} ne transfère aucune donnée
+      personnelle hors de l’Union européenne.
+    </p>
+    <p>
+      L’hébergeur peut changer : ce qui ne change pas, c’est que les données restent en France et
+      que le prestataire retenu n’y a accès que pour maintenir le service. Un changement de fond est
+      signalé sur le site, dans les conditions de la dernière section.
     </p>
   </section>
 
