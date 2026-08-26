@@ -98,9 +98,7 @@
                 class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1fr_110px_130px] items-center gap-3 border-t border-border-s px-3 py-2 text-[12.5px]"
               >
                 <span class="text-text">{{ row.name }}</span>
-                <span class="mono tnum text-right text-muted"
-                  >{{ fmt(row.listPrice) }} €</span
-                >
+                <span class="mono tnum text-right text-muted">{{ fmt(row.listPrice) }} €</span>
                 <div class="flex items-center justify-end gap-1.5">
                   @if (row.price === 0) {
                     <span class="rounded-full bg-ok-soft px-1.5 py-px text-[10px] text-ok"
