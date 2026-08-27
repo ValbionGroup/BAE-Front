@@ -21,7 +21,8 @@ function stockItem(over: Partial<ApiStockItem>): ApiStockItem {
     nearestExpirationDate: null,
     expiredBatchCount: 0,
     soonBatchCount: 0,
-    storageMethod: null,
+    storageLocationId: null,
+    storageLocation: null,
     ...over,
   };
 }
@@ -61,6 +62,7 @@ describe(StatsStore.name, () => {
     // `StocksStore.load()` charge aussi les catégories du formulaire de
     // création : sans cette réponse, le `forkJoin` n'émet jamais.
     httpMock.expectOne(`${baseUrl}/categories`).flush([]);
+    httpMock.expectOne(`${baseUrl}/storage-locations`).flush([]);
     await loaded;
 
     const byLabel = new Map(store.data().map((k) => [k.label, k.value]));

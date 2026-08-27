@@ -89,6 +89,7 @@ describe('permissionFor', () => {
       'supplier:read',
       'job:read',
       'product:read',
+      'storage-location:read',
     ]);
   });
 

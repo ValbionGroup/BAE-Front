@@ -43,11 +43,7 @@ import {
 } from '@bae/ui';
 import { Store } from '@ngrx/store';
 import { selectPermissions } from '#core/store/auth/auth.selector';
-import {
-  STORAGE_METHODS,
-  STORAGE_METHOD_LABELS,
-  type ApiGoodDetail,
-} from '#core/services/stocks/stocks-service';
+import { type ApiGoodDetail } from '#core/services/stocks/stocks-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { SupplierPriceModal } from '#shared/components/modal/supplier-price-modal/supplier-price-modal';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
@@ -55,14 +51,7 @@ import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stoc
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
 import { PrintService } from '#core/services/print/print-service';
 import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
-import type {
-  DlcStatus,
-  SortDir,
-  SortKey,
-  StockBatchRow,
-  StockProduct,
-  StorageMethod,
-} from './stocks.types';
+import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
 
 @Component({
   selector: 'bfd-stocks',
@@ -201,29 +190,40 @@ export class Stocks implements OnInit {
     this.permissions().includes('good:write'),
   );
 
-  protected readonly storageMethods = STORAGE_METHODS.map((method) => ({
-    value: method,
-    label: STORAGE_METHOD_LABELS[method],
-  }));
+  /**
+   * Le sélecteur n'est offert que si le référentiel a pu être chargé.
+   *
+   * ⚠️ `storage-location:read` garde la liste : sans ce droit elle revient vide,
+   * et un `<select>` sans option serait pire que pas de sélecteur — il
+   * laisserait croire à une panne. Le nom rendu par `GET /stocks` prend alors le
+   * relais en lecture seule.
+   */
+  /** Les lieux proposés au sélecteur, tels que le référentiel les rend. Le
+   *  gabarit ne touche jamais le magasin directement. */
+  protected readonly storageLocations = computed(() => this.store.storageLocations());
+
+  protected readonly canPickStorage = computed<boolean>(
+    () => this.canWriteGood() && this.store.storageLocations().length > 0,
+  );
 
   /** Le libellé lu dans le tableau et le panneau. Le tiret dit « pas encore
-   *  signalé », état normal pour une denrée d'avant la colonne. */
-  protected storageLabel(method: StorageMethod | null): string {
-    return method ? STORAGE_METHOD_LABELS[method] : '—';
+   *  signalé », état normal pour une denrée que personne n'a rangée. */
+  protected storageLabel(product: StockProduct): string {
+    return product.storageLocationName ?? '—';
   }
 
   /**
-   * Le geste « Signaler la méthode de stockage » du CDC.
+   * Le geste « Signaler l'emplacement de stockage ».
    *
    * `''` est la valeur du choix « Non précisé » : elle efface l'emplacement,
    * elle ne l'ignore pas — se tromper de rayon se corrige, et ne plus savoir
    * est une information honnête.
    */
-  protected async onStorageMethod(product: StockProduct, raw: string): Promise<void> {
-    const method = (raw || null) as StorageMethod | null;
-    if (method === product.storageMethod) return;
+  protected async onStorageLocation(product: StockProduct, raw: string): Promise<void> {
+    const id = raw === '' ? null : Number(raw);
+    if (id === product.storageLocationId) return;
 
-    const ok = await this.store.setStorageMethod(product.id, method);
+    const ok = await this.store.setStorageLocation(product.id, id);
     if (!ok) {
       this.toast.show({
         type: 'error',

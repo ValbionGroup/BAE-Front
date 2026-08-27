@@ -12,6 +12,14 @@ import { ToastService } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
+import type { StockProduct } from './stocks.types';
+
+/** Le référentiel des lieux, chargé par `StocksStore.load()` avec les stocks. */
+const STORAGE_LOCATIONS = [
+  { id: 7, name: 'Frigo' },
+  { id: 8, name: 'Congélateur' },
+  { id: 9, name: 'Sec' },
+];
 
 describe(Stocks.name, () => {
   let component: Stocks;
@@ -64,6 +72,7 @@ describe(Stocks.name, () => {
         },
       ]);
     http.expectOne((r) => r.url.endsWith('/categories')).flush([{ id: 2, name: 'Boisson' }]);
+    http.expectOne((r) => r.url.endsWith('/storage-locations')).flush(STORAGE_LOCATIONS);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -94,6 +103,7 @@ describe(Stocks.name, () => {
         },
       ]);
     http.expectOne((r) => r.url.endsWith('/categories')).flush([{ id: 2, name: 'Frais' }]);
+    http.expectOne((r) => r.url.endsWith('/storage-locations')).flush(STORAGE_LOCATIONS);
     await fixture.whenStable();
 
     // Accès par index : `select` et `firstToTakeId` sont `protected`, et
@@ -192,6 +202,7 @@ describe(Stocks.name, () => {
         },
       ]);
     http.expectOne((r) => r.url.endsWith('/categories')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/storage-locations')).flush(STORAGE_LOCATIONS);
     await fixture.whenStable();
 
     (component as unknown as { select(id: number): void }).select(7);
@@ -224,6 +235,7 @@ describe(Stocks.name, () => {
   it('annonce le prix comme étant celui de l’unité de stock', async () => {
     http.expectOne((r) => r.url.endsWith('/stocks')).flush([]);
     http.expectOne((r) => r.url.endsWith('/categories')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/storage-locations')).flush(STORAGE_LOCATIONS);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     component['prices'].set({
@@ -307,6 +319,7 @@ describe(Stocks.name, () => {
         },
       ]);
     http.expectOne((r) => r.url.endsWith('/categories')).flush([{ id: 2, name: 'Frais' }]);
+    http.expectOne((r) => r.url.endsWith('/storage-locations')).flush(STORAGE_LOCATIONS);
     await fixture.whenStable();
 
     void component['select'](1);
@@ -413,21 +426,25 @@ describe(Stocks.name, () => {
   describe('emplacement de stockage', () => {
     it('signale l’emplacement choisi sur la denrée du panneau', async () => {
       await selectFirstProduct();
-      const set = vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(true);
+      const set = vi
+        .spyOn(TestBed.inject(StocksStore), 'setStorageLocation')
+        .mockResolvedValue(true);
 
-      await component['onStorageMethod'](component['selectedProduct']()!, 'fridge');
+      await component['onStorageLocation'](component['selectedProduct']()!, '7');
 
-      expect(set).toHaveBeenCalledWith(1, 'fridge');
+      expect(set).toHaveBeenCalledWith(1, 7);
       vi.restoreAllMocks();
     });
 
     // `''` est l'option « Non précisé » : elle efface, elle n'annule pas le geste.
     it('efface l’emplacement quand « Non précisé » est choisi', async () => {
       await selectFirstProduct();
-      const set = vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(true);
+      const set = vi
+        .spyOn(TestBed.inject(StocksStore), 'setStorageLocation')
+        .mockResolvedValue(true);
 
-      await component['onStorageMethod'](
-        { ...component['selectedProduct']()!, storageMethod: 'dry' },
+      await component['onStorageLocation'](
+        { ...component['selectedProduct']()!, storageLocationId: 9, storageLocationName: 'Sec' },
         '',
       );
 
@@ -439,9 +456,11 @@ describe(Stocks.name, () => {
      *  elle-même : écrire pour rien ferait un PATCH par ouverture de panneau. */
     it('n’écrit pas quand la valeur ne change pas', async () => {
       await selectFirstProduct();
-      const set = vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(true);
+      const set = vi
+        .spyOn(TestBed.inject(StocksStore), 'setStorageLocation')
+        .mockResolvedValue(true);
 
-      await component['onStorageMethod'](component['selectedProduct']()!, '');
+      await component['onStorageLocation'](component['selectedProduct']()!, '');
 
       expect(set).not.toHaveBeenCalled();
       vi.restoreAllMocks();
@@ -449,18 +468,26 @@ describe(Stocks.name, () => {
 
     it('prévient quand le serveur refuse, plutôt que d’afficher une valeur fausse', async () => {
       await selectFirstProduct();
-      vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(false);
+      vi.spyOn(TestBed.inject(StocksStore), 'setStorageLocation').mockResolvedValue(false);
       const toast = vi.spyOn(TestBed.inject(ToastService), 'show');
 
-      await component['onStorageMethod'](component['selectedProduct']()!, 'freezer');
+      await component['onStorageLocation'](component['selectedProduct']()!, '8');
 
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
       vi.restoreAllMocks();
     });
 
+    /**
+     * ⚠️ Le libellé vient du **nom rendu par `GET /stocks`**, pas d'un
+     * dictionnaire local : la liste des lieux est éditable, et une table de
+     * traduction figée dans le front divergerait au premier renommage.
+     */
     it('rend un tiret pour une denrée sans emplacement signalé', () => {
-      expect(component['storageLabel'](null)).toBe('—');
-      expect(component['storageLabel']('freezer')).toBe('Congélateur');
+      const product = component['selectedProduct']() ?? ({} as StockProduct);
+      expect(component['storageLabel']({ ...product, storageLocationName: null })).toBe('—');
+      expect(component['storageLabel']({ ...product, storageLocationName: 'Congélateur' })).toBe(
+        'Congélateur',
+      );
     });
 
     it('laisse lire l’emplacement sans le droit d’écriture', () => {

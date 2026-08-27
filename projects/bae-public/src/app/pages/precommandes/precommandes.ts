@@ -32,6 +32,7 @@ import {
 
 import { CatalogStore } from '../../core/catalog.store';
 import { PaymentsService } from '../../core/payments.service';
+import { PurchasesStore } from '../../core/purchases.store';
 import { SessionStore } from '../../core/session.store';
 import type { PublicEvent, PublicMenuLine } from '../../core/catalog.models';
 
@@ -56,6 +57,7 @@ export class Precommandes {
   private readonly payments = inject(PaymentsService);
   private readonly navigation = inject(ExternalNavigation);
   private readonly session = inject(SessionStore);
+  private readonly purchases = inject(PurchasesStore);
 
   protected readonly icArrowRight = LucideArrowRight;
   protected readonly icShield = LucideShield;
@@ -77,6 +79,16 @@ export class Precommandes {
 
   constructor() {
     this.store.loadEvents();
+    // Le catalogue des formules pour son seul `bonusPercent` : c'est le seul
+    // endroit public où le serveur publie le supplément adhérent.
+    this.store.loadFastPasses();
+
+    // Sans cotisation connue, le panier annoncerait 10 % à quelqu'un que Lydia
+    // débitera de 15 %. La garde d'`init` du magasin rend l'appel gratuit quand
+    // l'en-tête l'a déjà fait.
+    effect(() => {
+      if (this.session.isAuthenticated()) this.purchases.loadSubscriptions();
+    });
 
     effect(() => {
       const event = this.selected();
@@ -114,7 +126,25 @@ export class Precommandes {
   });
 
   protected readonly itemCount = computed(() => this.store.menu()?.lines.length ?? 0);
-  protected readonly discountPercent = computed(() => this.store.menu()?.discountPercent ?? 0);
+
+  /** La remise consentie à tout le monde, telle que le menu public l'annonce. */
+  protected readonly basePercent = computed(() => this.store.menu()?.discountPercent ?? 0);
+
+  protected readonly hasFastPass = computed(() => this.purchases.activeSubscription() !== null);
+
+  /**
+   * Le supplément adhérent, nul tant qu'aucune cotisation en cours n'est connue.
+   *
+   * ⚠️ Reproduit la règle de `quotePreOrder` côté serveur : le bonus s'**ajoute**
+   * à la remise de base pour qui a un FastPass valide. C'est bien le serveur qui
+   * arrête le montant — ce calcul ne fait qu'annoncer le sien à l'avance, et un
+   * panier qui l'oublierait afficherait un total que Lydia ne demanderait pas.
+   */
+  protected readonly memberPercent = computed(() =>
+    this.hasFastPass() ? this.store.bonusPercent() : 0,
+  );
+
+  protected readonly discountPercent = computed(() => this.basePercent() + this.memberPercent());
   protected readonly closeLeadHours = computed(() => this.store.menu()?.closeLeadHours ?? 0);
   private readonly quantities = signal<ReadonlyMap<number, number>>(new Map());
 
@@ -141,6 +171,17 @@ export class Precommandes {
   protected readonly discount = computed(() =>
     Math.round((this.subtotal() * this.discountPercent()) / 100),
   );
+
+  protected readonly baseDiscount = computed(() =>
+    Math.round((this.subtotal() * this.basePercent()) / 100),
+  );
+
+  /**
+   * Le reste, et non un second arrondi : `applyDiscount` n'arrondit qu'une fois,
+   * sur le pourcentage cumulé. Deux arrondis séparés ne feraient pas toujours la
+   * somme, et le panier afficherait deux lignes qui ne tombent pas sur le total.
+   */
+  protected readonly memberDiscount = computed(() => this.discount() - this.baseDiscount());
 
   protected readonly total = computed(() => this.subtotal() - this.discount());
 

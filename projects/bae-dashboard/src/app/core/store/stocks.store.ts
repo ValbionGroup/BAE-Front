@@ -8,15 +8,11 @@ import {
   type CreateGoodPayload,
   type ApiGoodDetail,
   type ApiNamedRef,
+  type ApiStorageLocation,
 } from '#core/services/stocks/stocks-service';
 import type { LoadingStatus } from '#core/models/global.model';
 import { messageOf, parseApiDate, settle } from '@bae/ui';
-import type {
-  DlcStatus,
-  StockBatchRow,
-  StockProduct,
-  StorageMethod,
-} from '#pages/authed/stocks/stocks.types';
+import type { DlcStatus, StockBatchRow, StockProduct } from '#pages/authed/stocks/stocks.types';
 
 /** La borne compte : une DLC du jour même n'est pas encore périmée. */
 function dlcStatus(expirationDate: string | null, today: Date): DlcStatus {
@@ -53,7 +49,8 @@ function toStockProduct(item: ApiStockItem): StockProduct {
     nearestDlcStatus,
     expiredBatchCount: item.expiredBatchCount,
     soonBatchCount: item.soonBatchCount,
-    storageMethod: item.storageMethod ?? null,
+    storageLocationId: item.storageLocationId ?? null,
+    storageLocationName: item.storageLocation ?? null,
   };
 }
 
@@ -75,6 +72,9 @@ interface StocksState {
   /** Catégories du sélecteur de création. Vide si l'endpoint a échoué : ce
    *  n'est pas une raison de vider la page, seulement d'empêcher la saisie. */
   categories: ApiCategory[];
+  /** Lieux du sélecteur d'emplacement. Vide si l'endpoint a échoué **ou si le
+   *  droit manque** : l'emplacement reste lisible, il n'est plus modifiable. */
+  storageLocations: ApiStorageLocation[];
   creatingGood: boolean;
   createError: string | null;
 }
@@ -84,6 +84,7 @@ const initialState: StocksState = {
   loadError: null,
   products: [],
   categories: [],
+  storageLocations: [],
   creatingGood: false,
   createError: null,
 };
@@ -96,15 +97,18 @@ export const StocksStore = signalStore(
       if (store.loading() === 'loaded' || store.loading() === 'loading') return;
       patchState(store, { loading: 'loading', loadError: null });
       try {
-        // Les catégories ne servent qu'au formulaire : leur panne ne doit pas
-        // emporter le tableau.
-        const [items, categories] = await lastValueFrom(
-          forkJoin([svc.getAll(), settle(svc.getCategories())]),
+        // Catégories et lieux ne servent qu'aux sélecteurs : leur panne ne doit
+        // pas emporter le tableau. Les lieux sont en plus gardés par une
+        // permission que tout magasinier ne porte pas — un 403 est ici une
+        // réponse normale, pas un incident.
+        const [items, categories, storageLocations] = await lastValueFrom(
+          forkJoin([svc.getAll(), settle(svc.getCategories()), settle(svc.getStorageLocations())]),
         );
         patchState(store, {
           loading: 'loaded',
           products: items.map(toStockProduct),
           categories: categories.ok ? categories.value : [],
+          storageLocations: storageLocations.ok ? storageLocations.value : [],
         });
       } catch {
         patchState(store, { loading: 'error', loadError: 'Impossible de charger les stocks.' });
@@ -134,7 +138,9 @@ export const StocksStore = signalStore(
           nearestDlcStatus: 'none',
           expiredBatchCount: 0,
           soonBatchCount: 0,
-          storageMethod: created.storageMethod ?? null,
+          storageLocationId: created.storageLocationId ?? null,
+          storageLocationName:
+            store.storageLocations().find((l) => l.id === created.storageLocationId)?.name ?? null,
         };
         patchState(store, { products: insertByName(store.products(), product) });
         // Rendu à l'appelant : le scanner en a besoin pour rattacher la ligne
@@ -149,22 +155,29 @@ export const StocksStore = signalStore(
     },
 
     /**
-     * Signale où se conserve une denrée — le geste « Signaler la méthode de
-     * stockage » du CDC, depuis le panneau de détail.
+     * Signale où se range une denrée, depuis le panneau de détail.
      *
      * **Pas optimiste.** Le produit n'est patché qu'après l'accord du serveur :
      * afficher « Frigo » sur un refus laisserait une valeur fausse à l'écran
      * jusqu'au prochain rechargement, et le sélecteur n'a rien qui la démente.
      * Un seul produit change, donc pas de `refresh()` : relire tout le stock
      * pour un `<select>` serait disproportionné.
+     *
+     * ⚠️ Le **nom** est résolu ici, depuis la liste déjà chargée, et non relu au
+     * serveur : `GET /stocks` est le seul endpoint qui le rend, et le rappeler
+     * pour un libellé coûterait tout le catalogue.
      */
-    async setStorageMethod(id: number, storageMethod: StorageMethod | null): Promise<boolean> {
+    async setStorageLocation(id: number, storageLocationId: number | null): Promise<boolean> {
       try {
-        await lastValueFrom(svc.updateGoodStorageMethod(id, storageMethod));
+        await lastValueFrom(svc.updateGoodStorageLocation(id, storageLocationId));
+        const storageLocationName =
+          store.storageLocations().find((l) => l.id === storageLocationId)?.name ?? null;
         patchState(store, {
           products: store
             .products()
-            .map((product) => (product.id === id ? { ...product, storageMethod } : product)),
+            .map((product) =>
+              product.id === id ? { ...product, storageLocationId, storageLocationName } : product,
+            ),
         });
         return true;
       } catch {
@@ -229,12 +242,16 @@ export const StocksStore = signalStore(
      *  déjà `loaded`. */
     async refresh(): Promise<void> {
       try {
-        const [items, categories] = await lastValueFrom(
-          forkJoin([svc.getAll(), settle(svc.getCategories())]),
+        const [items, categories, storageLocations] = await lastValueFrom(
+          forkJoin([svc.getAll(), settle(svc.getCategories()), settle(svc.getStorageLocations())]),
         );
         patchState(store, {
           products: items.map(toStockProduct),
           categories: categories.ok ? categories.value : store.categories(),
+          // ⚠️ Relus ici et pas seulement au premier chargement : `load()` sort
+          // tôt une fois `loaded`, donc un lieu créé depuis Référentiels
+          // n'apparaîtrait au sélecteur qu'après un F5.
+          storageLocations: storageLocations.ok ? storageLocations.value : store.storageLocations(),
         });
       } catch {
         patchState(store, { loadError: 'Impossible de recharger les stocks.' });

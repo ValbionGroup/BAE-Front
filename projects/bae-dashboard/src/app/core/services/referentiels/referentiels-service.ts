@@ -35,6 +35,20 @@ export interface ApiProductCategory {
   readonly productsCount: number;
 }
 
+/**
+ * Où une denrée se **range**, quand `ApiCategory` dit ce qu'elle **est**. Les
+ * deux vocabulaires sont distincts et peuvent partager un mot : « Boissons » est
+ * une catégorie, « Cave » un lieu, et une bière porte les deux.
+ *
+ * `goodsCount` rend la suppression compréhensible : `goods.storage_location_id`
+ * est en `SET NULL`, donc les denrées seront déclassées, pas détruites.
+ */
+export interface ApiStorageLocation {
+  readonly id: number;
+  readonly name: string;
+  readonly goodsCount: number;
+}
+
 export interface ApiJob {
   readonly id: number;
   readonly name: string;
@@ -53,6 +67,7 @@ export interface ReferentielsSnapshot {
   readonly suppliers: ApiSupplier[];
   readonly jobs: ApiJob[];
   readonly productCategories: ApiProductCategory[];
+  readonly storageLocations: ApiStorageLocation[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -60,14 +75,15 @@ export class ReferentielsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
 
-  /** Les trois listes ensemble : l'écran les affiche toutes, et elles ne se
-   *  croisent jamais. */
+  /** Les listes ensemble : l'écran les affiche toutes, et elles ne se croisent
+   *  jamais. */
   loadAll(): Observable<ReferentielsSnapshot> {
     return forkJoin({
       categories: this.http.get<ApiCategory[]>(`${this.baseUrl}/categories`),
       suppliers: this.http.get<ApiSupplier[]>(`${this.baseUrl}/suppliers`),
       jobs: this.http.get<ApiJob[]>(`${this.baseUrl}/jobs`),
       productCategories: this.http.get<ApiProductCategory[]>(`${this.baseUrl}/product-categories`),
+      storageLocations: this.http.get<ApiStorageLocation[]>(`${this.baseUrl}/storage-locations`),
     });
   }
 
@@ -107,6 +123,18 @@ export class ReferentielsService {
 
   deleteProductCategory(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/product-categories/${id}`);
+  }
+
+  createStorageLocation(name: string): Observable<ApiStorageLocation> {
+    return this.http.post<ApiStorageLocation>(`${this.baseUrl}/storage-locations`, { name });
+  }
+
+  updateStorageLocation(id: number, name: string): Observable<ApiStorageLocation> {
+    return this.http.patch<ApiStorageLocation>(`${this.baseUrl}/storage-locations/${id}`, { name });
+  }
+
+  deleteStorageLocation(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/storage-locations/${id}`);
   }
 
   createJob(input: JobInput): Observable<ApiJob> {

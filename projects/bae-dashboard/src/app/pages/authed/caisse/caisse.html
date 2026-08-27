@@ -162,7 +162,27 @@
               {{ store.totalQuantity() }} quantité{{ store.totalQuantity() > 1 ? 's' : '' }}
             </div>
           </div>
-          <bae-btn kind="ghost" size="sm" [icon]="icX" (clicked)="store.clearCart()"></bae-btn>
+          <!-- La remise vit ici et non dans le pied `hidden md:block` : sous `md`
+               ce pied n'existe pas, et le geste était donc injoignable sur la
+               vue la plus utilisée. En-tête du ticket = visible dans les deux
+               tailles, et à portée de la croix qui vide le panier. -->
+          @if (canDiscount()) {
+            <bae-btn
+              [kind]="store.discountTotal() > 0 ? 'secondary' : 'ghost'"
+              size="sm"
+              [icon]="icPercent"
+              [disabled]="store.itemCount() === 0"
+              [ariaLabel]="store.discountTotal() > 0 ? 'Modifier la remise' : 'Ajouter une remise'"
+              (clicked)="openDiscount()"
+            ></bae-btn>
+          }
+          <bae-btn
+            kind="ghost"
+            size="sm"
+            [icon]="icX"
+            ariaLabel="Vider le panier"
+            (clicked)="store.clearCart()"
+          ></bae-btn>
         </div>
 
         <!-- Client, ou tranche : une commande prise en charge n'a personne à
@@ -343,17 +363,6 @@
             }
           </div>
 
-          @if (canDiscount()) {
-            <bae-btn
-              kind="secondary"
-              size="sm"
-              [full]="true"
-              [disabled]="store.itemCount() === 0"
-              (clicked)="openDiscount()"
-            >
-              {{ store.discountTotal() > 0 ? 'Modifier la remise' : 'Remise' }}
-            </bae-btn>
-          }
           <div
             class="flex items-baseline justify-between border-t border-dashed border-border py-3"
           >
@@ -363,6 +372,15 @@
             >
           </div>
         </div>
+
+        @if (store.discountTotal() > 0) {
+          <div
+            class="mb-2.5 flex items-center justify-between gap-2 text-[11.5px] text-warn md:hidden"
+          >
+            <span class="min-w-0 truncate">Remise · {{ store.discount()?.label }}</span>
+            <span class="tnum shrink-0">−{{ formatCents(store.discountTotal()) }} €</span>
+          </div>
+        }
 
         <div class="flex items-center gap-3">
           <div

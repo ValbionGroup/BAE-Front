@@ -22,7 +22,7 @@ describe(`${GoodCreateModal.name} — emplacement de stockage`, () => {
     onName(v: string): void;
     onUnit(v: string): void;
     onCategoryId(v: string): void;
-    onStorageMethod(v: string): void;
+    onStorageLocation(v: string): void;
     submit(): Promise<void>;
   } {
     return component as unknown as ReturnType<typeof internals>;
@@ -47,13 +47,13 @@ describe(`${GoodCreateModal.name} — emplacement de stockage`, () => {
   }
 
   /** Renseigne le minimum valide, puis envoie. Rend le corps de la requête. */
-  async function submitWith(storageMethod: string): Promise<Record<string, unknown>> {
+  async function submitWith(storageLocationId: string): Promise<Record<string, unknown>> {
     const component = await render();
     const api = internals(component);
     api.onName('Steaks hachés');
     api.onUnit('pcs');
     api.onCategoryId('2');
-    api.onStorageMethod(storageMethod);
+    api.onStorageLocation(storageLocationId);
 
     const pending = api.submit();
     const req = http.expectOne(`${baseUrl}/goods`);
@@ -65,12 +65,14 @@ describe(`${GoodCreateModal.name} — emplacement de stockage`, () => {
   it('envoie null quand aucun emplacement n’est choisi', async () => {
     const body = await submitWith('');
 
-    expect(body['storageMethod']).toBeNull();
+    expect(body['storageLocationId']).toBeNull();
   });
 
-  it('envoie la valeur choisie', async () => {
-    const body = await submitWith('freezer');
+  /** ⚠️ Un **nombre**, pas la chaîne du `<select>` : le validateur back attend
+   *  un entier, et `'7'` partirait en 422. */
+  it('envoie l’identifiant choisi, converti en nombre', async () => {
+    const body = await submitWith('7');
 
-    expect(body['storageMethod']).toBe('freezer');
+    expect(body['storageLocationId']).toBe(7);
   });
 });

@@ -24,7 +24,8 @@ function item(overrides: Partial<ApiStockItem> = {}): ApiStockItem {
     nearestExpirationDate: null,
     expiredBatchCount: 0,
     soonBatchCount: 0,
-    storageMethod: null,
+    storageLocationId: null,
+    storageLocation: null,
     ...overrides,
   };
 }
@@ -47,11 +48,12 @@ describe(StocksStore.name, () => {
 
   afterEach(() => http.verify());
 
-  /** Charge la page avec les deux appels que fait désormais `load()`. */
+  /** Charge la page avec les trois appels que fait désormais `load()`. */
   async function loadWith(items: ApiStockItem[]): Promise<void> {
     const loading = store.load();
     http.expectOne(`${baseUrl}/stocks`).flush(items);
     http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush([]);
     await loading;
   }
 
@@ -110,6 +112,7 @@ describe(StocksStore.name, () => {
     http
       .expectOne(`${baseUrl}/categories`)
       .flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne(`${baseUrl}/storage-locations`).flush([]);
     await loading;
 
     // Les catégories ne servent qu'au formulaire : leur panne ne doit pas
@@ -128,7 +131,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
-      storageMethod: null,
+      storageLocationId: null,
     });
     http.expectOne(`${baseUrl}/goods`).flush({
       id: 9,
@@ -137,7 +140,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
-      storageMethod: null,
+      storageLocationId: null,
     });
     await created;
 
@@ -154,7 +157,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
-      storageMethod: null,
+      storageLocationId: null,
     });
     http
       .expectOne(`${baseUrl}/goods`)
@@ -183,7 +186,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
-      storageMethod: null,
+      storageLocationId: null,
     });
     http
       .expectOne(`${baseUrl}/goods`)
@@ -213,6 +216,7 @@ describe(StocksStore.name, () => {
     // n'est pas ce que la page affiche, ce sont les agrégats par denrée.
     http.expectOne(`${baseUrl}/stocks`).flush([item({ totalRemainingQty: 18, batchCount: 2 })]);
     http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush([]);
     const result = await entered;
 
     expect(result).toEqual({ ok: true });
@@ -227,6 +231,7 @@ describe(StocksStore.name, () => {
     await tick();
     http.expectOne(`${baseUrl}/stocks`).flush([item({ totalRemainingQty: 8 })]);
     http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush([]);
     const result = await removed;
 
     expect(result).toEqual({ ok: true });
@@ -264,6 +269,7 @@ describe(StocksStore.name, () => {
     // pas deux allers-retours sur la liste entière.
     http.expectOne(`${baseUrl}/stocks`).flush([]);
     http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush([]);
     const result = await deleted;
 
     expect(result).toEqual({ deleted: 2, error: null });
@@ -283,6 +289,7 @@ describe(StocksStore.name, () => {
     await tick();
     http.expectOne(`${baseUrl}/stocks`).flush([item({ id: 1 })]);
     http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush([]);
     const result = await deleted;
 
     expect(result.deleted).toBe(1);
@@ -342,36 +349,70 @@ describe(`${StocksStore.name} — emplacement de stockage`, () => {
 
   afterEach(() => http.verify());
 
-  async function loaded(overrides: Partial<ApiStockItem> = {}): Promise<void> {
+  const LOCATIONS = [
+    { id: 7, name: 'Frigo' },
+    { id: 8, name: 'Cave' },
+    { id: 9, name: 'Sec' },
+  ];
+
+  async function loaded(
+    overrides: Partial<ApiStockItem> = {},
+    locations: { id: number; name: string }[] = LOCATIONS,
+  ): Promise<void> {
     const loading = store.load();
     http.expectOne(`${baseUrl}/stocks`).flush([item(overrides)]);
     http.expectOne(`${baseUrl}/categories`).flush([]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush(locations);
     await loading;
   }
 
-  it('lit l’emplacement rendu par la liste', async () => {
-    await loaded({ storageMethod: 'freezer' });
+  it('lit l’emplacement rendu par la liste, id et nom', async () => {
+    await loaded({ storageLocationId: 8, storageLocation: 'Cave' });
 
-    expect(store.products()[0].storageMethod).toBe('freezer');
+    expect(store.products()[0].storageLocationId).toBe(8);
+    expect(store.products()[0].storageLocationName).toBe('Cave');
   });
 
   it('rend null quand la denrée n’a pas d’emplacement signalé', async () => {
     await loaded();
 
-    expect(store.products()[0].storageMethod).toBeNull();
+    expect(store.products()[0].storageLocationId).toBeNull();
+    expect(store.products()[0].storageLocationName).toBeNull();
+  });
+
+  /**
+   * ⚠️ Le référentiel est gardé par `storage-location:read`. Un 403 doit laisser
+   * le tableau debout et seulement vider la liste : c'est le sélecteur qui
+   * disparaît, pas la page.
+   */
+  it('garde les stocks quand le référentiel des lieux est refusé', async () => {
+    const loading = store.load();
+    http.expectOne(`${baseUrl}/stocks`).flush([item()]);
+    http.expectOne(`${baseUrl}/categories`).flush([]);
+    http
+      .expectOne(`${baseUrl}/storage-locations`)
+      .flush({ code: 'E_FORBIDDEN', message: 'non' }, { status: 403, statusText: 'Forbidden' });
+    await loading;
+
+    expect(store.loading()).toBe('loaded');
+    expect(store.products()).toHaveLength(1);
+    expect(store.storageLocations()).toEqual([]);
   });
 
   it('signale l’emplacement par un PATCH et patche le produit en place', async () => {
     await loaded();
 
-    const pending = store.setStorageMethod(1, 'fridge');
+    const pending = store.setStorageLocation(1, 7);
     const req = http.expectOne(`${baseUrl}/goods/1`);
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ storageMethod: 'fridge' });
-    req.flush({ id: 1, storageMethod: 'fridge' });
+    expect(req.request.body).toEqual({ storageLocationId: 7 });
+    req.flush({ id: 1, storageLocationId: 7 });
 
     expect(await pending).toBe(true);
-    expect(store.products()[0].storageMethod).toBe('fridge');
+    expect(store.products()[0].storageLocationId).toBe(7);
+    // Le nom est résolu depuis la liste déjà chargée : `GET /stocks` est le seul
+    // endpoint qui le rend, et le rappeler pour un libellé coûterait le catalogue.
+    expect(store.products()[0].storageLocationName).toBe('Frigo');
   });
 
   /**
@@ -382,39 +423,41 @@ describe(`${StocksStore.name} — emplacement de stockage`, () => {
   it('n’envoie que l’emplacement, jamais le reste de la fiche', async () => {
     await loaded({ name: 'Beurre', unit: 'kg' });
 
-    const pending = store.setStorageMethod(1, 'cellar');
+    const pending = store.setStorageLocation(1, 8);
     const req = http.expectOne(`${baseUrl}/goods/1`);
-    expect(Object.keys(req.request.body)).toEqual(['storageMethod']);
+    expect(Object.keys(req.request.body)).toEqual(['storageLocationId']);
     req.flush({ id: 1 });
     await pending;
   });
 
   it('efface l’emplacement quand on choisit « non précisé »', async () => {
-    await loaded({ storageMethod: 'dry' });
+    await loaded({ storageLocationId: 9, storageLocation: 'Sec' });
 
-    const pending = store.setStorageMethod(1, null);
+    const pending = store.setStorageLocation(1, null);
     const req = http.expectOne(`${baseUrl}/goods/1`);
-    expect(req.request.body).toEqual({ storageMethod: null });
+    expect(req.request.body).toEqual({ storageLocationId: null });
     req.flush({ id: 1 });
 
     await pending;
-    expect(store.products()[0].storageMethod).toBeNull();
+    expect(store.products()[0].storageLocationId).toBeNull();
+    expect(store.products()[0].storageLocationName).toBeNull();
   });
 
   /** Pas d'optimisme : afficher « Frigo » sur un refus serait un mensonge que
    *  rien ne viendrait corriger avant le prochain rechargement. */
   it('laisse l’ancienne valeur si le serveur refuse', async () => {
-    await loaded({ storageMethod: 'dry' });
+    await loaded({ storageLocationId: 9, storageLocation: 'Sec' });
 
-    const pending = store.setStorageMethod(1, 'fridge');
+    const pending = store.setStorageLocation(1, 7);
     http
       .expectOne(`${baseUrl}/goods/1`)
       .flush(
-        { error: { code: 'E_VALIDATION', message: 'nope' } },
-        { status: 422, statusText: 'Unprocessable' },
+        { error: { code: 'E_STORAGE_LOCATION_NOT_FOUND', message: 'nope' } },
+        { status: 404, statusText: 'Not Found' },
       );
 
     expect(await pending).toBe(false);
-    expect(store.products()[0].storageMethod).toBe('dry');
+    expect(store.products()[0].storageLocationId).toBe(9);
+    expect(store.products()[0].storageLocationName).toBe('Sec');
   });
 });
