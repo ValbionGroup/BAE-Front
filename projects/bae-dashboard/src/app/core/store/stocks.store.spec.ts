@@ -234,10 +234,12 @@ describe(StocksStore.name, () => {
     await loadWith([item({ totalRemainingQty: 12 })]);
 
     const removed = store.removeFromBatch({ goodId: 1, stockBatchId: 42, quantity: 99 });
-    http.expectOne(`${baseUrl}/stock-movements`).flush(
-      { code: 'E_STOCK_INSUFFICIENT', message: 'Ce lot ne porte plus que 12 unité(s).' },
-      { status: 422, statusText: 'Unprocessable' },
-    );
+    http
+      .expectOne(`${baseUrl}/stock-movements`)
+      .flush(
+        { code: 'E_STOCK_INSUFFICIENT', message: 'Ce lot ne porte plus que 12 unité(s).' },
+        { status: 422, statusText: 'Unprocessable' },
+      );
     const result = await removed;
 
     expect(result.ok).toBe(false);
@@ -291,9 +293,12 @@ describe(StocksStore.name, () => {
 
     const usage = store.getGoodUsage([1, 2]);
     http.expectOne(`${baseUrl}/goods/1`).flush({ products: [{ id: 3, name: 'Crêpes' }] });
-    http
-      .expectOne(`${baseUrl}/goods/2`)
-      .flush({ products: [{ id: 3, name: 'Crêpes' }, { id: 4, name: 'Gâteau' }] });
+    http.expectOne(`${baseUrl}/goods/2`).flush({
+      products: [
+        { id: 3, name: 'Crêpes' },
+        { id: 4, name: 'Gâteau' },
+      ],
+    });
     const result = await usage;
 
     // Dédupliqué : deux denrées d'une même recette ne la citent pas deux fois.
