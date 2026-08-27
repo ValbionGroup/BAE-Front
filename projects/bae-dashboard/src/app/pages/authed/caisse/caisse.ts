@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  computed,
   effect,
   inject,
   signal,
@@ -31,6 +32,10 @@ import { EventsStore } from '#core/store/events.store';
 import { MenuItem } from '#core/models/event.model';
 import { Btn, Badge, Kbd, formatCents } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
+import { DiscountModal } from '#shared/components/modal/discount-modal/discount-modal';
+import { Store } from '@ngrx/store';
+import { selectPermissions } from '#core/store/auth/auth.selector';
+import type { OrderDiscount } from '#core/services/orders/orders-service';
 import { PaymentModal } from '#shared/components/modal/payment-modal/payment-modal';
 import type { PaymentMethod } from '#core/models/order.model';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
@@ -53,6 +58,13 @@ export class Caisse implements OnInit {
   private readonly modalService = inject(ModalService);
   private readonly realtime = inject(WebsocketService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly permissions = inject(Store).selectSignal(selectPermissions);
+
+  /** Sans le droit, le bouton n'est pas grisé : il n'existe pas. Un comptoir
+   *  n'a pas à voir un geste qu'il ne peut pas faire. */
+  protected readonly canDiscount = computed<boolean>(() =>
+    this.permissions().includes('order:discount'),
+  );
 
   /** Les ventes venues du fil, regroupées avant relecture — cf. `STOCK_AUDIT_MS`. */
   private readonly soldSomething = new Subject<void>();
@@ -153,6 +165,21 @@ export class Caisse implements OnInit {
     this.pickingBuyer.set(true);
   }
 
+  protected openDiscount(): void {
+    this.modalService.open({
+      type: 'component',
+      component: DiscountModal,
+      inputs: {
+        // Le plafond, c'est ce qui reste dû : une remise déjà posée ne doit pas
+        // rétrécir le maximum qu'on peut saisir en la remplaçant.
+        maxCents: this.store.chargedTotal(),
+        current: this.store.discount(),
+        applied: (discount: OrderDiscount | null) =>
+          discount ? this.store.setDiscount(discount) : this.store.clearDiscount(),
+      },
+    });
+  }
+
   /** Retrait de précommande lu au scanner, affiché comme une confirmation. */
   protected readonly pickup = signal<Pickup | null>(null);
 
@@ -189,7 +216,7 @@ export class Caisse implements OnInit {
       type: 'component',
       component: PaymentModal,
       inputs: {
-        totalCents: this.store.chargedTotal(),
+        totalCents: this.store.netTotal(),
         clientName: this.store.selectedBuyer()?.name ?? 'Anonyme',
         onConfirm: (method: PaymentMethod) => this.checkout(method),
       },

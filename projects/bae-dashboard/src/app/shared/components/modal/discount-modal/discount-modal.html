@@ -1,0 +1,62 @@
+<bfd-modal-shell
+  [icon]="icTicket"
+  tone="warn"
+  title="Remise"
+  subtitle="Consentie sur la commande entière. Elle est tracée avec son motif et son auteur."
+  [width]="460"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    <bae-field label="Montant" [hint]="'Maximum ' + formatCents(maxCents()) + ' €'">
+      <bae-input
+        placeholder="ex. 2,00"
+        [value]="amount()"
+        [invalid]="submitted() && !valid()"
+        (valueChange)="onAmount($event)"
+      />
+    </bae-field>
+
+    <bae-field label="Motif">
+      <select
+        class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+        [value]="reason()"
+        (change)="onReason($any($event.target).value)"
+      >
+        @for (r of reasons; track r) {
+          <option [value]="r">{{ r }}</option>
+        }
+        <option [value]="other">{{ other }}…</option>
+      </select>
+    </bae-field>
+
+    @if (reason() === other) {
+      <bae-field label="Préciser">
+        <bae-input
+          placeholder="ex. Commande offerte au staff de salle"
+          [value]="freeReason()"
+          [invalid]="submitted() && freeReason().trim() === ''"
+          (valueChange)="onFreeReason($event)"
+        />
+      </bae-field>
+    }
+
+    @if (submitted() && tooLarge()) {
+      <p role="alert" class="m-0 text-[12px] text-danger">
+        Une remise ne peut pas dépasser le total du panier ({{ formatCents(maxCents()) }} €).
+      </p>
+    } @else if (submitted() && !valid()) {
+      <p role="alert" class="m-0 text-[12px] text-danger">
+        Un montant positif et un motif sont requis.
+      </p>
+    }
+  </div>
+
+  <div modal-footer class="flex flex-1 items-center gap-2">
+    @if (current()) {
+      <bae-btn kind="ghost" size="md" (clicked)="remove()">Retirer la remise</bae-btn>
+    }
+    <span class="flex-1"></span>
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn kind="primary" size="md" (clicked)="submit()">Appliquer</bae-btn>
+  </div>
+</bfd-modal-shell>

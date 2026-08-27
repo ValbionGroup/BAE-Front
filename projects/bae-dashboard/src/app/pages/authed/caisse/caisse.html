@@ -332,13 +332,34 @@
                 <span class="tnum">−{{ formatCents(store.receivableTotal()) }} €</span>
               </div>
             }
+            <!-- Distincte de « Pris en charge » : celle-ci est du chiffre
+                 d'affaires perdu, l'autre une créance à recouvrer. Les
+                 confondre à l'écran, c'est les confondre au bilan. -->
+            @if (store.discountTotal() > 0) {
+              <div class="flex justify-between text-warn">
+                <span>Remise · {{ store.discount()?.label }}</span>
+                <span class="tnum">−{{ formatCents(store.discountTotal()) }} €</span>
+              </div>
+            }
           </div>
+
+          @if (canDiscount()) {
+            <bae-btn
+              kind="secondary"
+              size="sm"
+              [full]="true"
+              [disabled]="store.itemCount() === 0"
+              (clicked)="openDiscount()"
+            >
+              {{ store.discountTotal() > 0 ? 'Modifier la remise' : 'Remise' }}
+            </bae-btn>
+          }
           <div
             class="flex items-baseline justify-between border-t border-dashed border-border py-3"
           >
             <span class="text-sm text-text-2">À encaisser</span>
             <span class="tnum text-[30px] font-semibold -tracking-[0.6px] text-text"
-              >{{ formatCents(store.chargedTotal()) }} €</span
+              >{{ formatCents(store.netTotal()) }} €</span
             >
           </div>
         </div>
@@ -358,7 +379,7 @@
           <div class="shrink-0 whitespace-nowrap md:hidden">
             <div class="text-[11px] text-muted">À encaisser</div>
             <div class="tnum text-[19px] font-semibold tracking-[-0.3px] text-text">
-              {{ formatCents(store.chargedTotal()) }} €
+              {{ formatCents(store.netTotal()) }} €
             </div>
           </div>
 
@@ -379,7 +400,7 @@
               } @else {
                 <span class="md:hidden">Encaisser</span>
                 <span class="hidden md:inline"
-                  >Encaisser · {{ formatCents(store.chargedTotal()) }} €</span
+                  >Encaisser · {{ formatCents(store.netTotal()) }} €</span
                 >
               }
             </bae-btn>

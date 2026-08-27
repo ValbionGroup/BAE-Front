@@ -56,6 +56,18 @@ export function toOrder(dto: ApiOrder): Order {
   };
 }
 
+/**
+ * La remise consentie au comptoir. **En centimes**, comme tout montant.
+ *
+ * ⚠️ C'est le seul montant que la caisse envoie ; le reste du panier est
+ * retarifé côté serveur. Le motif est obligatoire : `order_discounts.label`
+ * l'est en base, et une remise sans raison ne se relit pas au bilan.
+ */
+export interface OrderDiscount {
+  readonly amountCents: number;
+  readonly label: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
   private readonly http = inject(HttpClient);
@@ -75,12 +87,14 @@ export class OrdersService {
     clientId?: number | null,
     paymentMethod: PaymentMethod = 'cash',
     sponsorshipCategoryId?: number | null,
+    discount?: OrderDiscount | null,
   ): Observable<ApiOrder> {
     return this.http.post<ApiOrder>(`${this.baseUrl}/events/${eventId}/orders`, {
       lines,
       paymentMethod,
       ...(clientId ? { clientId } : {}),
       ...(sponsorshipCategoryId ? { sponsorshipCategoryId } : {}),
+      ...(discount ? { discount } : {}),
     });
   }
 

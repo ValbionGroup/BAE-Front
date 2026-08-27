@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
-import type { CheckoutLine } from '#core/services/orders/orders-service';
+import type { CheckoutLine, OrderDiscount } from '#core/services/orders/orders-service';
 
 /** L'encaissement par carte au comptoir (SumUp Terminal Payments). */
 export type CardPaymentStatus = 'pending' | 'paid' | 'refused' | 'cancelled' | 'expired';
@@ -26,11 +26,15 @@ export class CardPaymentsService {
     lines: readonly CheckoutLine[],
     clientId?: number | null,
     sponsorshipCategoryId?: number | null,
+    discount?: OrderDiscount | null,
   ): Observable<ApiCardPayment> {
     return this.http.post<ApiCardPayment>(`${this.baseUrl}/events/${eventId}/card-payments`, {
       lines,
       ...(clientId ? { clientId } : {}),
       ...(sponsorshipCategoryId ? { sponsorshipCategoryId } : {}),
+      // Le terminal doit facturer le montant remisé : la remise voyage donc
+      // avec l'ouverture du paiement, pas à la confirmation.
+      ...(discount ? { discount } : {}),
     });
   }
 
