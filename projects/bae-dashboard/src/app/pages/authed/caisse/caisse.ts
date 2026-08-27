@@ -13,6 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, auditTime } from 'rxjs';
 import {
   LucideArrowRight,
+  LucideBadgePercent,
   LucideChevronDown,
   LucideChevronUp,
   LucideDynamicIcon,
@@ -311,4 +312,5 @@ export class Caisse implements OnInit {
   protected readonly icEuro = LucideEuro;
   protected readonly icQr = LucideQrCode;
   protected readonly icArrowRight = LucideArrowRight;
+  protected readonly icPercent = LucideBadgePercent;
 }

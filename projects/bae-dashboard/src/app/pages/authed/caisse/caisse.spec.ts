@@ -54,6 +54,44 @@ describe(Caisse.name, () => {
     TestBed.inject(CaisseStore).endSession();
   });
 
+  /** Ouvre une session avec un article au panier. */
+  async function withCart() {
+    const store = TestBed.inject(CaisseStore);
+    http
+      .expectOne((r) => r.url.endsWith('/events'))
+      .flush([{ id: '7', name: 'Ce soir', date: atHour(0), status: 'ongoing' }]);
+    await settle();
+    // L'ouverture est portée par un `effect` : il faut une détection de
+    // changement pour qu'il parte.
+    fixture.detectChanges();
+    await settle();
+
+    http
+      .expectOne((r) => r.url.includes('/events/7/products'))
+      .flush([
+        {
+          productId: 1,
+          name: 'Hot-dog',
+          isVegetarian: false,
+          quantity: 200,
+          price: 250,
+          unitCost: null,
+          totalCost: null,
+          category: 'Chaud',
+        },
+      ]);
+    // Ouvrir une session charge aussi le vendable : sans lui, la grille ne
+    // saurait pas ce qui est en rupture.
+    http.expectOne((r) => r.method === 'GET' && r.url.includes('/events/7/orders')).flush([]);
+    http.expectOne((r) => r.url.includes('/events/7/sellable')).flush([]);
+    await settle();
+    http.expectOne((r) => r.url.includes('/events/7/pre-orders')).flush([]);
+    await settle();
+
+    store.addToCart(store.menu()[0]);
+    return store;
+  }
+
   describe('remise', () => {
     /** Le comptoir n'a pas à voir un geste qu'il ne peut pas faire : le bouton
      *  est absent, pas grisé. */
@@ -67,6 +105,69 @@ describe(Caisse.name, () => {
       });
 
       expect(component['canDiscount']()).toBe(true);
+    });
+
+    const discountButton = (): HTMLButtonElement | null =>
+      fixture.nativeElement.querySelector('button[aria-label="Ajouter une remise"]');
+
+    /**
+     * Le défaut visé : le geste n'existait que dans le pied `hidden md:block`,
+     * donc nulle part sous `md` — c'est-à-dire sur la vue que le comptoir
+     * utilise réellement. L'en-tête du ticket n'a pas de point de rupture.
+     */
+    it('pose la remise dans l’en-tête du ticket, sans classe de rupture', async () => {
+      TestBed.inject(MockStore).setState({
+        auth: { permissions: ['order:write', 'order:discount'] },
+      });
+      await withCart();
+      fixture.detectChanges();
+
+      const button = discountButton();
+      expect(button).not.toBeNull();
+      // Ni dans le pied `hidden md:block` d'où il vient, ni dans un bloc
+      // `md:hidden` qui le rendrait invisible au poste fixe.
+      expect(button?.closest('.md\\:block')).toBeNull();
+      expect(button?.closest('.md\\:hidden')).toBeNull();
+    });
+
+    /** Le droit absent retire le bouton, il ne le grise pas. */
+    it('n’affiche aucun bouton de remise sans le droit', async () => {
+      await withCart();
+      fixture.detectChanges();
+
+      expect(discountButton()).toBeNull();
+    });
+
+    /** Un panier vide n'a rien à remiser : le bouton reste là, mais inerte. */
+    it('désactive la remise tant que le panier est vide', async () => {
+      TestBed.inject(MockStore).setState({
+        auth: { permissions: ['order:write', 'order:discount'] },
+      });
+      await withCart();
+      TestBed.inject(CaisseStore).clearCart();
+      fixture.detectChanges();
+
+      expect(discountButton()?.disabled).toBe(true);
+    });
+
+    /**
+     * Sous `md` le détail des totaux est masqué : sans une ligne dédiée, une
+     * remise posée ne se lirait nulle part, seul « À encaisser » bougerait — et
+     * un montant qui baisse sans motif ressemble à une erreur de caisse.
+     */
+    it('montre la remise appliquée dans le pied mobile', async () => {
+      TestBed.inject(MockStore).setState({
+        auth: { permissions: ['order:write', 'order:discount'] },
+      });
+      const store = await withCart();
+      store.setDiscount({ label: 'Geste commercial', amountCents: 100 });
+      fixture.detectChanges();
+
+      const line = [...fixture.nativeElement.querySelectorAll('.md\\:hidden')].find(
+        (node: Element) => node.textContent?.includes('Geste commercial'),
+      );
+      expect(line).toBeDefined();
+      expect(line?.textContent).toContain('1,00');
     });
   });
 
@@ -303,44 +404,6 @@ describe(Caisse.name, () => {
   });
 
   describe('encaissement', () => {
-    /** Ouvre une session avec un article au panier. */
-    async function withCart() {
-      const store = TestBed.inject(CaisseStore);
-      http
-        .expectOne((r) => r.url.endsWith('/events'))
-        .flush([{ id: '7', name: 'Ce soir', date: atHour(0), status: 'ongoing' }]);
-      await settle();
-      // L'ouverture est portée par un `effect` : il faut une détection de
-      // changement pour qu'il parte.
-      fixture.detectChanges();
-      await settle();
-
-      http
-        .expectOne((r) => r.url.includes('/events/7/products'))
-        .flush([
-          {
-            productId: 1,
-            name: 'Hot-dog',
-            isVegetarian: false,
-            quantity: 200,
-            price: 250,
-            unitCost: null,
-            totalCost: null,
-            category: 'Chaud',
-          },
-        ]);
-      // Ouvrir une session charge aussi le vendable : sans lui, la grille ne
-      // saurait pas ce qui est en rupture.
-      http.expectOne((r) => r.method === 'GET' && r.url.includes('/events/7/orders')).flush([]);
-      http.expectOne((r) => r.url.includes('/events/7/sellable')).flush([]);
-      await settle();
-      http.expectOne((r) => r.url.includes('/events/7/pre-orders')).flush([]);
-      await settle();
-
-      store.addToCart(store.menu()[0]);
-      return store;
-    }
-
     /** Le QR d'une catégorie ne désigne personne : il ne porte qu'une grille. */
     const staffCategory = (overrides: Record<string, unknown> = {}) => ({
       id: 3,
