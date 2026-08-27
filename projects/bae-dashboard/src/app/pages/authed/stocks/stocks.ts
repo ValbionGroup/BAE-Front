@@ -18,6 +18,8 @@ import {
   LucideDynamicIcon,
   LucideFunnel,
   LucidePackage,
+  LucidePackageMinus,
+  LucidePackagePlus,
   LucidePlus,
   LucideScanLine,
   LucideSearch,
@@ -40,10 +42,12 @@ import {
 } from '@bae/ui';
 import { Store } from '@ngrx/store';
 import { selectPermissions } from '#core/store/auth/auth.selector';
-import type { ApiGoodPrices } from '#core/services/stocks/stocks-service';
+import type { ApiGoodDetail } from '#core/services/stocks/stocks-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { SupplierPriceModal } from '#shared/components/modal/supplier-price-modal/supplier-price-modal';
 import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
+import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
 import { PrintService } from '#core/services/print/print-service';
 import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
@@ -124,6 +128,12 @@ export class Stocks implements OnInit {
 
   protected readonly pageActions = computed<readonly PageAction[]>(() => [
     { label: 'Scanner', icon: this.icScan, run: () => this.openScanner() },
+    {
+      label: 'Entrée',
+      icon: this.icEntry,
+      testId: 'stock-entry',
+      run: () => this.openStockEntry(),
+    },
     { label: 'Inventaire', icon: this.icDownload, run: () => this.printInventory() },
     {
       label: 'Produit',
@@ -143,6 +153,8 @@ export class Stocks implements OnInit {
   protected readonly icSort = LucideArrowDownUp;
   protected readonly icTrash = LucideTrash2;
   protected readonly icPackage = LucidePackage;
+  protected readonly icEntry = LucidePackagePlus;
+  protected readonly icExit = LucidePackageMinus;
 
   protected readonly searchQuery = signal('');
   protected readonly activeCategory = signal('Tous');
@@ -152,7 +164,7 @@ export class Stocks implements OnInit {
   protected readonly selectedId = signal<number | null>(null);
 
   /** Tarifs de la denrée sélectionnée ; `null` tant qu'on n'a rien lu. */
-  protected readonly prices = signal<ApiGoodPrices | null>(null);
+  protected readonly prices = signal<ApiGoodDetail | null>(null);
   protected readonly pricesLoading = signal(false);
   /** Bumpé après chaque écriture pour forcer la relecture. */
   private readonly pricesVersion = signal(0);
@@ -161,6 +173,11 @@ export class Stocks implements OnInit {
   protected readonly formatCents = formatCents;
 
   protected readonly canPrice = computed<boolean>(() => this.permissions().includes('good:write'));
+
+  /** Sans le droit, l'écran ne propose pas un geste que l'API refusera en 403. */
+  protected readonly canDelete = computed<boolean>(() =>
+    this.permissions().includes('good:delete'),
+  );
 
   /** « Prix par kg » — l'unité est dite en clair, parce que rien ne normalise
    *  les conditionnements : `pricing_service` compare les prix bruts. */
@@ -324,6 +341,49 @@ export class Stocks implements OnInit {
     void this.router.navigate(['/stocks/scanner']);
   }
 
+  /**
+   * Entrée de stock **sans code-barres**. Ouverte depuis la topbar, elle
+   * demande la denrée ; ouverte depuis le panneau, elle reprend celle qui y est
+   * sélectionnée — le même geste, un pas de moins.
+   */
+  protected openStockEntry(): void {
+    this.modal.open({
+      type: 'component',
+      component: StockEntryModal,
+      inputs: {
+        goodId: this.selectedId(),
+        onDone: () => void this.reloadBatches(),
+      },
+    });
+  }
+
+  protected openStockExit(batch: StockBatchRow): void {
+    const product = this.selectedProduct();
+    if (!product) return;
+    this.modal.open({
+      type: 'component',
+      component: StockExitModal,
+      inputs: {
+        goodId: product.id,
+        goodName: product.name,
+        unit: product.unit,
+        batch,
+        onDone: () => void this.reloadBatches(),
+      },
+    });
+  }
+
+  /**
+   * Les agrégats du tableau sont rafraîchis par le store ; les lots du panneau,
+   * eux, ne le sont par personne — l'effect ne réagit qu'à `selectedId` et
+   * `showEmptyBatches`, que l'écriture ne change pas.
+   */
+  private async reloadBatches(): Promise<void> {
+    const id = this.selectedId();
+    if (id === null) return;
+    this.selectedBatches.set(await this.store.getBatches(id, this.showEmptyBatches()));
+  }
+
   protected openCreateGood(): void {
     this.modal.open({ type: 'component', component: GoodCreateModal, inputs: {} });
   }
@@ -362,6 +422,73 @@ export class Stocks implements OnInit {
     }
   }
 
+  /**
+   * Demande confirmation avant de supprimer les denrées sélectionnées, en
+   * disant **ce que la cascade emporte**.
+   *
+   * ⚠️ L'API ne refuse jamais : `DELETE /goods/:id` détruit les lots, leur
+   * historique de mouvements, les tarifs, les codes-barres et la ligne de la
+   * denrée dans chaque recette qui l'utilise. Cet écran est le seul endroit de
+   * l'application qui l'annonce — le relevé des recettes coûte une requête par
+   * denrée, et c'est le prix d'une recette qu'on n'ampute pas en silence.
+   */
+  protected async confirmDeleteGoods(): Promise<void> {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0) return;
+
+    const products = this.store.products().filter((p) => ids.includes(p.id));
+    const batchCount = products.reduce((sum, p) => sum + p.batchCount, 0);
+    const usage = await this.store.getGoodUsage(ids);
+
+    const lines: string[] = [];
+    if (batchCount > 0) {
+      lines.push(`${batchCount} lot${batchCount > 1 ? 's' : ''} et leur historique de mouvements`);
+    }
+    if (usage.recipeNames.length > 0) {
+      lines.push(`l’ingrédient dans : ${usage.recipeNames.join(', ')}`);
+    }
+    if (!usage.complete) {
+      lines.push('⚠️ l’usage en recette n’a pas pu être vérifié pour toutes les denrées');
+    }
+
+    this.modal.open({
+      type: 'delete',
+      title: `Supprimer ${ids.length} denrée${ids.length > 1 ? 's' : ''}`,
+      message: products.map((p) => p.name).join(', '),
+      details:
+        lines.length > 0
+          ? `Cela supprimera aussi ${lines.join(' · ')}.`
+          : 'Aucun lot ni aucune recette n’en dépend.',
+      onConfirm: () => void this.deleteSelectedGoods(ids),
+    });
+  }
+
+  private async deleteSelectedGoods(ids: readonly number[]): Promise<void> {
+    const { deleted, error } = await this.store.deleteGoods(ids);
+
+    this.clearSelection();
+    // Le panneau montrait peut-être une denrée qui vient de partir : le laisser
+    // ouvert afficherait les lots d'un produit qui n'existe plus.
+    if (this.selectedId() !== null && ids.includes(this.selectedId() as number)) {
+      this.selectedId.set(null);
+      this.selectedBatches.set([]);
+    }
+
+    this.toast.show(
+      error
+        ? {
+            type: 'error',
+            title: 'Suppression incomplète',
+            message: messageOf(error, 'Certaines denrées n’ont pas pu être supprimées.'),
+          }
+        : {
+            type: 'success',
+            title: `${deleted} denrée${deleted > 1 ? 's' : ''} supprimée${deleted > 1 ? 's' : ''}`,
+            message: 'Le catalogue est à jour.',
+          },
+    );
+  }
+
   protected clearSelection(): void {
     this.selectedIds.set(new Set());
   }
@@ -387,9 +514,7 @@ export class Stocks implements OnInit {
     const product = this.selectedProduct();
     if (!product) return;
     await this.store.discardBatch(product.id, batch.id, batch.remainingQty);
-    // l'effect se déclenche sur selectedId + showEmptyBatches, mais on force un reload
-    const batches = await this.store.getBatches(product.id, this.showEmptyBatches());
-    this.selectedBatches.set(batches);
+    await this.reloadBatches();
   }
 
   protected async select(id: number): Promise<void> {

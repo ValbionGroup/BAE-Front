@@ -69,7 +69,11 @@
         </span>
         <span class="flex-1"></span>
         <bae-btn kind="ghost" size="sm" (clicked)="clearSelection()">Annuler</bae-btn>
-        <bae-btn kind="danger" size="sm" [icon]="icTrash">Supprimer</bae-btn>
+        @if (canDelete()) {
+          <bae-btn kind="danger" size="sm" [icon]="icTrash" (clicked)="confirmDeleteGoods()"
+            >Supprimer</bae-btn
+          >
+        }
       </div>
     }
 
@@ -338,14 +342,20 @@
 
         <!-- Lots -->
         <div>
-          <div class="mb-2 flex items-center justify-between">
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span class="text-[12px] font-semibold text-text">Lots · ordre FEFO</span>
-            <label
-              class="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted select-none"
-            >
-              <bae-toggle [on]="showEmptyBatches()" (change)="showEmptyBatches.set($event)" />
-              Afficher les lots vides
-            </label>
+            <div class="flex items-center gap-3">
+              <label
+                class="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted select-none"
+              >
+                <bae-toggle [on]="showEmptyBatches()" (change)="showEmptyBatches.set($event)" />
+                Afficher les lots vides
+              </label>
+              <!-- L'entrée sans code-barres : le vrac et les fûts n'en portent pas. -->
+              <bae-btn kind="secondary" size="sm" [icon]="icEntry" (clicked)="openStockEntry()">
+                Entrer un lot
+              </bae-btn>
+            </div>
           </div>
           @if (batchesLoading()) {
             <div class="py-4 text-center text-[12px] text-muted">Chargement des lots…</div>
@@ -401,6 +411,15 @@
                       [icon]="icDownload"
                       (clicked)="printLabels(b.id)"
                       >Étiquette</bae-btn
+                    >
+                    <!-- La sortie partielle : le rebut, lui, vide tout le lot. -->
+                    <bae-btn
+                      kind="secondary"
+                      size="sm"
+                      [icon]="icExit"
+                      [disabled]="b.remainingQty === 0"
+                      (clicked)="openStockExit(b)"
+                      >Sortir</bae-btn
                     >
                   </div>
                   @if (b.dlcStatus === 'expired') {

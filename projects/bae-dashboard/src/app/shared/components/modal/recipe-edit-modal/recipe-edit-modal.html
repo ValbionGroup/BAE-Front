@@ -38,7 +38,15 @@
         >
           <option value="">Sans catégorie</option>
           @for (category of referentiels.productCategories(); track category.id) {
-            <option [value]="category.id">{{ category.name }}</option>
+            <!-- `[selected]` en plus du `[value]` du `<select>` : dans une même
+                 passe de détection, Angular applique les bindings du `<select>`
+                 **avant** de créer les `<option>` du `@for`, et le navigateur
+                 jette une valeur sans option correspondante. Ici la catégorie de
+                 la recette et la liste des catégories arrivent ensemble — même
+                 piège et même remède que `VoucherEditModal`. -->
+            <option [value]="category.id" [selected]="category.id === categoryIdNumber()">
+              {{ category.name }}
+            </option>
           }
         </select>
       </bae-field>
@@ -128,7 +136,11 @@
                 >
                   <option value="">Choisir un produit…</option>
                   @for (good of stocks.products(); track good.id) {
-                    <option [value]="good.id">{{ good.name }}</option>
+                    <!-- Même piège : le catalogue et les lignes de la recette
+                         arrivent par deux requêtes distinctes. -->
+                    <option [value]="good.id" [selected]="sameGood(line.goodId, good.id)">
+                      {{ good.name }}
+                    </option>
                   }
                 </select>
 

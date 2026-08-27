@@ -6,7 +6,7 @@ import {
   type ApiCategory,
   type ApiStockItem,
   type CreateGoodPayload,
-  type ApiGoodPrices,
+  type ApiGoodDetail,
   type ApiNamedRef,
 } from '#core/services/stocks/stocks-service';
 import type { LoadingStatus } from '#core/models/global.model';
@@ -141,6 +141,59 @@ export const StocksStore = signalStore(
       }
     },
 
+    /**
+     * Supprime des denrées, **en séquence** : un refus ne doit pas emporter les
+     * suivantes — même patron que la validation du scanner. Un seul `refresh()`
+     * à la fin : deux suppressions ne justifient pas deux relectures de la liste.
+     *
+     * ⚠️ La cascade côté base emporte les lots, leur historique, les tarifs, les
+     * codes-barres et la ligne de la denrée dans chaque recette. L'API ne
+     * refuse rien : l'avertissement appartient à l'écran, pas à ce store.
+     */
+    async deleteGoods(ids: readonly number[]): Promise<{ deleted: number; error: unknown | null }> {
+      let deleted = 0;
+      let error: unknown | null = null;
+
+      for (const id of ids) {
+        try {
+          await lastValueFrom(svc.deleteGood(id));
+          deleted += 1;
+        } catch (caught) {
+          error = caught;
+        }
+      }
+
+      await this.refresh();
+      return { deleted, error };
+    },
+
+    /**
+     * Les recettes qu'une suppression amputerait, nommées et dédupliquées.
+     *
+     * `complete` à `false` quand une fiche n'a pas pu être lue : l'écran le dit
+     * plutôt que de taire un risque, et laisse quand même supprimer — ne pas
+     * pouvoir lire les recettes ne doit pas bloquer un ménage.
+     */
+    async getGoodUsage(
+      ids: readonly number[],
+    ): Promise<{ recipeNames: readonly string[]; complete: boolean }> {
+      const names: string[] = [];
+      let complete = true;
+
+      const details = await Promise.all(ids.map((id) => lastValueFrom(settle(svc.getGood(id)))));
+      for (const detail of details) {
+        if (!detail.ok) {
+          complete = false;
+          continue;
+        }
+        for (const product of detail.value.products ?? []) {
+          if (!names.includes(product.name)) names.push(product.name);
+        }
+      }
+
+      return { recipeNames: names, complete };
+    },
+
     /** Rechargement explicite : `load()` sortirait aussitôt, l'état étant
      *  déjà `loaded`. */
     async refresh(): Promise<void> {
@@ -154,6 +207,44 @@ export const StocksStore = signalStore(
         });
       } catch {
         patchState(store, { loadError: 'Impossible de recharger les stocks.' });
+      }
+    },
+
+    /**
+     * Entre un lot en stock — l'ajout **sans code-barres**, celui de la modale
+     * d'entrée manuelle comme celui du scanner.
+     *
+     * Le `refresh()` n'est pas décoratif : la page affiche des agrégats par
+     * denrée (`totalQty`, `batchCount`, les KPIs), que le POST ne renvoie pas.
+     * Sans lui, le lot existe en base et le tableau montre les quantités d'avant.
+     */
+    async createBatch(payload: {
+      goodId: number;
+      quantity: number;
+      expirationDate: string | null;
+    }): Promise<{ ok: true } | { ok: false; error: unknown }> {
+      try {
+        await lastValueFrom(svc.createBatch(payload));
+        await this.refresh();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    },
+
+    /** Sortie partielle d'un lot. Le refus voyage dans la valeur résolue —
+     *  patron de `setSupplierPrice` — pour que l'écran montre pourquoi. */
+    async removeFromBatch(payload: {
+      goodId: number;
+      stockBatchId: number;
+      quantity: number;
+    }): Promise<{ ok: true } | { ok: false; error: unknown }> {
+      try {
+        await lastValueFrom(svc.removeFromBatch(payload));
+        await this.refresh();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error };
       }
     },
 
@@ -195,9 +286,9 @@ export const StocksStore = signalStore(
      * est ouvert sur **une** denrée à la fois, et les mémoriser toutes ferait
      * vieillir des prix que personne ne regarde — même raison que `getBatches`.
      */
-    async getSupplierPrices(goodId: number): Promise<ApiGoodPrices | null> {
+    async getSupplierPrices(goodId: number): Promise<ApiGoodDetail | null> {
       try {
-        return await lastValueFrom(svc.getSupplierPrices(goodId));
+        return await lastValueFrom(svc.getGood(goodId));
       } catch {
         return null;
       }

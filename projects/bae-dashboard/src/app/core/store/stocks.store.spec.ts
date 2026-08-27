@@ -189,4 +189,132 @@ describe(StocksStore.name, () => {
     expect(store.createError()).toBe('Unité invalide.');
     expect(store.products()).toHaveLength(0);
   });
+
+  /** Laisse le `refresh()` enchaîné sur la réponse émettre ses requêtes. */
+  function tick(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('enters a batch in stock and refreshes the aggregates behind it', async () => {
+    await loadWith([item({ totalRemainingQty: 12, batchCount: 1 })]);
+
+    const entered = store.createBatch({ goodId: 1, quantity: 6, expirationDate: '2026-11-04' });
+    const req = http.expectOne(`${baseUrl}/stock-batches`);
+    expect(req.request.body).toEqual({ goodId: 1, quantity: 6, expirationDate: '2026-11-04' });
+    req.flush({ id: 30 });
+    await tick();
+
+    // Sans ce rechargement, le tableau garde les 12 d'avant : la ligne du lot
+    // n'est pas ce que la page affiche, ce sont les agrégats par denrée.
+    http.expectOne(`${baseUrl}/stocks`).flush([item({ totalRemainingQty: 18, batchCount: 2 })]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await entered;
+
+    expect(result).toEqual({ ok: true });
+    expect(store.products()[0]).toMatchObject({ totalQty: 18, batchCount: 2 });
+  });
+
+  it('takes a quantity out of a batch and refreshes', async () => {
+    await loadWith([item({ totalRemainingQty: 12 })]);
+
+    const removed = store.removeFromBatch({ goodId: 1, stockBatchId: 42, quantity: 4 });
+    http.expectOne(`${baseUrl}/stock-movements`).flush({ id: 7 });
+    await tick();
+    http.expectOne(`${baseUrl}/stocks`).flush([item({ totalRemainingQty: 8 })]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await removed;
+
+    expect(result).toEqual({ ok: true });
+    expect(store.products()[0].totalQty).toBe(8);
+  });
+
+  /** Le refus voyage dans la valeur résolue — patron de `setSupplierPrice` —
+   *  pour que l'écran montre `E_STOCK_INSUFFICIENT` au lieu de l'avaler. */
+  it('hands a refused withdrawal back instead of refreshing', async () => {
+    await loadWith([item({ totalRemainingQty: 12 })]);
+
+    const removed = store.removeFromBatch({ goodId: 1, stockBatchId: 42, quantity: 99 });
+    http
+      .expectOne(`${baseUrl}/stock-movements`)
+      .flush(
+        { code: 'E_STOCK_INSUFFICIENT', message: 'Ce lot ne porte plus que 12 unité(s).' },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+    const result = await removed;
+
+    expect(result.ok).toBe(false);
+    expect(store.products()[0].totalQty).toBe(12);
+  });
+
+  it('supprime chaque denrée sélectionnée, puis recharge une seule fois', async () => {
+    await loadWith([item({ id: 1 }), item({ id: 2, name: 'Farine' })]);
+
+    const deleted = store.deleteGoods([1, 2]);
+    http.expectOne(`${baseUrl}/goods/1`).flush(null);
+    await tick();
+    http.expectOne(`${baseUrl}/goods/2`).flush(null);
+    await tick();
+
+    // Un seul rechargement pour tout le lot : deux suppressions ne justifient
+    // pas deux allers-retours sur la liste entière.
+    http.expectOne(`${baseUrl}/stocks`).flush([]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await deleted;
+
+    expect(result).toEqual({ deleted: 2, error: null });
+    expect(store.products()).toHaveLength(0);
+  });
+
+  /** Un refus ne doit pas emporter les suivants — patron de `validate()`. */
+  it('poursuit après un refus et le remonte', async () => {
+    await loadWith([item({ id: 1 }), item({ id: 2, name: 'Farine' })]);
+
+    const deleted = store.deleteGoods([1, 2]);
+    http
+      .expectOne(`${baseUrl}/goods/1`)
+      .flush({ code: 'E_FORBIDDEN', message: 'Droit manquant.' }, { status: 403, statusText: 'x' });
+    await tick();
+    http.expectOne(`${baseUrl}/goods/2`).flush(null);
+    await tick();
+    http.expectOne(`${baseUrl}/stocks`).flush([item({ id: 1 })]);
+    http.expectOne(`${baseUrl}/categories`).flush([{ id: 2, name: 'Boisson' }]);
+    const result = await deleted;
+
+    expect(result.deleted).toBe(1);
+    expect(result.error).not.toBeNull();
+  });
+
+  /**
+   * Ce que la modale de suppression doit annoncer : la cascade emporte la
+   * ligne de la denrée dans chaque recette, en silence côté API.
+   */
+  it('nomme les recettes que la suppression amputerait', async () => {
+    await loadWith([item({ id: 1 }), item({ id: 2 })]);
+
+    const usage = store.getGoodUsage([1, 2]);
+    http.expectOne(`${baseUrl}/goods/1`).flush({ products: [{ id: 3, name: 'Crêpes' }] });
+    http.expectOne(`${baseUrl}/goods/2`).flush({
+      products: [
+        { id: 3, name: 'Crêpes' },
+        { id: 4, name: 'Gâteau' },
+      ],
+    });
+    const result = await usage;
+
+    // Dédupliqué : deux denrées d'une même recette ne la citent pas deux fois.
+    expect(result.recipeNames).toEqual(['Crêpes', 'Gâteau']);
+    expect(result.complete).toBe(true);
+  });
+
+  /** Ne pas pouvoir lire les recettes ne doit pas bloquer un ménage. */
+  it('signale un relevé incomplet plutôt que d’échouer', async () => {
+    await loadWith([item({ id: 1 })]);
+
+    const usage = store.getGoodUsage([1]);
+    http.expectOne(`${baseUrl}/goods/1`).flush(null, { status: 500, statusText: 'x' });
+    const result = await usage;
+
+    expect(result.complete).toBe(false);
+    expect(result.recipeNames).toEqual([]);
+  });
 });

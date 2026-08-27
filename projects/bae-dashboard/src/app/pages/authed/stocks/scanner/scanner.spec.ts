@@ -16,14 +16,17 @@ const baseUrl = 'http://api.test/v1';
 interface ScannerInternals {
   onBarcode(code: string): Promise<void>;
   lines(): readonly {
-    barcode: string;
+    id: string;
+    barcode: string | null;
     goodId: number | null;
+    name: string;
     quantity: number;
     attachPending: boolean;
   }[];
-  resolveUnknown(barcode: string): void;
+  resolveUnknown(lineId: string): void;
+  addWithoutBarcode(product: { id: number; name: string }): void;
   ready(): readonly unknown[];
-  bump(barcode: string, delta: number): void;
+  bump(lineId: string, delta: number): void;
   validate(): Promise<void>;
   saveError(): string | null;
 }
@@ -143,7 +146,7 @@ describe(StocksScanner.name, () => {
       categoryId: 2,
     });
     await scanned;
-    scanner.bump('3268754117904', 2);
+    scanner.bump(scanner.lines()[0].id, 2);
 
     const validated = scanner.validate();
     const req = http.expectOne(`${baseUrl}/stock-batches`);
@@ -215,7 +218,9 @@ describe(StocksScanner.name, () => {
     await scanned;
     expect(scanner.lines()[0].goodId).toBeNull();
 
-    (scanner as unknown as { createUnknown(b: string): void }).createUnknown('0000000000000');
+    (scanner as unknown as { createUnknown(id: string): void }).createUnknown(
+      scanner.lines()[0].id,
+    );
     const config = opened.mock.calls.at(0)?.at(0) as unknown as {
       inputs: { created: (p: unknown) => void };
     };
@@ -259,7 +264,7 @@ describe(StocksScanner.name, () => {
     flushLookup(barcode, null);
     await scanned;
 
-    scanner.resolveUnknown(barcode);
+    scanner.resolveUnknown(scanner.lines()[0].id);
     const config = opened.mock.calls.at(-1)?.at(0) as unknown as {
       inputs: { picked: (p: unknown) => void };
     };
@@ -343,5 +348,69 @@ describe(StocksScanner.name, () => {
     await second;
 
     expect(scanner.lines()).toHaveLength(0);
+  });
+
+  /**
+   * L'entrée sans code-barres, dans la même session que les lignes scannées :
+   * une caisse de vrac et un pack de bouteilles arrivent par le même camion, et
+   * séparer les deux gestes obligerait à valider deux fois.
+   */
+  it('adds a line for a good picked by hand, with no barcode', () => {
+    scanner.addWithoutBarcode({ id: 7, name: 'Farine T55' });
+
+    expect(scanner.lines()).toHaveLength(1);
+    expect(scanner.lines()[0]).toMatchObject({
+      barcode: null,
+      goodId: 7,
+      name: 'Farine T55',
+      quantity: 1,
+      // La denrée existe déjà : il n'y a aucun code à rattacher, et un
+      // rattachement en attente ferait poster `null` à la validation.
+      attachPending: false,
+    });
+    expect(scanner.ready()).toHaveLength(1);
+  });
+
+  it('stacks two hand-picked lines instead of merging them', () => {
+    scanner.addWithoutBarcode({ id: 7, name: 'Farine T55' });
+    scanner.addWithoutBarcode({ id: 9, name: 'Sucre' });
+
+    // Le regroupement du scan se fait sur le code : sans code, deux ajouts sont
+    // deux lots, chacun avec sa DLC.
+    expect(scanner.lines()).toHaveLength(2);
+  });
+
+  it('creates the batch of a barcodeless line without attaching anything', async () => {
+    scanner.addWithoutBarcode({ id: 7, name: 'Farine T55' });
+    scanner.bump(scanner.lines()[0].id, 4);
+
+    const validated = scanner.validate();
+    http.expectNone((r) => r.url.includes('/barcodes'));
+    const req = http.expectOne(`${baseUrl}/stock-batches`);
+    expect(req.request.body).toEqual({ goodId: 7, quantity: 5, expirationDate: null });
+    req.flush({ id: 1 });
+    await tick();
+    http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    await validated;
+
+    expect(scanner.lines()).toHaveLength(0);
+  });
+
+  /** Deux paquets du même produit, deux DLC : les deux lignes doivent vivre. */
+  it('keeps a scanned line and a hand-picked line of the same good apart', async () => {
+    const scanned = scanner.onBarcode('3268754117904');
+    flushLookup('3268754117904', {
+      id: 7,
+      name: 'Moutarde',
+      unit: 'pcs',
+      brand: '',
+      categoryId: 2,
+    });
+    await scanned;
+
+    scanner.addWithoutBarcode({ id: 7, name: 'Moutarde' });
+
+    expect(scanner.lines()).toHaveLength(2);
   });
 });

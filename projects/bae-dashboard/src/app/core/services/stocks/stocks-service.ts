@@ -40,14 +40,22 @@ export interface ApiSupplierPrice {
   readonly price: number;
 }
 
-/** `GET /goods/:id` — la fiche d'une denrée, tarifs compris. */
-export interface ApiGoodPrices {
+/**
+ * `GET /goods/:id` — la fiche complète d'une denrée.
+ *
+ * ⚠️ `products` sont les **recettes** qui utilisent la denrée (pivot
+ * `product_goods`). Le champ compte parce que la suppression d'une denrée
+ * cascade sur ce pivot : sans le lire, l'écran laisserait amputer quatre
+ * recettes en silence.
+ */
+export interface ApiGoodDetail {
   readonly id: number;
   readonly name: string;
   readonly unit: string;
   readonly suppliers: readonly ApiSupplierPrice[];
   readonly bestSupplier: ApiSupplierPrice | null;
   readonly bestPrice: number | null;
+  readonly products: readonly ApiNamedRef[];
 }
 
 /** Une entité de référence réduite à son identité — ici, une enseigne. */
@@ -137,15 +145,25 @@ export class StocksService {
   }
 
   /**
-   * Les tarifs d'une denrée chez ses enseignes, **triés du moins cher au plus
-   * cher** par l'API. Le premier est le prix de référence : c'est lui que
-   * `bestSupplierPrice` sert au coût de recette, à la liste de courses et au
-   * bilan de soirée.
+   * La fiche d'une denrée : ses tarifs et les recettes qui l'utilisent.
+   *
+   * Les tarifs arrivent **triés du moins cher au plus cher** par l'API. Le
+   * premier est le prix de référence : c'est lui que `bestSupplierPrice` sert au
+   * coût de recette, à la liste de courses et au bilan de soirée.
    *
    * ⚠️ Les prix sont en **centimes**, comme tout montant de l'API.
    */
-  getSupplierPrices(goodId: number): Observable<ApiGoodPrices> {
-    return this.http.get<ApiGoodPrices>(`${this.baseUrl}/goods/${goodId}`);
+  getGood(goodId: number): Observable<ApiGoodDetail> {
+    return this.http.get<ApiGoodDetail>(`${this.baseUrl}/goods/${goodId}`);
+  }
+
+  /**
+   * ⚠️ Supprime **en cascade** : les lots, leur historique de mouvements, les
+   * tarifs, les codes-barres, et la ligne de la denrée dans chaque recette qui
+   * l'utilise. L'API ne le refuse jamais — l'avertissement est à l'écran.
+   */
+  deleteGood(goodId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/goods/${goodId}`);
   }
 
   /** Pose ou corrige — la même route fait les deux, c'est le même geste. */
@@ -166,6 +184,27 @@ export class StocksService {
   getBatches(goodsId: number, showEmpty = false): Observable<ApiStockBatch[]> {
     const params = showEmpty ? { showEmpty: 'true' } : undefined;
     return this.http.get<ApiStockBatch[]>(`${this.baseUrl}/stocks/${goodsId}/batches`, { params });
+  }
+
+  /**
+   * Sort une quantité d'un lot précis — le geste de la sortie partielle.
+   *
+   * ⚠️ `movementType` n'est pas un paramètre : une **entrée** en stock passe par
+   * un lot (`createBatch`), qui porte sa DLC et son étiquette. Un mouvement `in`
+   * ajouterait de la quantité à un lot sans dire d'où elle vient.
+   *
+   * L'API refuse en 422 `E_STOCK_INSUFFICIENT` une quantité supérieure au
+   * restant, et `E_BATCH_MISMATCH` un lot d'une autre denrée.
+   */
+  removeFromBatch(payload: {
+    goodId: number;
+    stockBatchId: number;
+    quantity: number;
+  }): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/stock-movements`, {
+      ...payload,
+      movementType: 'out',
+    });
   }
 
   discardBatch(goodsId: number, batchId: number, remainingQty: number): Observable<void> {
