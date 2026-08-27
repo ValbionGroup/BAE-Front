@@ -31,6 +31,11 @@ export class Faq {
             'Les précommandes ferment 12h avant le début de la soirée, ou avant si les places sont épuisées. La date exacte de clôture est indiquée sur chaque soirée.',
         },
         {
+          question: 'La précommande me fait-elle passer devant la file ?',
+          answer:
+            'Non. La précommande vous évite de payer sur place et vous donne un tarif plus avantageux, mais elle ne donne aucune priorité à l’entrée : c’est le FastPass qui l’ouvre. Un adhérent qui précommande cumule donc les deux — il passe devant, et n’a plus rien à régler.',
+        },
+        {
           question: 'Comment je récupère ma commande ?',
           answer:
             'Un QR code est envoyé par email après paiement. Présentez-le au stand pour recevoir vos articles.',
@@ -75,7 +80,8 @@ export class Faq {
         },
         {
           question: 'Je ne suis pas adhérent, puis-je commander ?',
-          answer: 'Oui, les précommandes sont ouvertes à tous.',
+          answer:
+            'Oui, les précommandes sont ouvertes à tous. L’adhésion — le FastPass — ajoute une remise supplémentaire sur chaque précommande et l’accès prioritaire aux soirées.',
         },
       ],
     },

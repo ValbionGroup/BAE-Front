@@ -22,7 +22,7 @@ describe(Faq.name, () => {
   it('replie chaque réponse dans un `details` fermé par défaut', () => {
     const entries = host.querySelectorAll('details');
 
-    expect(entries.length).toBe(9);
+    expect(entries.length).toBe(10);
     expect([...entries].every((entry) => !entry.open)).toBe(true);
   });
 

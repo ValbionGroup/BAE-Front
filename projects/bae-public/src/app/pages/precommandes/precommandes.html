@@ -8,13 +8,14 @@
     <h1
       class="mt-3.5 mb-4 text-[40px] leading-[1.02] font-semibold -tracking-[1.2px] text-text md:text-[56px]"
     >
-      Mangez sans la queue.<br />
+      Commandez moins cher.<br />
       <span class="text-muted">Récupérez avec un QR code.</span>
     </h1>
     <p class="m-0 max-w-135 text-base leading-[1.55] text-text-2">
-      Commandez vos hot-dogs, bières et crêpes pour la prochaine soirée du BAE.
+      Commandez vos hot-dogs, bières et crêpes pour la prochaine soirée du BAE : tout est réglé à
+      l’avance, plus rien à payer le soir même.
       @if (discountPercent() > 0) {
-        Commander à l’avance vous fait économiser {{ discountPercent() }} % sur toute la commande.
+        Et vous économisez {{ discountPercent() }} % sur toute la commande.
       }
     </p>
 
@@ -320,10 +321,16 @@
           <div class="flex justify-between text-text-2">
             <span>Sous-total</span><span class="tnum">{{ price(subtotal()) }} €</span>
           </div>
-          @if (discount() > 0) {
+          @if (baseDiscount() > 0) {
             <div class="flex justify-between text-ok">
-              <span>Remise précommande ({{ discountPercent() }} %)</span>
-              <span class="tnum">−{{ price(discount()) }} €</span>
+              <span>Remise précommande ({{ basePercent() }} %)</span>
+              <span class="tnum">−{{ price(baseDiscount()) }} €</span>
+            </div>
+          }
+          @if (memberDiscount() > 0) {
+            <div class="flex justify-between text-ok">
+              <span>Bonus adhérent ({{ memberPercent() }} %)</span>
+              <span class="tnum">−{{ price(memberDiscount()) }} €</span>
             </div>
           }
         </div>

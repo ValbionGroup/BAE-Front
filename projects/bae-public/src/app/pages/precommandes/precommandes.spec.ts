@@ -8,6 +8,7 @@ import { findA11yViolations } from '@bae/ui/testing';
 
 import { Precommandes } from './precommandes';
 import { SessionStore, type SessionStatus } from '../../core/session.store';
+import type { MySubscription } from '../../core/purchases.store';
 import type { PublicEvent, PublicMenu } from '../../core/catalog.models';
 
 const OPEN_EVENT: PublicEvent = {
@@ -57,16 +58,40 @@ const MENU: PublicMenu = {
   ],
 };
 
+const ACTIVE_PASS: MySubscription = {
+  fastPassId: 1,
+  label: 'FastPass 1 an',
+  subscribedAt: '2026-01-05T12:00:00.000+01:00',
+  expiresAt: '2027-01-05T12:00:00.000+01:00',
+  status: 'active',
+  amount: 1500,
+  paymentMethod: 'lydia',
+};
+
+const EXPIRED_PASS: MySubscription = { ...ACTIVE_PASS, status: 'expired' };
+
 describe(Precommandes.name, () => {
   let fixture: ComponentFixture<Precommandes>;
   let host: HTMLElement;
   let http: HttpTestingController;
 
-  const mount = async (events: PublicEvent[] = [OPEN_EVENT, FULL_EVENT]): Promise<void> => {
+  const mount = async (
+    events: PublicEvent[] = [OPEN_EVENT, FULL_EVENT],
+    subscriptions: MySubscription[] = [],
+  ): Promise<void> => {
     fixture = TestBed.createComponent(Precommandes);
     fixture.detectChanges();
 
     http.expectOne((req) => req.url.endsWith('/public/events')).flush(events);
+    http
+      .expectOne((req) => req.url.endsWith('/public/fast-passes'))
+      .flush({ bonusPercent: 5, plans: [] });
+    // `match` et non `expectOne` : un visiteur déconnecté ne demande pas ses
+    // cotisations, et zéro requête est la bonne réponse dans ce cas-là.
+    for (const request of http.match((req) => req.url.endsWith('/account/subscriptions'))) {
+      request.flush(subscriptions);
+    }
+
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -169,6 +194,48 @@ describe(Precommandes.name, () => {
 
     expect(cartText()).toContain('−0,75 €');
     expect(cartText()).toContain('Total 6,75 €');
+  });
+
+  /**
+   * Le défaut visé : annoncer 10 % à un adhérent que le serveur débitera de
+   * 15 %. `quotePreOrder` ajoute `FAST_PASS_PRE_ORDER_BONUS_PERCENT` dès qu'une
+   * cotisation est en cours ; le panier doit dire le même total que Lydia.
+   */
+  it('ajoute le bonus adhérent à la remise pour une cotisation en cours', async () => {
+    await mount([OPEN_EVENT, FULL_EVENT], [ACTIVE_PASS]);
+    // 2 hot-dogs à 3,50 € = 7,00 €, moins 10 % + 5 %.
+    await addTo('Hot-dog classique', 2);
+
+    expect(cartText()).toContain('Remise précommande (10 %)');
+    expect(cartText()).toContain('−0,70 €');
+    expect(cartText()).toContain('Bonus adhérent (5 %)');
+    expect(cartText()).toContain('−0,35 €');
+    expect(cartText()).toContain('Total 5,95 €');
+  });
+
+  /** Une cotisation échue n'est pas une cotisation : le bonus ne s'applique pas. */
+  it('s’en tient à la remise de base quand la cotisation est échue', async () => {
+    await mount([OPEN_EVENT, FULL_EVENT], [EXPIRED_PASS]);
+    await addTo('Hot-dog classique', 2);
+
+    expect(cartText()).not.toContain('Bonus adhérent');
+    expect(cartText()).toContain('Total 6,30 €');
+  });
+
+  /**
+   * Les deux lignes doivent toujours tomber sur le total : `applyDiscount`
+   * n'arrondit qu'une fois, sur le pourcentage cumulé. Arrondir chaque part
+   * séparément dérive d'un centime dès que les deux moitiés tombent sur un
+   * demi — 3,55 € donnerait 0,36 € + 0,18 € contre 0,53 € de remise réelle.
+   */
+  it('détaille la remise sans dériver du total remisé', async () => {
+    await mount([OPEN_EVENT, FULL_EVENT], [ACTIVE_PASS]);
+    // 3 × 2,50 € = 7,50 € → 15 % = 1,125 €, arrondi à 1,13 €.
+    await addTo('Heineken 33cl', 3);
+
+    expect(cartText()).toContain('−0,75 €');
+    expect(cartText()).toContain('−0,38 €');
+    expect(cartText()).toContain('Total 6,37 €');
   });
 
   it('regroupe un même article sur une seule ligne', async () => {
