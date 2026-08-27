@@ -1,6 +1,7 @@
 import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { EventsStore } from '#core/store/events.store';
+import type { OrderDiscount } from '#core/services/orders/orders-service';
 import { EventsService } from '#core/services/events/events-service';
 import { EventDetail, MenuItem } from '#core/models/event.model';
 import { LoadingStatus } from '#core/models/global.model';
@@ -68,6 +69,8 @@ interface CaisseState {
   readonly activeProductId: number | null;
   /** Le paiement par carte en cours. */
   readonly cardPayment: { readonly orderRef: string; readonly amountCents: number } | null;
+  /** Remise consentie sur la commande en cours ; `null` = aucune. */
+  readonly discount: OrderDiscount | null;
 }
 
 const clearedSession = {
@@ -78,6 +81,7 @@ const clearedSession = {
   checkoutError: null,
   activeProductId: null,
   cardPayment: null,
+  discount: null,
 } satisfies Partial<CaisseState>;
 
 const initialState: CaisseState = {
@@ -92,6 +96,7 @@ const initialState: CaisseState = {
   lastOrder: null,
   activeProductId: null,
   cardPayment: null,
+  discount: null,
 };
 
 export const CaisseStore = signalStore(
@@ -99,7 +104,7 @@ export const CaisseStore = signalStore(
   withState<CaisseState>(initialState),
   withComputed(
     (
-      { sessionEventId, cart, activeCategory, activeProductId, category },
+      { sessionEventId, cart, activeCategory, activeProductId, category, discount },
       eventsStore = inject(EventsStore),
       eventsService = inject(EventsService),
       ordersStore = inject(OrdersStore),
@@ -162,6 +167,17 @@ export const CaisseStore = signalStore(
 
       const receivableTotal = computed(() => publicTotal() - chargedTotal());
 
+      /**
+       * La remise est **ramenée au dû**, exactement comme le fait `priceCart`
+       * côté serveur. Sans ce plafond, l'écran annoncerait un total négatif que
+       * l'API corrigerait en silence : le comptoir et le ticket diraient deux
+       * choses différentes.
+       */
+      const discountTotal = computed(() => Math.min(discount()?.amountCents ?? 0, chargedTotal()));
+
+      /** Ce que le client paie réellement. */
+      const netTotal = computed(() => chargedTotal() - discountTotal());
+
       const totalQuantity = computed(() => cart().reduce((sum, line) => sum + line.quantity, 0));
 
       return {
@@ -175,6 +191,8 @@ export const CaisseStore = signalStore(
         activeLine,
         stockByProduct,
         chargedTotal,
+        discountTotal,
+        netTotal,
         publicTotal,
         receivableTotal,
         totalQuantity,
@@ -213,6 +231,7 @@ export const CaisseStore = signalStore(
           category: null,
           checkingOut: false,
           cardPayment: null,
+          discount: null,
           lastOrder: order,
         } satisfies Partial<CaisseState>;
       }
@@ -231,6 +250,7 @@ export const CaisseStore = signalStore(
               lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
               store.selectedBuyer()?.userId ?? null,
               store.category()?.id ?? null,
+              store.discount(),
             ),
           );
 
@@ -252,6 +272,20 @@ export const CaisseStore = signalStore(
       return {
         canAdd,
         unitPriceOf,
+
+        /**
+         * Consent une remise sur la commande en cours.
+         *
+         * Elle ne survit **ni** à l'encaissement **ni** au changement de
+         * soirée : une remise oubliée dans le panier s'appliquerait au client
+         * suivant, qui n'a rien demandé.
+         */
+        setDiscount(discount: OrderDiscount): void {
+          patchState(store, { discount });
+        },
+        clearDiscount(): void {
+          patchState(store, { discount: null });
+        },
 
         startSession(eventId: string): void {
           patchState(store, { ...clearedSession, sessionEventId: eventId });
@@ -440,6 +474,7 @@ export const CaisseStore = signalStore(
             store.selectedBuyer()?.userId ?? null,
             method,
             store.category()?.id ?? null,
+            store.discount(),
           );
 
           if (order) {
@@ -448,6 +483,7 @@ export const CaisseStore = signalStore(
               selectedBuyer: null,
               category: null,
               checkingOut: false,
+              discount: null,
               lastOrder: order,
             });
             void ordersStore.refreshSellable(eventId);

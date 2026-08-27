@@ -7,6 +7,7 @@ import {
   toOrder,
   type ApiSellableLine,
   type CheckoutLine,
+  type OrderDiscount,
 } from '#core/services/orders/orders-service';
 import { PreOrdersService } from '#core/services/pre-orders/pre-orders-service';
 import type { LoadingStatus } from '#core/models/global.model';
@@ -207,11 +208,19 @@ export const OrdersStore = signalStore(
         clientId?: number | null,
         paymentMethod: PaymentMethod = 'cash',
         sponsorshipCategoryId?: number | null,
+        discount?: OrderDiscount | null,
       ): Promise<Order | null> {
         try {
           const order = toOrder(
             await lastValueFrom(
-              svc.checkout(eventId, lines, clientId, paymentMethod, sponsorshipCategoryId),
+              svc.checkout(
+                eventId,
+                lines,
+                clientId,
+                paymentMethod,
+                sponsorshipCategoryId,
+                discount,
+              ),
             ),
           );
           upsert(order);

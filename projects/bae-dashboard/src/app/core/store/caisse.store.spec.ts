@@ -113,4 +113,98 @@ describe(CaisseStore.name, () => {
       expect(store.checkoutError()).toContain('expiré');
     });
   });
+
+  describe('remise', () => {
+    /** Deux hot-dogs : 5,00 €. */
+    function cartOfTwo(): void {
+      store.startSession('3');
+      store.addToCart(HOTDOG);
+      store.addToCart(HOTDOG);
+    }
+
+    it('retranche la remise du total à encaisser', () => {
+      cartOfTwo();
+
+      store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
+
+      expect(store.chargedTotal()).toBe(500);
+      expect(store.discountTotal()).toBe(100);
+      expect(store.netTotal()).toBe(400);
+    });
+
+    /** Même plafond que `priceCart` côté serveur : sans lui, l'écran
+     *  annoncerait un total négatif que l'API corrigerait en silence. */
+    it('plafonne la remise au total du panier', () => {
+      cartOfTwo();
+
+      store.setDiscount({ amountCents: 99_999, label: 'Offert' });
+
+      expect(store.discountTotal()).toBe(500);
+      expect(store.netTotal()).toBe(0);
+    });
+
+    it('envoie la remise avec l’encaissement', async () => {
+      cartOfTwo();
+      store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
+
+      const pending = store.checkout('cash');
+      const request = http.expectOne(
+        (req) => req.url.endsWith('/events/3/orders') && req.method === 'POST',
+      );
+      expect(request.request.body.discount).toEqual({
+        amountCents: 100,
+        label: 'Geste commercial',
+      });
+      request.flush(orderFor('3'));
+      await pending;
+    });
+
+    it('envoie la remise au terminal carte, pas seulement à la confirmation', async () => {
+      cartOfTwo();
+      store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
+
+      const pending = store.checkout('card');
+      const request = http.expectOne((req) => req.url.endsWith('/events/3/card-payments'));
+      expect(request.request.body.discount).toEqual({
+        amountCents: 100,
+        label: 'Geste commercial',
+      });
+      request.flush({ orderRef: 'ref-9', status: 'pending', amountCents: 400, eventId: 3 });
+      await pending;
+    });
+
+    /** ⚠️ Une remise oubliée dans le panier s'appliquerait au client suivant,
+     *  qui n'a rien demandé. */
+    it('oublie la remise après l’encaissement', async () => {
+      cartOfTwo();
+      store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
+
+      const pending = store.checkout('cash');
+      http
+        .expectOne((req) => req.url.endsWith('/events/3/orders') && req.method === 'POST')
+        .flush(orderFor('3'));
+      await pending;
+
+      expect(store.discount()).toBeNull();
+    });
+
+    it('oublie la remise en changeant de soirée', () => {
+      cartOfTwo();
+      store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
+
+      store.startSession('4');
+
+      expect(store.discount()).toBeNull();
+    });
+
+    it('retire la remise sur demande', () => {
+      cartOfTwo();
+      store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
+
+      store.clearDiscount();
+
+      expect(store.discount()).toBeNull();
+      expect(store.netTotal()).toBe(500);
+    });
+  });
 });

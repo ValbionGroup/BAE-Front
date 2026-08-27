@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { provideRouter } from '@angular/router';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -32,7 +33,13 @@ describe(Caisse.name, () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Caisse],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // La page lit les permissions pour décider si la remise est offerte.
+        provideMockStore({ initialState: { auth: { permissions: ['order:write'] } } }),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Caisse);
@@ -45,6 +52,22 @@ describe(Caisse.name, () => {
     // Le store est `providedIn: 'root'` : sans ça, une session ouverte par un
     // test fuit dans le suivant.
     TestBed.inject(CaisseStore).endSession();
+  });
+
+  describe('remise', () => {
+    /** Le comptoir n'a pas à voir un geste qu'il ne peut pas faire : le bouton
+     *  est absent, pas grisé. */
+    it('n’offre pas la remise sans le droit order:discount', () => {
+      expect(component['canDiscount']()).toBe(false);
+    });
+
+    it('offre la remise avec le droit', () => {
+      TestBed.inject(MockStore).setState({
+        auth: { permissions: ['order:write', 'order:discount'] },
+      });
+
+      expect(component['canDiscount']()).toBe(true);
+    });
   });
 
   it('should create', () => {
@@ -733,6 +756,7 @@ describe(`${Caisse.name} — le stock suit les ventes des autres postes`, () => 
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideMockStore({ initialState: { auth: { permissions: ['order:write'] } } }),
         { provide: WebsocketService, useValue: realtime },
       ],
     }).compileComponents();
