@@ -2,8 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { LucidePackage } from '@lucide/angular';
 import { Btn, Field, Input, ToastService } from '@bae/ui';
 import { StocksStore } from '#core/store/stocks.store';
-import { GOOD_UNITS, GOOD_UNIT_LABELS, type GoodUnit } from '#core/services/stocks/stocks-service';
-import type { StockProduct } from '#pages/authed/stocks/stocks.types';
+import {
+  GOOD_UNITS,
+  GOOD_UNIT_LABELS,
+  STORAGE_METHODS,
+  STORAGE_METHOD_LABELS,
+  type GoodUnit,
+} from '#core/services/stocks/stocks-service';
+import type { StockProduct, StorageMethod } from '#pages/authed/stocks/stocks.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -33,6 +39,11 @@ export class GoodCreateModal {
     label: GOOD_UNIT_LABELS[unit],
   }));
 
+  protected readonly storageMethods = STORAGE_METHODS.map((method) => ({
+    value: method,
+    label: STORAGE_METHOD_LABELS[method],
+  }));
+
   private readonly modalService = inject(ModalService);
   private readonly toast = inject(ToastService);
   protected readonly store = inject(StocksStore);
@@ -43,6 +54,9 @@ export class GoodCreateModal {
   protected readonly unit = signal<string>('');
   protected readonly brand = signal<string>('');
   protected readonly categoryId = signal<string>('');
+  /** `''` = « Non précisé ». Facultatif à dessein : l'emplacement se signale
+   *  aussi bien plus tard, depuis le panneau de détail des stocks. */
+  protected readonly storageMethod = signal<string>('');
 
   /** Les erreurs de champ ne s'affichent qu'après une tentative d'envoi. */
   protected readonly submitted = signal(false);
@@ -58,6 +72,9 @@ export class GoodCreateModal {
   }
   protected onCategoryId(v: string): void {
     this.categoryId.set(v);
+  }
+  protected onStorageMethod(v: string): void {
+    this.storageMethod.set(v);
   }
 
   protected readonly valid = computed(
@@ -78,6 +95,9 @@ export class GoodCreateModal {
       brand: this.brand().trim(),
       categoryId: Number(this.categoryId()),
       barcodes: this.barcode() ? [this.barcode() as string] : [],
+      // `null` et non `''` : la colonne est nullable, et le validateur back
+      // refuse une chaîne vide qui n'est pas dans l'enum.
+      storageMethod: (this.storageMethod() || null) as StorageMethod | null,
     });
 
     if (!product) return;

@@ -47,9 +47,26 @@
       </bae-field>
     </div>
 
-    <bae-field label="Marque" hint="Facultatif.">
-      <bae-input placeholder="ex. Maille" [value]="brand()" (valueChange)="onBrand($event)" />
-    </bae-field>
+    <div class="grid grid-cols-2 gap-3">
+      <bae-field label="Marque" hint="Facultatif.">
+        <bae-input placeholder="ex. Maille" [value]="brand()" (valueChange)="onBrand($event)" />
+      </bae-field>
+
+      <!-- Facultatif comme la marque : l'emplacement se signale aussi depuis le
+           panneau de détail, et l'exiger ici bloquerait une création pressée. -->
+      <bae-field label="Stockage" hint="Facultatif.">
+        <select
+          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+          [value]="storageMethod()"
+          (change)="onStorageMethod($any($event.target).value)"
+        >
+          <option value="">Non précisé</option>
+          @for (m of storageMethods; track m.value) {
+            <option [value]="m.value">{{ m.label }}</option>
+          }
+        </select>
+      </bae-field>
+    </div>
 
     @if (barcode(); as code) {
       <div

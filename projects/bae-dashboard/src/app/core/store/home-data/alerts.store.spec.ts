@@ -21,6 +21,7 @@ function stockItem(over: Partial<ApiStockItem>): ApiStockItem {
     nearestExpirationDate: null,
     expiredBatchCount: 0,
     soonBatchCount: 0,
+    storageMethod: null,
     ...over,
   };
 }

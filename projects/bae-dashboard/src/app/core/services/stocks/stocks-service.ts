@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
+import type { StorageMethod } from '#pages/authed/stocks/stocks.types';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
 
@@ -18,6 +19,8 @@ export interface ApiStockItem {
   nearestExpirationDate: string | null;
   expiredBatchCount: number;
   soonBatchCount: number;
+  /** `null` tant que personne ne l'a signalé — la colonne est nullable. */
+  storageMethod: StorageMethod | null;
 }
 
 export interface ApiStockBatch {
@@ -80,6 +83,7 @@ export interface ApiCreatedGood {
   /** Tous les codes de la denrée : un aliment se vend sous plusieurs
    *  conditionnements, donc sous plusieurs EAN. Vide si aucun. */
   readonly barcodes: readonly string[];
+  readonly storageMethod: StorageMethod | null;
 }
 
 /** Contrainte `goods_unit_check` : un enum en base, pas du texte libre. */
@@ -93,6 +97,19 @@ export const GOOD_UNIT_LABELS: Readonly<Record<GoodUnit, string>> = {
   liter: 'Litre',
 };
 
+/**
+ * Contrainte `goods_storage_method_check`, même patron que `unit` : un enum en
+ * base, donc un `<select>` à la saisie et jamais du texte libre.
+ */
+export const STORAGE_METHODS = ['fridge', 'freezer', 'dry', 'cellar'] as const;
+
+export const STORAGE_METHOD_LABELS: Readonly<Record<StorageMethod, string>> = {
+  fridge: 'Frigo',
+  freezer: 'Congélateur',
+  dry: 'Sec',
+  cellar: 'Cave',
+};
+
 /** `brand` est une chaîne, jamais `null` : la colonne est `NOT NULL`. */
 export interface CreateGoodPayload {
   readonly name: string;
@@ -101,6 +118,9 @@ export interface CreateGoodPayload {
   readonly categoryId: number;
   /** Vide quand le produit n'a pas été créé depuis un scan. */
   readonly barcodes: readonly string[];
+  /** Facultatif à la création : il se signale aussi bien plus tard, depuis le
+   *  panneau de détail. */
+  readonly storageMethod: StorageMethod | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -118,6 +138,20 @@ export class StocksService {
 
   createGood(payload: CreateGoodPayload): Observable<ApiCreatedGood> {
     return this.http.post<ApiCreatedGood>(`${this.baseUrl}/goods`, payload);
+  }
+
+  /**
+   * Signale où se conserve une denrée déjà au catalogue.
+   *
+   * `PATCH` et un corps d'un seul champ : l'écran n'a pas la fiche complète
+   * sous la main, et le contrôleur ne touche qu'aux clés présentes. `null`
+   * efface l'emplacement — c'est le choix « Non précisé » du sélecteur.
+   */
+  updateGoodStorageMethod(
+    id: number,
+    storageMethod: StorageMethod | null,
+  ): Observable<ApiCreatedGood> {
+    return this.http.patch<ApiCreatedGood>(`${this.baseUrl}/goods/${id}`, { storageMethod });
   }
 
   /** Liste vide si le code n'est rattaché à rien : réponse normale, pas une

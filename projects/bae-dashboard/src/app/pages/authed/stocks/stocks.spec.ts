@@ -8,6 +8,7 @@ import { Stocks } from './stocks';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { PrintService } from '#core/services/print/print-service';
 import { StocksStore } from '#core/store/stocks.store';
+import { ToastService } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
@@ -407,5 +408,65 @@ describe(Stocks.name, () => {
     TestBed.inject(MockStore).setState({ auth: { permissions: ['stock:read'] } });
 
     expect(component['canDelete']()).toBe(false);
+  });
+
+  describe('emplacement de stockage', () => {
+    it('signale l’emplacement choisi sur la denrée du panneau', async () => {
+      await selectFirstProduct();
+      const set = vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(true);
+
+      await component['onStorageMethod'](component['selectedProduct']()!, 'fridge');
+
+      expect(set).toHaveBeenCalledWith(1, 'fridge');
+      vi.restoreAllMocks();
+    });
+
+    // `''` est l'option « Non précisé » : elle efface, elle n'annule pas le geste.
+    it('efface l’emplacement quand « Non précisé » est choisi', async () => {
+      await selectFirstProduct();
+      const set = vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(true);
+
+      await component['onStorageMethod'](
+        { ...component['selectedProduct']()!, storageMethod: 'dry' },
+        '',
+      );
+
+      expect(set).toHaveBeenCalledWith(1, null);
+      vi.restoreAllMocks();
+    });
+
+    /** Le `change` d'un `<select>` se déclenche aussi quand la valeur revient à
+     *  elle-même : écrire pour rien ferait un PATCH par ouverture de panneau. */
+    it('n’écrit pas quand la valeur ne change pas', async () => {
+      await selectFirstProduct();
+      const set = vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(true);
+
+      await component['onStorageMethod'](component['selectedProduct']()!, '');
+
+      expect(set).not.toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
+
+    it('prévient quand le serveur refuse, plutôt que d’afficher une valeur fausse', async () => {
+      await selectFirstProduct();
+      vi.spyOn(TestBed.inject(StocksStore), 'setStorageMethod').mockResolvedValue(false);
+      const toast = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+      await component['onStorageMethod'](component['selectedProduct']()!, 'freezer');
+
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+      vi.restoreAllMocks();
+    });
+
+    it('rend un tiret pour une denrée sans emplacement signalé', () => {
+      expect(component['storageLabel'](null)).toBe('—');
+      expect(component['storageLabel']('freezer')).toBe('Congélateur');
+    });
+
+    it('laisse lire l’emplacement sans le droit d’écriture', () => {
+      TestBed.inject(MockStore).setState({ auth: { permissions: ['stock:read'] } });
+
+      expect(component['canWriteGood']()).toBe(false);
+    });
   });
 });
