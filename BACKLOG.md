@@ -18,6 +18,55 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 
 ## ✅ Livré
 
+### 2026-08-27 — le rappel de péremption des stocks (tâche 37)
+
+`notify:stock-expiring` + `app/services/stock_expiry_service.ts`. Verbe `stock.expiring`, P1 du CDC
+(`H1 §0 quindecies`). Décalque de `presence_reminder_service` : la commande **détecte et met en
+file**, c'est `notify:dispatch` qui envoie.
+
+#### Le `dedupeKey` est la politique de relance, pas un détail technique
+
+Un **récapitulatif par jour**, clé `stock.expiring:<AAAA-MM-JJ>` : le rappel repart tant que des lots
+restent à traiter. Une clé par lot — le patron de `presence.pending`, `verb:eventId` — aurait
+prévenu chaque lot **une seule fois** : ignoré une fois, il périmait en silence. Pour un rappel, se
+répéter est la fonction.
+
+#### Trois choix, et leur raison
+
+| Point         | Choix                                        | Pourquoi                                                                                                  |
+| ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Périmètre     | DLC dans la fenêtre **et lots déjà périmés** | Un lot passé est le cas le plus urgent ; ne signaler que le futur, c'est ne signaler que le non-problème. |
+| Destinataires | membres portant `stock:read`                 | Décalque de `supportRecipients()` (`ticket:read`) dans `ticket_service`.                                  |
+| Canaux        | `['in_app', 'mail']`                         | **Ce qui rend la tâche utile aujourd'hui.** Sans SMTP (tâche 100) le mail dort en file ; l'in-app marche. |
+
+Les rappels de présence, eux, n'utilisent que `mail` — ils sont donc muets tant que la 100 n'est pas
+faite. À reconsidérer quand on y touchera.
+
+⚠️ **Les lots vides sont exclus, et gratuitement** : le service passe par `loadBatchesWithRemaining`
+(`showEmpty: false`) au lieu d'une requête agrégée, parce que la quantité restante n'est jamais
+stockée et que sa formule doit rester en un seul endroit. Prévenir pour un lot consommé enverrait
+l'équipe chercher dans le frigo ce qui n'y est plus, et discréditerait tout le rappel.
+
+⚠️ **Sans destinataire, le fait est enregistré quand même** (`recordEvent` plutôt qu'`emit`) : la
+péremption a lieu qu'on la notifie ou non. Reprise du raisonnement d'`openTicket`.
+
+#### Deux tests passaient pour la mauvaise raison
+
+Les tests « ignore le lot X » s'écrivaient `assert.isFalse(lines.some(…))` — vrais aussi quand le
+récapitulatif **n'est pas produit du tout**. C'est le défaut de la tâche **66**, « vert par chance,
+pas par construction ». Chacun porte désormais un **témoin** : une denrée qui, elle, doit
+apparaître dans le même message. L'absence de l'une ne prouve rien sans la présence de l'autre.
+
+Le filtre des lots vides a été cassé volontairement pour vérifier que le test rougissait : il l'a
+fait, sur ce seul test.
+
+⚠️ **Il n'existe aucun planificateur dans ce dépôt.** La commande attend d'être lancée une fois par
+jour par le déploiement — c'est la tâche **58**. Sans ce câblage, le rappel n'existe que sur le
+papier.
+
+Back : **762 tests, 0 échec**, `tsc --noEmit` vert, `node ace list` la découvre, `--dry-run` sur la
+base de dev annonce 1 lot. Aucun changement côté front : la cloche consomme déjà la file.
+
 ### 2026-08-27 — où se range une denrée (tâche 44)
 
 `goods.storage_method` : **frigo / congélateur / sec / cave**, migration
@@ -722,7 +771,7 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | ~~34~~ | ~~Généraliser les gardes de permission au reste de l'API~~                                                                                                              | ✅ **Fait le 2026-08-26.** `job:read` sur `GET /v1/assignments`, la dernière route membre sans garde.                                                                                                                                                                 |
 | 35     | Purger les `logs` d'avant le 2026-08-06 (jetons d'accès en clair dans `meta.response`, lisibles avec `log:read`)                                                        | **Sans objet sur la base de dev** (2026-08-26 : plus ancienne entrée au 2026-08-10, aucun `oat_` dans `meta`). Reste à faire **avant la première mise en production**, sur une base réelle. `H1 §8`                                                                   |
 | ~~36~~ | ~~Rédiger l'URL journalisée : le code d'autorisation SSO en clair dans `logs.url` et `logs.message`~~                                                                   | ✅ **Fait le 2026-08-26.** `redactUrl` dans `log_redaction_service`, appelé par `request_logger_middleware` ; le message dérive de l'URL rédigée. 5 tests.                                                                                                            |
-| 37     | Rappel de péremption des stocks (`verb: 'stock.expiring'`)                                                                                                              | Oui — « presque gratuit » depuis le lot mailer. Le mail ne partira pas sans SMTP (tâche 100), le code est écrivable. `H1 §0 quindecies` (P1)                                                                                                                          |
+| ~~37~~ | ~~Rappel de péremption des stocks~~                                                                                                                                     | ✅ **Fait le 2026-08-27.** `notify:stock-expiring`, récapitulatif quotidien, canaux `in_app` + `mail`. Reste à câbler au cron du déploiement (tâche **58**). Voir « Livré ».                                                                                          |
 | 38     | Ajouter des `recordEvent()` sur les gestes qui le méritent (3 émetteurs aujourd'hui)                                                                                    | Oui. `H1 §0 octodecies`                                                                                                                                                                                                                                               |
 | 39     | Endpoint permettant au **bureau** de fixer la présence d'un autre membre — doit contourner son propre verrou, donc gardé par permission                                 | Oui. `H1 §7.3`                                                                                                                                                                                                                                                        |
 | 40     | Table d'**événements de scan** (qui, quoi, quand, quelle soirée), distincte de `received_quantity`                                                                      | Oui. Base de l'historique client et de la fidélité. `H1 §11`                                                                                                                                                                                                          |
