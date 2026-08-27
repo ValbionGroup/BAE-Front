@@ -66,6 +66,7 @@ describe(StockEntryModal.name, () => {
     const http = TestBed.inject(HttpTestingController);
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush(apiItems));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
     await settle();
     fixture.detectChanges();
   }

@@ -48,6 +48,7 @@ describe(Referentiels.name, () => {
     http
       .expectOne(`${baseUrl}/product-categories`)
       .flush([{ id: 4, name: 'Desserts', productsCount: 2 }]);
+    http.expectOne(`${baseUrl}/storage-locations`).flush([{ id: 5, name: 'Cave', goodsCount: 6 }]);
     await settle();
     fixture.detectChanges();
   }
@@ -194,6 +195,49 @@ describe(Referentiels.name, () => {
     expect(text()).toContain('Catégories de recettes');
     expect(text()).not.toContain('Enseignes');
     expect(text()).toContain('Desserts');
+  });
+
+  it('montre l’onglet des lieux à qui porte storage-location:read', async () => {
+    await render(['category:read', 'supplier:read', 'job:read', 'storage-location:read']);
+
+    expect(text()).toContain('Lieux de stockage');
+  });
+
+  it('n’offre pas les lieux sans la lecture', async () => {
+    await render(['category:read', 'supplier:read', 'job:read']);
+
+    expect(text()).not.toContain('Lieux de stockage');
+  });
+
+  /**
+   * ⚠️ « Catégories » et « Lieux de stockage » se ressemblent, mais l'une dit
+   * **ce qu'est** une denrée et l'autre **où elle se range**. Le sous-titre est
+   * ce qui les sépare à l'écran.
+   */
+  it('ouvre le référentiel des lieux et dit à quoi il sert', async () => {
+    await render(['storage-location:read']);
+
+    expect(text()).toContain('où les denrées se conservent');
+    expect(text()).toContain('Cave');
+    expect(text()).toContain('6 denrée(s)');
+    expect(text()).not.toContain('Enseignes');
+  });
+
+  /** Le compteur annonce ce que la suppression déclasserait, sans rien détruire. */
+  it('annonce ce qu’une suppression de lieu va déclasser', async () => {
+    await render(['storage-location:read', 'storage-location:delete']);
+    const open = vi.spyOn(TestBed.inject(ModalService), 'open').mockReturnValue('m');
+
+    fixture.componentInstance['confirmDeleteStorageLocation']({
+      id: 5,
+      name: 'Cave',
+      goodsCount: 6,
+    });
+
+    const config = open.mock.calls[0][0] as unknown as { details: string };
+    expect(config.details).toContain('6');
+    expect(config.details).toContain('plus d’emplacement');
+    expect(config.details).toContain('ne sont pas supprimées');
   });
 
   /** Le compteur annonce ce que la suppression déclasserait, sans rien détruire. */

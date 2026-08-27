@@ -29,21 +29,24 @@ describe('ReferentielsStore', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  /** Sert les trois listes que `load()` et chaque rechargement demandent. */
+  /** Sert les cinq listes que `load()` et chaque rechargement demandent. */
   function flushAll(
     categories: unknown[] = [],
     suppliers: unknown[] = [],
     jobs: unknown[] = [],
     productCategories: unknown[] = [],
+    storageLocations: unknown[] = [],
   ): void {
     http.expectOne(`${baseUrl}/categories`).flush(categories);
     http.expectOne(`${baseUrl}/suppliers`).flush(suppliers);
     http.expectOne(`${baseUrl}/jobs`).flush(jobs);
     // ⚠️ Quatrième liste depuis le 2026-08-26 : les catégories de recettes.
     http.expectOne(`${baseUrl}/product-categories`).flush(productCategories);
+    // ⚠️ Cinquième depuis le 2026-08-27 : les lieux de stockage.
+    http.expectOne(`${baseUrl}/storage-locations`).flush(storageLocations);
   }
 
-  it('charge les quatre listes en une fois', async () => {
+  it('charge les cinq listes en une fois', async () => {
     const loaded = store.load();
     flushAll(
       [{ id: 1, name: 'Boissons', goodsCount: 3 }],

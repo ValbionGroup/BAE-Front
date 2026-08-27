@@ -70,6 +70,7 @@ describe(RecipeEditModal.name, () => {
     // sélecteur d'ingrédients, `ReferentielsStore` pour les référentiels. Un
     // `expectOne` échouerait sur « found 2 requests ».
     for (const request of http.match(`${baseUrl}/categories`)) request.flush([]);
+    for (const request of http.match(`${baseUrl}/storage-locations`)) request.flush([]);
     // ⚠️ `ReferentielsStore.load()` charge les **quatre** listes de référence : le
     // sélecteur de catégorie n'en lit qu'une, mais les trois autres partent
     // quand même. Sans cette vidange, `http.verify()` échoue sur tout le fichier.

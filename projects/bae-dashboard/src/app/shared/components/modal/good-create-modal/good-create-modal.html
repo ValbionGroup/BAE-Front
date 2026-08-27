@@ -57,12 +57,12 @@
       <bae-field label="Stockage" hint="Facultatif.">
         <select
           class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
-          [value]="storageMethod()"
-          (change)="onStorageMethod($any($event.target).value)"
+          [value]="storageLocationId()"
+          (change)="onStorageLocation($any($event.target).value)"
         >
           <option value="">Non précisé</option>
-          @for (m of storageMethods; track m.value) {
-            <option [value]="m.value">{{ m.label }}</option>
+          @for (location of store.storageLocations(); track location.id) {
+            <option [value]="location.id">{{ location.name }}</option>
           }
         </select>
       </bae-field>

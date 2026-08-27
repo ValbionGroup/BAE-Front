@@ -2,7 +2,6 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
-import type { StorageMethod } from '#pages/authed/stocks/stocks.types';
 
 // All fields are camelCase: the apiResponseCaseInterceptor converts snake_case responses automatically.
 
@@ -20,7 +19,8 @@ export interface ApiStockItem {
   expiredBatchCount: number;
   soonBatchCount: number;
   /** `null` tant que personne ne l'a signalé — la colonne est nullable. */
-  storageMethod: StorageMethod | null;
+  storageLocationId: number | null;
+  storageLocation: string | null;
 }
 
 export interface ApiStockBatch {
@@ -83,7 +83,7 @@ export interface ApiCreatedGood {
   /** Tous les codes de la denrée : un aliment se vend sous plusieurs
    *  conditionnements, donc sous plusieurs EAN. Vide si aucun. */
   readonly barcodes: readonly string[];
-  readonly storageMethod: StorageMethod | null;
+  readonly storageLocationId: number | null;
 }
 
 /** Contrainte `goods_unit_check` : un enum en base, pas du texte libre. */
@@ -98,17 +98,18 @@ export const GOOD_UNIT_LABELS: Readonly<Record<GoodUnit, string>> = {
 };
 
 /**
- * Contrainte `goods_storage_method_check`, même patron que `unit` : un enum en
- * base, donc un `<select>` à la saisie et jamais du texte libre.
+ * Un lieu de stockage du référentiel — « Frigo », « Cave », et tout ce que le
+ * BAE y ajoute depuis la page Référentiels.
+ *
+ * ⚠️ Ce n'était **pas** une liste jusqu'au 2026-08-27 : `goods.storage_method`
+ * portait un enum figé de quatre valeurs, doublé ici par un dictionnaire de
+ * libellés. Les deux ont disparu — les options viennent maintenant du serveur,
+ * et coder la liste en dur la ferait diverger dès le premier ajout.
  */
-export const STORAGE_METHODS = ['fridge', 'freezer', 'dry', 'cellar'] as const;
-
-export const STORAGE_METHOD_LABELS: Readonly<Record<StorageMethod, string>> = {
-  fridge: 'Frigo',
-  freezer: 'Congélateur',
-  dry: 'Sec',
-  cellar: 'Cave',
-};
+export interface ApiStorageLocation {
+  readonly id: number;
+  readonly name: string;
+}
 
 /** `brand` est une chaîne, jamais `null` : la colonne est `NOT NULL`. */
 export interface CreateGoodPayload {
@@ -120,7 +121,7 @@ export interface CreateGoodPayload {
   readonly barcodes: readonly string[];
   /** Facultatif à la création : il se signale aussi bien plus tard, depuis le
    *  panneau de détail. */
-  readonly storageMethod: StorageMethod | null;
+  readonly storageLocationId: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -136,22 +137,33 @@ export class StocksService {
     return this.http.get<ApiCategory[]>(`${this.baseUrl}/categories`);
   }
 
+  /**
+   * Le référentiel des lieux, pour alimenter le sélecteur d'emplacement.
+   *
+   * ⚠️ Gardé par `storage-location:read`, que tout magasinier ne porte pas. Un
+   * 403 n'est donc pas un incident : il retire le sélecteur, pas la page — d'où
+   * l'appel enveloppé dans `settle()` côté magasin.
+   */
+  getStorageLocations(): Observable<ApiStorageLocation[]> {
+    return this.http.get<ApiStorageLocation[]>(`${this.baseUrl}/storage-locations`);
+  }
+
   createGood(payload: CreateGoodPayload): Observable<ApiCreatedGood> {
     return this.http.post<ApiCreatedGood>(`${this.baseUrl}/goods`, payload);
   }
 
   /**
-   * Signale où se conserve une denrée déjà au catalogue.
+   * Signale où se range une denrée déjà au catalogue.
    *
    * `PATCH` et un corps d'un seul champ : l'écran n'a pas la fiche complète
    * sous la main, et le contrôleur ne touche qu'aux clés présentes. `null`
    * efface l'emplacement — c'est le choix « Non précisé » du sélecteur.
    */
-  updateGoodStorageMethod(
+  updateGoodStorageLocation(
     id: number,
-    storageMethod: StorageMethod | null,
+    storageLocationId: number | null,
   ): Observable<ApiCreatedGood> {
-    return this.http.patch<ApiCreatedGood>(`${this.baseUrl}/goods/${id}`, { storageMethod });
+    return this.http.patch<ApiCreatedGood>(`${this.baseUrl}/goods/${id}`, { storageLocationId });
   }
 
   /** Liste vide si le code n'est rattaché à rien : réponse normale, pas une

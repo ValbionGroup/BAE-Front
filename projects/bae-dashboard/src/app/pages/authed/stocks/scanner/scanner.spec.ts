@@ -55,6 +55,7 @@ describe(StocksScanner.name, () => {
     // La page charge le store pour alimenter la modale de création.
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
   });
 
   afterEach(() => {
@@ -158,6 +159,7 @@ describe(StocksScanner.name, () => {
     // La validation recharge le tableau des stocks derrière.
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
     await validated;
 
     // La ligne enregistrée disparaît : revalider ne doit pas la créer deux fois.
@@ -181,6 +183,7 @@ describe(StocksScanner.name, () => {
     await tick();
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
     await validated;
 
     expect(shown).toHaveBeenCalledWith(
@@ -299,6 +302,7 @@ describe(StocksScanner.name, () => {
     await tick();
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
     await validated;
 
     expect(scanner.lines()).toHaveLength(0);
@@ -345,6 +349,7 @@ describe(StocksScanner.name, () => {
     await tick();
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
     await second;
 
     expect(scanner.lines()).toHaveLength(0);
@@ -392,6 +397,7 @@ describe(StocksScanner.name, () => {
     await tick();
     http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
     http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+    http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
     await validated;
 
     expect(scanner.lines()).toHaveLength(0);

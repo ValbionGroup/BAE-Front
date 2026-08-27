@@ -79,6 +79,57 @@
             }
           </bae-card>
         }
+        @case ('storageLocations') {
+          <bae-card [padding]="0" class="block">
+            <div
+              class="flex items-center border-b border-border-s px-4 py-3.5 text-[13px] font-semibold text-text"
+            >
+              <span class="flex-1">Lieux de stockage</span>
+              @if (canWriteStorageLocations()) {
+                <bae-btn
+                  kind="primary"
+                  size="sm"
+                  [icon]="icPlus"
+                  (clicked)="createStorageLocation()"
+                >
+                  Ajouter
+                </bae-btn>
+              }
+            </div>
+            @if (store.storageLocations().length === 0) {
+              <div class="px-4 py-6 text-xs text-muted">Aucun lieu de stockage.</div>
+            } @else {
+              @for (location of store.storageLocations(); track location.id) {
+                <div
+                  class="flex items-center gap-3 border-b border-border-s px-4 py-2.5 last:border-0"
+                >
+                  <span class="flex-1 text-[12.5px] text-text">{{ location.name }}</span>
+                  <!-- Le compteur explique d'avance ce qu'une suppression déclasserait. -->
+                  <bae-badge kind="neutral">{{ location.goodsCount }} denrée(s)</bae-badge>
+                  @if (canWriteStorageLocations()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icPencil"
+                      (clicked)="editStorageLocation(location)"
+                      >Modifier</bae-btn
+                    >
+                  }
+                  @if (canDeleteStorageLocations()) {
+                    <bae-btn
+                      kind="ghost"
+                      size="sm"
+                      [icon]="icTrash"
+                      data-action="delete"
+                      (clicked)="confirmDeleteStorageLocation(location)"
+                      >Supprimer</bae-btn
+                    >
+                  }
+                </div>
+              }
+            }
+          </bae-card>
+        }
         @case ('productCategories') {
           <bae-card [padding]="0" class="block">
             <div

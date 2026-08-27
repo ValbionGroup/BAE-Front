@@ -18,13 +18,14 @@ import type {
   ApiCategory,
   ApiJob,
   ApiProductCategory,
+  ApiStorageLocation,
   ApiSupplier,
 } from '#core/services/referentiels/referentiels-service';
 import { selectPermissions } from '#core/store/auth/auth.selector';
 import type { Permission } from '#core/models/permission.model';
 import { JOB_PERIOD_LABELS, type JobPeriod } from '#core/models/job-period.model';
 
-type Tab = 'categories' | 'suppliers' | 'jobs' | 'productCategories';
+type Tab = 'categories' | 'storageLocations' | 'suppliers' | 'jobs' | 'productCategories';
 
 /**
  * Chaque onglet est conditionné à sa propre lecture.
@@ -33,6 +34,11 @@ type Tab = 'categories' | 'suppliers' | 'jobs' | 'productCategories';
  * trop proches pour qu'on sache lequel ouvrir. Le `hint` dit à quoi chacun sert,
  * et il est affiché : les denrées se classent pour le **stockage**, les recettes
  * pour le **menu et la caisse**.
+ *
+ * ⚠️ « Catégories » et « Lieux de stockage » se ressemblent aussi, et pour une
+ * raison différente : l'une dit **ce qu'est** une denrée, l'autre **où elle se
+ * range**. Une bière est « Boissons » et vit en « Cave » — deux listes, deux
+ * mots qui peuvent coïncider sans être le même objet.
  */
 const TABS: readonly {
   readonly key: Tab;
@@ -46,6 +52,12 @@ const TABS: readonly {
     hint: 'des denrées, pour le stockage',
     read: 'category:read',
   },
+  {
+    key: 'storageLocations',
+    label: 'Lieux de stockage',
+    hint: 'où les denrées se conservent',
+    read: 'storage-location:read',
+  },
   { key: 'suppliers', label: 'Enseignes', hint: 'où l’on achète', read: 'supplier:read' },
   { key: 'jobs', label: 'Postes', hint: 'tenus pendant une soirée', read: 'job:read' },
   {
@@ -57,22 +69,23 @@ const TABS: readonly {
 ];
 
 /**
- * Les trois listes de référence que le reste de l'application consomme sans
- * pouvoir les modifier : catégories de denrées, enseignes, postes.
+ * Les listes de référence que le reste de l'application consomme sans pouvoir
+ * les modifier : catégories de denrées, lieux de stockage, enseignes, postes,
+ * catégories de recettes.
  *
  * ⚠️ **La page s'ouvre dès qu'on porte UNE des trois lectures**
  * (`ROUTE_PERMISSIONS` accepte une liste, cf. `route-permissions.ts`). L'onglet
  * actif se choisit donc parmi ceux qu'on a le droit de voir, jamais en dur :
  * un membre qui ne porte que `job:read` atterrirait sinon sur un onglet vide.
  *
- * Les trois listes se chargent ensemble, y compris celles qu'on n'affichera
+ * Elles se chargent **toutes ensemble**, y compris celles qu'on n'affichera
  * pas. C'est voulu : le serveur garde chaque route, un 403 sur une liste
  * masquée est sans conséquence, et conditionner le chargement compliquerait le
  * store pour rien.
  */
 @Component({
   selector: 'bfd-referentiels',
-  imports: [Badge, Btn, Card, LucideDynamicIcon],
+  imports: [Badge, Btn, Card],
   templateUrl: './referentiels.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full' },
@@ -98,6 +111,10 @@ export class Referentiels implements OnInit {
   protected readonly canDeleteSuppliers = computed(() => this.has('supplier:delete'));
   protected readonly canWriteProductCategories = computed(() => this.has('product:write'));
   protected readonly canDeleteProductCategories = computed(() => this.has('product:delete'));
+  protected readonly canWriteStorageLocations = computed(() => this.has('storage-location:write'));
+  protected readonly canDeleteStorageLocations = computed(() =>
+    this.has('storage-location:delete'),
+  );
   protected readonly canWriteJobs = computed(() => this.has('job:write'));
   protected readonly canDeleteJobs = computed(() => this.has('job:delete'));
 
@@ -175,6 +192,38 @@ export class Referentiels implements OnInit {
   protected editCategory(category: ApiCategory): void {
     this.openNamed('Modifier la catégorie', '', category.name, (name) =>
       this.store.updateCategory(category.id, name),
+    );
+  }
+
+  protected createStorageLocation(): void {
+    this.openNamed('Nouveau lieu de stockage', 'ex. Réserve', '', (name) =>
+      this.store.createStorageLocation(name),
+    );
+  }
+
+  protected editStorageLocation(location: ApiStorageLocation): void {
+    this.openNamed('Modifier le lieu de stockage', '', location.name, (name) =>
+      this.store.updateStorageLocation(location.id, name),
+    );
+  }
+
+  protected confirmDeleteStorageLocation(location: ApiStorageLocation): void {
+    this.modal.open({
+      type: 'delete',
+      title: 'Supprimer le lieu de stockage',
+      message: `« ${location.name} » sera retiré de la liste.`,
+      details:
+        location.goodsCount > 0
+          ? `${location.goodsCount} denrée(s) n’auront plus d’emplacement. Elles ne sont pas supprimées.`
+          : 'Aucune denrée n’y est rangée.',
+      onConfirm: () => void this.deleteStorageLocation(location.id, location.name),
+    });
+  }
+
+  protected async deleteStorageLocation(id: number, name: string): Promise<void> {
+    this.report(
+      await this.store.deleteStorageLocation(id),
+      `« ${name} » n’est plus dans la liste.`,
     );
   }
 

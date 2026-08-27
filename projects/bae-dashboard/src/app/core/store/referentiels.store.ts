@@ -7,6 +7,7 @@ import {
   type ApiCategory,
   type ApiJob,
   type ApiProductCategory,
+  type ApiStorageLocation,
   type ApiSupplier,
   type JobInput,
 } from '#core/services/referentiels/referentiels-service';
@@ -27,6 +28,7 @@ interface ReferentielsState {
   readonly suppliers: readonly ApiSupplier[];
   readonly jobs: readonly ApiJob[];
   readonly productCategories: readonly ApiProductCategory[];
+  readonly storageLocations: readonly ApiStorageLocation[];
 }
 
 const initialState: ReferentielsState = {
@@ -36,6 +38,7 @@ const initialState: ReferentielsState = {
   suppliers: [],
   jobs: [],
   productCategories: [],
+  storageLocations: [],
 };
 
 export const ReferentielsStore = signalStore(
@@ -98,6 +101,13 @@ export const ReferentielsStore = signalStore(
         write(() => lastValueFrom(svc.updateProductCategory(id, name))),
       deleteProductCategory: (id: number) =>
         write(() => lastValueFrom(svc.deleteProductCategory(id))),
+
+      createStorageLocation: (name: string) =>
+        write(() => lastValueFrom(svc.createStorageLocation(name))),
+      updateStorageLocation: (id: number, name: string) =>
+        write(() => lastValueFrom(svc.updateStorageLocation(id, name))),
+      deleteStorageLocation: (id: number) =>
+        write(() => lastValueFrom(svc.deleteStorageLocation(id))),
 
       createJob: (input: JobInput) => write(() => lastValueFrom(svc.createJob(input))),
       updateJob: (id: number, input: JobInput) =>

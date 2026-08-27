@@ -200,7 +200,7 @@
               <span
                 class="hidden overflow-hidden text-ellipsis whitespace-nowrap text-[11.5px] text-muted md:block"
               >
-                {{ storageLabel(p.storageMethod) }}
+                {{ storageLabel(p) }}
               </span>
               <span class="hidden md:block"></span>
             </div>
@@ -287,19 +287,19 @@
              et non dans le tableau : le panneau est le seul endroit où la
              denrée est identifiée sans ambiguïté. -->
         <bae-field label="Stockage">
-          @if (canWriteGood()) {
+          @if (canPickStorage()) {
             <select
               class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
-              [value]="p.storageMethod ?? ''"
-              (change)="onStorageMethod(p, $any($event.target).value)"
+              [value]="p.storageLocationId ?? ''"
+              (change)="onStorageLocation(p, $any($event.target).value)"
             >
               <option value="">Non précisé</option>
-              @for (m of storageMethods; track m.value) {
-                <option [value]="m.value">{{ m.label }}</option>
+              @for (location of storageLocations(); track location.id) {
+                <option [value]="location.id">{{ location.name }}</option>
               }
             </select>
           } @else {
-            <span class="text-[12.5px] text-text-2">{{ storageLabel(p.storageMethod) }}</span>
+            <span class="text-[12.5px] text-text-2">{{ storageLabel(p) }}</span>
           }
         </bae-field>
 
