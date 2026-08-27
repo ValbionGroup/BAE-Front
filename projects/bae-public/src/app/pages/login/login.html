@@ -1,49 +1,55 @@
 <div class="flex items-center justify-center px-6 py-12 md:py-20">
-  <bae-card [padding]="36" class="w-full max-w-100">
-    <div class="text-center">
-      <div
-        class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-soft text-blue"
-      >
-        <svg [lucideIcon]="icShield" [size]="22" aria-hidden="true"></svg>
+  <bae-card [padding]="0" class="w-full max-w-100">
+    <div class="p-6 sm:p-9">
+      <div class="text-center">
+        <div
+          class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-soft text-blue"
+        >
+          <svg [lucideIcon]="icShield" [size]="22" aria-hidden="true"></svg>
+        </div>
+
+        <h1 class="mt-4.5 mb-2 text-2xl font-semibold -tracking-[0.4px]">Connexion adhérent</h1>
+        <p class="m-0 mb-6.5 text-[13.5px] leading-[1.55] text-muted">
+          L’accès aux précommandes, au FastPass et à votre historique se fait uniquement via votre
+          compte EirbConnect.
+        </p>
       </div>
 
-      <h1 class="mt-4.5 mb-2 text-2xl font-semibold -tracking-[0.4px]">Connexion adhérent</h1>
-      <p class="m-0 mb-6.5 text-[13.5px] leading-[1.55] text-muted">
-        L’accès aux précommandes, au FastPass et à votre historique se fait uniquement via votre
-        compte EirbConnect.
+      @if (ssoError(); as error) {
+        <div
+          class="mb-5 flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-left text-sm text-danger"
+          role="alert"
+          aria-live="assertive"
+        >
+          <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <span>{{ error }}</span>
+        </div>
+      }
+
+      <!-- `wrap` : le libellé nomme l'IdP exprès (la FAQ s'aligne dessus), il est
+         donc long et le bouton est `full`. Sans lui, le texte déborde de la
+         carte vers la droite sous 390 px. -->
+      <bae-btn
+        kind="primary"
+        [full]="true"
+        [wrap]="true"
+        size="lg"
+        [icon]="icShield"
+        (clicked)="loginWithEirbConnect()"
+      >
+        Se connecter avec EirbConnect
+      </bae-btn>
+
+      <p class="mt-5 mb-0 text-center text-[11.5px] leading-[1.5] text-muted">
+        Réservé aux étudiant·es et alternant·es de l’ENSEIRB-MATMECA. Les comptes du bureau se
+        connectent sur la console d’administration.<br />
+        Un souci de connexion ?
+        <a
+          routerLink="/contact"
+          class="rounded-sm text-text-2 underline focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+          >Contactez-nous</a
+        >.
       </p>
     </div>
-
-    @if (ssoError(); as error) {
-      <div
-        class="mb-5 flex items-start gap-2.5 rounded-md border border-danger bg-danger-soft px-3.5 py-3 text-left text-sm text-danger"
-        role="alert"
-        aria-live="assertive"
-      >
-        <svg [lucideIcon]="icAlert" [size]="16" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
-        <span>{{ error }}</span>
-      </div>
-    }
-
-    <bae-btn
-      kind="primary"
-      [full]="true"
-      size="lg"
-      [icon]="icShield"
-      (clicked)="loginWithEirbConnect()"
-    >
-      Se connecter avec EirbConnect
-    </bae-btn>
-
-    <p class="mt-5 mb-0 text-center text-[11.5px] leading-[1.5] text-muted">
-      Réservé aux étudiant·es et alternant·es de l’ENSEIRB-MATMECA. Les comptes du bureau se
-      connectent sur la console d’administration.<br />
-      Un souci de connexion ?
-      <a
-        routerLink="/contact"
-        class="rounded-sm text-text-2 underline focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
-        >Contactez-nous</a
-      >.
-    </p>
   </bae-card>
 </div>
