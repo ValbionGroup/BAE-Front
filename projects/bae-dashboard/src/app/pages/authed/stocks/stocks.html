@@ -83,7 +83,7 @@
     <bae-card [padding]="0" [fill]="true" class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <!-- Header -->
       <div
-        class="hidden grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] gap-3 border-b md:grid border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
+        class="hidden grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.6fr_24px] gap-3 border-b md:grid border-border-s px-3.5 py-2.5 text-[10.5px] font-medium uppercase tracking-wider text-muted"
       >
         <div (click)="$event.stopPropagation()">
           <bae-checkbox [checked]="allSelected()" (change)="toggleAll()" />
@@ -117,6 +117,7 @@
         >
           DLC
         </button>
+        <span class="hidden md:block">Stockage</span>
         <span></span>
       </div>
 
@@ -145,7 +146,7 @@
               role="button"
               [attr.aria-current]="selected ? 'true' : null"
               [class]="
-                'relative grid cursor-pointer grid-cols-[24px_1fr_auto] items-center gap-x-2.5 gap-y-1 px-3.5 py-3 text-[12.5px] text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue md:grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_24px] md:gap-3 md:py-2.5 ' +
+                'relative grid cursor-pointer grid-cols-[24px_1fr_auto] items-center gap-x-2.5 gap-y-1 px-3.5 py-3 text-[12.5px] text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue md:grid-cols-[24px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.6fr_24px] md:gap-3 md:py-2.5 ' +
                 (last ? '' : 'border-b border-border-s ') +
                 (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50')
               "
@@ -193,6 +194,14 @@
                   <span class="text-muted">—</span>
                 }
               </div>
+              <!-- Lecture seule ici : la modifier passe par le panneau de
+                   détail, où la denrée est identifiée sans ambiguïté. Un
+                   `<select>` par ligne se déclencherait au défilement. -->
+              <span
+                class="hidden overflow-hidden text-ellipsis whitespace-nowrap text-[11.5px] text-muted md:block"
+              >
+                {{ storageLabel(p.storageMethod) }}
+              </span>
               <span class="hidden md:block"></span>
             </div>
           } @empty {
@@ -274,6 +283,26 @@
           </div>
         </div>
 
+        <!-- Le geste « Signaler la méthode de stockage » (CDC P1). Il vit ici
+             et non dans le tableau : le panneau est le seul endroit où la
+             denrée est identifiée sans ambiguïté. -->
+        <bae-field label="Stockage">
+          @if (canWriteGood()) {
+            <select
+              class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+              [value]="p.storageMethod ?? ''"
+              (change)="onStorageMethod(p, $any($event.target).value)"
+            >
+              <option value="">Non précisé</option>
+              @for (m of storageMethods; track m.value) {
+                <option [value]="m.value">{{ m.label }}</option>
+              }
+            </select>
+          } @else {
+            <span class="text-[12.5px] text-text-2">{{ storageLabel(p.storageMethod) }}</span>
+          }
+        </bae-field>
+
         <!-- Quick stats -->
         <div class="grid grid-cols-2 gap-1.5">
           <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
@@ -292,7 +321,7 @@
         <div class="mb-4">
           <div class="mb-2 flex items-center justify-between">
             <span class="text-[12px] font-semibold text-text">{{ priceUnitLabel() }}</span>
-            @if (canPrice()) {
+            @if (canWriteGood()) {
               <bae-btn kind="secondary" size="sm" (clicked)="openPriceEditor(null)">
                 Ajouter un tarif
               </bae-btn>
@@ -322,7 +351,7 @@
                     @if (good.bestSupplier && good.bestSupplier.id === price.id) {
                       <bae-badge kind="ok">Référence</bae-badge>
                     }
-                    @if (canPrice()) {
+                    @if (canWriteGood()) {
                       <bae-btn kind="ghost" size="sm" (clicked)="openPriceEditor(price.id)"
                         >Modifier</bae-btn
                       >

@@ -1,6 +1,6 @@
 # BAE — état des tâches restantes
 
-> **Dernière mise à jour : 2026-08-26.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
+> **Dernière mise à jour : 2026-08-27.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
 > code** au 2026-08-23, la tâche 27 livrée le 2026-08-24, le cycle de vie de la soirée le
 > 2026-08-26.
 >
@@ -17,6 +17,65 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 ---
 
 ## ✅ Livré
+
+### 2026-08-27 — où se range une denrée (tâche 44)
+
+`goods.storage_method` : **frigo / congélateur / sec / cave**, migration
+`1789100000002`. C'est « Signaler la méthode de stockage », P1 du CDC (`H2 §18.2`).
+
+#### La colonne est nullable, et ce n'est pas une facilité
+
+Le §18.2 prévenait : « à décider **avant** l'écran d'ajout de produit, pas après ». La fenêtre était
+déjà fermée — `good-create-modal` existe et la table est peuplée. Un `NOT NULL DEFAULT 'dry'` aurait
+donc **affirmé que les surgelés se conservent à sec** sur toute la base existante. Une donnée fausse
+coûte plus qu'une donnée absente, surtout sur une liste de courses : `null` se lit « pas encore
+signalé », ce qui est vrai.
+
+#### Le verbe du CDC désignait le bon endroit
+
+« **Signaler** » est un geste sur une denrée qui existe déjà, pas un champ de création. D'où le
+`<select>` dans le **panneau de détail** des Stocks — et c'est lui qui rattrape le catalogue au fil
+de l'eau. Le champ de la modale de création n'est qu'un raccourci, facultatif.
+
+⚠️ **Rien n'y aurait mené sans un correctif préalable :** le front n'avait **aucun** chemin
+d'édition d'une denrée (`stocks.store.ts` n'exposait que `createGood`), et `PUT /goods/:id` était
+inutilisable en partiel —
+
+```ts
+good.name = payload.name; // ← écrasé par `undefined` si la clé est absente
+good.unit = payload.unit;
+good.categoryId = payload.categoryId;
+if ('brand' in payload) good.brand = payload.brand ?? ''; // ← le bon motif, seul
+```
+
+Signaler l'emplacement d'une denrée aurait **effacé son nom, son unité et sa catégorie**. Le motif
+`'x' in payload` est désormais généralisé aux cinq champs, avec un test de régression dédié.
+
+#### La maquette a corrigé deux choix, et en a inspiré un troisième — écarté
+
+La colonne s'appelle **« Stockage »** et non « Emplacement » (mot venu du handoff, pas du design),
+et elle vient **en dernier**, après « DLC la + proche » — grille
+`24px 1.6fr 0.8fr 0.7fr 0.9fr 1fr 0.6fr 24px`, reprise telle quelle de `screen-stocks.jsx`.
+
+⚠️ En revanche ses valeurs sont `Frigo A`, `Frigo B`, `Réserve`, `Congél.` : des **lieux nommés**,
+avec plusieurs frigos. Le CDC demande quatre **modes de conservation**. Le modèle de données n'a pas
+été plié à l'image — c'est le piège que le dépôt documente déjà : « la maquette est en avance sur le
+schéma ». Un jour où l'on voudra « Frigo A » plutôt que « Frigo », ce sera une table de lieux, une
+décision produit, pas un élargissement d'enum.
+
+#### Ce qui a été écarté
+
+`capacity`-style : pas de filtre ni d'onglet par emplacement, pas de regroupement dans l'inventaire
+imprimé, pas de modale d'édition complète de la denrée. Le `<select>` du panneau suffit au geste
+demandé.
+
+Back : **752 tests, 0 échec**, `tsc --noEmit` vert. Front : **854** (dashboard), 109 (`bae-ui`),
+115 (`bae-public`), 0 échec, `ng build` vert.
+
+⚠️ Note de méthode : `database/schema.ts` a été régénéré, et le diff **vérifié ligne à ligne** —
+`diff <(sort avant | uniq -c) <(sort après | uniq -c)` annule le décalage qu'une insertion provoque.
+Trois changements, tous sur `goods`, aucune colonne d'une autre branche importée. C'est la tâche 64
+faite à la main, et c'est reproductible.
 
 ### 2026-08-26 — la dernière route membre sans garde (tâche 34)
 
@@ -589,12 +648,12 @@ troisième consommateur qu'on lui prêtait n'a jamais eu lieu d'être. L'arbitra
 
 ### Ouverts
 
-| #      | Tâche                                                                                                | Note                                                                                 |
-| ------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **26** | Écarts au design system                                                                              | Demande l'accès au MCP `claude_design`.                                              |
-| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir. |
-| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                |
-| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.               |
+| #      | Tâche                                                                                                | Note                                                                                                                                                                                                                                                                                                                                  |
+| ------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **26** | Écarts au design system                                                                              | ⚠️ **Le blocage n'en est pas un** (2026-08-27). `DesignSync.list_projects` rend une liste **vide** parce qu'il ne liste que les projets de type _design-system_ ; « BAE - ERP » est un projet ordinaire et se lit très bien par son id, `019e1c0a-86ed-72eb-949d-25f2fc0a2e7d`. Passer par `get_project` / `list_files` / `get_file`. |
+| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir.                                                                                                                                                                                                                                                  |
+| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                                                                                                                                                                                                                                                                 |
+| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.                                                                                                                                                                                                                                                                |
 
 ### Ordre proposé
 
@@ -608,7 +667,7 @@ suspendu à un accès (26), soit différé (25).
 **33**) » comme la suite naturelle. **Les deux étaient déjà faites**, ainsi que 31, 45, 50 et 59 —
 c'est exactement le défaut que ce document se reproche en tête. L'ordre à jour est ci-dessous.
 
-### La suite, au 2026-08-26
+### La suite, au 2026-08-27
 
 Rejoué dans le code, pas déduit. Les trois premières sont des correctifs de sécurité ou
 d'intégrité, tous vérifiés sur la base et l'API de dev.
@@ -621,6 +680,15 @@ d'intégrité, tous vérifiés sur la base et l'API de dev.
 | 4     | **63**          | Le coût du manque de base de test est mesuré : 14 échecs de bruit, et un vrai bug caché dedans pendant des semaines.       |
 | 5     | **58**          | Sans `db:seed` au déploiement, `/v1/vouchers` répond 403 à tout le monde en production — administrateurs compris.          |
 | 6     | **35**          | Purge des vieux logs, **avant la première mise en production** (sans objet sur la base de dev).                            |
+
+⚠️ **La 44 a été livrée le 2026-08-27 hors de cet ordre**, sur arbitrage : le haut du tableau est
+de l'infra, et la demande était du fonctionnel. L'ordre ci-dessus reste valable pour ce qu'il classe,
+mais il ne classe **que** de l'infra — c'est un défaut de ce tableau, pas une priorité du produit.
+
+⚠️ **Ne pas relire le « 14 échecs » du rang 4 comme un état courant.** La suite back est à
+**752 / 0** depuis le 2026-08-27, parce que `migration:run` a réaligné le schéma de la base de dev.
+Le bruit reviendra au **prochain changement de branche** : c'est exactement ce que la 63 corrige, et
+la mesure vaut toujours — elle ne se lit simplement pas dans le compte du jour.
 
 Ensuite, sans blocage et par valeur décroissante : **60 / 61 / 62** (seeders non idempotents, et
 `product_furniture_seeder` qui fausse la liste de courses avec 5 nappes par hot-dog), **42**
@@ -646,35 +714,35 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 
 ## Bloc B — Faisable directement, back
 
-| #      | Tâche                                                                                                                                                                      | Faisable ?                                                                                                                                                                                                                                                            |
-| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ~~31~~ | ~~Protéger `RolesController.destroy` / `DELETE /roles/:id`~~                                                                                                               | ✅ **Faite** (constatée le 2026-08-26) : `acquireRbacLock` + `assertNoLockout`, route gardée par `role:delete`.                                                                                                                                                       |
-| ~~32~~ | ~~Garder `/vouchers` par permission~~                                                                                                                                      | ✅ **Faite** (2026-08-26) : `voucher:read` / `voucher:write` / `voucher:delete` sur les cinq routes.                                                                                                                                                                  |
-| ~~33~~ | ~~Garder `DELETE /events/:id` et `DELETE /jobs/:id`~~                                                                                                                      | ✅ **Faite** (2026-08-26) : `event:delete` et `job:delete` sur les deux routes.                                                                                                                                                                                       |
-| ~~34~~ | ~~Généraliser les gardes de permission au reste de l'API~~                                                                                                                 | ✅ **Fait le 2026-08-26.** `job:read` sur `GET /v1/assignments`, la dernière route membre sans garde.                                                                                                                                                                 |
-| 35     | Purger les `logs` d'avant le 2026-08-06 (jetons d'accès en clair dans `meta.response`, lisibles avec `log:read`)                                                           | **Sans objet sur la base de dev** (2026-08-26 : plus ancienne entrée au 2026-08-10, aucun `oat_` dans `meta`). Reste à faire **avant la première mise en production**, sur une base réelle. `H1 §8`                                                                   |
-| ~~36~~ | ~~Rédiger l'URL journalisée : le code d'autorisation SSO en clair dans `logs.url` et `logs.message`~~                                                                      | ✅ **Fait le 2026-08-26.** `redactUrl` dans `log_redaction_service`, appelé par `request_logger_middleware` ; le message dérive de l'URL rédigée. 5 tests.                                                                                                            |
-| 37     | Rappel de péremption des stocks (`verb: 'stock.expiring'`)                                                                                                                 | Oui — « presque gratuit » depuis le lot mailer. Le mail ne partira pas sans SMTP (tâche 100), le code est écrivable. `H1 §0 quindecies` (P1)                                                                                                                          |
-| 38     | Ajouter des `recordEvent()` sur les gestes qui le méritent (3 émetteurs aujourd'hui)                                                                                       | Oui. `H1 §0 octodecies`                                                                                                                                                                                                                                               |
-| 39     | Endpoint permettant au **bureau** de fixer la présence d'un autre membre — doit contourner son propre verrou, donc gardé par permission                                    | Oui. `H1 §7.3`                                                                                                                                                                                                                                                        |
-| 40     | Table d'**événements de scan** (qui, quoi, quand, quelle soirée), distincte de `received_quantity`                                                                         | Oui. Base de l'historique client et de la fidélité. `H1 §11`                                                                                                                                                                                                          |
-| ~~41~~ | ~~Faire consommer `product_category_service` par `ProductsController`~~                                                                                                    | ✅ **Faite** (2026-08-26) : les deux définitions ont disparu avec la dérivation elle-même — la catégorie d'une recette est désormais une colonne.                                                                                                                     |
-| 42     | Centraliser côté back le calcul d'expiration d'une cotisation (`subscribed_at + duration`), aujourd'hui recalculé dans chaque écran                                        | Oui. Deux consommateurs. `H1 §4.1`                                                                                                                                                                                                                                    |
-| 43     | Élaguer le seeder de permissions (`fetchOrCreateMany` n'insère jamais) **et** nettoyer les 8 permissions rescapées d'un ancien nommage (l'enregistrement échoue en 422)    | Oui, le SQL de nettoyage est fourni dans le handoff. `H1 §0 octodecies`                                                                                                                                                                                               |
-| 44     | Colonne de **méthode de stockage** sur `goods` (frigo / congélateur / sec / cave) + le champ dans l'écran                                                                  | Oui, une migration d'une colonne. C'est aussi la colonne « Emplacement » de la maquette stocks. `H2 §18.2` (P1)                                                                                                                                                       |
-| ~~45~~ | ~~Instantané de prix sur `pre_order_items`~~                                                                                                                               | ✅ **Faite** : migration `1788000000000_add_price_snapshot_to_pre_order_items_table` (constatée le 2026-08-26).                                                                                                                                                       |
-| ~~46~~ | ~~Contrainte d'unicité `(user_id, event_id)` sur `pre_orders`~~                                                                                                            | ✅ **Fait le 2026-08-26.** Index **partiel** (`WHERE status <> 'cancelled'`), migration `1788100000000`.                                                                                                                                                              |
-| ~~47~~ | ~~Appliquer le plafond de précommandes~~                                                                                                                                   | ✅ **Tranché le 2026-08-26, et pas comme la tâche le supposait** : `capacity` reste une **estimation**, elle ne refuse rien. La barrière dure est l'unicité, posée avant paiement. Voir « Livré ».                                                                    |
-| 48     | Sidebar par rôle généralisée : table de correspondance entrée de menu → permission                                                                                         | Oui, **mais jamais seule** — à faire avec la tâche 34. `H2 §22.2` (P1)                                                                                                                                                                                                |
-| 49     | Brancher `validateAssignments()` (le panneau de coordination n'appelle aucun endpoint)                                                                                     | Oui, back + front. `H1 §8`                                                                                                                                                                                                                                            |
-| ~~50~~ | ~~Authentifier la connexion temps réel côté serveur~~                                                                                                                      | ✅ **Faite** (2026-08-26) : `transmit.authorize` sur `events/:id/orders` vérifie `order:read` via `permissionsOfMember`. L'exception `__transmit/events` est documentée — `EventSource` ne peut pas porter de Bearer, ce sont `subscribe`/`unsubscribe` qui filtrent. |
-| 51     | Factoriser `ip_address`/`user_agent` hors de `AccessTokenController.store` et le réutiliser dans le callback SSO (sinon les sessions SSO sont vides dans la page Sécurité) | Oui. `H1 §2.3/§9.5`                                                                                                                                                                                                                                                   |
-| 52     | Retirer `@adonisjs/ally` ou documenter pourquoi il reste (`config/ally.ts` vide ; c'est `openid-client` qui porte le flux, ally n'a pas PKCE)                              | Oui. `H1 §9`                                                                                                                                                                                                                                                          |
-| 53     | Bouton **Remise** en caisse (listant les règles) + remise libre permissionnée écrivant dans `order_discounts` avec `applied_by_user_id`                                    | Oui — la lecture est branchée et testée, « il ne manquera que l'écriture ». Le motif obligatoire ou non dépend de la tâche 85. `H2 §37.8/§37.13`                                                                                                                      |
-| 54     | Domaine **Messages** (messagerie entre personnes : auteur, destinataires, fil, non-lus) — table **distincte** des notifications                                            | Oui, gros chantier. Ne pas fondre en une table avec une colonne `kind`. `H2 §21` (P2)                                                                                                                                                                                 |
-| 55     | Table `invitations` (email, rôle proposé, jeton, expiration, statut) + routes de création/révocation + envoi d'e-mail                                                      | Oui ; l'e-mail restera muet sans SMTP (tâche 100). Bloquant pour l'onglet Invitations. `H1 §3.2`                                                                                                                                                                      |
-| 56     | Réparer `MembersController.store` (`new Member()` part en base sans id alors que `selfAssignPrimaryKey = true`)                                                            | Oui pour le bug lui-même ; « créer un membre = créer un compte » dépend de la tâche 63 (2FA/mot de passe vs SSO seul). `H1 §2.1`                                                                                                                                      |
-| 57     | Bruit de virgule flottante dans les nombres de l'API (`183.03000000000065`) et N+1 (~2N aller-retours) dans `shopping_list_service`                                        | Oui, tous deux mesurés acceptables aux tailles actuelles. Priorité basse. `H1 §0 septies`                                                                                                                                                                             |
+| #      | Tâche                                                                                                                                                                   | Faisable ?                                                                                                                                                                                                                                                            |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~31~~ | ~~Protéger `RolesController.destroy` / `DELETE /roles/:id`~~                                                                                                            | ✅ **Faite** (constatée le 2026-08-26) : `acquireRbacLock` + `assertNoLockout`, route gardée par `role:delete`.                                                                                                                                                       |
+| ~~32~~ | ~~Garder `/vouchers` par permission~~                                                                                                                                   | ✅ **Faite** (2026-08-26) : `voucher:read` / `voucher:write` / `voucher:delete` sur les cinq routes.                                                                                                                                                                  |
+| ~~33~~ | ~~Garder `DELETE /events/:id` et `DELETE /jobs/:id`~~                                                                                                                   | ✅ **Faite** (2026-08-26) : `event:delete` et `job:delete` sur les deux routes.                                                                                                                                                                                       |
+| ~~34~~ | ~~Généraliser les gardes de permission au reste de l'API~~                                                                                                              | ✅ **Fait le 2026-08-26.** `job:read` sur `GET /v1/assignments`, la dernière route membre sans garde.                                                                                                                                                                 |
+| 35     | Purger les `logs` d'avant le 2026-08-06 (jetons d'accès en clair dans `meta.response`, lisibles avec `log:read`)                                                        | **Sans objet sur la base de dev** (2026-08-26 : plus ancienne entrée au 2026-08-10, aucun `oat_` dans `meta`). Reste à faire **avant la première mise en production**, sur une base réelle. `H1 §8`                                                                   |
+| ~~36~~ | ~~Rédiger l'URL journalisée : le code d'autorisation SSO en clair dans `logs.url` et `logs.message`~~                                                                   | ✅ **Fait le 2026-08-26.** `redactUrl` dans `log_redaction_service`, appelé par `request_logger_middleware` ; le message dérive de l'URL rédigée. 5 tests.                                                                                                            |
+| 37     | Rappel de péremption des stocks (`verb: 'stock.expiring'`)                                                                                                              | Oui — « presque gratuit » depuis le lot mailer. Le mail ne partira pas sans SMTP (tâche 100), le code est écrivable. `H1 §0 quindecies` (P1)                                                                                                                          |
+| 38     | Ajouter des `recordEvent()` sur les gestes qui le méritent (3 émetteurs aujourd'hui)                                                                                    | Oui. `H1 §0 octodecies`                                                                                                                                                                                                                                               |
+| 39     | Endpoint permettant au **bureau** de fixer la présence d'un autre membre — doit contourner son propre verrou, donc gardé par permission                                 | Oui. `H1 §7.3`                                                                                                                                                                                                                                                        |
+| 40     | Table d'**événements de scan** (qui, quoi, quand, quelle soirée), distincte de `received_quantity`                                                                      | Oui. Base de l'historique client et de la fidélité. `H1 §11`                                                                                                                                                                                                          |
+| ~~41~~ | ~~Faire consommer `product_category_service` par `ProductsController`~~                                                                                                 | ✅ **Faite** (2026-08-26) : les deux définitions ont disparu avec la dérivation elle-même — la catégorie d'une recette est désormais une colonne.                                                                                                                     |
+| 42     | Centraliser côté back le calcul d'expiration d'une cotisation (`subscribed_at + duration`), aujourd'hui recalculé dans chaque écran                                     | Oui. Deux consommateurs. `H1 §4.1`                                                                                                                                                                                                                                    |
+| 43     | Élaguer le seeder de permissions (`fetchOrCreateMany` n'insère jamais) **et** nettoyer les 8 permissions rescapées d'un ancien nommage (l'enregistrement échoue en 422) | Oui, le SQL de nettoyage est fourni dans le handoff. `H1 §0 octodecies`                                                                                                                                                                                               |
+| ~~44~~ | ~~Colonne de **méthode de stockage** sur `goods`~~                                                                                                                      | ✅ **Faite le 2026-08-27.** Colonne **nullable**, sans backfill, plus le `<select>` du panneau de détail et la colonne « Emplacement ». Voir « Livré ».                                                                                                               |
+| ~~45~~ | ~~Instantané de prix sur `pre_order_items`~~                                                                                                                            | ✅ **Faite** : migration `1788000000000_add_price_snapshot_to_pre_order_items_table` (constatée le 2026-08-26).                                                                                                                                                       |
+| ~~46~~ | ~~Contrainte d'unicité `(user_id, event_id)` sur `pre_orders`~~                                                                                                         | ✅ **Fait le 2026-08-26.** Index **partiel** (`WHERE status <> 'cancelled'`), migration `1788100000000`.                                                                                                                                                              |
+| ~~47~~ | ~~Appliquer le plafond de précommandes~~                                                                                                                                | ✅ **Tranché le 2026-08-26, et pas comme la tâche le supposait** : `capacity` reste une **estimation**, elle ne refuse rien. La barrière dure est l'unicité, posée avant paiement. Voir « Livré ».                                                                    |
+| ~~48~~ | ~~Sidebar par rôle généralisée~~                                                                                                                                        | ✅ **Déjà faite**, constatée le 2026-08-27 : `sidebar.ts:136-142` filtre par `permissionFor(item.route)`, spec à l'appui.                                                                                                                                             |
+| 49     | Brancher `validateAssignments()` (le panneau de coordination n'appelle aucun endpoint)                                                                                  | Oui, back + front. `H1 §8`                                                                                                                                                                                                                                            |
+| ~~50~~ | ~~Authentifier la connexion temps réel côté serveur~~                                                                                                                   | ✅ **Faite** (2026-08-26) : `transmit.authorize` sur `events/:id/orders` vérifie `order:read` via `permissionsOfMember`. L'exception `__transmit/events` est documentée — `EventSource` ne peut pas porter de Bearer, ce sont `subscribe`/`unsubscribe` qui filtrent. |
+| ~~51~~ | ~~Sessions SSO vides dans la page Sécurité~~                                                                                                                            | ✅ **Déjà faite**, constatée le 2026-08-27 : `keycloak_auth_controller.ts:91` pose `ip_address` et `user_agent`.                                                                                                                                                      |
+| 52     | Retirer `@adonisjs/ally` ou documenter pourquoi il reste (`config/ally.ts` vide ; c'est `openid-client` qui porte le flux, ally n'a pas PKCE)                           | Oui. `H1 §9`                                                                                                                                                                                                                                                          |
+| 53     | Bouton **Remise** en caisse (listant les règles) + remise libre permissionnée écrivant dans `order_discounts` avec `applied_by_user_id`                                 | Oui — la lecture est branchée et testée, « il ne manquera que l'écriture ». Le motif obligatoire ou non dépend de la tâche 85. `H2 §37.8/§37.13`                                                                                                                      |
+| 54     | Domaine **Messages** (messagerie entre personnes : auteur, destinataires, fil, non-lus) — table **distincte** des notifications                                         | Oui, gros chantier. Ne pas fondre en une table avec une colonne `kind`. `H2 §21` (P2)                                                                                                                                                                                 |
+| 55     | Table `invitations` (email, rôle proposé, jeton, expiration, statut) + routes de création/révocation + envoi d'e-mail                                                   | Oui ; l'e-mail restera muet sans SMTP (tâche 100). Bloquant pour l'onglet Invitations. `H1 §3.2`                                                                                                                                                                      |
+| ~~56~~ | ~~Réparer `MembersController.store`~~                                                                                                                                   | ✅ **Sans objet**, constaté le 2026-08-27 : l'action lève un `E_MEMBER_CREATE_UNAVAILABLE` (501). Le reste est la tâche **55** (invitations).                                                                                                                         |
+| 57     | Bruit de virgule flottante dans les nombres de l'API (`183.03000000000065`) et N+1 (~2N aller-retours) dans `shopping_list_service`                                     | Oui, tous deux mesurés acceptables aux tailles actuelles. Priorité basse. `H1 §0 septies`                                                                                                                                                                             |
 
 ---
 

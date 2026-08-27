@@ -15,6 +15,7 @@ function product(overrides: Partial<StockProduct> = {}): StockProduct {
     nearestDlcStatus: 'none',
     expiredBatchCount: 0,
     soonBatchCount: 0,
+    storageMethod: null,
     ...overrides,
   };
 }

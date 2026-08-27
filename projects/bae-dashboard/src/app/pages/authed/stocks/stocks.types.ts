@@ -1,4 +1,11 @@
 export type DlcStatus = 'expired' | 'soon' | 'ok' | 'none';
+
+/**
+ * Où se conserve une denrée — « Signaler la méthode de stockage », P1 du CDC.
+ * `null` n'est pas une valeur manquante par accident : la colonne est nullable
+ * exprès, et se lit « pas encore signalé ».
+ */
+export type StorageMethod = 'fridge' | 'freezer' | 'dry' | 'cellar';
 export type SortKey = 'name' | 'qty' | 'dlc' | 'category';
 export type SortDir = 'asc' | 'desc';
 
@@ -27,6 +34,7 @@ export interface StockProduct {
   readonly nearestDlcStatus: DlcStatus;
   readonly expiredBatchCount: number;
   readonly soonBatchCount: number;
+  readonly storageMethod: StorageMethod | null;
 }
 
 export interface StockCategory {

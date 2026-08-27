@@ -11,7 +11,12 @@ import {
 } from '#core/services/stocks/stocks-service';
 import type { LoadingStatus } from '#core/models/global.model';
 import { messageOf, parseApiDate, settle } from '@bae/ui';
-import type { DlcStatus, StockBatchRow, StockProduct } from '#pages/authed/stocks/stocks.types';
+import type {
+  DlcStatus,
+  StockBatchRow,
+  StockProduct,
+  StorageMethod,
+} from '#pages/authed/stocks/stocks.types';
 
 /** La borne compte : une DLC du jour même n'est pas encore périmée. */
 function dlcStatus(expirationDate: string | null, today: Date): DlcStatus {
@@ -48,6 +53,7 @@ function toStockProduct(item: ApiStockItem): StockProduct {
     nearestDlcStatus,
     expiredBatchCount: item.expiredBatchCount,
     soonBatchCount: item.soonBatchCount,
+    storageMethod: item.storageMethod ?? null,
   };
 }
 
@@ -128,6 +134,7 @@ export const StocksStore = signalStore(
           nearestDlcStatus: 'none',
           expiredBatchCount: 0,
           soonBatchCount: 0,
+          storageMethod: created.storageMethod ?? null,
         };
         patchState(store, { products: insertByName(store.products(), product) });
         // Rendu à l'appelant : le scanner en a besoin pour rattacher la ligne
@@ -138,6 +145,30 @@ export const StocksStore = signalStore(
         return null;
       } finally {
         patchState(store, { creatingGood: false });
+      }
+    },
+
+    /**
+     * Signale où se conserve une denrée — le geste « Signaler la méthode de
+     * stockage » du CDC, depuis le panneau de détail.
+     *
+     * **Pas optimiste.** Le produit n'est patché qu'après l'accord du serveur :
+     * afficher « Frigo » sur un refus laisserait une valeur fausse à l'écran
+     * jusqu'au prochain rechargement, et le sélecteur n'a rien qui la démente.
+     * Un seul produit change, donc pas de `refresh()` : relire tout le stock
+     * pour un `<select>` serait disproportionné.
+     */
+    async setStorageMethod(id: number, storageMethod: StorageMethod | null): Promise<boolean> {
+      try {
+        await lastValueFrom(svc.updateGoodStorageMethod(id, storageMethod));
+        patchState(store, {
+          products: store
+            .products()
+            .map((product) => (product.id === id ? { ...product, storageMethod } : product)),
+        });
+        return true;
+      } catch {
+        return false;
       }
     },
 

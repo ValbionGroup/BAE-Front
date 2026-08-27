@@ -24,6 +24,7 @@ function item(overrides: Partial<ApiStockItem> = {}): ApiStockItem {
     nearestExpirationDate: null,
     expiredBatchCount: 0,
     soonBatchCount: 0,
+    storageMethod: null,
     ...overrides,
   };
 }
@@ -127,6 +128,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
+      storageMethod: null,
     });
     http.expectOne(`${baseUrl}/goods`).flush({
       id: 9,
@@ -135,6 +137,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
+      storageMethod: null,
     });
     await created;
 
@@ -151,6 +154,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
+      storageMethod: null,
     });
     http
       .expectOne(`${baseUrl}/goods`)
@@ -179,6 +183,7 @@ describe(StocksStore.name, () => {
       brand: '',
       categoryId: 2,
       barcodes: [],
+      storageMethod: null,
     });
     http
       .expectOne(`${baseUrl}/goods`)
@@ -316,5 +321,100 @@ describe(StocksStore.name, () => {
 
     expect(result.complete).toBe(false);
     expect(result.recipeNames).toEqual([]);
+  });
+});
+
+describe(`${StocksStore.name} — emplacement de stockage`, () => {
+  let store: InstanceType<typeof StocksStore>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: baseUrl },
+      ],
+    });
+    store = TestBed.inject(StocksStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  async function loaded(overrides: Partial<ApiStockItem> = {}): Promise<void> {
+    const loading = store.load();
+    http.expectOne(`${baseUrl}/stocks`).flush([item(overrides)]);
+    http.expectOne(`${baseUrl}/categories`).flush([]);
+    await loading;
+  }
+
+  it('lit l’emplacement rendu par la liste', async () => {
+    await loaded({ storageMethod: 'freezer' });
+
+    expect(store.products()[0].storageMethod).toBe('freezer');
+  });
+
+  it('rend null quand la denrée n’a pas d’emplacement signalé', async () => {
+    await loaded();
+
+    expect(store.products()[0].storageMethod).toBeNull();
+  });
+
+  it('signale l’emplacement par un PATCH et patche le produit en place', async () => {
+    await loaded();
+
+    const pending = store.setStorageMethod(1, 'fridge');
+    const req = http.expectOne(`${baseUrl}/goods/1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ storageMethod: 'fridge' });
+    req.flush({ id: 1, storageMethod: 'fridge' });
+
+    expect(await pending).toBe(true);
+    expect(store.products()[0].storageMethod).toBe('fridge');
+  });
+
+  /**
+   * Un seul champ part sur le fil. Envoyer le produit entier rejouerait le bug
+   * que `GoodsController.update` vient de perdre — et l'écran n'a de toute
+   * façon pas la fiche complète sous la main.
+   */
+  it('n’envoie que l’emplacement, jamais le reste de la fiche', async () => {
+    await loaded({ name: 'Beurre', unit: 'kg' });
+
+    const pending = store.setStorageMethod(1, 'cellar');
+    const req = http.expectOne(`${baseUrl}/goods/1`);
+    expect(Object.keys(req.request.body)).toEqual(['storageMethod']);
+    req.flush({ id: 1 });
+    await pending;
+  });
+
+  it('efface l’emplacement quand on choisit « non précisé »', async () => {
+    await loaded({ storageMethod: 'dry' });
+
+    const pending = store.setStorageMethod(1, null);
+    const req = http.expectOne(`${baseUrl}/goods/1`);
+    expect(req.request.body).toEqual({ storageMethod: null });
+    req.flush({ id: 1 });
+
+    await pending;
+    expect(store.products()[0].storageMethod).toBeNull();
+  });
+
+  /** Pas d'optimisme : afficher « Frigo » sur un refus serait un mensonge que
+   *  rien ne viendrait corriger avant le prochain rechargement. */
+  it('laisse l’ancienne valeur si le serveur refuse', async () => {
+    await loaded({ storageMethod: 'dry' });
+
+    const pending = store.setStorageMethod(1, 'fridge');
+    http
+      .expectOne(`${baseUrl}/goods/1`)
+      .flush(
+        { error: { code: 'E_VALIDATION', message: 'nope' } },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+
+    expect(await pending).toBe(false);
+    expect(store.products()[0].storageMethod).toBe('dry');
   });
 });
