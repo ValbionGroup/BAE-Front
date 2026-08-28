@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  Injector,
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
@@ -16,12 +17,13 @@ import {
   errorInterceptor,
   apiResponseCaseInterceptor,
   apiEnvelopeInterceptor,
+  SESSION_EXPIRED_HANDLER,
   ThemeService,
 } from '@bae/ui';
 import { provideEffects } from '@ngrx/effects';
 import { AuthEffects } from '#core/store/auth/auth.effect';
 import { storeConfig } from '#app/app-store.config';
-import { rehydrateAuth } from '#core/store/auth/auth.actions';
+import { rehydrateAuth, sessionExpired } from '#core/store/auth/auth.actions';
 import { Store } from '@ngrx/store';
 
 export const appConfig: ApplicationConfig = {
@@ -29,7 +31,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const store = inject(Store);
       store.dispatch(rehydrateAuth());
-      // Instantiate ThemeService eagerly so the .light class is applied before first paint.
       inject(ThemeService);
     }),
     provideBrowserGlobalErrorListeners(),
@@ -38,8 +39,6 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([
         apiCaseRequestInterceptor,
         authInterceptor,
-        // Après `authInterceptor` : il faut que `withCredentials` soit déjà posé,
-        // sinon le cookie CSRF ne partirait pas avec l'en-tête qui le recopie.
         csrfInterceptor,
         errorInterceptor,
         apiResponseCaseInterceptor,
@@ -48,6 +47,13 @@ export const appConfig: ApplicationConfig = {
     ),
     storeConfig,
     provideEffects([AuthEffects]),
+    {
+      provide: SESSION_EXPIRED_HANDLER,
+      useFactory: () => {
+        const injector = inject(Injector);
+        return () => injector.get(Store).dispatch(sessionExpired());
+      },
+    },
     provideLucideConfig({
       strokeWidth: 2,
     }),

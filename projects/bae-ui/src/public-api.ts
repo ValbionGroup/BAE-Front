@@ -58,6 +58,7 @@ export * from './lib/components/toast/toast-container/toast-container';
 export * from './lib/http/api-url.token';
 export * from './lib/http/api-response.model';
 export * from './lib/http/pagination';
+export * from './lib/http/session-expired.token';
 export * from './lib/http/interceptors/api-case-request/api-case-request-interceptor';
 export * from './lib/http/interceptors/auth/auth-interceptor';
 export * from './lib/http/interceptors/csrf/csrf-interceptor';

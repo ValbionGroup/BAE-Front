@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
+import { catchError, exhaustMap, filter, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '#core/services/auth/auth-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { API_BASE_URL, ApiError, ExternalNavigation, isApiError } from '@bae/ui';
@@ -128,9 +128,6 @@ export class AuthEffects {
       ofType(AuthActions.twoFactorVerifyStart),
       mergeMap(({ code, kind }) =>
         this.authService.verifyTwoFactor$(code, kind).pipe(
-          // Le succès réutilise `loginSuccess` : l'aval est identique — profil en
-          // magasin, websocket ouvert, navigation. Un second chemin de succès
-          // dupliquerait la navigation et finirait par en diverger.
           switchMap(() =>
             this.authService.getUserProfile$().pipe(
               map((userProfile) =>
@@ -148,14 +145,26 @@ export class AuthEffects {
     ),
   );
 
+  sessionExpired$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.sessionExpired),
+        filter(() => !this.router.url.startsWith(`/${AppRoutes.login}`)),
+        exhaustMap(() => {
+          const redirectTo = this.router.url;
+          this.websocketService.shutdown();
+
+          return from(this.router.navigate([AppRoutes.login], { queryParams: { redirectTo } }));
+        }),
+      ),
+    { dispatch: false },
+  );
+
   loginSuccess$ = createEffect(
     () =>
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess),
         switchMap(() =>
-          // ⚠️ Le repli compte : sans `redirectTo` — quelqu'un qui tape `/login`
-          // au lieu d'y être renvoyé par `authGuard` — `navigateByUrl(undefined)`
-          // levait. Le saut 2FA rend ce cas courant.
           from(this.router.navigateByUrl(this.redirectTo() ?? '/')),
         ),
       ),
@@ -169,8 +178,6 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess, AuthActions.rehydrationSuccess),
         tap(() => {
-          // Sans `user.id` : le serveur résout l'identité depuis le jeton et
-          // vérifie `order:read` avant d'accorder un canal.
           this.websocketService.initialize();
         }),
       ),

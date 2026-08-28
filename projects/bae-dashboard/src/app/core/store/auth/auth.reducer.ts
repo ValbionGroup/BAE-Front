@@ -66,5 +66,12 @@ export const authReducer = createReducer(
     twoFactorError: error,
   })),
 
+  on(AuthActions.sessionExpired, (state) => ({
+    ...state,
+    user: undefined,
+    member: undefined,
+    permissions: [],
+  })),
+
   on(AuthActions.logout, () => initialAuthState),
 );
