@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  Injector,
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
@@ -16,12 +17,13 @@ import {
   errorInterceptor,
   apiResponseCaseInterceptor,
   apiEnvelopeInterceptor,
+  SESSION_EXPIRED_HANDLER,
   ThemeService,
 } from '@bae/ui';
 import { provideEffects } from '@ngrx/effects';
 import { AuthEffects } from '#core/store/auth/auth.effect';
 import { storeConfig } from '#app/app-store.config';
-import { rehydrateAuth } from '#core/store/auth/auth.actions';
+import { rehydrateAuth, sessionExpired } from '#core/store/auth/auth.actions';
 import { Store } from '@ngrx/store';
 
 export const appConfig: ApplicationConfig = {
@@ -48,6 +50,23 @@ export const appConfig: ApplicationConfig = {
     ),
     storeConfig,
     provideEffects([AuthEffects]),
+    /**
+     * Ce que `errorInterceptor` déclenche sur un 401 de navigation. Le crochet
+     * vit ici plutôt que dans `bae/ui` parce que la bibliothèque est partagée
+     * avec la zone publique, qui n'a ni magasin ni notion de déconnexion.
+     *
+     * ⚠️ `Store` est résolu **à l'appel**, pas à la fabrication : la chaîne
+     * `HttpClient → intercepteur → crochet` se construit au tout début de
+     * l'amorçage, et exiger le magasin à cet instant nouerait une dépendance
+     * circulaire avec les effets, qui eux réclament `HttpClient`.
+     */
+    {
+      provide: SESSION_EXPIRED_HANDLER,
+      useFactory: () => {
+        const injector = inject(Injector);
+        return () => injector.get(Store).dispatch(sessionExpired());
+      },
+    },
     provideLucideConfig({
       strokeWidth: 2,
     }),

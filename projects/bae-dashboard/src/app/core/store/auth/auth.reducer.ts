@@ -66,5 +66,19 @@ export const authReducer = createReducer(
     twoFactorError: error,
   })),
 
+  /**
+   * ⚠️ Surtout **pas** `initialAuthState`, malgré la ressemblance avec une
+   * déconnexion : `authGuard` n'accepte de trancher que sur un `permissions`
+   * défini (`isSettled`). Le remettre à `undefined` le laisserait attendre pour
+   * toujours, sur une page blanche — au lieu de rebondir vers la connexion, qui
+   * est tout l'objet de l'action.
+   */
+  on(AuthActions.sessionExpired, (state) => ({
+    ...state,
+    user: undefined,
+    member: undefined,
+    permissions: [],
+  })),
+
   on(AuthActions.logout, () => initialAuthState),
 );

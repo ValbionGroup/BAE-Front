@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
+import { catchError, exhaustMap, filter, from, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '#core/services/auth/auth-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { API_BASE_URL, ApiError, ExternalNavigation, isApiError } from '@bae/ui';
@@ -146,6 +146,36 @@ export class AuthEffects {
         ),
       ),
     ),
+  );
+
+  /**
+   * Le **repli** de l'expiration de session, pas son traitement principal : le
+   * back repose désormais le cookie à chaque requête authentifiée, si bien qu'un
+   * 401 ne survient plus qu'après une inactivité réelle. Il n'y a alors rien à
+   * rafraîchir — le secret du jeton n'existait que dans le cookie que le
+   * navigateur vient de jeter — et la seule issue honnête est de redemander une
+   * connexion, en gardant la page où l'utilisateur en était.
+   *
+   * ⚠️ `filter` + `exhaustMap`, et non un simple `tap`. Une session morte fait
+   * échouer **toutes** les requêtes en vol d'un coup : une page qui charge quatre
+   * panneaux produit quatre `sessionExpired`. Sans `exhaustMap`, autant de
+   * navigations concurrentes ; sans le `filter`, celles qui arrivent après la
+   * première écraseraient `redirectTo` par `/login` lui-même, et la
+   * reconnexion retomberait sur la page de connexion.
+   */
+  sessionExpired$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.sessionExpired),
+        filter(() => !this.router.url.startsWith(`/${AppRoutes.login}`)),
+        exhaustMap(() => {
+          const redirectTo = this.router.url;
+          this.websocketService.shutdown();
+
+          return from(this.router.navigate([AppRoutes.login], { queryParams: { redirectTo } }));
+        }),
+      ),
+    { dispatch: false },
   );
 
   loginSuccess$ = createEffect(

@@ -11,6 +11,7 @@ import { vi } from 'vitest';
 import { AuthEffects } from './auth.effect';
 import { API_BASE_URL, ExternalNavigation, ThemeService } from '@bae/ui';
 import * as AuthActions from './auth.actions';
+import { AppRoutes } from '#app/app-routes.const';
 
 // L'environnement de test ne fournit pas de vrai `localStorage` (Node expose un
 // stub incomplet sans `setItem`) : on le remplace par une implémentation en
@@ -198,5 +199,48 @@ describe(AuthEffects.name, () => {
     await result;
 
     expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  /**
+   * ⚠️ Le symptôme d'origine : une session morte ne produisait **aucune**
+   * conclusion. Chaque magasin rangeait son 401 dans son propre `loadError`, et
+   * l'écran affichait quatre « erreur de chargement » côte à côte sans que
+   * personne n'en déduise qu'il fallait se reconnecter.
+   */
+  it('renvoie sur la connexion en gardant la page en cours', async () => {
+    const actionsSubject = new Subject<Action>();
+    actions$ = actionsSubject.asObservable();
+    effects = TestBed.inject(AuthEffects);
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'url', 'get').mockReturnValue('/stocks');
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const result = firstValueFrom(effects.sessionExpired$);
+    actionsSubject.next(AuthActions.sessionExpired());
+    await result;
+
+    expect(navigate).toHaveBeenCalledWith([AppRoutes.login], {
+      queryParams: { redirectTo: '/stocks' },
+    });
+  });
+
+  /**
+   * ⚠️ Une session morte fait échouer toutes les requêtes en vol d'un coup : une
+   * page à quatre panneaux émet quatre `sessionExpired`. Sans garde, la deuxième
+   * navigation partirait avec `redirectTo=/login`, et la reconnexion réussie
+   * retomberait sur la page de connexion.
+   */
+  it('ne rebondit pas une seconde fois depuis la page de connexion', () => {
+    const actionsSubject = new Subject<Action>();
+    actions$ = actionsSubject.asObservable();
+    effects = TestBed.inject(AuthEffects);
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'url', 'get').mockReturnValue(`/${AppRoutes.login}`);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    effects.sessionExpired$.subscribe();
+    actionsSubject.next(AuthActions.sessionExpired());
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

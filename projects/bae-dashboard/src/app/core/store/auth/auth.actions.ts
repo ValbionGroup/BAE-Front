@@ -27,6 +27,16 @@ export const loginFailure = createAction('[Auth] Login Failure', props<{ error: 
 
 export const rehydrateAuth = createAction('[Auth] Rehydrate auth');
 
+/**
+ * L'API vient de refuser une requête de navigation ordinaire : la session est
+ * morte alors qu'on la croyait vivante.
+ *
+ * ⚠️ Distinct de `rehydrationFailed`, qui dit « il n'y a jamais eu de session »
+ * au démarrage. Ici il y en avait une, l'utilisateur était au travail, et la
+ * destination en cours mérite d'être conservée pour l'après-reconnexion.
+ */
+export const sessionExpired = createAction('[Auth] Session Expired');
+
 // Double authentification
 /**
  * Le mot de passe était bon, mais il ne suffit pas. Aucune session n'est ouverte :
