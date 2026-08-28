@@ -71,6 +71,13 @@ describe(LogistiqueEvents.name, () => {
     expect(component['menuCost'](partial)).toBeNull();
   });
 
+  it('affiche le coût denrées de l’en-tête en euros, pas en centimes', () => {
+    // `totalCost` est en centimes depuis le 2026-08-25 ; l'en-tête de la carte
+    // le montrait sans convertir, soit « 1464 € » pour un menu à 14,64 €.
+    expect(component['formatEurosInt'](1464)).toBe('15');
+    expect(component['formatEurosInt'](0)).toBe('0');
+  });
+
   it('n’offre au sélecteur que les recettes absentes du menu', () => {
     const available = component['availableRecipes'](
       [

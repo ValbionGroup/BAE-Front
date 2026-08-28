@@ -239,8 +239,13 @@ export class LogistiqueEvents implements OnInit, OnDestroy {
     return menu.filter((line) => line.price === 0).length;
   }
 
-  protected formatPriceInt(n: number): string {
-    return n.toFixed(0);
+  /**
+   * L'en-tête de la carte n'a la place que d'un euro entier — mais il reçoit
+   * des **centimes**, comme tout montant depuis le 2026-08-25. Sans la
+   * division, un menu à 14,64 € s'affichait « 1464 € ».
+   */
+  protected formatEurosInt(cents: number): string {
+    return Math.round(cents / 100).toString();
   }
 
   /** « — » plutôt qu'un nombre : `unitCost`/`totalCost` valent `null` dès
