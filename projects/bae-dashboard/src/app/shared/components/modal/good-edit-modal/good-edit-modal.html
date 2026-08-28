@@ -1,8 +1,12 @@
 <bfd-modal-shell
   [icon]="icPackage"
   tone="blue"
-  title="Nouveau produit"
-  subtitle="Crée la référence au catalogue. Elle apparaîtra à 0 : c'est un réassort qui lui donnera du stock."
+  [title]="editing() ? 'Modifier le produit' : 'Nouveau produit'"
+  [subtitle]="
+    editing()
+      ? 'Nom, marque, catégorie et emplacement. L’unité de stock ne se change pas.'
+      : 'Crée la référence au catalogue. Elle apparaîtra à 0 : c’est un réassort qui lui donnera du stock.'
+  "
   [width]="520"
   (close)="cancel()"
 >
@@ -26,24 +30,40 @@
         >
           <option value="">Choisir une catégorie…</option>
           @for (category of store.categories(); track category.id) {
-            <option [value]="category.id">{{ category.name }}</option>
+            <!-- `[selected]` en plus de `[value]` : le `<select>` reçoit sa
+                 valeur avant que le `@for` n'ait produit ses options, et une
+                 valeur sans option correspondante est jetée. -->
+            <option [value]="category.id" [selected]="category.id === categoryIdNumber()">
+              {{ category.name }}
+            </option>
           }
         </select>
       </bae-field>
 
       <!-- `<select>` et non texte libre : `goods.unit` est un enum contraint en
-           base (`goods_unit_check`), une valeur hors liste part en 500. -->
-      <bae-field label="Unité de stock">
-        <select
-          class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
-          [value]="unit()"
-          (change)="onUnit($any($event.target).value)"
-        >
-          <option value="">Choisir…</option>
-          @for (u of units; track u.value) {
-            <option [value]="u.value">{{ u.label }}</option>
-          }
-        </select>
+           base (`goods_unit_check`), une valeur hors liste part en 500.
+           En **édition**, l'unité est figée : la changer ne convertit ni les
+           quantités des lots ni les tarifs d'enseigne, qui deviendraient faux
+           sans que rien ne le signale. -->
+      <bae-field label="Unité de stock" [hint]="editing() ? 'Non modifiable.' : ''">
+        @if (editing()) {
+          <div
+            class="flex h-9 w-full items-center rounded-md border border-border-s bg-surface-2 px-2 text-[12.5px] text-muted"
+          >
+            {{ unitLabel() }}
+          </div>
+        } @else {
+          <select
+            class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
+            [value]="unit()"
+            (change)="onUnit($any($event.target).value)"
+          >
+            <option value="">Choisir…</option>
+            @for (u of units; track u.value) {
+              <option [value]="u.value">{{ u.label }}</option>
+            }
+          </select>
+        }
       </bae-field>
     </div>
 
@@ -62,7 +82,9 @@
         >
           <option value="">Non précisé</option>
           @for (location of store.storageLocations(); track location.id) {
-            <option [value]="location.id">{{ location.name }}</option>
+            <option [value]="location.id" [selected]="location.id === storageLocationIdNumber()">
+              {{ location.name }}
+            </option>
           }
         </select>
       </bae-field>
@@ -87,7 +109,7 @@
       </p>
     }
 
-    @if (store.createError(); as message) {
+    @if (store.saveError(); as message) {
       <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
     }
   </div>
@@ -97,10 +119,14 @@
     <bae-btn
       kind="primary"
       size="md"
-      [disabled]="store.creatingGood() || categoriesMissing()"
+      [disabled]="store.savingGood() || categoriesMissing()"
       (clicked)="submit()"
     >
-      {{ store.creatingGood() ? 'Enregistrement…' : 'Créer le produit' }}
+      @if (store.savingGood()) {
+        Enregistrement…
+      } @else {
+        {{ editing() ? 'Enregistrer' : 'Créer le produit' }}
+      }
     </bae-btn>
   </div>
 </bfd-modal-shell>

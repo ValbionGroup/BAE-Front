@@ -30,7 +30,7 @@ import { StocksStore } from '#core/store/stocks.store';
 import { BarcodeScannerService } from '#core/services/barcode/barcode-scanner-service';
 import { Btn, Badge, Field, Input, ToastService, messageOf } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
-import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { GoodEditModal } from '#shared/components/modal/good-edit-modal/good-edit-modal';
 import { GoodPickerModal } from '#shared/components/modal/good-picker-modal/good-picker-modal';
 import type { StockProduct } from '../stocks.types';
 
@@ -277,7 +277,7 @@ export class StocksScanner {
     if (!barcode) return;
     this.modals.open({
       type: 'component',
-      component: GoodCreateModal,
+      component: GoodEditModal,
       inputs: {
         barcode,
         created: (product: StockProduct) => this.attach(lineId, product, false),

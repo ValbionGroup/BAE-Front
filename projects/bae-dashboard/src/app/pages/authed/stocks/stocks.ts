@@ -46,7 +46,7 @@ import { selectPermissions } from '#core/store/auth/auth.selector';
 import { type ApiGoodDetail } from '#core/services/stocks/stocks-service';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { SupplierPriceModal } from '#shared/components/modal/supplier-price-modal/supplier-price-modal';
-import { GoodCreateModal } from '#shared/components/modal/good-create-modal/good-create-modal';
+import { GoodEditModal } from '#shared/components/modal/good-edit-modal/good-edit-modal';
 import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
 import { PrintService } from '#core/services/print/print-service';
@@ -252,53 +252,17 @@ export class Stocks implements OnInit {
   /** Frontière unique de conversion centimes → euros à l'affichage. */
   protected readonly formatCents = formatCents;
 
-  /** Un seul droit couvre les deux écritures sur une denrée : son tarif et son
-   *  emplacement. Le signal porte donc le nom du droit, pas celui d'un geste. */
+  /** Un seul droit couvre les écritures sur une denrée : son identité (nom,
+   *  marque, catégorie, emplacement) et ses tarifs. Le signal porte donc le nom
+   *  du droit, pas celui d'un geste. */
   protected readonly canWriteGood = computed<boolean>(() =>
     this.permissions().includes('good:write'),
-  );
-
-  /**
-   * Le sélecteur n'est offert que si le référentiel a pu être chargé.
-   *
-   * ⚠️ `storage-location:read` garde la liste : sans ce droit elle revient vide,
-   * et un `<select>` sans option serait pire que pas de sélecteur — il
-   * laisserait croire à une panne. Le nom rendu par `GET /stocks` prend alors le
-   * relais en lecture seule.
-   */
-  /** Les lieux proposés au sélecteur, tels que le référentiel les rend. Le
-   *  gabarit ne touche jamais le magasin directement. */
-  protected readonly storageLocations = computed(() => this.store.storageLocations());
-
-  protected readonly canPickStorage = computed<boolean>(
-    () => this.canWriteGood() && this.store.storageLocations().length > 0,
   );
 
   /** Le libellé lu dans le tableau et le panneau. Le tiret dit « pas encore
    *  signalé », état normal pour une denrée que personne n'a rangée. */
   protected storageLabel(product: StockProduct): string {
     return product.storageLocationName ?? '—';
-  }
-
-  /**
-   * Le geste « Signaler l'emplacement de stockage ».
-   *
-   * `''` est la valeur du choix « Non précisé » : elle efface l'emplacement,
-   * elle ne l'ignore pas — se tromper de rayon se corrige, et ne plus savoir
-   * est une information honnête.
-   */
-  protected async onStorageLocation(product: StockProduct, raw: string): Promise<void> {
-    const id = raw === '' ? null : Number(raw);
-    if (id === product.storageLocationId) return;
-
-    const ok = await this.store.setStorageLocation(product.id, id);
-    if (!ok) {
-      this.toast.show({
-        type: 'error',
-        title: 'Emplacement non enregistré',
-        message: `L'emplacement de ${product.name} n'a pas pu être modifié.`,
-      });
-    }
   }
 
   /** Sans le droit, l'écran ne propose pas un geste que l'API refusera en 403. */
@@ -312,6 +276,16 @@ export class Stocks implements OnInit {
     const unit = this.prices()?.unit ?? this.selectedProduct()?.unit ?? '';
     return unit === '' ? 'Prix' : `Prix par ${unit}`;
   });
+
+  /** L'édition part du panneau : c'est le seul endroit où la denrée est
+   *  identifiée sans ambiguïté. */
+  protected openEditGood(product: StockProduct): void {
+    this.modal.open({
+      type: 'component',
+      component: GoodEditModal,
+      inputs: { product },
+    });
+  }
 
   protected openPriceEditor(supplierId: number | null): void {
     const good = this.prices();
@@ -512,7 +486,7 @@ export class Stocks implements OnInit {
   }
 
   protected openCreateGood(): void {
-    this.modal.open({ type: 'component', component: GoodCreateModal, inputs: {} });
+    this.modal.open({ type: 'component', component: GoodEditModal, inputs: {} });
   }
 
   protected printInventory(): void {

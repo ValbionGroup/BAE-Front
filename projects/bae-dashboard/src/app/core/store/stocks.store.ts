@@ -6,6 +6,7 @@ import {
   type ApiCategory,
   type ApiStockItem,
   type CreateGoodPayload,
+  type UpdateGoodPayload,
   type ApiGoodDetail,
   type ApiNamedRef,
   type ApiStorageLocation,
@@ -75,8 +76,8 @@ interface StocksState {
   /** Lieux du sélecteur d'emplacement. Vide si l'endpoint a échoué **ou si le
    *  droit manque** : l'emplacement reste lisible, il n'est plus modifiable. */
   storageLocations: ApiStorageLocation[];
-  creatingGood: boolean;
-  createError: string | null;
+  savingGood: boolean;
+  saveError: string | null;
 }
 
 const initialState: StocksState = {
@@ -85,8 +86,8 @@ const initialState: StocksState = {
   products: [],
   categories: [],
   storageLocations: [],
-  creatingGood: false,
-  createError: null,
+  savingGood: false,
+  saveError: null,
 };
 
 export const StocksStore = signalStore(
@@ -120,8 +121,8 @@ export const StocksStore = signalStore(
      * produit naît sans lot — c'est un réassort qui lui donnera du stock.
      */
     async createGood(payload: CreateGoodPayload): Promise<StockProduct | null> {
-      if (store.creatingGood()) return null;
-      patchState(store, { creatingGood: true, createError: null });
+      if (store.savingGood()) return null;
+      patchState(store, { savingGood: true, saveError: null });
 
       try {
         const created = await lastValueFrom(svc.createGood(payload));
@@ -147,41 +148,57 @@ export const StocksStore = signalStore(
         // qui vient d'être créée, qui sans cela resterait « à créer ».
         return product;
       } catch (error) {
-        patchState(store, { createError: messageOf(error, 'Impossible de créer ce produit.') });
+        patchState(store, { saveError: messageOf(error, 'Impossible de créer ce produit.') });
         return null;
       } finally {
-        patchState(store, { creatingGood: false });
+        patchState(store, { savingGood: false });
       }
     },
 
     /**
-     * Signale où se range une denrée, depuis le panneau de détail.
+     * Réécrit l'identité d'une denrée depuis la modale d'édition.
      *
-     * **Pas optimiste.** Le produit n'est patché qu'après l'accord du serveur :
-     * afficher « Frigo » sur un refus laisserait une valeur fausse à l'écran
-     * jusqu'au prochain rechargement, et le sélecteur n'a rien qui la démente.
-     * Un seul produit change, donc pas de `refresh()` : relire tout le stock
-     * pour un `<select>` serait disproportionné.
+     * ⚠️ La réponse porte l'identité complète mais **aucun agrégat** : les lots,
+     * les compteurs de DLC et la quantité restante viennent de `GET /stocks` et
+     * sont conservés tels quels. Les reprendre de la réponse mettrait la ligne
+     * à zéro lot le temps d'un rechargement.
      *
-     * ⚠️ Le **nom** est résolu ici, depuis la liste déjà chargée, et non relu au
-     * serveur : `GET /stocks` est le seul endpoint qui le rend, et le rappeler
-     * pour un libellé coûterait tout le catalogue.
+     * La ligne est **réinsérée** : le tableau suit l'ordre alphabétique de
+     * `GET /stocks`, qu'un renommage casserait.
      */
-    async setStorageLocation(id: number, storageLocationId: number | null): Promise<boolean> {
+    async updateGood(id: number, payload: UpdateGoodPayload): Promise<StockProduct | null> {
+      if (store.savingGood()) return null;
+      patchState(store, { savingGood: true, saveError: null });
+
       try {
-        await lastValueFrom(svc.updateGoodStorageLocation(id, storageLocationId));
-        const storageLocationName =
-          store.storageLocations().find((l) => l.id === storageLocationId)?.name ?? null;
+        const saved = await lastValueFrom(svc.updateGood(id, payload));
+        const current = store.products().find((product) => product.id === id);
+        if (!current) return null;
+
+        const product: StockProduct = {
+          ...current,
+          name: saved.name,
+          brand: saved.brand,
+          categoryId: saved.categoryId,
+          categoryName: store.categories().find((c) => c.id === saved.categoryId)?.name ?? '—',
+          storageLocationId: saved.storageLocationId ?? null,
+          storageLocationName:
+            store.storageLocations().find((l) => l.id === saved.storageLocationId)?.name ?? null,
+        };
         patchState(store, {
-          products: store
-            .products()
-            .map((product) =>
-              product.id === id ? { ...product, storageLocationId, storageLocationName } : product,
-            ),
+          products: insertByName(
+            store.products().filter((entry) => entry.id !== id),
+            product,
+          ),
         });
-        return true;
-      } catch {
-        return false;
+        return product;
+      } catch (error) {
+        patchState(store, {
+          saveError: messageOf(error, 'Impossible de modifier ce produit.'),
+        });
+        return null;
+      } finally {
+        patchState(store, { savingGood: false });
       }
     },
 

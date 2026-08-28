@@ -213,7 +213,7 @@ describe(StocksStore.name, () => {
     const ok = await created;
 
     expect(ok).toBeNull();
-    expect(store.createError()).toBe('Unité invalide.');
+    expect(store.saveError()).toBe('Unité invalide.');
     expect(store.products()).toHaveLength(0);
   });
 
@@ -348,135 +348,65 @@ describe(StocksStore.name, () => {
     expect(result.complete).toBe(false);
     expect(result.recipeNames).toEqual([]);
   });
-});
 
-describe(`${StocksStore.name} — emplacement de stockage`, () => {
-  let store: InstanceType<typeof StocksStore>;
-  let http: HttpTestingController;
+  /**
+   * `PATCH /goods/:id` rend l'identité complète mais **aucun agrégat** : la
+   * ligne du tableau garde donc ses lots et ses compteurs de DLC, sinon
+   * renommer une denrée la ferait passer à zéro lot jusqu'au rechargement.
+   */
+  it('préserve les agrégats de la ligne modifiée', async () => {
+    await loadWith([item({ id: 5, totalRemainingQty: 12, batchCount: 3 })]);
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: API_BASE_URL, useValue: baseUrl },
-      ],
+    const updating = store.updateGood(5, {
+      name: 'Bière blonde',
+      brand: 'Kro',
+      categoryId: 2,
+      storageLocationId: null,
     });
-    store = TestBed.inject(StocksStore);
-    http = TestBed.inject(HttpTestingController);
+    http.expectOne(`${baseUrl}/goods/5`).flush({
+      id: 5,
+      name: 'Bière blonde',
+      unit: 'btl',
+      brand: 'Kro',
+      categoryId: 2,
+      barcodes: [],
+      storageLocationId: null,
+    });
+    await updating;
+
+    const [product] = store.products();
+    expect(product.name).toBe('Bière blonde');
+    expect(product.brand).toBe('Kro');
+    expect(product.totalQty).toBe(12);
+    expect(product.batchCount).toBe(3);
   });
 
-  afterEach(() => http.verify());
+  /** `GET /stocks` trie par nom : une denrée renommée doit reprendre sa place,
+   *  faute de quoi elle reste au mauvais rang jusqu'au prochain chargement. */
+  it('replace la denrée renommée dans l’ordre alphabétique', async () => {
+    await loadWith([
+      item({ id: 1, name: 'Bière' }),
+      item({ id: 2, name: 'Moutarde' }),
+      item({ id: 3, name: 'Sucre' }),
+    ]);
 
-  const LOCATIONS = [
-    { id: 7, name: 'Frigo' },
-    { id: 8, name: 'Cave' },
-    { id: 9, name: 'Sec' },
-  ];
+    const updating = store.updateGood(1, {
+      name: 'Riz',
+      brand: '',
+      categoryId: 2,
+      storageLocationId: null,
+    });
+    http.expectOne(`${baseUrl}/goods/1`).flush({
+      id: 1,
+      name: 'Riz',
+      unit: 'btl',
+      brand: '',
+      categoryId: 2,
+      barcodes: [],
+      storageLocationId: null,
+    });
+    await updating;
 
-  async function loaded(
-    overrides: Partial<ApiStockItem> = {},
-    locations: { id: number; name: string }[] = LOCATIONS,
-  ): Promise<void> {
-    const loading = store.load();
-    http.expectOne(`${baseUrl}/stocks`).flush([item(overrides)]);
-    http.expectOne(`${baseUrl}/categories`).flush([]);
-    http.expectOne(`${baseUrl}/storage-locations`).flush(locations);
-    await loading;
-  }
-
-  it('lit l’emplacement rendu par la liste, id et nom', async () => {
-    await loaded({ storageLocationId: 8, storageLocation: 'Cave' });
-
-    expect(store.products()[0].storageLocationId).toBe(8);
-    expect(store.products()[0].storageLocationName).toBe('Cave');
-  });
-
-  it('rend null quand la denrée n’a pas d’emplacement signalé', async () => {
-    await loaded();
-
-    expect(store.products()[0].storageLocationId).toBeNull();
-    expect(store.products()[0].storageLocationName).toBeNull();
-  });
-
-  /**
-   * ⚠️ Le référentiel est gardé par `storage-location:read`. Un 403 doit laisser
-   * le tableau debout et seulement vider la liste : c'est le sélecteur qui
-   * disparaît, pas la page.
-   */
-  it('garde les stocks quand le référentiel des lieux est refusé', async () => {
-    const loading = store.load();
-    http.expectOne(`${baseUrl}/stocks`).flush([item()]);
-    http.expectOne(`${baseUrl}/categories`).flush([]);
-    http
-      .expectOne(`${baseUrl}/storage-locations`)
-      .flush({ code: 'E_FORBIDDEN', message: 'non' }, { status: 403, statusText: 'Forbidden' });
-    await loading;
-
-    expect(store.loading()).toBe('loaded');
-    expect(store.products()).toHaveLength(1);
-    expect(store.storageLocations()).toEqual([]);
-  });
-
-  it('signale l’emplacement par un PATCH et patche le produit en place', async () => {
-    await loaded();
-
-    const pending = store.setStorageLocation(1, 7);
-    const req = http.expectOne(`${baseUrl}/goods/1`);
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ storageLocationId: 7 });
-    req.flush({ id: 1, storageLocationId: 7 });
-
-    expect(await pending).toBe(true);
-    expect(store.products()[0].storageLocationId).toBe(7);
-    // Le nom est résolu depuis la liste déjà chargée : `GET /stocks` est le seul
-    // endpoint qui le rend, et le rappeler pour un libellé coûterait le catalogue.
-    expect(store.products()[0].storageLocationName).toBe('Frigo');
-  });
-
-  /**
-   * Un seul champ part sur le fil. Envoyer le produit entier rejouerait le bug
-   * que `GoodsController.update` vient de perdre — et l'écran n'a de toute
-   * façon pas la fiche complète sous la main.
-   */
-  it('n’envoie que l’emplacement, jamais le reste de la fiche', async () => {
-    await loaded({ name: 'Beurre', unit: 'kg' });
-
-    const pending = store.setStorageLocation(1, 8);
-    const req = http.expectOne(`${baseUrl}/goods/1`);
-    expect(Object.keys(req.request.body)).toEqual(['storageLocationId']);
-    req.flush({ id: 1 });
-    await pending;
-  });
-
-  it('efface l’emplacement quand on choisit « non précisé »', async () => {
-    await loaded({ storageLocationId: 9, storageLocation: 'Sec' });
-
-    const pending = store.setStorageLocation(1, null);
-    const req = http.expectOne(`${baseUrl}/goods/1`);
-    expect(req.request.body).toEqual({ storageLocationId: null });
-    req.flush({ id: 1 });
-
-    await pending;
-    expect(store.products()[0].storageLocationId).toBeNull();
-    expect(store.products()[0].storageLocationName).toBeNull();
-  });
-
-  /** Pas d'optimisme : afficher « Frigo » sur un refus serait un mensonge que
-   *  rien ne viendrait corriger avant le prochain rechargement. */
-  it('laisse l’ancienne valeur si le serveur refuse', async () => {
-    await loaded({ storageLocationId: 9, storageLocation: 'Sec' });
-
-    const pending = store.setStorageLocation(1, 7);
-    http
-      .expectOne(`${baseUrl}/goods/1`)
-      .flush(
-        { error: { code: 'E_STORAGE_LOCATION_NOT_FOUND', message: 'nope' } },
-        { status: 404, statusText: 'Not Found' },
-      );
-
-    expect(await pending).toBe(false);
-    expect(store.products()[0].storageLocationId).toBe(9);
-    expect(store.products()[0].storageLocationName).toBe('Sec');
+    expect(store.products().map((product) => product.name)).toEqual(['Moutarde', 'Riz', 'Sucre']);
   });
 });

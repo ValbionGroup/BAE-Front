@@ -319,26 +319,17 @@
                   }
                 </div>
               </div>
+              @if (canWriteGood()) {
+                <bae-btn kind="secondary" size="sm" (clicked)="openEditGood(p)">Modifier</bae-btn>
+              }
             </div>
 
-            <!-- Le geste « Signaler la méthode de stockage » (CDC P1). Il vit ici
-             et non dans le tableau : le panneau est le seul endroit où la
-             denrée est identifiée sans ambiguïté. -->
+            <!-- Lecture seule : l'emplacement se règle dans la modale d'édition,
+                 avec le nom, la marque et la catégorie. Un panneau qui écrivait
+                 cette colonne-là et affichait les autres en lecture seule laissait
+                 croire qu'elle seule était corrigeable. -->
             <bae-field label="Stockage">
-              @if (canPickStorage()) {
-                <select
-                  class="h-9 w-full rounded-md border border-border-s bg-surface px-2 text-[12.5px] text-text focus-visible:ring-2 focus-visible:ring-blue/40"
-                  [value]="p.storageLocationId ?? ''"
-                  (change)="onStorageLocation(p, $any($event.target).value)"
-                >
-                  <option value="">Non précisé</option>
-                  @for (location of storageLocations(); track location.id) {
-                    <option [value]="location.id">{{ location.name }}</option>
-                  }
-                </select>
-              } @else {
-                <span class="text-[12.5px] text-text-2">{{ storageLabel(p) }}</span>
-              }
+              <span class="text-[12.5px] text-text-2">{{ storageLabel(p) }}</span>
             </bae-field>
 
             <!-- Quick stats -->

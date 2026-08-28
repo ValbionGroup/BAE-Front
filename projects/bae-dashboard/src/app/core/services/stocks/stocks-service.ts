@@ -127,6 +127,22 @@ export interface CreateGoodPayload {
   readonly storageLocationId: number | null;
 }
 
+/**
+ * Le corps de `PATCH /goods/:id` depuis la modale d'édition.
+ *
+ * ⚠️ **`unit` en est absent, volontairement.** Passer une denrée de `kg` à
+ * `pcs` ne convertit rien : les quantités de tous ses lots et tous ses tarifs
+ * d'enseigne sont exprimés dans cette unité et deviendraient faux en silence.
+ * Le contrôleur n'affecte que les clés présentes — l'omettre suffit à la
+ * protéger.
+ */
+export interface UpdateGoodPayload {
+  readonly name: string;
+  readonly brand: string;
+  readonly categoryId: number;
+  readonly storageLocationId: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StocksService {
   private readonly http = inject(HttpClient);
@@ -155,18 +171,9 @@ export class StocksService {
     return this.http.post<ApiCreatedGood>(`${this.baseUrl}/goods`, payload);
   }
 
-  /**
-   * Signale où se range une denrée déjà au catalogue.
-   *
-   * `PATCH` et un corps d'un seul champ : l'écran n'a pas la fiche complète
-   * sous la main, et le contrôleur ne touche qu'aux clés présentes. `null`
-   * efface l'emplacement — c'est le choix « Non précisé » du sélecteur.
-   */
-  updateGoodStorageLocation(
-    id: number,
-    storageLocationId: number | null,
-  ): Observable<ApiCreatedGood> {
-    return this.http.patch<ApiCreatedGood>(`${this.baseUrl}/goods/${id}`, { storageLocationId });
+  /** Réécrit l'identité d'une denrée : nom, marque, catégorie, emplacement. */
+  updateGood(id: number, payload: UpdateGoodPayload): Observable<ApiCreatedGood> {
+    return this.http.patch<ApiCreatedGood>(`${this.baseUrl}/goods/${id}`, payload);
   }
 
   /** Liste vide si le code n'est rattaché à rien : réponse normale, pas une
