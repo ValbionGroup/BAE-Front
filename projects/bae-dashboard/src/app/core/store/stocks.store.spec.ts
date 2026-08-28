@@ -17,7 +17,7 @@ function item(overrides: Partial<ApiStockItem> = {}): ApiStockItem {
     unit: 'btl',
     brand: null,
     categoryId: 2,
-    categoryName: 'Boisson',
+    category: 'Boisson',
     supplierId: null,
     totalRemainingQty: 12,
     batchCount: 1,
@@ -88,6 +88,25 @@ describe(StocksStore.name, () => {
 
   it('n’alerte pas encore à huit jours', async () => {
     expect(await statusOf(8)).toBe('ok');
+  });
+
+  /**
+   * ⚠️ Régression : `GET /stocks` sert le nom de la catégorie sous la clé nue
+   * `category` — comme `storageLocation` juste à côté — et le store le lisait
+   * sous `categoryName`. Le `?? '—'` du mapping changeait l'absence en tiret,
+   * si bien que la page montrait toutes ses denrées sans catégorie sans qu'une
+   * seule erreur ne remonte.
+   */
+  it('nomme la catégorie servie par l’API', async () => {
+    await loadWith([item()]);
+
+    expect(store.products()[0].categoryName).toBe('Boisson');
+  });
+
+  it('retombe sur un tiret quand la denrée n’a pas de catégorie', async () => {
+    await loadWith([item({ categoryId: null, category: null })]);
+
+    expect(store.products()[0].categoryName).toBe('—');
   });
 
   it('affiche la DLC au jour servi par l’API', async () => {

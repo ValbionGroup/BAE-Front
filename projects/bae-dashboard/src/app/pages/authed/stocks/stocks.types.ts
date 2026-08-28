@@ -20,7 +20,7 @@ export interface StockProduct {
   readonly name: string;
   readonly unit: string;
   readonly brand: string | null;
-  readonly categoryId: number;
+  readonly categoryId: number | null;
   readonly categoryName: string;
   readonly totalQty: number;
   readonly batchCount: number;

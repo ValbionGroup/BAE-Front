@@ -42,7 +42,7 @@ function toStockProduct(item: ApiStockItem): StockProduct {
     unit: item.unit,
     brand: item.brand,
     categoryId: item.categoryId,
-    categoryName: item.categoryName ?? '—',
+    categoryName: item.category ?? '—',
     totalQty: item.totalRemainingQty,
     batchCount: item.batchCount,
     nearestDlc,

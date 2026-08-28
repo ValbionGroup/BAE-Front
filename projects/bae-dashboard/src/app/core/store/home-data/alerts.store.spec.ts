@@ -14,7 +14,7 @@ function stockItem(over: Partial<ApiStockItem>): ApiStockItem {
     unit: 'u',
     brand: null,
     categoryId: 1,
-    categoryName: 'Divers',
+    category: 'Divers',
     supplierId: null,
     totalRemainingQty: 5,
     batchCount: 1,

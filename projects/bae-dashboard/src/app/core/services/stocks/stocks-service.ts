@@ -10,8 +10,11 @@ export interface ApiStockItem {
   name: string;
   unit: string;
   brand: string | null;
-  categoryId: number;
-  categoryName: string;
+  /** `null` pour une denrée sans catégorie : la colonne est nullable. */
+  categoryId: number | null;
+  /** ⚠️ Le nom **nu** de la relation, comme `storageLocation` plus bas — le
+   *  serveur ne sert pas de `categoryName` sur cet endpoint. */
+  category: string | null;
   supplierId: number | null;
   totalRemainingQty: number;
   batchCount: number;
