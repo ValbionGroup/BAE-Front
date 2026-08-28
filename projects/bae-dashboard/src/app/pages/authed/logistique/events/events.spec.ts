@@ -19,8 +19,8 @@ function menuLine(overrides: Partial<MenuItem> = {}): MenuItem {
     isVegetarian: false,
     quantity: 100,
     price: 350,
-    unitCost: 1.12,
-    totalCost: 112,
+    unitCost: 112,
+    totalCost: 11200,
     category: 'Plats',
     ...overrides,
   };
@@ -62,13 +62,20 @@ describe(LogistiqueEvents.name, () => {
   });
 
   it('somme le coût des denrées du menu, et l’ignore quand un coût est inconnu', () => {
-    const known = [{ totalCost: 100 }, { totalCost: 46.4 }] as never;
-    expect(component['menuCost'](known)).toBe(146.4);
+    const known = [{ totalCost: 10000 }, { totalCost: 4640 }] as never;
+    expect(component['menuCost'](known)).toBe(14640);
 
     // Une recette dont on ignore le coût rend le total de la soirée inconnu :
     // additionner ce qu'on sait donnerait un chiffre faussement rassurant.
-    const partial = [{ totalCost: 100 }, { totalCost: null }] as never;
+    const partial = [{ totalCost: 10000 }, { totalCost: null }] as never;
     expect(component['menuCost'](partial)).toBeNull();
+  });
+
+  it('affiche le coût denrées de l’en-tête en euros, pas en centimes', () => {
+    // `totalCost` est en centimes depuis le 2026-08-25 ; l'en-tête de la carte
+    // le montrait sans convertir, soit « 14640 € » pour un menu à 146,40 €.
+    expect(component['formatEurosInt'](14640)).toBe('146');
+    expect(component['formatEurosInt'](0)).toBe('0');
   });
 
   it('n’offre au sélecteur que les recettes absentes du menu', () => {
