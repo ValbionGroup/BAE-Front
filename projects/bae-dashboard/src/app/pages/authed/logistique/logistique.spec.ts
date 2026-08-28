@@ -278,6 +278,30 @@ describe(Logistique.name, () => {
     expect(goodsSection.textContent).toContain('120 pcs');
   });
 
+  it('arrondit les quantités de la liste à deux décimales', async () => {
+    // `missingQty` est un besoin fractionnaire moins un stock : le flottant y
+    // laisse ses artefacts, et « 2.5999999999999996 kg » n'est pas une ligne
+    // de liste de courses. Un entier, lui, reste entier.
+    expect(component['formatQty'](2.5999999999999996)).toBe('2,6');
+    expect(component['formatQty'](2.567)).toBe('2,57');
+    expect(component['formatQty'](120)).toBe('120');
+
+    await renderLoaded(
+      shoppingList({
+        lines: [
+          shoppingLine({ needQty: 12.3, stockQty: 9.7, missingQty: 2.5999999999999996 }),
+          shoppingLine({ kind: 'furniture', id: 2, name: 'Barquettes', missingQty: 2.567 }),
+        ],
+        lineCount: 2,
+      }),
+    );
+
+    const goods = fixture.nativeElement.querySelector('[data-testid="section-goods"]');
+    const furniture = fixture.nativeElement.querySelector('[data-testid="section-furniture"]');
+    expect(goods.textContent).toContain('2,6 kg');
+    expect(furniture.textContent).toContain('2,57 kg');
+  });
+
   it('renders no retailer column when nothing is priced', async () => {
     await renderLoaded(shoppingList({ lines: [shoppingLine({ suppliers: [] })], lineCount: 1 }));
 

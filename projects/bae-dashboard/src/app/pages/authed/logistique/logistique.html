@@ -147,7 +147,7 @@
                     }
                   </th>
                   <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
-                    {{ row.missingQty }} {{ row.unit }}
+                    {{ formatQty(row.missingQty) }} {{ row.unit }}
                   </td>
                   @for (cell of row.cells; track cell.supplierId) {
                     <td [class]="'mono tnum px-3.5 py-2.5 text-right ' + cellClass(cell)">
@@ -238,7 +238,7 @@
                     }
                   </th>
                   <td class="mono tnum px-3.5 py-2.5 text-right text-text-2">
-                    {{ line.missingQty }} {{ line.unit }}
+                    {{ formatQty(line.missingQty) }} {{ line.unit }}
                   </td>
                   <td class="mono tnum px-3.5 py-2.5 text-right text-text">
                     @if (line.bestPrice === null) {

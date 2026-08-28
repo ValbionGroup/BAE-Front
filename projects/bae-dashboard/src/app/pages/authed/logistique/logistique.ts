@@ -345,6 +345,19 @@ export class Logistique implements OnInit {
     return formatCents(cents);
   }
 
+  /**
+   * `missingQty` est un besoin fractionnaire — une recette consomme des
+   * fractions d'unité — moins un stock qui l'est aussi. Le flottant laisse ses
+   * artefacts dans la soustraction, et « 2.5999999999999996 kg » n'est pas une
+   * ligne de liste de courses : deux décimales suffisent à faire les courses.
+   *
+   * `toString` plutôt que `toFixed(2)` : un manque de 120 pièces s'annonce
+   * « 120 », pas « 120,00 ».
+   */
+  protected formatQty(qty: number): string {
+    return (Math.round(qty * 100) / 100).toString().replace('.', ',');
+  }
+
   protected cellClass(cell: CartCell): string {
     if (cell.price === null) return 'text-muted/60';
     return cell.isBest ? 'text-ok font-semibold' : 'text-muted';
