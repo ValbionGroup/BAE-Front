@@ -201,12 +201,6 @@ describe(AuthEffects.name, () => {
     expect(navigate).toHaveBeenCalledWith('/');
   });
 
-  /**
-   * ⚠️ Le symptôme d'origine : une session morte ne produisait **aucune**
-   * conclusion. Chaque magasin rangeait son 401 dans son propre `loadError`, et
-   * l'écran affichait quatre « erreur de chargement » côte à côte sans que
-   * personne n'en déduise qu'il fallait se reconnecter.
-   */
   it('renvoie sur la connexion en gardant la page en cours', async () => {
     const actionsSubject = new Subject<Action>();
     actions$ = actionsSubject.asObservable();

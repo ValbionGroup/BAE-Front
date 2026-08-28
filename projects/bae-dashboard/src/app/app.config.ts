@@ -31,7 +31,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const store = inject(Store);
       store.dispatch(rehydrateAuth());
-      // Instantiate ThemeService eagerly so the .light class is applied before first paint.
       inject(ThemeService);
     }),
     provideBrowserGlobalErrorListeners(),
@@ -40,8 +39,6 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([
         apiCaseRequestInterceptor,
         authInterceptor,
-        // Après `authInterceptor` : il faut que `withCredentials` soit déjà posé,
-        // sinon le cookie CSRF ne partirait pas avec l'en-tête qui le recopie.
         csrfInterceptor,
         errorInterceptor,
         apiResponseCaseInterceptor,
@@ -50,16 +47,6 @@ export const appConfig: ApplicationConfig = {
     ),
     storeConfig,
     provideEffects([AuthEffects]),
-    /**
-     * Ce que `errorInterceptor` déclenche sur un 401 de navigation. Le crochet
-     * vit ici plutôt que dans `bae/ui` parce que la bibliothèque est partagée
-     * avec la zone publique, qui n'a ni magasin ni notion de déconnexion.
-     *
-     * ⚠️ `Store` est résolu **à l'appel**, pas à la fabrication : la chaîne
-     * `HttpClient → intercepteur → crochet` se construit au tout début de
-     * l'amorçage, et exiger le magasin à cet instant nouerait une dépendance
-     * circulaire avec les effets, qui eux réclament `HttpClient`.
-     */
     {
       provide: SESSION_EXPIRED_HANDLER,
       useFactory: () => {

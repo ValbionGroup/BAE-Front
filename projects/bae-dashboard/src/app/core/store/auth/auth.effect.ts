@@ -128,9 +128,6 @@ export class AuthEffects {
       ofType(AuthActions.twoFactorVerifyStart),
       mergeMap(({ code, kind }) =>
         this.authService.verifyTwoFactor$(code, kind).pipe(
-          // Le succès réutilise `loginSuccess` : l'aval est identique — profil en
-          // magasin, websocket ouvert, navigation. Un second chemin de succès
-          // dupliquerait la navigation et finirait par en diverger.
           switchMap(() =>
             this.authService.getUserProfile$().pipe(
               map((userProfile) =>
@@ -148,21 +145,6 @@ export class AuthEffects {
     ),
   );
 
-  /**
-   * Le **repli** de l'expiration de session, pas son traitement principal : le
-   * back repose désormais le cookie à chaque requête authentifiée, si bien qu'un
-   * 401 ne survient plus qu'après une inactivité réelle. Il n'y a alors rien à
-   * rafraîchir — le secret du jeton n'existait que dans le cookie que le
-   * navigateur vient de jeter — et la seule issue honnête est de redemander une
-   * connexion, en gardant la page où l'utilisateur en était.
-   *
-   * ⚠️ `filter` + `exhaustMap`, et non un simple `tap`. Une session morte fait
-   * échouer **toutes** les requêtes en vol d'un coup : une page qui charge quatre
-   * panneaux produit quatre `sessionExpired`. Sans `exhaustMap`, autant de
-   * navigations concurrentes ; sans le `filter`, celles qui arrivent après la
-   * première écraseraient `redirectTo` par `/login` lui-même, et la
-   * reconnexion retomberait sur la page de connexion.
-   */
   sessionExpired$ = createEffect(
     () =>
       this.actions$.pipe(
@@ -183,9 +165,6 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess),
         switchMap(() =>
-          // ⚠️ Le repli compte : sans `redirectTo` — quelqu'un qui tape `/login`
-          // au lieu d'y être renvoyé par `authGuard` — `navigateByUrl(undefined)`
-          // levait. Le saut 2FA rend ce cas courant.
           from(this.router.navigateByUrl(this.redirectTo() ?? '/')),
         ),
       ),
@@ -199,8 +178,6 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess, AuthActions.rehydrationSuccess),
         tap(() => {
-          // Sans `user.id` : le serveur résout l'identité depuis le jeton et
-          // vérifie `order:read` avant d'accorder un canal.
           this.websocketService.initialize();
         }),
       ),
