@@ -41,6 +41,21 @@ export interface RecipeIngredientInput {
 }
 
 /**
+ * Une ligne **non alimentaire** à écrire — gobelets, serviettes.
+ *
+ * Ni rang ni instruction, contrairement à `RecipeIngredientInput` : le pivot
+ * `product_furnitures` ne porte que la quantité, et une fourniture n'a pas de
+ * place dans l'ordre d'assemblage.
+ *
+ * ⚠️ `quantity` est un **entier** : la colonne est `integer unsigned`, là où
+ * celle des ingrédients est décimale.
+ */
+export interface RecipeFurnitureInput {
+  readonly furnitureId: number;
+  readonly quantity: number;
+}
+
+/**
  * Corps de `POST /products` et `PUT /products/:id`.
  *
  * `goods` est toujours envoyé par l'écran, y compris vide : omettre la clé
@@ -53,6 +68,9 @@ export interface RecipeWritePayload {
   readonly description: string | null;
   readonly recipe: string | null;
   readonly goods: readonly RecipeIngredientInput[];
+  /** Envoyée **toujours**, vide comprise : taire la clé signifie « ne touche
+   *  pas au non alimentaire », ce qu'un formulaire complet ne veut jamais. */
+  readonly furnitures: readonly RecipeFurnitureInput[];
   /**
    * La catégorie de **vente** — celle qui décide de l'onglet de la caisse.
    * `null` déclasse explicitement ; l'omettre laisserait la recette telle

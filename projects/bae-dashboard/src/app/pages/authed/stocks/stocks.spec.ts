@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
@@ -12,6 +13,7 @@ import { ToastService } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stock-entry-modal';
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
+import { GoodEditModal } from '#shared/components/modal/good-edit-modal/good-edit-modal';
 import type { StockProduct } from './stocks.types';
 
 /** Le référentiel des lieux, chargé par `StocksStore.load()` avec les stocks. */
@@ -424,57 +426,17 @@ describe(Stocks.name, () => {
   });
 
   describe('emplacement de stockage', () => {
-    it('signale l’emplacement choisi sur la denrée du panneau', async () => {
+    /**
+     * ⚠️ Le `<select>` d'emplacement a quitté le panneau : il se règle dans la
+     * modale d'édition, avec le nom, la marque et la catégorie. Un panneau qui
+     * écrit une colonne et en affiche quatre autres en lecture seule laissait
+     * croire qu'elle seule était corrigeable.
+     */
+    it('ne propose plus de sélecteur dans le panneau', async () => {
       await selectFirstProduct();
-      const set = vi
-        .spyOn(TestBed.inject(StocksStore), 'setStorageLocation')
-        .mockResolvedValue(true);
 
-      await component['onStorageLocation'](component['selectedProduct']()!, '7');
-
-      expect(set).toHaveBeenCalledWith(1, 7);
-      vi.restoreAllMocks();
-    });
-
-    // `''` est l'option « Non précisé » : elle efface, elle n'annule pas le geste.
-    it('efface l’emplacement quand « Non précisé » est choisi', async () => {
-      await selectFirstProduct();
-      const set = vi
-        .spyOn(TestBed.inject(StocksStore), 'setStorageLocation')
-        .mockResolvedValue(true);
-
-      await component['onStorageLocation'](
-        { ...component['selectedProduct']()!, storageLocationId: 9, storageLocationName: 'Sec' },
-        '',
-      );
-
-      expect(set).toHaveBeenCalledWith(1, null);
-      vi.restoreAllMocks();
-    });
-
-    /** Le `change` d'un `<select>` se déclenche aussi quand la valeur revient à
-     *  elle-même : écrire pour rien ferait un PATCH par ouverture de panneau. */
-    it('n’écrit pas quand la valeur ne change pas', async () => {
-      await selectFirstProduct();
-      const set = vi
-        .spyOn(TestBed.inject(StocksStore), 'setStorageLocation')
-        .mockResolvedValue(true);
-
-      await component['onStorageLocation'](component['selectedProduct']()!, '');
-
-      expect(set).not.toHaveBeenCalled();
-      vi.restoreAllMocks();
-    });
-
-    it('prévient quand le serveur refuse, plutôt que d’afficher une valeur fausse', async () => {
-      await selectFirstProduct();
-      vi.spyOn(TestBed.inject(StocksStore), 'setStorageLocation').mockResolvedValue(false);
-      const toast = vi.spyOn(TestBed.inject(ToastService), 'show');
-
-      await component['onStorageLocation'](component['selectedProduct']()!, '8');
-
-      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
-      vi.restoreAllMocks();
+      const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select');
+      expect(selects).toHaveLength(0);
     });
 
     /**
@@ -482,18 +444,106 @@ describe(Stocks.name, () => {
      * dictionnaire local : la liste des lieux est éditable, et une table de
      * traduction figée dans le front divergerait au premier renommage.
      */
-    it('rend un tiret pour une denrée sans emplacement signalé', () => {
+    it('laisse lire l’emplacement dans le panneau', async () => {
+      await selectFirstProduct();
+
       const product = component['selectedProduct']() ?? ({} as StockProduct);
       expect(component['storageLabel']({ ...product, storageLocationName: null })).toBe('—');
       expect(component['storageLabel']({ ...product, storageLocationName: 'Congélateur' })).toBe(
         'Congélateur',
       );
     });
+  });
 
-    it('laisse lire l’emplacement sans le droit d’écriture', () => {
+  describe('édition d’une denrée', () => {
+    it('ouvre la modale sur la denrée du panneau', async () => {
+      await selectFirstProduct();
+      const open = vi.spyOn(TestBed.inject(ModalService), 'open');
+
+      component['openEditGood'](component['selectedProduct']()!);
+
+      expect(open).toHaveBeenCalledWith(
+        expect.objectContaining({
+          component: GoodEditModal,
+          inputs: expect.objectContaining({ product: component['selectedProduct']() }),
+        }),
+      );
+      vi.restoreAllMocks();
+    });
+
+    it('n’offre pas la modification sans le droit good:write', () => {
       TestBed.inject(MockStore).setState({ auth: { permissions: ['stock:read'] } });
 
       expect(component['canWriteGood']()).toBe(false);
+    });
+  });
+
+  /**
+   * La bascule vers le non alimentaire. Les deux catalogues ne partagent pas
+   * une colonne : la page change de tableau, de KPIs et d'actions, elle ne
+   * filtre pas une liste commune.
+   */
+  describe('bascule denrées / non alimentaire', () => {
+    /** Les lectures des deux catalogues, plus les gestes sur les denrées. */
+    async function renderWith(permissions: string[]): Promise<void> {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [Stocks],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideMockStore({ initialState: { auth: { permissions } } }),
+        ],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(Stocks);
+      component = fixture.componentInstance;
+      http = TestBed.inject(HttpTestingController);
+      await fixture.whenStable();
+      http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
+      http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+      http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    it('n’offre pas la bascule sans le droit de lire les fournitures', async () => {
+      await renderWith(['stock:read']);
+
+      expect(component['canReadFurnitures']()).toBe(false);
+      expect(text()).not.toContain('Non alimentaire');
+    });
+
+    it('rend le catalogue non alimentaire une fois basculée', async () => {
+      await renderWith(['stock:read', 'furniture:read']);
+      component['setMode']('furnitures');
+      fixture.detectChanges();
+      http.match((r) => r.url.endsWith('/furnitures')).forEach((r) => r.flush([]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(text()).toContain('Valeur du stock');
+      // Le tableau des denrées et ses colonnes de lots ont disparu : une
+      // fourniture n'a ni DLC ni lot.
+      expect(text()).not.toContain('DLC');
+    });
+
+    /** Scanner, entrée de stock et inventaire ne veulent rien dire ici. */
+    it('ne garde que la création en actions de topbar', async () => {
+      await renderWith(['stock:read', 'furniture:read', 'furniture:write']);
+      component['setMode']('furnitures');
+
+      expect(component['pageActions']().map((action) => action.label)).toEqual(['Fourniture']);
+    });
+
+    it('n’offre pas la création sans le droit d’écriture', async () => {
+      await renderWith(['stock:read', 'furniture:read']);
+      component['setMode']('furnitures');
+
+      expect(component['pageActions']()).toHaveLength(0);
     });
   });
 });

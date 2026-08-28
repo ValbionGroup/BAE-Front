@@ -18,6 +18,10 @@ interface ModalApi {
   setQuantity(key: string, quantity: string): void;
   moveLine(key: string, delta: number): void;
   lines(): readonly { key: string }[];
+  addFurnitureLine(): void;
+  setFurniture(key: string, furnitureId: string): void;
+  setFurnitureQuantity(key: string, quantity: string): void;
+  furnitureLines(): readonly { key: string }[];
   submit(): Promise<void>;
 }
 
@@ -79,6 +83,14 @@ describe(RecipeEditModal.name, () => {
     http
       .expectOne(`${baseUrl}/product-categories`)
       .flush([{ id: 4, name: 'Desserts', productsCount: 0 }]);
+    // Le catalogue non alimentaire, chargé par `FurnituresStore` : le bloc
+    // « Non alimentaire » de la modale y puise son sélecteur.
+    for (const request of http.match(`${baseUrl}/furnitures`)) {
+      request.flush([
+        { id: 5, name: 'Gobelet 33 cl', quantity: 240, price: 8 },
+        { id: 6, name: 'Serviettes', quantity: 0, price: 2 },
+      ]);
+    }
     return fixture;
   }
 
@@ -319,5 +331,108 @@ describe(RecipeEditModal.name, () => {
     const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select');
     // Le premier est celui de la catégorie ; le second, la ligne d'ingrédient.
     expect(selects[1]?.value).toBe('11');
+  });
+
+  /**
+   * Le pivot `product_furnitures` est le seul chemin par lequel une fourniture
+   * atteint une liste de courses. Sans ce bloc, en créer une ne servait à rien.
+   */
+  it('envoie les fournitures de la recette', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Hot-dog');
+    modal.addFurnitureLine();
+    const [line] = modal.furnitureLines().map((l) => l.key);
+    modal.setFurniture(line, '5');
+    modal.setFurnitureQuantity(line, '2');
+
+    const submitted = modal.submit();
+    const request = http.expectOne(`${baseUrl}/products`);
+    expect(request.request.body.furnitures).toEqual([{ furnitureId: 5, quantity: 2 }]);
+    request.flush({ id: 9, name: 'Hot-dog' });
+    await tick();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+    await submitted;
+  });
+
+  /** La clé est toujours envoyée, vide comprise : la taire signifierait « ne
+   *  touche pas », ce qui n'est jamais ce que veut un formulaire complet. */
+  it('envoie une liste vide quand la recette n’a aucune fourniture', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Crêpe');
+
+    const submitted = modal.submit();
+    const request = http.expectOne(`${baseUrl}/products`);
+    expect(request.request.body.furnitures).toEqual([]);
+    request.flush({ id: 9, name: 'Crêpe' });
+    await tick();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+    await submitted;
+  });
+
+  it('reprend les fournitures de la recette à la modification', async () => {
+    const fixture = open(7);
+    const modal = api(fixture);
+
+    http.expectOne(`${baseUrl}/products/7`).flush({
+      id: 7,
+      name: 'Hot-dog',
+      isVegetarian: false,
+      description: null,
+      recipe: null,
+      productCategoryId: null,
+      furnitures: [{ id: 5, name: 'Gobelet 33 cl', quantity: 3 }],
+    });
+    http.expectOne(`${baseUrl}/products/7/ingredients`).flush([]);
+    await tick();
+    fixture.detectChanges();
+
+    expect(modal.furnitureLines()).toHaveLength(1);
+
+    const submitted = modal.submit();
+    const request = http.expectOne(`${baseUrl}/products/7`);
+    expect(request.request.body.furnitures).toEqual([{ furnitureId: 5, quantity: 3 }]);
+    request.flush({ id: 7, name: 'Hot-dog' });
+    await tick();
+    http.expectOne(`${baseUrl}/products/summary`).flush([]);
+    await submitted;
+  });
+
+  /** Clé primaire `(product_id, furniture_id)` : le doublon est un refus API. */
+  it('refuse deux fois la même fourniture', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Hot-dog');
+    modal.addFurnitureLine();
+    modal.addFurnitureLine();
+    for (const line of modal.furnitureLines()) modal.setFurniture(line.key, '5');
+
+    await modal.submit();
+
+    http.expectNone(`${baseUrl}/products`);
+  });
+
+  /**
+   * ⚠️ `product_furnitures.quantity` est un `integer unsigned`, là où celle des
+   * ingrédients est décimale : `1,5` gobelet y serait arrondi en silence.
+   */
+  it('refuse une quantité de fourniture qui n’est pas un entier positif', async () => {
+    const fixture = open(null);
+    const modal = api(fixture);
+
+    modal.onName('Hot-dog');
+    modal.addFurnitureLine();
+    const [line] = modal.furnitureLines().map((l) => l.key);
+    modal.setFurniture(line, '5');
+
+    for (const bad of ['0', '-1', '1,5', 'abc', '']) {
+      modal.setFurnitureQuantity(line, bad);
+      await modal.submit();
+      http.expectNone(`${baseUrl}/products`);
+    }
   });
 });
