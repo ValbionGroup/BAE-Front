@@ -496,4 +496,73 @@ describe(Stocks.name, () => {
       expect(component['canWriteGood']()).toBe(false);
     });
   });
+
+  /**
+   * La bascule vers le non alimentaire. Les deux catalogues ne partagent pas
+   * une colonne : la page change de tableau, de KPIs et d'actions, elle ne
+   * filtre pas une liste commune.
+   */
+  describe('bascule denrées / non alimentaire', () => {
+    /** Les lectures des deux catalogues, plus les gestes sur les denrées. */
+    async function renderWith(permissions: string[]): Promise<void> {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [Stocks],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideMockStore({ initialState: { auth: { permissions } } }),
+        ],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(Stocks);
+      component = fixture.componentInstance;
+      http = TestBed.inject(HttpTestingController);
+      await fixture.whenStable();
+      http.match((r) => r.url.endsWith('/stocks')).forEach((r) => r.flush([]));
+      http.match((r) => r.url.endsWith('/categories')).forEach((r) => r.flush([]));
+      http.match((r) => r.url.endsWith('/storage-locations')).forEach((r) => r.flush([]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    it('n’offre pas la bascule sans le droit de lire les fournitures', async () => {
+      await renderWith(['stock:read']);
+
+      expect(component['canReadFurnitures']()).toBe(false);
+      expect(text()).not.toContain('Non alimentaire');
+    });
+
+    it('rend le catalogue non alimentaire une fois basculée', async () => {
+      await renderWith(['stock:read', 'furniture:read']);
+      component['setMode']('furnitures');
+      fixture.detectChanges();
+      http.match((r) => r.url.endsWith('/furnitures')).forEach((r) => r.flush([]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(text()).toContain('Valeur du stock');
+      // Le tableau des denrées et ses colonnes de lots ont disparu : une
+      // fourniture n'a ni DLC ni lot.
+      expect(text()).not.toContain('DLC');
+    });
+
+    /** Scanner, entrée de stock et inventaire ne veulent rien dire ici. */
+    it('ne garde que la création en actions de topbar', async () => {
+      await renderWith(['stock:read', 'furniture:read', 'furniture:write']);
+      component['setMode']('furnitures');
+
+      expect(component['pageActions']().map((action) => action.label)).toEqual(['Fourniture']);
+    });
+
+    it('n’offre pas la création sans le droit d’écriture', async () => {
+      await renderWith(['stock:read', 'furniture:read']);
+      component['setMode']('furnitures');
+
+      expect(component['pageActions']()).toHaveLength(0);
+    });
+  });
 });

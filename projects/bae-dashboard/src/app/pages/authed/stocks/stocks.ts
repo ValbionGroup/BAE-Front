@@ -51,7 +51,14 @@ import { StockEntryModal } from '#shared/components/modal/stock-entry-modal/stoc
 import { StockExitModal } from '#shared/components/modal/stock-exit-modal/stock-exit-modal';
 import { PrintService } from '#core/services/print/print-service';
 import { PageAction, PageActions } from '#shared/components/page-actions/page-actions';
+import { FurnitureEditModal } from '#shared/components/modal/furniture-edit-modal/furniture-edit-modal';
+import { FurnituresStore } from '#core/store/furnitures.store';
+import { Furnitures } from './furnitures/furnitures';
 import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from './stocks.types';
+
+/** Les deux catalogues de la page. Une bascule, pas un filtre : ils ne
+ *  partagent pas une colonne. */
+type StockMode = 'goods' | 'furnitures';
 
 @Component({
   selector: 'bfd-stocks',
@@ -66,6 +73,7 @@ import type { DlcStatus, SortDir, SortKey, StockBatchRow, StockProduct } from '.
     LucideDynamicIcon,
     PageActions,
     DetailSheet,
+    Furnitures,
   ],
   templateUrl: './stocks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,6 +85,7 @@ export class Stocks implements OnInit {
   private readonly pageHeader = inject(PageHeaderService);
   private readonly router = inject(Router);
   private readonly store = inject(StocksStore);
+  private readonly furnitures = inject(FurnituresStore);
   private readonly modal = inject(ModalService);
   private readonly toast = inject(ToastService);
   private readonly permissions = inject(Store).selectSignal(selectPermissions);
@@ -93,11 +102,9 @@ export class Stocks implements OnInit {
     // ⚠️ Un seul effect, dans cet ordre : `set()` remet les actions à `null`,
     // donc un effect séparé effacerait les boutons au premier chargement.
     effect(() => {
-      const products = this.store.products();
-      const batches = products.reduce((sum, p) => sum + p.batchCount, 0);
       this.pageHeader.set({
         title: 'Stocks',
-        subtitle: `${products.length} produits · ${batches} lots`,
+        subtitle: this.subtitle(),
         breadcrumb: ['Préparation', 'Stocks'],
         activeNavId: 'stocks',
       });
@@ -138,24 +145,85 @@ export class Stocks implements OnInit {
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
 
-  protected readonly pageActions = computed<readonly PageAction[]>(() => [
-    { label: 'Scanner', icon: this.icScan, run: () => this.openScanner() },
-    {
-      label: 'Entrée',
-      icon: this.icEntry,
-      testId: 'stock-entry',
-      run: () => this.openStockEntry(),
-    },
-    { label: 'Inventaire', icon: this.icDownload, run: () => this.printInventory() },
-    {
-      label: 'Produit',
-      icon: this.icPlus,
-      kind: 'primary',
-      primary: true,
-      testId: 'add-good',
-      run: () => this.openCreateGood(),
-    },
-  ]);
+  /**
+   * ⚠️ Dépendent du mode : scanner, entrée de stock et inventaire n'ont pas
+   * d'équivalent non alimentaire — une fourniture n'a ni code-barres, ni lot,
+   * ni DLC à imprimer.
+   */
+  protected readonly pageActions = computed<readonly PageAction[]>(() => {
+    if (this.mode() === 'furnitures') {
+      return this.canWriteFurnitures()
+        ? [
+            {
+              label: 'Fourniture',
+              icon: this.icPlus,
+              kind: 'primary' as const,
+              primary: true,
+              testId: 'add-furniture',
+              run: () => this.openFurnitureEditor(),
+            },
+          ]
+        : [];
+    }
+
+    return [
+      { label: 'Scanner', icon: this.icScan, run: () => this.openScanner() },
+      {
+        label: 'Entrée',
+        icon: this.icEntry,
+        testId: 'stock-entry',
+        run: () => this.openStockEntry(),
+      },
+      { label: 'Inventaire', icon: this.icDownload, run: () => this.printInventory() },
+      {
+        label: 'Produit',
+        icon: this.icPlus,
+        kind: 'primary',
+        primary: true,
+        testId: 'add-good',
+        run: () => this.openCreateGood(),
+      },
+    ];
+  });
+
+  protected readonly mode = signal<StockMode>('goods');
+
+  protected readonly modeTabs: readonly { key: StockMode; label: string }[] = [
+    { key: 'goods', label: 'Denrées' },
+    { key: 'furnitures', label: 'Non alimentaire' },
+  ];
+
+  protected setMode(mode: StockMode): void {
+    this.mode.set(mode);
+  }
+
+  protected readonly canReadFurnitures = computed<boolean>(() =>
+    this.permissions().includes('furniture:read'),
+  );
+
+  protected readonly canWriteFurnitures = computed<boolean>(() =>
+    this.permissions().includes('furniture:write'),
+  );
+
+  /** Le sous-titre suit le catalogue affiché : compter des lots devant un
+   *  tableau qui n'en a pas serait un contresens. */
+  protected readonly subtitle = computed<string>(() => {
+    if (this.mode() === 'furnitures') {
+      const items = this.furnitures.items();
+      return `${items.length} fourniture${items.length !== 1 ? 's' : ''}`;
+    }
+    const products = this.store.products();
+    const batches = products.reduce((sum, p) => sum + p.batchCount, 0);
+    return `${products.length} produits · ${batches} lots`;
+  });
+
+  protected openFurnitureEditor(): void {
+    this.modal.open({
+      type: 'component',
+      component: FurnitureEditModal,
+      inputs: { furniture: null },
+    });
+  }
 
   protected readonly icScan = LucideScanLine;
   protected readonly icDownload = LucideDownload;
