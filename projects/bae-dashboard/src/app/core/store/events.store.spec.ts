@@ -20,8 +20,8 @@ function menuLine(overrides: Partial<MenuItem> = {}): MenuItem {
     isVegetarian: false,
     quantity: 100,
     price: 350,
-    unitCost: 1.12,
-    totalCost: 112,
+    unitCost: 112,
+    totalCost: 11200,
     category: 'Plats',
     ...overrides,
   };
@@ -154,8 +154,8 @@ describe(EventsStore.name, () => {
           isVegetarian: false,
           quantity: 220,
           price: 350,
-          unitCost: 1.12,
-          totalCost: 246.4,
+          unitCost: 112,
+          totalCost: 24640,
           category: 'Plats',
         },
       ]);
@@ -166,7 +166,7 @@ describe(EventsStore.name, () => {
     });
 
     it('met à jour la quantité de façon optimiste et confirme avec la réponse', async () => {
-      await seedMenu('7', [menuLine({ productId: 3, quantity: 100, totalCost: 112 })]);
+      await seedMenu('7', [menuLine({ productId: 3, quantity: 100, totalCost: 11200 })]);
 
       const promise = store.setMenuLineQuantity('7', 3, 240);
       // Optimiste : la valeur a déjà bougé, avant toute réponse réseau.
@@ -174,11 +174,11 @@ describe(EventsStore.name, () => {
 
       httpMock
         .expectOne({ method: 'PATCH', url: `${baseUrl}/events/7/products/3` })
-        .flush(menuLine({ productId: 3, quantity: 240, totalCost: 268.8 }));
+        .flush(menuLine({ productId: 3, quantity: 240, totalCost: 26880 }));
       await promise;
 
       // Le coût total ne peut pas être deviné côté client : il vient du serveur.
-      expect(store.getEventById('7')?.menu?.[0].totalCost).toBe(268.8);
+      expect(store.getEventById('7')?.menu?.[0].totalCost).toBe(26880);
     });
 
     it('ne restaure que la ligne fautive quand l’écriture échoue', async () => {
