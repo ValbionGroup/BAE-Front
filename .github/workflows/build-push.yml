@@ -165,19 +165,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # amd64 only. Asking for linux/arm64 here would build it under
-          # QEMU user-mode emulation on this x86 runner, and QEMU cannot
-          # reliably execute the code V8 emits at runtime: the dependency install
-          # died at random with `qemu: uncaught target signal 4 (Illegal
-          # instruction)`. It was intermittent — what V8 emits depends on
-          # scheduling — so the same tag could fail, then pass on a re-run.
-          #
-          # Nothing deployed needs arm64 today. To bring it back, do not
-          # simply add the platform to this line: split the build across a
-          # matrix with `ubuntu-24.04-arm` for the arm64 half (free on
-          # public repositories), push each half by digest, and join them
-          # with `docker buildx imagetools create`. That way neither half
-          # is emulated.
           platforms: linux/amd64
 
       - name: Generate artifact attestation
