@@ -31,6 +31,7 @@ const payload: RecipeWritePayload = {
   description: null,
   recipe: null,
   goods: [],
+  furnitures: [],
   productCategoryId: null,
 };
 

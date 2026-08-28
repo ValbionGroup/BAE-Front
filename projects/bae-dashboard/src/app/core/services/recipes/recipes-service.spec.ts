@@ -40,6 +40,7 @@ describe(RecipesService.name, () => {
         description: null,
         recipe: null,
         goods: [],
+        furnitures: [],
         productCategoryId: null,
       })
       .subscribe();

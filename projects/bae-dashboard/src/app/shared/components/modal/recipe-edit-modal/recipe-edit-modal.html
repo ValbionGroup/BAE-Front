@@ -192,11 +192,102 @@
         }
       </div>
 
+      <!-- Non alimentaire : pas de flèches d'ordre ni d'instruction, le pivot
+           `product_furnitures` ne porte que la quantité. -->
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <h3 class="m-0 text-xs font-medium text-text-2">Non alimentaire</h3>
+          <span class="text-[11px] text-muted">Ce que la soirée consomme sans le manger.</span>
+          <span class="flex-1"></span>
+          <bae-btn
+            kind="secondary"
+            size="sm"
+            [icon]="icPlus"
+            [disabled]="furnituresMissing()"
+            (clicked)="addFurnitureLine()"
+            >Ajouter</bae-btn
+          >
+        </div>
+
+        @if (furnituresMissing()) {
+          <p
+            class="m-0 rounded-md border border-dashed border-border-s bg-surface p-3 text-[12px] text-muted"
+          >
+            Aucune fourniture au catalogue : ajoutez-en une depuis la page Stocks, onglet « Non
+            alimentaire ».
+          </p>
+        } @else if (furnitureLines().length === 0) {
+          <p
+            class="m-0 rounded-md border border-dashed border-border-s bg-surface p-3 text-center text-[12px] text-muted"
+          >
+            Aucune fourniture. « Ajouter » en pose une première.
+          </p>
+        } @else {
+          <div class="flex flex-col gap-1.5">
+            <div
+              class="hidden md:grid md:grid-cols-[1fr_104px_92px] gap-2 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+            >
+              <span>Fourniture</span>
+              <span>Quantité</span>
+              <span></span>
+            </div>
+
+            @for (line of furnitureLines(); track line.key) {
+              <div
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1fr_104px_92px] md:gap-2"
+              >
+                <select
+                  aria-label="Fourniture"
+                  [attr.aria-invalid]="
+                    submitted() &&
+                    (line.furnitureId === '' || duplicateFurnitureIds().has(line.furnitureId))
+                      ? 'true'
+                      : null
+                  "
+                  class="h-9 w-full rounded-md border border-border bg-surface-2 px-2 text-[12.5px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue/40"
+                  [value]="line.furnitureId"
+                  (change)="setFurniture(line.key, $any($event.target).value)"
+                >
+                  <option value="">Choisir une fourniture…</option>
+                  @for (furniture of furnitures.items(); track furniture.id) {
+                    <option
+                      [value]="furniture.id"
+                      [selected]="sameFurniture(line.furnitureId, furniture.id)"
+                    >
+                      {{ furniture.name }}
+                    </option>
+                  }
+                </select>
+
+                <bae-input
+                  ariaLabel="Quantité"
+                  type="text"
+                  placeholder="1"
+                  [value]="line.quantity"
+                  [invalid]="submitted() && furnitureLineInvalid(line)"
+                  (valueChange)="setFurnitureQuantity(line.key, $event)"
+                />
+
+                <div class="flex items-center justify-end gap-0.5">
+                  <bae-btn
+                    kind="quiet"
+                    size="sm"
+                    [icon]="icTrash"
+                    ariaLabel="Retirer cette fourniture"
+                    (clicked)="removeFurnitureLine(line.key)"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
       @if (submitted() && !valid()) {
         <p role="alert" class="m-0 text-[12px] text-danger">
           Le nom est obligatoire, et chaque ingrédient doit désigner un produit distinct avec une
           quantité supérieure à zéro. Les décimales sont admises : 0,0833 paquet pour un pain pris
-          dans un paquet de douze.
+          dans un paquet de douze. Une fourniture, elle, se compte en entiers.
         </p>
       }
 

@@ -8,6 +8,18 @@ import type {
   RecipeWritePayload,
 } from '#pages/authed/recettes/recipes.types';
 
+/**
+ * Une fourniture de la recette, telle que `GET /products/:id` la sert.
+ *
+ * ⚠️ `quantity` est celle du **pivot** — ce que la recette consomme — et non le
+ * stock de la fourniture, que `GET /furnitures` porte sous le même nom.
+ */
+export interface ApiRecipeFurniture {
+  readonly id: number;
+  readonly name: string;
+  readonly quantity: number;
+}
+
 export type { RecipeProduct, RecipeIngredient, RecipeWritePayload };
 
 /** Ligne `products` renvoyée par les écritures — sans les agrégats de coût,
@@ -30,6 +42,7 @@ export interface ApiRecipeDetail {
   readonly recipe: string | null;
   /** La catégorie de **vente** ; `null` = non classée, ce n'est pas une anomalie. */
   readonly productCategoryId: number | null;
+  readonly furnitures: readonly ApiRecipeFurniture[];
 }
 
 @Injectable({ providedIn: 'root' })

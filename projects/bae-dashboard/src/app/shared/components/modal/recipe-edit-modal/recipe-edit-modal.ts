@@ -18,6 +18,7 @@ import { Btn, Field, Input, Toggle, ToastService } from '@bae/ui';
 import { RecipesStore } from '#core/store/recipes.store';
 import { StocksStore } from '#core/store/stocks.store';
 import { ReferentielsStore } from '#core/store/referentiels.store';
+import { FurnituresStore } from '#core/store/furnitures.store';
 import type { RecipeWritePayload } from '#pages/authed/recettes/recipes.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
@@ -38,6 +39,16 @@ interface IngredientLine {
 }
 
 /**
+ * Une ligne du bloc **non alimentaire**. Ni rang ni instruction : le pivot
+ * `product_furnitures` ne porte que la quantité.
+ */
+interface FurnitureLine {
+  readonly key: string;
+  readonly furnitureId: string;
+  readonly quantity: string;
+}
+
+/**
  * Une recette consomme une fraction d'unité d'achat : `0,0833` paquet de pains
  * pour un hot-dog. La virgule est acceptée autant que le point.
  */
@@ -46,6 +57,18 @@ function parseQuantity(raw: string): number | null {
   if (!/^\d*\.?\d+$/.test(trimmed)) return null;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+/**
+ * ⚠️ Une quantité de fourniture est un **entier** : `product_furnitures.quantity`
+ * est un `integer unsigned`, là où celle des ingrédients est décimale. Une
+ * fraction y serait arrondie en silence par Postgres.
+ */
+function parseCount(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return parsed > 0 ? parsed : null;
 }
 
 function emptyToNull(raw: string): string | null {
@@ -89,6 +112,9 @@ export class RecipeEditModal {
   protected readonly stocks = inject(StocksStore);
   /** Alimente le sélecteur de catégorie de vente. */
   protected readonly referentiels = inject(ReferentielsStore);
+  /** Alimente le sélecteur du bloc non alimentaire, comme `StocksStore` le fait
+   *  pour les ingrédients : même liste que la page Stocks, déjà en cache. */
+  protected readonly furnitures = inject(FurnituresStore);
 
   protected readonly icChef = LucideChefHat;
   protected readonly icPlus = LucidePlus;
@@ -103,6 +129,7 @@ export class RecipeEditModal {
   protected readonly description = signal('');
   protected readonly method = signal('');
   protected readonly lines = signal<readonly IngredientLine[]>([]);
+  protected readonly furnitureLines = signal<readonly FurnitureLine[]>([]);
 
   /** `''` = « Sans catégorie ». Une recette non classée est un cas normal. */
   protected readonly categoryId = signal<string>('');
@@ -124,6 +151,7 @@ export class RecipeEditModal {
     // store est `providedIn: 'root'` et `load()` est gardé : une fois chargé, la
     // modale suivante ne redemande rien.
     void this.referentiels.load();
+    void this.furnitures.load();
 
     effect(() => {
       const id = this.recipeId();
@@ -138,6 +166,16 @@ export class RecipeEditModal {
           this.method.set(detail.recipe ?? '');
           this.categoryId.set(
             detail.productCategoryId === null ? '' : String(detail.productCategoryId),
+          );
+          // ⚠️ `?? []` : les fournitures viennent de `GET /products/:id`, jamais
+          // de `products/summary` — une réponse sans la clé laisse la recette
+          // sans non-alimentaire, elle ne la met pas en erreur.
+          this.furnitureLines.set(
+            (detail.furnitures ?? []).map((furniture) => ({
+              key: crypto.randomUUID(),
+              furnitureId: String(furniture.id),
+              quantity: String(furniture.quantity),
+            })),
           );
           this.lines.set(
             ingredients.map((ingredient) => ({
@@ -207,6 +245,56 @@ export class RecipeEditModal {
     });
   }
 
+  protected addFurnitureLine(): void {
+    this.furnitureLines.update((lines) => [
+      ...lines,
+      { key: crypto.randomUUID(), furnitureId: '', quantity: '1' },
+    ]);
+  }
+
+  protected removeFurnitureLine(key: string): void {
+    this.furnitureLines.update((lines) => lines.filter((line) => line.key !== key));
+  }
+
+  protected setFurniture(key: string, furnitureId: string): void {
+    this.patchFurnitureLine(key, { furnitureId });
+  }
+
+  protected setFurnitureQuantity(key: string, quantity: string): void {
+    this.patchFurnitureLine(key, { quantity });
+  }
+
+  private patchFurnitureLine(key: string, patch: Partial<FurnitureLine>): void {
+    this.furnitureLines.update((lines) =>
+      lines.map((line) => (line.key === key ? { ...line, ...patch } : line)),
+    );
+  }
+
+  /** Même office que `sameGood` : les gabarits ne peuvent pas appeler `Number`. */
+  protected sameFurniture(lineFurnitureId: string, furnitureId: number): boolean {
+    return lineFurnitureId !== '' && Number(lineFurnitureId) === furnitureId;
+  }
+
+  /** Clé primaire `(product_id, furniture_id)` : le doublon est un refus API. */
+  protected readonly duplicateFurnitureIds = computed(() => {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const line of this.furnitureLines()) {
+      if (line.furnitureId === '') continue;
+      if (seen.has(line.furnitureId)) duplicates.add(line.furnitureId);
+      seen.add(line.furnitureId);
+    }
+    return duplicates;
+  });
+
+  protected furnitureLineInvalid(line: FurnitureLine): boolean {
+    return (
+      line.furnitureId === '' ||
+      parseCount(line.quantity) === null ||
+      this.duplicateFurnitureIds().has(line.furnitureId)
+    );
+  }
+
   protected setGood(key: string, goodId: string): void {
     this.patchLine(key, { goodId });
   }
@@ -256,10 +344,15 @@ export class RecipeEditModal {
   /** Une recette sans ingrédient reste valide : on peut poser l'entête d'abord
    *  et composer ensuite. */
   protected readonly valid = computed(
-    () => this.name().trim() !== '' && this.lines().every((line) => !this.lineInvalid(line)),
+    () =>
+      this.name().trim() !== '' &&
+      this.lines().every((line) => !this.lineInvalid(line)) &&
+      this.furnitureLines().every((line) => !this.furnitureLineInvalid(line)),
   );
 
   protected readonly goodsMissing = computed(() => this.stocks.products().length === 0);
+
+  protected readonly furnituresMissing = computed(() => this.furnitures.items().length === 0);
 
   protected async submit(): Promise<void> {
     this.submitted.set(true);
@@ -279,6 +372,10 @@ export class RecipeEditModal {
         quantity: parseQuantity(line.quantity)!,
         instruction: emptyToNull(line.instruction),
       })),
+      furnitures: this.furnitureLines().map((line) => ({
+        furnitureId: Number(line.furnitureId),
+        quantity: parseCount(line.quantity)!,
+      })),
     };
 
     const id = this.recipeId();
@@ -294,7 +391,11 @@ export class RecipeEditModal {
     this.toast.show({
       type: 'success',
       title: id === null ? 'Recette créée' : 'Recette enregistrée',
-      message: `${payload.name} · ${payload.goods.length} ingrédient${payload.goods.length !== 1 ? 's' : ''}.`,
+      message:
+        `${payload.name} · ${payload.goods.length} ingrédient${payload.goods.length !== 1 ? 's' : ''}` +
+        (payload.furnitures.length > 0
+          ? ` · ${payload.furnitures.length} fourniture${payload.furnitures.length !== 1 ? 's' : ''}.`
+          : '.'),
     });
     this.modalService.close(this.id());
   }
