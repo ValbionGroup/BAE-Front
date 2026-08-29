@@ -164,9 +164,7 @@ export class AuthEffects {
     () =>
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess),
-        switchMap(() =>
-          from(this.router.navigateByUrl(this.redirectTo() ?? '/')),
-        ),
+        switchMap(() => from(this.router.navigateByUrl(this.redirectTo() ?? '/'))),
       ),
     { dispatch: false },
   );
