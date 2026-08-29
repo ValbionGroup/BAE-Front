@@ -1,5 +1,5 @@
 <!-- LEFT: list -->
-<div class="flex min-h-0 min-w-0 flex-col gap-3.5 p-4 md:p-5">
+<div class="flex min-h-0 min-w-0 flex-col gap-3.5 p-4 md:col-start-1 md:row-start-2 md:p-5">
   <!-- KPI row -->
   <div class="grid grid-cols-3 gap-3">
     @for (k of kpis(); track k.label) {
@@ -182,6 +182,7 @@
 
 <!-- RIGHT: detail panel -->
 <bae-detail-sheet
+  class="md:col-start-2 md:row-span-2 md:row-start-1"
   [open]="selected() !== null"
   [title]="selected()?.name ?? ''"
   (closed)="selectedId.set(null)"
