@@ -3,7 +3,8 @@
     [baeFloating]="t.anchor"
     [baePlacement]="t.placement ?? 'top'"
     [baeDistance]="8"
-    class="pointer-events-none rounded-md bg-[#0c0c0e] px-2.5 py-[7px] text-[12px] font-medium text-white shadow-lg"
+    [baeArrow]="arrow"
+    class="pointer-events-none relative rounded-md bg-[#0c0c0e] px-2.5 py-[7px] text-[12px] font-medium text-white shadow-lg"
     style="max-width: 280px"
     role="tooltip"
   >
@@ -11,5 +12,8 @@
     @if (t.description) {
       <div class="mt-px text-[11px] text-white/60">{{ t.description }}</div>
     }
+    <!-- 8×8 tourné à 45°, comme la maquette. `aria-hidden` : c'est du décor,
+         et le rôle `tooltip` porte déjà tout le sens. -->
+    <div #arrow class="absolute h-2 w-2 rotate-45 bg-[#0c0c0e]" aria-hidden="true"></div>
   </div>
 }

@@ -1,6 +1,6 @@
 # BAE — état des tâches restantes
 
-> **Dernière mise à jour : 2026-08-27.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
+> **Dernière mise à jour : 2026-08-28.** Les blocs 0 et A ci-dessous ont été **revérifiés dans le
 > code** au 2026-08-23, la tâche 27 livrée le 2026-08-24, le cycle de vie de la soirée le
 > 2026-08-26.
 >
@@ -17,6 +17,62 @@ comme ouverte alors qu'elle était livrée. **Rayer au fil de l'eau, ou ne pas �
 ---
 
 ## ✅ Livré
+
+### 2026-08-28 — le lot 62 / 49 / 42 / 26, et la check-list 21-22
+
+Cinq tâches prises d'affilée. **Trois n'étaient pas ce que ce document en disait** — rejouées dans
+le code avant d'être traitées, conformément à l'avertissement de sa propre annexe.
+
+| #   | Ce que le backlog affirmait          | Ce que le code disait                                                                                                                                                                            |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 42  | « recalculé dans chaque écran »      | **Faux.** `app/services/subscription_service.ts` centralise `expiryOf` / `statusOf` / `toView`, et quatre consommateurs back l'utilisent. Le front reçoit `expiresAt` et `status` déjà calculés. |
+| 49  | « brancher `validateAssignments()` » | **Rien à brancher** : aucune notion de « validé » n'existait en base. L'endpoint était à _définir_, pas à câbler.                                                                                |
+| 26  | débloquée par `get_project`          | Toujours bloquée — par `/design-login`, pas par la méthode d'appel. Une fois autorisée : **les jetons et les primitives concordent**, valeur pour valeur.                                        |
+
+**42 — un vrai bug, à un endroit inattendu.** La seule duplication restante était l'aperçu
+« expire le… » de la modale de cotisation, et elle divergeait : `setFullYear` ne borne pas le jour
+du mois, là où Luxon (`plus({ years })`) sature au dernier jour valide. Un 29 février y devenait un
+1er mars. La règle vit désormais dans `@bae/ui` (`utils/subscription.ts`), avec sa spec.
+
+**49 — arbitré plutôt que deviné.** Quatre lectures possibles de « Valider l'affectation » ;
+retenue : **prévenir les affectés**, la seule des quatre sans migration. Geler l'affectation aurait
+demandé une colonne _et_ une garde sur chaque écriture de `AssignmentsController`, pour un invariant
+que le CDC n'a jamais formulé.
+
+> La clé d'idempotence porte l'**empreinte de l'affectation** (`sha1` des couples `membre:poste`
+> triés), pas la soirée. `presence_reminder` déduplique sur « ce verbe, cette soirée », ce qui
+> convient à un cron ; ici la même clé aurait rendu **muette** toute revalidation — on corrige une
+> affectation, on revalide, et personne n'est prévenu.
+
+`POST /events/:id/assignments/notify`, gardé par `assignment:write` (qui compose annonce ; une
+permission neuve n'aurait rien séparé). Six specs fonctionnelles.
+
+**62 — vérifié en base, pas seulement en code.** `sync()` par nom au lieu de `furnitures[0]/[1]` ;
+`node ace db:seed` puis lecture du pivot : les nappes ont disparu, chaque produit porte son
+contenant. Nappes et sacs poubelle ne s'attachent à aucun produit — consommables de soirée, rien
+au schéma ne les porte à ce niveau (tâche 128).
+
+**26 — l'audit conclut à la conformité.** `theme.jsx` et `tokens.css` sont identiques ; `Btn`,
+`Badge`, `Card`, `Field`, `Input`, `Toggle`, `Kbd`, `Avatar`, `Toast` et `Dropdown` concordent.
+Trois écarts seulement, dont **un seul substantiel** : le tooltip n'avait pas la flèche de la
+maquette — corrigé via le middleware `arrow` de Floating UI, qui suit le placement retenu par
+`flip()`. Les deux autres sont assumés : voir ci-dessous.
+
+| Écart restant                           | Décision                                                                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `bae-btn` md : `gap-1.5` (6px) vs 7px   | **Laissé.** 1 px sous le seuil perceptible, contre une valeur arbitraire hors de l'échelle Tailwind.                                       |
+| Chip du toast : `rounded-lg` (10) vs 8  | **Laissé.** 8 px n'existe pas dans l'échelle de rayons (4/6/10/14) ; la maquette était hors-échelle, l'implémentation l'y ramène.          |
+| Jeu d'icônes : Lucide vs le set dessiné | **Assumé** — choix de pile inscrit au `CLAUDE.md`. Idem pour le logo (vrai fichier au lieu du carré+cercle de substitution) et « BA'ERP ». |
+
+**21 / 22 — non-code, et elles le restent.** Elles ne sont pas exécutables ici (deux comptes réels,
+navigateur contre l'IdP). Livré à la place : `VERIFICATION-MANUELLE.md`, une procédure à dérouler.
+Le seeder de dev fournit déjà la paire de comptes qu'il faut — `admin@bae.test` et
+`membre@bae.test`, dont le `SPECIFIC` est **vide** : il lui manque précisément `stock:read`,
+`stock:update` et `voucher:read`, les trois droits qui gouvernent les panneaux « Accès restreint ».
+
+Suites après le lot : **800 / 0** back, **909 / 0** dashboard, **129 / 0** bae-ui, **118 / 0** public.
+
+---
 
 ### 2026-08-27 — la remise au comptoir (tâche 53)
 
@@ -750,17 +806,18 @@ troisième consommateur qu'on lui prêtait n'a jamais eu lieu d'être. L'arbitra
 
 ### Ouverts
 
-| #      | Tâche                                                                                                | Note                                                                                                                                                                                                                                                                                                                                  |
-| ------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **26** | Écarts au design system                                                                              | ⚠️ **Le blocage n'en est pas un** (2026-08-27). `DesignSync.list_projects` rend une liste **vide** parce qu'il ne liste que les projets de type _design-system_ ; « BAE - ERP » est un projet ordinaire et se lit très bien par son id, `019e1c0a-86ed-72eb-949d-25f2fc0a2e7d`. Passer par `get_project` / `list_files` / `get_file`. |
-| **21** | Vérifications à l'œil : 7 écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes | Non-code. Le comportement d'un compte **sans** la permission est ce qu'il faut voir.                                                                                                                                                                                                                                                  |
-| **22** | Bout-en-bout du logout SSO à la main                                                                 | Non-code. Le protocole n'est joué en test nulle part.                                                                                                                                                                                                                                                                                 |
-| **25** | Sortir `shared/components/modal/` dans `bae-ui`                                                      | **Différée volontairement** : le jour où `bae-public` aura une modale.                                                                                                                                                                                                                                                                |
+| #          | Tâche                                                                                                               | Note                                                                                                                                                                                                                                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~**26**~~ | ~~Écarts au design system~~ ✅ **Fait le 2026-08-28** — audit conforme, flèche du tooltip corrigée. Ancienne note : | ⚠️ **Le blocage n'en est pas un** (2026-08-27). `DesignSync.list_projects` rend une liste **vide** parce qu'il ne liste que les projets de type _design-system_ ; « BAE - ERP » est un projet ordinaire et se lit très bien par son id, `019e1c0a-86ed-72eb-949d-25f2fc0a2e7d`. Passer par `get_project` / `list_files` / `get_file`. |
+| **21**     | Vérifications à l'œil : écrans publics, `soiree/bilan`, Équipe, bons d'achat avec **deux** comptes                  | Non-code, **procédure écrite le 2026-08-28** : `VERIFICATION-MANUELLE.md`. Reste à dérouler à la main.                                                                                                                                                                                                                                |
+| **22**     | Bout-en-bout du logout SSO à la main                                                                                | Non-code. Le protocole n'est joué en test nulle part.                                                                                                                                                                                                                                                                                 |
+| **25**     | Sortir `shared/components/modal/` dans `bae-ui`                                                                     | **Différée volontairement** : le jour où `bae-public` aura une modale.                                                                                                                                                                                                                                                                |
 
 ### Ordre proposé
 
-1. **26** — sous réserve d'accès aux maquettes.
-2. **21 / 22** — à intercaler, ce sont des vérifications humaines.
+~~1. **26** — sous réserve d'accès aux maquettes.~~ ✅ fait le 2026-08-28.
+
+1. **21 / 22** — à dérouler à la main, procédure dans `VERIFICATION-MANUELLE.md`.
 
 **Le bloc A ne contient plus de code.** Ce qui reste y est soit non-code (21, 22), soit
 suspendu à un accès (26), soit différé (25).
@@ -774,14 +831,14 @@ c'est exactement le défaut que ce document se reproche en tête. L'ordre à jou
 Rejoué dans le code, pas déduit. Les trois premières sont des correctifs de sécurité ou
 d'intégrité, tous vérifiés sur la base et l'API de dev.
 
-| Rang  | #               | Pourquoi celle-ci d'abord                                                                                                  |
-| ----- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| ~~1~~ | ~~**36**~~      | ✅ **Fait le 2026-08-26.** Fuite fermée, voir « Livré » ci-dessus. Le rang 2 devient le suivant à prendre.                 |
-| ~~2~~ | ~~**46 + 47**~~ | ✅ **Fait le 2026-08-26**, la 47 par un arbitrage plutôt que par du code. Le rang 3 (**34**) devient le suivant à prendre. |
-| ~~3~~ | ~~**34**~~      | ✅ **Fait le 2026-08-26.** Le rang 4 (**63**, base de test dédiée) devient le suivant à prendre.                           |
-| 4     | **63**          | Le coût du manque de base de test est mesuré : 14 échecs de bruit, et un vrai bug caché dedans pendant des semaines.       |
-| 5     | **58**          | Sans `db:seed` au déploiement, `/v1/vouchers` répond 403 à tout le monde en production — administrateurs compris.          |
-| 6     | **35**          | Purge des vieux logs, **avant la première mise en production** (sans objet sur la base de dev).                            |
+| Rang  | #               | Pourquoi celle-ci d'abord                                                                                                                                                                |
+| ----- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~1~~ | ~~**36**~~      | ✅ **Fait le 2026-08-26.** Fuite fermée, voir « Livré » ci-dessus. Le rang 2 devient le suivant à prendre.                                                                               |
+| ~~2~~ | ~~**46 + 47**~~ | ✅ **Fait le 2026-08-26**, la 47 par un arbitrage plutôt que par du code. Le rang 3 (**34**) devient le suivant à prendre.                                                               |
+| ~~3~~ | ~~**34**~~      | ✅ **Fait le 2026-08-26.** Le rang 4 (**63**, base de test dédiée) devient le suivant à prendre.                                                                                         |
+| 4     | **63**          | Le coût du manque de base de test est mesuré : 14 échecs de bruit, et un vrai bug caché dedans pendant des semaines.                                                                     |
+| ~~5~~ | ~~**58**~~      | ✅ **Fait le 2026-08-27** (`638b80a`) : `docker-entrypoint.js` lance `migration:run --force` **et** `db:seed`, les seeders de démo étant gardés par `DEMO_ONLY`. Constaté le 2026-08-28. |
+| 6     | **35**          | Purge des vieux logs, **avant la première mise en production** (sans objet sur la base de dev).                                                                                          |
 
 ⚠️ **La 44 a été livrée le 2026-08-27 hors de cet ordre**, sur arbitrage : le haut du tableau est
 de l'infra, et la demande était du fonctionnel. L'ordre ci-dessus reste valable pour ce qu'il classe,
@@ -792,10 +849,10 @@ mais il ne classe **que** de l'infra — c'est un défaut de ce tableau, pas une
 Le bruit reviendra au **prochain changement de branche** : c'est exactement ce que la 63 corrige, et
 la mesure vaut toujours — elle ne se lit simplement pas dans le compte du jour.
 
-Ensuite, sans blocage et par valeur décroissante : **60 / 61 / 62** (seeders non idempotents, et
-`product_furniture_seeder` qui fausse la liste de courses avec 5 nappes par hot-dog), **42**
-(expiration de cotisation recalculée dans chaque écran), **49** (`validateAssignments()` n'appelle
-aucun endpoint).
+~~Ensuite, sans blocage et par valeur décroissante : **60 / 61 / 62**, **42**, **49**.~~
+✅ **62, 42 et 49 faites le 2026-08-28** ; **61** l'était déjà (prix déterministes en centimes dans
+`21_good_supplier_seeder.ts`), et **60** est largement absorbée — les seeders de démo portent
+`DEMO_ONLY` et un `sync()`/`fetchOrCreateMany` idempotent. Reste à mesurer ce que 60 couvre encore.
 
 **Ce qui verrouille le reste n'est pas du travail, c'est un ordre du jour** — bloc D : **71**
 (versionner `products`, qui bloque **79**, « le lot le moins cher du CDC »), **73** (quel prix
@@ -829,14 +886,14 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | 39     | Endpoint permettant au **bureau** de fixer la présence d'un autre membre — doit contourner son propre verrou, donc gardé par permission       | Oui. `H1 §7.3`                                                                                                                                                                                                                                                                                                                                                                    |
 | 40     | Table d'**événements de scan** (qui, quoi, quand, quelle soirée), distincte de `received_quantity`                                            | Oui. Base de l'historique client et de la fidélité. `H1 §11`                                                                                                                                                                                                                                                                                                                      |
 | ~~41~~ | ~~Faire consommer `product_category_service` par `ProductsController`~~                                                                       | ✅ **Faite** (2026-08-26) : les deux définitions ont disparu avec la dérivation elle-même — la catégorie d'une recette est désormais une colonne.                                                                                                                                                                                                                                 |
-| 42     | Centraliser côté back le calcul d'expiration d'une cotisation (`subscribed_at + duration`), aujourd'hui recalculé dans chaque écran           | Oui. Deux consommateurs. `H1 §4.1`                                                                                                                                                                                                                                                                                                                                                |
+| ~~42~~ | ~~Centraliser côté back le calcul d'expiration d'une cotisation (`subscribed_at + duration`), aujourd'hui recalculé dans chaque écran~~       | ✅ **Faite le 2026-08-28.** Elle l'était déjà côté back (`subscription_service.ts`) ; seul l'aperçu de la modale divergeait — règle extraite dans `@bae/ui`.                                                                                                                                                                                                                      |
 | 43     | ~~Élaguer le seeder de permissions (`fetchOrCreateMany` n'insère jamais)~~ **et** nettoyer les 8 permissions rescapées d'un ancien nommage    | ⚠️ **La première moitié est fausse** (constaté le 2026-08-27) : ajouter `order:discount` au catalogue puis lancer `db:seed --files=database/seeders/02_permission_seeder.ts` l'a bien inséré en base. `05_role_permission_seeder` emploie `sync()` et non `attach()` — il est idempotent, contrairement à ce que laisse croire la tâche 60. Reste le nettoyage des 8 permissions. |
 | ~~44~~ | ~~Colonne de **méthode de stockage** sur `goods`~~                                                                                            | ✅ **Faite le 2026-08-27.** Colonne **nullable**, sans backfill, plus le `<select>` du panneau de détail et la colonne « Emplacement ». Voir « Livré ».                                                                                                                                                                                                                           |
 | ~~45~~ | ~~Instantané de prix sur `pre_order_items`~~                                                                                                  | ✅ **Faite** : migration `1788000000000_add_price_snapshot_to_pre_order_items_table` (constatée le 2026-08-26).                                                                                                                                                                                                                                                                   |
 | ~~46~~ | ~~Contrainte d'unicité `(user_id, event_id)` sur `pre_orders`~~                                                                               | ✅ **Fait le 2026-08-26.** Index **partiel** (`WHERE status <> 'cancelled'`), migration `1788100000000`.                                                                                                                                                                                                                                                                          |
 | ~~47~~ | ~~Appliquer le plafond de précommandes~~                                                                                                      | ✅ **Tranché le 2026-08-26, et pas comme la tâche le supposait** : `capacity` reste une **estimation**, elle ne refuse rien. La barrière dure est l'unicité, posée avant paiement. Voir « Livré ».                                                                                                                                                                                |
 | ~~48~~ | ~~Sidebar par rôle généralisée~~                                                                                                              | ✅ **Déjà faite**, constatée le 2026-08-27 : `sidebar.ts:136-142` filtre par `permissionFor(item.route)`, spec à l'appui.                                                                                                                                                                                                                                                         |
-| 49     | Brancher `validateAssignments()` (le panneau de coordination n'appelle aucun endpoint)                                                        | Oui, back + front. `H1 §8`                                                                                                                                                                                                                                                                                                                                                        |
+| ~~49~~ | ~~Brancher `validateAssignments()` (le panneau de coordination n'appelle aucun endpoint)~~                                                    | ✅ **Faite le 2026-08-28.** `POST /events/:id/assignments/notify` : « valider » = prévenir les affectés, aucun état « validé » en base.                                                                                                                                                                                                                                           |
 | ~~50~~ | ~~Authentifier la connexion temps réel côté serveur~~                                                                                         | ✅ **Faite** (2026-08-26) : `transmit.authorize` sur `events/:id/orders` vérifie `order:read` via `permissionsOfMember`. L'exception `__transmit/events` est documentée — `EventSource` ne peut pas porter de Bearer, ce sont `subscribe`/`unsubscribe` qui filtrent.                                                                                                             |
 | ~~51~~ | ~~Sessions SSO vides dans la page Sécurité~~                                                                                                  | ✅ **Déjà faite**, constatée le 2026-08-27 : `keycloak_auth_controller.ts:91` pose `ip_address` et `user_agent`.                                                                                                                                                                                                                                                                  |
 | 52     | Retirer `@adonisjs/ally` ou documenter pourquoi il reste (`config/ally.ts` vide ; c'est `openid-client` qui porte le flux, ally n'a pas PKCE) | Oui. `H1 §9`                                                                                                                                                                                                                                                                                                                                                                      |
@@ -855,8 +912,8 @@ Chaque ligne porte sa source (`H1 §x` = HANDOFF.md, `H2 §x` = HANDOFF2.md).
 | 58     | Faire lancer `node ace migration:run` **et** `db:seed` par le déploiement — rien dans la CI ne les lance, et `voucher:*` / `role:*` n'existent qu'en TypeScript                                                                                        | Oui. Sans ça, `/v1/vouchers` renvoie **403 à tout le monde, administrateurs compris**. `H1 §0 bis/§0 quinquies`                                                                                                                                                                                                                    |
 | ~~59~~ | ~~Semer les permissions dans la base de dev locale~~                                                                                                                                                                                                   | ✅ **Faite** (2026-08-26) : `log:read`, `event:matching`, `event:settle`, `assignment:write`, `voucher:read` et `role:delete` sont en base.                                                                                                                                                                                        |
 | 60     | Rendre les seeders idempotents (`member`, `event`, `restock`, `stock_batch`, `stock_movement`, `transaction` doublent à chaque `db:seed` nu ; `attach()` viole la PK composite)                                                                        | Oui. `H1 §0 septies`                                                                                                                                                                                                                                                                                                               |
-| 61     | Corriger `good_supplier_seeder` (15 fournisseurs pour 10 produits, prix aléatoires) — **préalable** à l'écran multi-enseignes, sinon on dessine contre des données absurdes                                                                            | Oui. `H2 §17, H1 §2.2`                                                                                                                                                                                                                                                                                                             |
-| 62     | Corriger `product_furniture_seeder` (attache `furnitures[0]/[1]` par index : 5 nappes par hot-dog, 3 750 par soirée — et la liste de courses affichera ce chiffre)                                                                                     | Oui. `H1 §0 septies`                                                                                                                                                                                                                                                                                                               |
+| ~~61~~ | ~~Corriger `good_supplier_seeder` (15 fournisseurs pour 10 produits, prix aléatoires) — **préalable** à l'écran multi-enseignes, sinon on dessine contre des données absurdes~~                                                                        | ✅ **Constatée faite le 2026-08-28** : `21_good_supplier_seeder.ts` porte une table `BASE_PRICES` déterministe en centimes.                                                                                                                                                                                                        |
+| ~~62~~ | ~~Corriger `product_furniture_seeder` (attache `furnitures[0]/[1]` par index : 5 nappes par hot-dog, 3 750 par soirée — et la liste de courses affichera ce chiffre)~~                                                                                 | ✅ **Faite le 2026-08-28.** Attache par nom via `sync()`, vérifiée sur le pivot en base.                                                                                                                                                                                                                                           |
 | 63     | Base de test dédiée / `.env.test` — `node ace test` tourne sur la **base de dev**, donc un changement de branche produit des échecs qui n'en sont pas                                                                                                  | Oui, et **le coût est mesuré** : au 2026-08-26 l'arbre propre donne 642 réussis / **14 échoués**, tous dus au schéma dérivé de la base de dev. Il a fallu un `git stash` pour distinguer une régression du bruit — et **un vrai bug y dormait** (le total par moyen de paiement du bilan, corrigé le 2026-08-26). `H1 §0 undecies` |
 | 64     | Régénérer `database/schema.ts` depuis une base jetable (il aspire les colonnes des autres branches)                                                                                                                                                    | Oui, règle de méthode. `H1 §0 undecies`                                                                                                                                                                                                                                                                                            |
 | 65     | Reseed de la base de dev (libellés de lots absurdes déjà en base, données de vérification : production run id 50, soirée 4)                                                                                                                            | Oui, `migration:fresh` + reseed. `H1 §0 octies/§0 decies`                                                                                                                                                                                                                                                                          |
