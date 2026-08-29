@@ -1,6 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideBadgeCheck } from '@lucide/angular';
-import { Btn, Field, Input, ToastService, parseApiDate, formatCents, parseEuros } from '@bae/ui';
+import {
+  Btn,
+  Field,
+  Input,
+  ToastService,
+  formatCents,
+  parseEuros,
+  subscriptionExpiry,
+} from '@bae/ui';
 import { ClientsStore } from '#core/store/clients.store';
 import {
   FastPassesService,
@@ -81,14 +89,18 @@ export class SubscriptionCreateModal {
   /** Saisie en euros, envoyée en **centimes**. `parseEuros` lit la virgule. */
   protected readonly parsedAmount = computed(() => parseEuros(this.amount()));
 
-  /** Le back ajoute `duration` **années** à la date de souscription. */
+  /**
+   * Aperçu seul : la valeur qui fera foi est celle que l'API renverra après
+   * création. `subscriptionExpiry` porte la règle une fois pour le front, alignée
+   * sur le calcul Luxon du back (cf. `subscription_service.ts`).
+   */
   protected readonly expiresAt = computed<string | null>(() => {
     const plan = this.selectedPlan();
-    const start = this.subscribedAt();
-    if (plan === null || start === '') return null;
-    const date = parseApiDate(start);
-    if (Number.isNaN(date.getTime())) return null;
-    date.setFullYear(date.getFullYear() + plan.durationYears);
+    if (plan === null) return null;
+
+    const date = subscriptionExpiry(this.subscribedAt(), plan.durationYears);
+    if (date === null) return null;
+
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   });
 

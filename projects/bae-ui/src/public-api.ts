@@ -74,3 +74,4 @@ export * from './lib/utils/case-converter';
 export * from './lib/utils/external-navigation';
 export * from './lib/utils/money';
 export * from './lib/utils/pickup-slots';
+export * from './lib/utils/subscription';
