@@ -28,6 +28,7 @@ interface CoordinationInternals {
   toggleLock(memberId: number, jobId: number): void;
   assignMember(memberId: number, roleId: number): void;
   validateAssignments(): void;
+  notifying(): boolean;
   printAssignments(): void;
   lockedCount(): number;
   replaceableCount(): number;
@@ -327,6 +328,7 @@ describe(Coordination.name, () => {
   let toast: ToastService;
   let runMatching: ReturnType<typeof vi.fn>;
   let setAssignmentLock: ReturnType<typeof vi.fn>;
+  let notifyAssignments: ReturnType<typeof vi.fn>;
 
   async function setup(
     data: CoordinationApiData = baseData(),
@@ -334,6 +336,7 @@ describe(Coordination.name, () => {
   ): Promise<void> {
     runMatching = vi.fn(() => of(summary()));
     setAssignmentLock = vi.fn(() => of(null));
+    notifyAssignments = vi.fn(() => of({ notified: 3, skipped: 0, recipients: 3 }));
 
     const mockService = {
       loadAll: () => of(data),
@@ -348,6 +351,7 @@ describe(Coordination.name, () => {
       getJobEligibleMembers: () => of([{ jobId: 2, memberId: 2 }]),
       runMatching,
       setAssignmentLock,
+      notifyAssignments,
       ...serviceOverrides,
     };
 
@@ -795,13 +799,44 @@ describe(Coordination.name, () => {
     });
 
     /**
-     * `validateAssignments()` has no endpoint behind it yet (the panel is
-     * ahead of the backend, on purpose). It must never claim a write
-     * happened — least of all right under the "Soirée clôturée" banner.
+     * Le panneau devançait le back : le bouton affichait un toast « validation
+     * indisponible ». `POST /events/:id/assignments/notify` existe désormais,
+     * et « valider » veut dire **prévenir les affectés** — rien ne se verrouille.
      */
-    it('never tells the user a validation succeeded: no write exists', async () => {
+    it('prévient les membres affectés et annonce le compte', async () => {
       await setup();
       internals(component).validateAssignments();
+      await fixture.whenStable();
+
+      expect(notifyAssignments).toHaveBeenCalledWith(1);
+      const last = toast.toasts().at(-1)!;
+      expect(last.type).toBe('success');
+      expect(last.message).toContain('3');
+    });
+
+    /**
+     * L'idempotence porte sur l'empreinte de l'affectation : revalider sans
+     * changement ne dérange personne. Annoncer un succès le ferait croire
+     * qu'un envoi vient de partir.
+     */
+    it('ne revendique aucun envoi quand rien n’a changé', async () => {
+      await setup(baseData(), {
+        notifyAssignments: vi.fn(() => of({ notified: 0, skipped: 4, recipients: 4 })),
+      });
+      internals(component).validateAssignments();
+      await fixture.whenStable();
+
+      const last = toast.toasts().at(-1)!;
+      expect(last.type).not.toBe('success');
+      expect(last.message).toContain('inchangée');
+    });
+
+    it('le dit plutôt que d’appeler quand la soirée n’a personne d’affecté', async () => {
+      await setup(baseData(), {
+        notifyAssignments: vi.fn(() => of({ notified: 0, skipped: 0, recipients: 0 })),
+      });
+      internals(component).validateAssignments();
+      await fixture.whenStable();
 
       expect(toast.toasts().at(-1)!.type).not.toBe('success');
     });
@@ -813,6 +848,27 @@ describe(Coordination.name, () => {
       const last = toast.toasts().at(-1)!;
       expect(last.type).not.toBe('success');
       expect(last.title).toBe('Soirée déjà clôturée');
+      expect(notifyAssignments).not.toHaveBeenCalled();
+    });
+
+    it('rend l’erreur de l’API et relâche le bouton', async () => {
+      await setup(baseData(), {
+        notifyAssignments: vi.fn(() =>
+          throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 409,
+                error: { code: 'E_EVENT_CLOSED', message: 'Soirée clôturée' },
+              }),
+          ),
+        ),
+      });
+      internals(component).validateAssignments();
+      await fixture.whenStable();
+
+      const last = toast.toasts().at(-1)!;
+      expect(last.type).toBe('error');
+      expect(internals(component).notifying()).toBe(false);
     });
   });
 });

@@ -3,7 +3,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '@bae/ui';
 
-import { CoordinationService, type ApiJob, type ApiMatchingSummary } from './coordination-service';
+import {
+  CoordinationService,
+  type ApiAssignmentNotification,
+  type ApiJob,
+  type ApiMatchingSummary,
+} from './coordination-service';
 
 describe(CoordinationService.name, () => {
   let service: CoordinationService;
@@ -60,5 +65,16 @@ describe(CoordinationService.name, () => {
     ]);
     expect(summary?.unmatchedMemberIds).toEqual([5]);
     expect(summary?.locked).toEqual([{ memberId: 3, jobId: 9, period: null }]);
+  });
+
+  it('sérialise POST /events/:id/assignments/notify et rend des compteurs de membres', () => {
+    let summary: ApiAssignmentNotification | undefined;
+    service.notifyAssignments(7).subscribe((s) => (summary = s));
+
+    const req = httpMock.expectOne(`${baseUrl}/events/7/assignments/notify`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ notified: 12, skipped: 0, recipients: 12 });
+
+    expect(summary).toEqual({ notified: 12, skipped: 0, recipients: 12 });
   });
 });

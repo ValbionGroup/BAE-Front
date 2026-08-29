@@ -117,6 +117,17 @@ export interface ApiMatchingSummary {
   locked: { memberId: number; jobId: number; period: JobPeriod | null }[];
 }
 
+/**
+ * Les trois compteurs sont en **membres**, pas en notifications envoyées : le
+ * back convertit avant de répondre, parce qu'un membre prévenu sur deux canaux
+ * reste un membre (cf. `assignment_notification_service.ts`).
+ */
+export interface ApiAssignmentNotification {
+  notified: number;
+  skipped: number;
+  recipients: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CoordinationService {
   private readonly http = inject(HttpClient);
@@ -171,6 +182,14 @@ export class CoordinationService {
 
   runMatching(eventId: number): Observable<ApiMatchingSummary> {
     return this.http.post<ApiMatchingSummary>(`${this.baseUrl}/events/${eventId}/matching`, {});
+  }
+
+  /** « Valider l'affectation » : prévient les affectés, ne verrouille rien. */
+  notifyAssignments(eventId: number): Observable<ApiAssignmentNotification> {
+    return this.http.post<ApiAssignmentNotification>(
+      `${this.baseUrl}/events/${eventId}/assignments/notify`,
+      {},
+    );
   }
 
   unassign(eventId: number, memberId: number, jobId: number): Observable<unknown> {

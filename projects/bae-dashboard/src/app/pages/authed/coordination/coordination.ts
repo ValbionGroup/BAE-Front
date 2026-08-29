@@ -311,6 +311,23 @@ export function matchingErrorMessage(error: unknown): string {
 }
 
 /**
+ * ⚠️ Distinct de `matchingErrorMessage` : les deux gestes échouent pour des
+ * raisons différentes. Lancer l'affectation bute sur des points déjà
+ * consolidés (`E_EVENT_ALREADY_SETTLED`), l'annoncer bute sur une soirée
+ * clôturée (`E_EVENT_CLOSED`) — le même 409, deux causes.
+ */
+export function notifyErrorMessage(error: unknown): string {
+  const body = error instanceof HttpErrorResponse ? error.error : null;
+  if (isApiError(body)) {
+    if (body.code === 'E_EVENT_CLOSED') {
+      return "Soirée clôturée : son affectation ne s'annonce plus.";
+    }
+    return body.message;
+  }
+  return "L'annonce n'a pas pu partir. Personne n'a été prévenu.";
+}
+
+/**
  * Turn a matching summary into something the user can act on.
  *
  * The engine happily returns an empty `matched` when the event has no job,
@@ -447,11 +464,15 @@ export class Coordination implements OnInit {
         run: () => this.confirmRunMatching(),
       },
       {
-        label: settled ? 'Affectation clôturée' : "Valider l'affectation",
+        label: settled
+          ? 'Affectation clôturée'
+          : this.notifying()
+            ? 'Envoi en cours…'
+            : "Valider l'affectation",
         icon: this.icCheck,
         kind: 'primary',
         primary: true,
-        disabled: settled,
+        disabled: settled || this.notifying(),
         run: () => this.validateAssignments(),
       },
     ];
@@ -464,6 +485,9 @@ export class Coordination implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
+
+  /** Le bouton « Valider » reste enfoncé le temps de l'appel. */
+  protected readonly notifying = signal(false);
 
   protected readonly icSettings = LucideSettings;
   protected readonly icZap = LucideZap;
@@ -948,12 +972,16 @@ export class Coordination implements OnInit {
   }
 
   /**
-   * No `POST` backs this button yet — the panel is ahead of the backend on
-   * purpose (cf. project convention). The toast must not claim otherwise: it
-   * used to announce a success with no write behind it, right under a banner
-   * saying the soirée's points are already consolidated. The button is also
-   * disabled once the soirée is settled (template); this early return covers
-   * the keyboard path the same way `confirmRunMatching` does.
+   * « Valider l'affectation » = **prévenir les affectés**, rien de plus : aucun
+   * état « validé » n'existe en base, et le geste ne verrouille donc rien.
+   *
+   * Le back déduplique sur l'empreinte de l'affectation, pas sur la soirée :
+   * revalider sans changement ne dérange personne, revalider après un
+   * changement prévient de nouveau. C'est pourquoi `notified: 0` n'est pas un
+   * échec et ne doit pas s'annoncer comme un succès.
+   *
+   * Le bouton est déjà désactivé sur une soirée clôturée (template) ; ce retour
+   * anticipé couvre le chemin clavier, comme `confirmRunMatching`.
    */
   protected validateAssignments(): void {
     if (this.isSettled()) {
@@ -964,11 +992,51 @@ export class Coordination implements OnInit {
       });
       return;
     }
-    this.toast.show({
-      type: 'info',
-      title: 'Validation indisponible',
-      message: "Cette action n'est pas encore reliée au serveur.",
-    });
+
+    const eventData = this.selectedEventData();
+    if (!eventData) return;
+
+    this.notifying.set(true);
+    this.svc
+      .notifyAssignments(eventData.event.id)
+      .pipe(
+        catchError((error: unknown) => {
+          this.toast.show({
+            type: 'error',
+            title: "Échec de l'annonce",
+            message: notifyErrorMessage(error),
+          });
+          return of(null);
+        }),
+        finalize(() => this.notifying.set(false)),
+      )
+      .subscribe((result) => {
+        if (!result) return;
+
+        if (result.recipients === 0) {
+          this.toast.show({
+            type: 'info',
+            title: 'Personne à prévenir',
+            message: "Aucun membre n'est affecté à cette soirée.",
+          });
+          return;
+        }
+
+        if (result.notified === 0) {
+          this.toast.show({
+            type: 'info',
+            title: 'Déjà annoncée',
+            message: 'Affectation inchangée depuis la dernière annonce : personne redérangé.',
+          });
+          return;
+        }
+
+        this.toast.show({
+          type: 'success',
+          title: 'Affectation annoncée',
+          message: `${result.notified} ${result.notified > 1 ? 'membres prévenus' : 'membre prévenu'}.`,
+        });
+      });
   }
 
   protected printAssignments(): void {
