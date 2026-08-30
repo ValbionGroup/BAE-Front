@@ -15,12 +15,25 @@
       />
     </bae-field>
 
-    <div class="mt-1.5 flex flex-wrap items-center gap-2">
-      <bae-badge kind="neutral">Non lié</bae-badge>
-      <span class="text-[11px] text-muted">
-        Le bot ne peut pas encore vous écrire : la liaison arrivera plus tard.
-      </span>
-    </div>
+    @if (session.client()?.telegram?.linked) {
+      <div class="mt-1.5 flex flex-wrap items-center gap-2">
+        <bae-badge kind="ok" [dot]="true">Lié</bae-badge>
+        <span class="text-[11px] text-muted"> Vous recevez vos notifications dans Telegram. </span>
+        <bae-btn type="button" kind="ghost" size="sm" [disabled]="saving()" (clicked)="unlink()">
+          Délier
+        </bae-btn>
+      </div>
+    } @else {
+      <div class="mt-1.5 flex flex-wrap items-center gap-2">
+        <bae-badge kind="neutral">Non lié</bae-badge>
+        <bae-btn type="button" kind="outline" size="sm" [disabled]="saving()" (clicked)="link()">
+          Lier mon compte Telegram
+        </bae-btn>
+      </div>
+      <p class="mt-1.5 mb-0 text-[11px] text-muted">
+        Vous serez emmené dans Telegram pour confirmer. Le lien est valable 15 minutes.
+      </p>
+    }
 
     @if (handleRejected()) {
       <p id="telegram-error" class="mt-1.5 mb-0 text-[11.5px] text-danger">

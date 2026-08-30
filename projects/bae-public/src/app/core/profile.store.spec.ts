@@ -79,3 +79,72 @@ describe(ProfileStore.name, () => {
     expect(session.client()).toEqual(CLIENT);
   });
 });
+
+describe(`${ProfileStore.name} — liaison Telegram`, () => {
+  let store: ProfileStore;
+  let session: SessionStore;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
+      ],
+    });
+    store = TestBed.inject(ProfileStore);
+    session = TestBed.inject(SessionStore);
+    http = TestBed.inject(HttpTestingController);
+
+    session.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+  });
+
+  afterEach(() => {
+    http.verify();
+    TestBed.resetTestingModule();
+  });
+
+  it('rend l’URL de liaison émise par le serveur', async () => {
+    const asked = store.startTelegramLink();
+
+    http
+      .expectOne((req) => req.method === 'POST' && req.url.endsWith('/account/telegram/link'))
+      .flush({
+        url: 'https://t.me/bae_bot?start=K7M3QZ8XW2VP',
+        code: 'K7M3QZ8XW2VP',
+        botUsername: 'bae_bot',
+        expiresAt: '2026-08-30T14:15:00.000Z',
+      });
+
+    expect(await asked).toBe('https://t.me/bae_bot?start=K7M3QZ8XW2VP');
+  });
+
+  it('signale un refus sans prétendre avoir une URL', async () => {
+    const asked = store.startTelegramLink();
+
+    http
+      .expectOne((req) => req.method === 'POST')
+      .flush(
+        { code: 'E_TELEGRAM_ALREADY_LINKED', message: 'Déjà lié.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    expect(await asked).toBeNull();
+    expect(store.saveError()).toBe('Déjà lié.');
+  });
+
+  it('délier remplace le profil par la réponse du serveur', async () => {
+    const unlinked = store.unlinkTelegram();
+
+    http
+      .expectOne((req) => req.method === 'DELETE' && req.url.endsWith('/account/telegram/link'))
+      .flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+
+    expect(await unlinked).toBe(true);
+    expect(session.client()?.telegram.linked).toBe(false);
+  });
+});

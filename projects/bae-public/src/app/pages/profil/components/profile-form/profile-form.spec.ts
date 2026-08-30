@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { API_BASE_URL } from '@bae/ui';
+import { API_BASE_URL, ExternalNavigation } from '@bae/ui';
+import { vi } from 'vitest';
 import { findA11yViolations } from '@bae/ui/testing';
 
 import { ProfileForm } from './profile-form';
@@ -151,5 +152,73 @@ describe(ProfileForm.name, () => {
     await mount();
 
     expect(await findA11yViolations(host)).toEqual([]);
+  });
+
+  const LINKED: ClientProfile = {
+    ...CLIENT,
+    telegram: { handle: 'lea_m', linked: true, linkedAt: '2026-08-30T12:00:00.000Z' },
+  };
+
+  const click = (label: string): void => {
+    const button = [...host.querySelectorAll('button')].find((el) =>
+      el.textContent?.includes(label),
+    );
+    expect(button, `bouton « ${label} » introuvable`).toBeDefined();
+    button?.click();
+    fixture.detectChanges();
+  };
+
+  /**
+   * La liaison se termine dans Telegram : on quitte la page, et le retour
+   * recharge l'application, donc le profil. Pas de sondage à écrire.
+   */
+  it('emmène vers Telegram avec l’URL que le serveur a construite', async () => {
+    await mount();
+    const navigation = TestBed.inject(ExternalNavigation);
+    vi.spyOn(navigation, 'go').mockImplementation(() => undefined);
+
+    click('Lier mon compte Telegram');
+
+    http
+      .expectOne((req) => req.method === 'POST' && req.url.endsWith('/account/telegram/link'))
+      .flush({
+        url: 'https://t.me/bae_bot?start=K7M3QZ8XW2VP',
+        code: 'K7M3QZ8XW2VP',
+        botUsername: 'bae_bot',
+        expiresAt: '2026-08-30T14:15:00.000Z',
+      });
+    await fixture.whenStable();
+    await fixture.whenStable();
+
+    expect(navigation.go).toHaveBeenCalledWith('https://t.me/bae_bot?start=K7M3QZ8XW2VP');
+  });
+
+  it('annonce la liaison et propose de délier', async () => {
+    await mount(LINKED);
+
+    expect(host.textContent).toContain('Lié');
+    expect(host.textContent).not.toContain('Non lié');
+
+    click('Délier');
+    http
+      .expectOne((req) => req.method === 'DELETE' && req.url.endsWith('/account/telegram/link'))
+      .flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Non lié');
+  });
+
+  /** Telegram réécrit le pseudo à chaque liaison : une saisie manuelle serait effacée. */
+  it('verrouille le pseudo une fois le compte lié', async () => {
+    await mount(LINKED);
+
+    expect(field('telegramHandle').disabled).toBe(true);
+  });
+
+  it('laisse le pseudo saisissable tant que rien n’est lié', async () => {
+    await mount();
+
+    expect(field('telegramHandle').disabled).toBe(false);
   });
 });
