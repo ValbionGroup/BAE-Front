@@ -106,17 +106,12 @@ describe(Profil.name, () => {
       .expectOne((req) => req.url.endsWith('/account/subscriptions'))
       .flush(options.subscriptions ?? []);
     http.expectOne((req) => req.url.endsWith('/account/orders')).flush(options.orders ?? []);
+    http
+      .expectOne((req) => req.url.endsWith('/account/qr'))
+      .flush({ token: 'jeton', expiresAt: '2026-08-24T19:33:00.000+02:00', ttlSeconds: 180 });
 
     await fixture.whenStable();
     fixture.detectChanges();
-
-    if ((options.subscriptions ?? []).some((row) => row.status === 'active')) {
-      http
-        .expectOne((req) => req.url.endsWith('/account/qr'))
-        .flush({ token: 'jeton', expiresAt: '2026-08-24T19:33:00.000+02:00', ttlSeconds: 180 });
-      await fixture.whenStable();
-      fixture.detectChanges();
-    }
   };
 
   it('affiche l’identité venue d’EirbConnect', async () => {
@@ -127,17 +122,23 @@ describe(Profil.name, () => {
     expect(host.textContent).toContain('ENSEIRB');
   });
 
-  it('montre le QR quand une cotisation est en cours', async () => {
+  it('annonce la cotisation en cours et son échéance', async () => {
     await mount({ subscriptions: [ACTIVE] });
 
-    expect(host.querySelector('bfp-fastpass-qr')).not.toBeNull();
+    expect(host.textContent).toContain('Cotisation à jour');
+    expect(host.textContent).toContain('Annuelle');
+    expect(host.textContent).toContain('12/01/2027');
   });
 
-  /** Afficher un QR que le comptoir refusera serait pire que d'expliquer son absence. */
-  it('propose le FastPass plutôt qu’un QR sans cotisation', async () => {
+  /**
+   * `/account/qr` émet un jeton d'identité sans consulter les cotisations, et le
+   * comptoir l'accepte tel quel : on s'identifie sans FastPass.
+   */
+  it('montre le QR sans cotisation, et propose le FastPass à côté', async () => {
     await mount({ subscriptions: [{ ...ACTIVE, status: 'expired' }] });
 
-    expect(host.querySelector('bfp-fastpass-qr')).toBeNull();
+    expect(host.querySelector('bfp-identity-qr')).not.toBeNull();
+    expect(host.textContent).toContain('Aucun FastPass actif');
     expect(host.querySelector('a[href="/fastpass"]')).not.toBeNull();
   });
 

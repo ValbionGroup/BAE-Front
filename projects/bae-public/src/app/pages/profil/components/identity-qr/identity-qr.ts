@@ -10,23 +10,23 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL, Btn, QrCode, messageOf } from '@bae/ui';
 
-interface IdentityQr {
+interface QrToken {
   readonly token: string;
   readonly expiresAt: string;
   readonly ttlSeconds: number;
 }
 
 /**
- * Le QR d'adhérent et son renouvellement. Le parent décide de l'afficher ou non :
- * monté, il émet aussitôt.
+ * Le QR d'identité et son renouvellement. Il identifie son porteur au comptoir,
+ * indépendamment de toute cotisation : `/account/qr` n'en demande aucune.
  */
 @Component({
-  selector: 'bfp-fastpass-qr',
+  selector: 'bfp-identity-qr',
   imports: [Btn, QrCode],
-  templateUrl: './fastpass-qr.html',
+  templateUrl: './identity-qr.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FastpassQr implements OnInit {
+export class IdentityQr implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
   private readonly destroyRef = inject(DestroyRef);
@@ -50,7 +50,7 @@ export class FastpassQr implements OnInit {
   protected refresh(): void {
     this.error.set(null);
 
-    this.http.get<IdentityQr>(`${this.baseUrl}/account/qr`).subscribe({
+    this.http.get<QrToken>(`${this.baseUrl}/account/qr`).subscribe({
       next: (qr) => {
         this.token.set(qr.token);
 
