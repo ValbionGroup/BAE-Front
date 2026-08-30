@@ -35,36 +35,38 @@
 
   <bae-card>
     <h2 class="m-0 mb-3 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
-      FastPass
+      Ma carte
     </h2>
 
-    @if (purchases.activeSubscription(); as pass) {
-      <div class="flex flex-col items-center gap-3 text-center">
-        <bae-badge kind="ok" [dot]="true">Cotisation à jour</bae-badge>
-        <span class="text-[13px] text-text-2">
-          {{ pass.label }} · valable jusqu'au {{ dateOf(pass.expiresAt) }}
-        </span>
+    <bfp-identity-qr class="block" [alt]="'Code d’adhérent de ' + session.displayName()" />
 
-        <bfp-fastpass-qr [alt]="'Code d’adhérent de ' + session.displayName()" />
-      </div>
-    } @else if (pending()) {
-      <bae-skeleton height="240px" rounded="md" />
-    } @else if (purchases.subscriptionsStatus() === 'error') {
-      <p class="m-0 text-[13px] text-text-2">
-        Votre adhésion n’a pas pu être vérifiée — le serveur n’a pas répondu.
-      </p>
-    } @else {
-      <div class="flex flex-col items-start gap-3">
-        <svg [lucideIcon]="icPass" [size]="20" class="text-muted" aria-hidden="true"></svg>
+    <div class="mt-4 border-t border-border-s pt-4">
+      @if (pending()) {
+        <bae-skeleton height="34px" rounded="md" />
+      } @else if (purchases.activeSubscription(); as pass) {
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <bae-badge kind="ok" [dot]="true">Cotisation à jour</bae-badge>
+          <span class="text-[13px] text-text-2">
+            {{ pass.label }} · valable jusqu'au {{ dateOf(pass.expiresAt) }}
+          </span>
+        </div>
+      } @else if (purchases.subscriptionsStatus() === 'error') {
         <p class="m-0 text-[13px] text-text-2">
-          Le FastPass est l'adhésion au BAE : il donne l'accès prioritaire aux soirées et une remise
-          supplémentaire sur vos précommandes.
+          Votre adhésion n’a pas pu être vérifiée — le serveur n’a pas répondu.
         </p>
-        <a routerLink="/fastpass">
-          <bae-btn kind="primary" size="sm">Découvrir le FastPass</bae-btn>
-        </a>
-      </div>
-    }
+      } @else {
+        <div class="flex flex-col items-start gap-3">
+          <p class="m-0 text-[13px] text-text-2">
+            <span class="font-semibold text-text">Aucun FastPass actif.</span>
+            Votre carte vous identifie quand même au comptoir — le FastPass y ajoute l'accès
+            prioritaire aux soirées et une remise supplémentaire sur vos précommandes.
+          </p>
+          <a routerLink="/fastpass">
+            <bae-btn kind="primary" size="sm">Découvrir le FastPass</bae-btn>
+          </a>
+        </div>
+      }
+    </div>
   </bae-card>
 
   <bae-card>

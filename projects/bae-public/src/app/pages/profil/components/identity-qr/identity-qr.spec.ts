@@ -6,21 +6,21 @@ import { API_BASE_URL } from '@bae/ui';
 import { toString as qrToString } from 'qrcode';
 import { vi } from 'vitest';
 
-import { FastpassQr } from './fastpass-qr';
+import { IdentityQr } from './identity-qr';
 
 const QR_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.jeton-identite-signe-par-le-back.signature';
 
 @Component({
-  imports: [FastpassQr],
+  imports: [IdentityQr],
   template: `@if (shown()) {
-    <bfp-fastpass-qr alt="Code d’adhérent de Léa Marchand" />
+    <bfp-identity-qr alt="Code d’adhérent de Léa Marchand" />
   }`,
 })
 class HostComponent {
   readonly shown = signal(true);
 }
 
-describe(FastpassQr.name, () => {
+describe(IdentityQr.name, () => {
   let fixture: ComponentFixture<HostComponent>;
   let host: HTMLElement;
   let http: HttpTestingController;
@@ -101,8 +101,8 @@ describe(FastpassQr.name, () => {
   });
 
   /**
-   * Le composant est monté sous `@if` : un minuteur survivant à sa destruction
-   * émettrait des requêtes pour une page que plus personne ne regarde.
+   * Un minuteur survivant à la destruction émettrait des requêtes pour une page
+   * que plus personne ne regarde.
    */
   it('renouvelle avant l’échéance, puis cesse une fois détruit', () => {
     vi.useFakeTimers();

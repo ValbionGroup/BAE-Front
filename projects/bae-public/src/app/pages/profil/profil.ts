@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideBadgeCheck, LucideDynamicIcon } from '@lucide/angular';
 import { Badge, Btn, Card, Skeleton, formatApiDate, formatCents } from '@bae/ui';
 
 import { PurchasesStore } from '../../core/purchases.store';
 import { SessionStore } from '../../core/session.store';
-import { FastpassQr } from './components/fastpass-qr/fastpass-qr';
+import { IdentityQr } from './components/identity-qr/identity-qr';
 import { ProfileForm } from './components/profile-form/profile-form';
 
 /** Une ligne d'aperçu, quelle que soit la source de l'achat. */
@@ -21,15 +20,13 @@ const PREVIEW_SIZE = 3;
 
 @Component({
   selector: 'bfp-profil',
-  imports: [RouterLink, Badge, Btn, Card, Skeleton, LucideDynamicIcon, FastpassQr, ProfileForm],
+  imports: [RouterLink, Badge, Btn, Card, Skeleton, IdentityQr, ProfileForm],
   templateUrl: './profil.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Profil {
   protected readonly session = inject(SessionStore);
   protected readonly purchases = inject(PurchasesStore);
-
-  protected readonly icPass = LucideBadgeCheck;
 
   constructor() {
     this.purchases.load();
