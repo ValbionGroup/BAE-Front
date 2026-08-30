@@ -6,6 +6,7 @@ import {
   forwardRef,
   input,
   output,
+  signal,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { LucideDynamicIcon, LucideIconInput } from '@lucide/angular';
@@ -73,15 +74,19 @@ export class Input implements ControlValueAccessor {
 
   readonly valueChange = output<string>();
 
-  protected innerValue = '';
+  protected readonly innerValue = signal('');
   protected isDisabled = false;
+
+  /** `[value]` reste maître en mode contrôlé ; en CVA c'est `writeValue` qui l'est. */
+  private inCvaMode = false;
 
   private onChange: (v: string) => void = () => {};
   protected onTouched: () => void = () => {};
 
   constructor() {
     effect(() => {
-      this.innerValue = this.value();
+      const next = this.value();
+      if (!this.inCvaMode) this.innerValue.set(next);
     });
   }
 
@@ -94,7 +99,8 @@ export class Input implements ControlValueAccessor {
   });
 
   writeValue(value: string): void {
-    this.innerValue = value ?? '';
+    this.inCvaMode = true;
+    this.innerValue.set(value ?? '');
   }
 
   registerOnChange(fn: (v: string) => void): void {
@@ -111,7 +117,7 @@ export class Input implements ControlValueAccessor {
 
   protected onInput(event: Event): void {
     const v = (event.target as HTMLInputElement).value;
-    this.innerValue = v;
+    this.innerValue.set(v);
     this.onChange(v);
     this.valueChange.emit(v);
   }

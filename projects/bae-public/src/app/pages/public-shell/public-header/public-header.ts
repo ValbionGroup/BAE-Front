@@ -1,14 +1,6 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
-  LucideBadgeCheck,
   LucideDynamicIcon,
   LucideLogOut,
   LucideMenu,
@@ -21,7 +13,6 @@ import {
 import { Avatar, Btn, DropdownService, Logo, Skeleton, ThemeService } from '@bae/ui';
 
 import { APP_VERSION } from '../../../app-version';
-import { PurchasesStore } from '../../../core/purchases.store';
 import { SessionStore } from '../../../core/session.store';
 
 interface NavLink {
@@ -41,17 +32,8 @@ export class PublicHeader {
   private readonly router = inject(Router);
 
   protected readonly session = inject(SessionStore);
-  private readonly purchases = inject(PurchasesStore);
   protected readonly theme = inject(ThemeService);
   protected readonly appVersion = APP_VERSION;
-
-  constructor() {
-    effect(() => {
-      if (this.session.isAuthenticated()) this.purchases.loadSubscriptions();
-    });
-  }
-
-  protected readonly hasFastPass = computed(() => this.purchases.activeSubscription() !== null);
 
   protected readonly icUser = LucideUser;
   protected readonly icMenu = LucideMenu;
@@ -87,21 +69,17 @@ export class PublicHeader {
       width: 210,
       header: this.session.user()?.email,
       items: [
-        ...(this.hasFastPass()
-          ? [
-              {
-                type: 'action' as const,
-                icon: LucideBadgeCheck,
-                label: 'FastPass',
-                onClick: () => void this.router.navigate(['/ma-carte']),
-              },
-            ]
-          : []),
+        {
+          type: 'action',
+          icon: LucideUser,
+          label: 'Mon profil',
+          onClick: () => void this.router.navigate(['/profil']),
+        },
         {
           type: 'action',
           icon: LucideQrCode,
-          label: 'Mes commandes',
-          onClick: () => void this.router.navigate(['/mes-commandes']),
+          label: 'Mes achats',
+          onClick: () => void this.router.navigate(['/profil/commandes']),
         },
         { type: 'separator' },
         {

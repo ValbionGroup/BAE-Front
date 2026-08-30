@@ -1,0 +1,26 @@
+<div class="flex flex-col items-center gap-3">
+  <div class="w-full max-w-64 rounded-lg bg-white p-4">
+    @if (token(); as value) {
+      <bae-qr-code
+        class="block w-full"
+        [value]="value"
+        [alt]="alt()"
+        (failed)="error.set('Le QR n’a pas pu être dessiné.')"
+      />
+    } @else {
+      <div
+        class="flex aspect-square items-center justify-center px-2 text-center text-xs text-[#1a1a1a]"
+      >
+        {{ error() ?? 'Génération du QR…' }}
+      </div>
+    }
+  </div>
+
+  @if (error()) {
+    <bae-btn kind="outline" size="sm" (clicked)="refresh()">Réessayer</bae-btn>
+  } @else {
+    <p class="m-0 text-center text-[11.5px] text-muted">
+      Le code se renouvelle tout seul. Gardez la page ouverte jusqu'au passage.
+    </p>
+  }
+</div>

@@ -16,10 +16,26 @@ export interface SessionUser {
  */
 export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
 
+/** Ce que le client renseigne sur lui-même, plus ce qu'EirbConnect a fourni. */
+export interface ClientProfile {
+  readonly phone: string | null;
+  readonly promotion: string | null;
+  readonly school: string | null;
+  readonly registeredAt: string | null;
+  readonly preparationNote: string | null;
+  readonly telegram: {
+    readonly handle: string | null;
+    readonly linked: boolean;
+    readonly linkedAt: string | null;
+  };
+}
+
 interface ProfileResponse {
   readonly user: { id: number; email: string };
   /** `null` pour un client : la zone publique n'exige aucune ligne `members`. */
   readonly member: { firstName: string | null; lastName: string | null } | null;
+  /** `null` pour un membre du bureau qui n'a jamais ouvert la zone publique. */
+  readonly client: ClientProfile | null;
 }
 
 /**
@@ -36,9 +52,11 @@ export class SessionStore {
 
   private readonly _status = signal<SessionStatus>('unknown');
   private readonly _user = signal<SessionUser | null>(null);
+  private readonly _client = signal<ClientProfile | null>(null);
 
   readonly status = this._status.asReadonly();
   readonly user = this._user.asReadonly();
+  readonly client = this._client.asReadonly();
   readonly isAuthenticated = computed(() => this._status() === 'authenticated');
 
   /** Le nom du membre, ou la partie locale de l'e-mail pour un client. */
@@ -60,14 +78,21 @@ export class SessionStore {
           firstName: profile.member?.firstName ?? null,
           lastName: profile.member?.lastName ?? null,
         });
+        this._client.set(profile.client ?? null);
         this._status.set('authenticated');
       },
       // Un 401 est la réponse normale d'un visiteur non connecté, pas un incident.
       error: () => {
         this._user.set(null);
+        this._client.set(null);
         this._status.set('anonymous');
       },
     });
+  }
+
+  /** Point d'écriture unique, réservé à `ProfileStore` après un PATCH réussi. */
+  setClient(next: ClientProfile): void {
+    this._client.set(next);
   }
 
   /**

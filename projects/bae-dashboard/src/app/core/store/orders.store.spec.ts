@@ -32,6 +32,7 @@ function ticket(overrides: Partial<PreOrderTicket> = {}): PreOrderTicket {
     status: 'pending',
     clientName: 'Alice',
     lines: [{ productId: 3, productName: 'Hot-dog', quantity: 2, receivedQuantity: 0 }],
+    preparationNote: null,
     paid: true,
     fullyCollected: false,
     pickupAt: '2026-08-15T20:00:00.000Z',

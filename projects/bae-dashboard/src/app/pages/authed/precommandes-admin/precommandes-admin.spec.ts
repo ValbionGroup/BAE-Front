@@ -22,6 +22,7 @@ function ticket(overrides: Partial<PreOrderTicket> = {}): PreOrderTicket {
     fullyCollected: false,
     pickupAt: '2026-08-16T19:30:00.000Z',
     due: false,
+    preparationNote: null,
     createdAt: null,
     ...overrides,
   };
@@ -237,5 +238,41 @@ describe('PrecommandesAdmin', () => {
       expect(host.querySelectorAll('[data-testid="pickup-slot"]')).toHaveLength(0);
       expect(host.textContent).toContain('Aucune commande sélectionnée');
     });
+  });
+
+  const openFirstTicket = async (): Promise<HTMLElement> => {
+    const fixture = TestBed.createComponent(PrecommandesAdmin);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const row = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('P-01'),
+    );
+    expect(row, 'le ticket P-01 doit être cliquable').toBeDefined();
+    row?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    return host;
+  };
+
+  /** C'est le seul écran où l'allergie sert au geste : elle doit sauter aux yeux. */
+  it('met en avant la consigne du client sur son ticket', async () => {
+    list.mockReturnValue(of([ticket({ preparationNote: 'Allergie arachide' })]));
+
+    const host = await openFirstTicket();
+
+    expect(host.querySelector('[data-block="preparation-note"]')?.textContent).toContain(
+      'Allergie arachide',
+    );
+  });
+
+  it('n’affiche aucun bandeau sans consigne', async () => {
+    const host = await openFirstTicket();
+
+    expect(host.querySelector('[data-block="preparation-note"]')).toBeNull();
   });
 });

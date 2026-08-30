@@ -128,3 +128,67 @@ describe(SessionStore.name, () => {
     );
   });
 });
+
+describe(`${SessionStore.name} — bloc client`, () => {
+  let store: SessionStore;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
+      ],
+    });
+    store = TestBed.inject(SessionStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    TestBed.resetTestingModule();
+  });
+
+  const CLIENT = {
+    phone: '0612345678',
+    promotion: 'I2',
+    school: 'ENSEIRB',
+    registeredAt: '2026-01-12',
+    preparationNote: 'Allergie arachide',
+    telegram: { handle: null, linked: false, linkedAt: null },
+  };
+
+  it('expose les coordonnées du client', () => {
+    store.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+
+    expect(store.client()).toEqual(CLIENT);
+  });
+
+  // Un membre du bureau qui n'a jamais ouvert la zone publique n'a pas de ligne.
+  it('tolère un profil sans ligne client', () => {
+    store.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({ user: { id: 1, email: 's@enseirb.fr' }, member: null, client: null });
+
+    expect(store.client()).toBeNull();
+    expect(store.status()).toBe('authenticated');
+  });
+
+  /** Une sauvegarde ne doit jamais pouvoir faire basculer l'état de session. */
+  it('remplace le bloc client sans toucher au statut', () => {
+    store.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+
+    store.setClient({ ...CLIENT, phone: '0699999999' });
+
+    expect(store.client()?.phone).toBe('0699999999');
+    expect(store.status()).toBe('authenticated');
+  });
+});

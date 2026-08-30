@@ -260,8 +260,26 @@
           }
         </div>
 
+        <div class="p-[22px] pb-0" data-block="preparation-note">
+          <div class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-2.5">
+            Consignes de l'adhérent
+          </div>
+          @if (d.preparationNote) {
+            <div
+              class="p-3 bg-warn-soft border border-warn rounded-md text-xs text-text leading-relaxed"
+            >
+              {{ d.preparationNote }}
+              <div class="text-[10.5px] text-muted mt-2">
+                Écrite par l'adhérent — non modifiable ici.
+              </div>
+            </div>
+          } @else {
+            <div class="text-[11.5px] text-muted">Aucune consigne.</div>
+          }
+        </div>
+
         <!-- Notes -->
-        <div class="p-[22px]">
+        <div class="p-[22px]" data-block="staff-note">
           <div class="text-[11px] font-semibold tracking-wider text-muted uppercase mb-2.5">
             Note interne
           </div>

@@ -28,6 +28,28 @@ export interface MyPreOrder {
   readonly createdAt: string | null;
 }
 
+export interface MyCounterOrderLine {
+  readonly productName: string;
+  readonly quantity: number;
+  /** En **centimes**, figé à la vente. */
+  readonly unitPrice: number;
+}
+
+export interface MyCounterOrder {
+  readonly id: number;
+  /** Le numéro crié au comptoir, donc celui de la soirée. */
+  readonly number: number;
+  readonly eventId: number | null;
+  readonly eventName: string;
+  readonly eventDate: string | null;
+  readonly status: string;
+  readonly lines: readonly MyCounterOrderLine[];
+  readonly totalCents: number;
+  /** Remise et prise en charge cumulées : ce qui n'a pas été payé. */
+  readonly savedCents: number;
+  readonly createdAt: string | null;
+}
+
 export interface MySubscription {
   readonly fastPassId: number;
   readonly label: string;
@@ -48,16 +70,21 @@ export class PurchasesStore {
   private readonly _subscriptionsStatus = signal<LoadingStatus>('init');
   private readonly _preOrders = signal<readonly MyPreOrder[]>([]);
   private readonly _subscriptions = signal<readonly MySubscription[]>([]);
+  private readonly _orders = signal<readonly MyCounterOrder[]>([]);
   private readonly _error = signal<string | null>(null);
 
   readonly status = this._status.asReadonly();
   readonly preOrders = this._preOrders.asReadonly();
   readonly subscriptions = this._subscriptions.asReadonly();
+  readonly orders = this._orders.asReadonly();
   readonly subscriptionsStatus = this._subscriptionsStatus.asReadonly();
   readonly error = this._error.asReadonly();
 
   readonly isEmpty = computed(
-    () => this._preOrders().length === 0 && this._subscriptions().length === 0,
+    () =>
+      this._preOrders().length === 0 &&
+      this._subscriptions().length === 0 &&
+      this._orders().length === 0,
   );
 
   readonly activeSubscription = computed<MySubscription | null>(
@@ -87,37 +114,57 @@ export class PurchasesStore {
     this._status.set('loading');
     this._error.set(null);
 
-    let pending = 2;
+    const total = 3;
+    let pending = total;
     let failures = 0;
 
-    const settle = (): void => {
+    const settle = (failed: boolean): void => {
+      if (failed) failures += 1;
       pending -= 1;
       if (pending > 0) return;
-      this._status.set(failures === 2 ? 'error' : 'loaded');
+      this._status.set(failures === total ? 'error' : 'loaded');
     };
 
-    this.http.get<MyPreOrder[]>(`${this.baseUrl}/account/pre-orders`).subscribe({
-      next: (preOrders) => {
-        this._preOrders.set(preOrders);
-        settle();
-      },
-      error: (error: unknown) => {
-        failures += 1;
-        this._error.set(messageOf(error, 'Vos commandes n’ont pas pu être chargées.'));
-        settle();
-      },
-    });
+    this.track(
+      this.http.get<MyPreOrder[]>(`${this.baseUrl}/account/pre-orders`),
+      (rows) => this._preOrders.set(rows),
+      'Vos commandes n’ont pas pu être chargées.',
+      settle,
+    );
 
-    this.fetchSubscriptions().subscribe({
-      next: (subscriptions) => {
-        this._subscriptions.set(subscriptions);
+    this.track(
+      this.fetchSubscriptions(),
+      (rows) => {
+        this._subscriptions.set(rows);
         this._subscriptionsStatus.set('loaded');
-        settle();
+      },
+      'Vos cotisations n’ont pas pu être chargées.',
+      settle,
+    );
+
+    this.track(
+      this.http.get<MyCounterOrder[]>(`${this.baseUrl}/account/orders`),
+      (rows) => this._orders.set(rows),
+      'Vos achats au comptoir n’ont pas pu être chargés.',
+      settle,
+    );
+  }
+
+  /** L'échec d'une source n'emporte pas les autres : chacune se règle seule. */
+  private track<T>(
+    request: Observable<T>,
+    apply: (rows: T) => void,
+    failure: string,
+    settle: (failed: boolean) => void,
+  ): void {
+    request.subscribe({
+      next: (rows) => {
+        apply(rows);
+        settle(false);
       },
       error: (error: unknown) => {
-        failures += 1;
-        this._error.set(messageOf(error, 'Vos cotisations n’ont pas pu être chargées.'));
-        settle();
+        this._error.set(messageOf(error, failure));
+        settle(true);
       },
     });
   }

@@ -29,6 +29,11 @@ export interface ClientDetail extends ClientRow {
   readonly note: string | null;
   readonly noteAuthor: string | null;
   readonly noteWrittenAt: string | null;
+  /**
+   * Écrite par l'adhérent depuis son profil public, et en lecture seule ici :
+   * elle est absente de `ClientWritePayload`, le back la refuserait.
+   */
+  readonly preparationNote: string | null;
   readonly subscriptions: readonly SubscriptionRow[];
   readonly preOrderCount: number;
   readonly spentCents: number;

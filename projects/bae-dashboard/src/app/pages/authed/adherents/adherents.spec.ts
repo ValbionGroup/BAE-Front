@@ -71,6 +71,7 @@ const DETAIL: ClientDetail = {
   note: 'Allergie noix.',
   noteAuthor: 'Sarah K.',
   noteWrittenAt: '2026-01-12T10:00:00.000Z',
+  preparationNote: 'Intolérance au lactose',
   subscriptions: [
     {
       fastPassId: 1,
@@ -326,5 +327,42 @@ describe(Adherents.name, () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Impossible de charger les adhérents.');
+  });
+
+  /**
+   * Deux notes aux propriétaires opposés cohabitent sur la fiche : celle du
+   * bureau *sur* l'adhérent, et celle que l'adhérent écrit sur lui-même. Les
+   * confondre ferait lire une allergie comme un commentaire interne.
+   */
+  it('distingue la consigne de l’adhérent de la note interne', async () => {
+    const fixture = await render();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const consigne = host.querySelector('[data-block="preparation-note"]');
+    const interne = host.querySelector('[data-block="staff-note"]');
+
+    expect(consigne?.textContent).toContain('Intolérance au lactose');
+    expect(consigne?.textContent).not.toContain('Allergie noix.');
+    expect(interne?.textContent).toContain('Allergie noix.');
+  });
+
+  it('dit qu’il n’y a aucune consigne plutôt que de laisser un vide', async () => {
+    const fixture = TestBed.createComponent(Adherents);
+    fixture.detectChanges();
+
+    http.expectOne(`${baseUrl}/clients`).flush(CLIENTS);
+    http.expectOne(`${baseUrl}/clients/summary`).flush(SUMMARY);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    http.expectOne(`${baseUrl}/clients/1`).flush({ ...DETAIL, preparationNote: null });
+    await fixture.whenStable();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const block = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-block="preparation-note"]',
+    );
+    expect(block?.textContent).toContain('Aucune consigne');
   });
 });

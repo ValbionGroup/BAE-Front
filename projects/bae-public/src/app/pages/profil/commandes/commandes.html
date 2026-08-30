@@ -1,6 +1,9 @@
 <section class="mx-auto max-w-190 px-6 pt-12 pb-2 md:px-14">
-  <h1 class="m-0 mb-1.5 text-[30px] font-semibold -tracking-[0.6px]">Mes commandes</h1>
-  <p class="m-0 text-[13.5px] text-muted">Historique de vos précommandes et de vos cotisations.</p>
+  <a routerLink="/profil" class="text-[12.5px] text-muted hover:text-text">← Mon profil</a>
+  <h1 class="m-0 mt-2 mb-1.5 text-[30px] font-semibold -tracking-[0.6px]">Mes achats</h1>
+  <p class="m-0 text-[13.5px] text-muted">
+    Vos précommandes, vos achats au comptoir et vos cotisations.
+  </p>
 </section>
 
 <section class="mx-auto flex max-w-190 flex-col gap-6 px-6 pt-6 pb-16 md:px-14">
@@ -15,13 +18,14 @@
       @if (hasNothing()) {
         <bae-card [padding]="32">
           <p class="m-0 text-center text-sm text-muted">
-            Vous n’avez encore ni précommande ni cotisation. Elles apparaîtront ici.
+            Vous n’avez encore aucun achat. Vos précommandes et vos passages au comptoir
+            apparaîtront ici.
           </p>
         </bae-card>
       }
 
       @if (store.preOrders().length > 0) {
-        <div>
+        <div data-section="pre-orders">
           <h2 class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
             Précommandes
           </h2>
@@ -60,7 +64,9 @@
                   @if (!preOrder.paid) {
                     <bae-badge kind="warn">À payer au retrait</bae-badge>
                   }
-                  <bae-badge [kind]="statusKind(preOrder)">{{ statusLabel(preOrder) }}</bae-badge>
+                  <bae-badge [kind]="badgeKind(preOrder.status)">
+                    {{ badgeLabel(preOrder.status) }}
+                  </bae-badge>
 
                   <bae-btn kind="ghost" size="sm" [routerLink]="['/commande', preOrder.id]">
                     Détail
@@ -72,8 +78,68 @@
         </div>
       }
 
+      <div data-section="orders">
+        <h2 class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
+          Achats au comptoir
+        </h2>
+
+        @if (store.orders().length === 0) {
+          <bae-card>
+            <p class="m-0 text-[13px] text-muted">
+              Seuls les achats pour lesquels vous avez présenté votre QR au comptoir apparaissent
+              ici.
+            </p>
+          </bae-card>
+        } @else {
+          <bae-card [padding]="0">
+            <ul class="m-0 flex list-none flex-col p-0">
+              @for (order of store.orders(); track order.id; let first = $first) {
+                <li
+                  class="flex flex-wrap items-center gap-3.5 px-4.5 py-4"
+                  [class.border-t]="!first"
+                  [class.border-border-s]="!first"
+                >
+                  <div
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-2 text-text-2"
+                  >
+                    <svg [lucideIcon]="icStore" [size]="16" aria-hidden="true"></svg>
+                  </div>
+
+                  <div class="min-w-40 flex-1">
+                    <h3 class="m-0 text-[13.5px] font-semibold text-text">{{ order.eventName }}</h3>
+                    <p class="m-0 mt-0.5 text-[11.5px] text-muted">
+                      Commande n°{{ order.number }} · {{ dateOf(order.createdAt) }}
+                    </p>
+                    <p class="m-0 mt-0.5 text-[11.5px] text-text-2">
+                      @for (line of order.lines; track line.productName; let last = $last) {
+                        {{ line.quantity }} × {{ line.productName }}{{ last ? '' : ', ' }}
+                      }
+                    </p>
+                  </div>
+
+                  <div class="text-right">
+                    <span class="tnum block text-[13.5px] font-medium text-text">
+                      {{ price(order.totalCents) }} €
+                    </span>
+                    @if (order.savedCents > 0) {
+                      <span class="tnum text-[11px] text-ok">
+                        {{ price(order.savedCents) }} € économisés
+                      </span>
+                    }
+                  </div>
+
+                  <bae-badge [kind]="badgeKind(order.status)">
+                    {{ badgeLabel(order.status) }}
+                  </bae-badge>
+                </li>
+              }
+            </ul>
+          </bae-card>
+        }
+      </div>
+
       @if (store.subscriptions().length > 0) {
-        <div>
+        <div data-section="subscriptions">
           <h2 class="m-0 mb-2.5 text-[11px] font-semibold tracking-[0.8px] text-muted uppercase">
             Cotisations
           </h2>

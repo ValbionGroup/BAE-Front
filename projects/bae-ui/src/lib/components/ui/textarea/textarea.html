@@ -1,0 +1,21 @@
+<textarea
+  [attr.id]="id()"
+  [rows]="rows()"
+  [value]="internalValue()"
+  [placeholder]="placeholder()"
+  [disabled]="internalDisabled()"
+  [readOnly]="readonly()"
+  [attr.maxlength]="maxlength()"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-describedby]="errorId()"
+  [attr.aria-invalid]="invalid() ? 'true' : null"
+  [class]="boxClass()"
+  (input)="onInput($event)"
+  (blur)="onTouched()"
+></textarea>
+
+@if (remaining() !== null) {
+  <span class="mt-1 block text-right text-[11px] text-muted" aria-live="polite">
+    {{ remaining() }} caractères restants
+  </span>
+}

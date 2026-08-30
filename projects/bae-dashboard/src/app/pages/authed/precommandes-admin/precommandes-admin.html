@@ -151,6 +151,21 @@
           </div>
         </div>
 
+        @if (s.preparationNote; as consigne) {
+          <div
+            data-block="preparation-note"
+            class="mb-3 flex items-start gap-2.5 rounded-md border border-warn bg-warn-soft p-3"
+          >
+            <svg [lucideIcon]="icAlert" [size]="14" class="mt-0.5 shrink-0 text-warn"></svg>
+            <div>
+              <div class="text-[11px] font-semibold tracking-wider text-muted uppercase">
+                Consignes du client
+              </div>
+              <p class="m-0 mt-1 text-xs leading-relaxed text-text">{{ consigne }}</p>
+            </div>
+          </div>
+        }
+
         <bae-card [padding]="0">
           <div class="flex items-center border-b border-border-s px-4 py-3.5">
             <div class="flex-1 text-[13px] font-semibold text-text">Liste de préparation</div>

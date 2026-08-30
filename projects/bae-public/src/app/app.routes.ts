@@ -31,17 +31,16 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/contact/contact').then((m) => m.Contact),
       },
       {
-        path: 'mes-commandes',
-        title: 'BAE — Mes commandes',
+        path: 'profil',
+        title: 'BAE — Mon profil',
         canActivate: [sessionGuard],
-        loadComponent: () =>
-          import('./pages/mes-commandes/mes-commandes').then((m) => m.MesCommandes),
+        loadComponent: () => import('./pages/profil/profil').then((m) => m.Profil),
       },
       {
-        path: 'ma-carte',
-        title: 'BAE — Mon FastPass',
+        path: 'profil/commandes',
+        title: 'BAE — Mes achats',
         canActivate: [sessionGuard],
-        loadComponent: () => import('./pages/ma-carte/ma-carte').then((m) => m.MaCarte),
+        loadComponent: () => import('./pages/profil/commandes/commandes').then((m) => m.Commandes),
       },
       {
         path: 'commande/:id',

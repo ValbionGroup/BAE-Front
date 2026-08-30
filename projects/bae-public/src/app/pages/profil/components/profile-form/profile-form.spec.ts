@@ -1,0 +1,155 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { API_BASE_URL } from '@bae/ui';
+import { findA11yViolations } from '@bae/ui/testing';
+
+import { ProfileForm } from './profile-form';
+import { SessionStore, type ClientProfile } from '../../../../core/session.store';
+
+const CLIENT: ClientProfile = {
+  phone: '0612345678',
+  promotion: 'I2',
+  school: 'ENSEIRB',
+  registeredAt: '2026-01-12',
+  preparationNote: 'Sans gluten',
+  telegram: { handle: null, linked: false, linkedAt: null },
+};
+
+describe(ProfileForm.name, () => {
+  let fixture: ComponentFixture<ProfileForm>;
+  let host: HTMLElement;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ProfileForm],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
+      ],
+    }).compileComponents();
+
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    TestBed.resetTestingModule();
+  });
+
+  const mount = async (client: ClientProfile = CLIENT): Promise<void> => {
+    TestBed.inject(SessionStore).load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({ user: { id: 7, email: 'lea@enseirb.fr' }, member: null, client });
+
+    fixture = TestBed.createComponent(ProfileForm);
+    host = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  const field = (name: string): HTMLInputElement | HTMLTextAreaElement =>
+    host.querySelector(`[data-field="${name}"] input, [data-field="${name}"] textarea`)!;
+
+  const type = (name: string, value: string): void => {
+    const el = field(name);
+    el.value = value;
+    el.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  };
+
+  const submit = (): void => {
+    host.querySelector('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+  };
+
+  it('reprend les valeurs déjà enregistrées', async () => {
+    await mount();
+
+    expect(field('phone').value).toBe('0612345678');
+    expect(field('preparationNote').value).toBe('Sans gluten');
+  });
+
+  /** Rien n'a bougé : un PATCH vide ferait croire à un enregistrement. */
+  it('n’enregistre pas tant que rien n’a changé', async () => {
+    await mount();
+
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+  });
+
+  it('n’envoie que les champs modifiés', async () => {
+    await mount();
+    type('phone', '0699999999');
+    submit();
+
+    const request = http.expectOne((req) => req.method === 'PATCH');
+    expect(request.request.body).toEqual({ phone: '0699999999' });
+    request.flush({ ...CLIENT, phone: '0699999999' });
+  });
+
+  it('envoie null plutôt qu’une chaîne vide pour un champ effacé', async () => {
+    await mount();
+    type('preparationNote', '');
+    submit();
+
+    const request = http.expectOne((req) => req.method === 'PATCH');
+    expect(request.request.body).toEqual({ preparationNote: null });
+    request.flush({ ...CLIENT, preparationNote: null });
+  });
+
+  /** La règle Telegram est connue du navigateur : inutile de déranger le serveur. */
+  it('refuse un pseudo Telegram invalide sans appeler le serveur', async () => {
+    await mount();
+    type('telegramHandle', 'a-b');
+    submit();
+
+    http.expectNone((req) => req.method === 'PATCH');
+    expect(host.textContent).toContain('Pseudo Telegram invalide');
+  });
+
+  it('accepte un pseudo copié avec son arobase', async () => {
+    await mount();
+    type('telegramHandle', '@lea_m');
+    submit();
+
+    const request = http.expectOne((req) => req.method === 'PATCH');
+    expect(request.request.body).toEqual({ telegramHandle: '@lea_m' });
+    request.flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+  });
+
+  it('annonce l’échec du serveur dans une alerte', async () => {
+    await mount();
+    type('phone', '0699999999');
+    submit();
+
+    http
+      .expectOne((req) => req.method === 'PATCH')
+      .flush(
+        { code: 'E_OOPS', message: 'Enregistrement impossible.' },
+        { status: 500, statusText: 'Server Error' },
+      );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      'Enregistrement impossible.',
+    );
+  });
+
+  /** Tant qu'aucun bot n'existe, l'état honnête est « non lié », pas un silence. */
+  it('dit que le compte Telegram n’est pas encore lié', async () => {
+    await mount({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+
+    expect(host.textContent).toContain('Non lié');
+  });
+
+  it('ne présente aucune violation d’accessibilité', async () => {
+    await mount();
+
+    expect(await findA11yViolations(host)).toEqual([]);
+  });
+});

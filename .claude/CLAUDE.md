@@ -222,6 +222,18 @@ Les deux composants supportent deux modes :
 
 ---
 
+## Commentaires
+
+- **Pas de commentaire inline.** Aucun `//` dans un corps de fonction, ni au-dessus d'une
+  ligne, ni en fin de ligne. Ce qui mérite d'être dit remonte dans une docstring `/** */`.
+- **Docstrings courtes.** Une ou deux lignes. Un paragraphe est déjà trop long.
+- Un commentaire ne se garde que pour une contrainte venue d'ailleurs : une unité
+  (centimes), un piège du framework, un refus du back. Jamais pour redire la signature.
+- **Aucun commentaire dans les gabarits `.html`.** Les fichiers de routes restent nus.
+- Un commentaire retiré par le user est un retrait délibéré : ne pas le réécrire.
+
+---
+
 ## TypeScript Best Practices
 
 - Use strict type checking
