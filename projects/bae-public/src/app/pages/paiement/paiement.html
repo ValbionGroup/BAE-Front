@@ -7,7 +7,7 @@
         <p class="m-0 text-[13px] text-text-2">
           {{ formatCents(amountCents()) }} € encaissés. Votre commande est enregistrée.
         </p>
-        <bae-btn kind="primary" routerLink="/mes-commandes">Voir mes commandes</bae-btn>
+        <bae-btn kind="primary" routerLink="/profil/commandes">Voir mes commandes</bae-btn>
       </div>
     } @else if (settled()) {
       <div class="flex flex-col items-center gap-3 text-center">
@@ -25,7 +25,7 @@
           Nous n’avons pas encore reçu la confirmation de Lydia. Si le paiement a abouti, votre
           commande apparaîtra d’ici quelques minutes.
         </p>
-        <bae-btn kind="primary" routerLink="/mes-commandes">Voir mes commandes</bae-btn>
+        <bae-btn kind="primary" routerLink="/profil/commandes">Voir mes commandes</bae-btn>
       </div>
     } @else {
       <div class="flex flex-col items-center gap-3 text-center" aria-live="polite">

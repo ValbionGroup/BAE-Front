@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideDynamicIcon, LucideQrCode, LucideZap } from '@lucide/angular';
+import { LucideDynamicIcon, LucideQrCode, LucideStore, LucideZap } from '@lucide/angular';
 import {
   Badge,
   BadgeKind,
@@ -12,35 +12,21 @@ import {
   formatPickupSlot,
 } from '@bae/ui';
 
-import { PurchasesStore, type MyPreOrder, type MySubscription } from '../../core/purchases.store';
-
-const STATUS_LABELS: Readonly<Record<string, string>> = {
-  pending: 'Enregistrée',
-  in_progress: 'En préparation',
-  ready: 'Prête à retirer',
-  completed: 'Retirée',
-  cancelled: 'Annulée',
-};
-
-const STATUS_KINDS: Readonly<Record<string, BadgeKind>> = {
-  pending: 'neutral',
-  in_progress: 'blue',
-  ready: 'warn',
-  completed: 'ok',
-  cancelled: 'danger',
-};
+import { PurchasesStore, type MySubscription } from '../../../core/purchases.store';
+import { statusKind, statusLabel } from '../purchase-labels';
 
 @Component({
-  selector: 'bfp-mes-commandes',
-  imports: [RouterLink, Btn, Badge, Card, Skeleton, LucideDynamicIcon],
-  templateUrl: './mes-commandes.html',
+  selector: 'bfp-profil-commandes',
+  imports: [RouterLink, Badge, Btn, Card, Skeleton, LucideDynamicIcon],
+  templateUrl: './commandes.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MesCommandes {
+export class Commandes {
   protected readonly store = inject(PurchasesStore);
 
   protected readonly icQr = LucideQrCode;
   protected readonly icZap = LucideZap;
+  protected readonly icStore = LucideStore;
 
   constructor() {
     this.store.load();
@@ -50,12 +36,12 @@ export class MesCommandes {
     () => this.store.status() === 'loaded' && this.store.isEmpty(),
   );
 
-  protected statusLabel(preOrder: MyPreOrder): string {
-    return STATUS_LABELS[preOrder.status] ?? preOrder.status;
+  protected badgeLabel(status: string): string {
+    return statusLabel(status);
   }
 
-  protected statusKind(preOrder: MyPreOrder): BadgeKind {
-    return STATUS_KINDS[preOrder.status] ?? 'neutral';
+  protected badgeKind(status: string): BadgeKind {
+    return statusKind(status);
   }
 
   protected subscriptionKind(subscription: MySubscription): BadgeKind {
@@ -80,7 +66,7 @@ export class MesCommandes {
     return formatCents(cents);
   }
 
-  /** Reçoit des **centimes**, comme `price()` juste au-dessus. */
+  /** Reçoit des **centimes**, comme `price()`. */
   protected euros(cents: number | null): string {
     return cents === null ? '—' : formatCents(cents);
   }

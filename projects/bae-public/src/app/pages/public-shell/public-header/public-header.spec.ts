@@ -7,18 +7,6 @@ import { vi } from 'vitest';
 
 import { PublicHeader } from './public-header';
 import { SessionStore } from '../../../core/session.store';
-import type { MySubscription } from '../../../core/purchases.store';
-
-const ACTIVE: MySubscription = {
-  fastPassId: 1,
-  label: 'Annuelle',
-  subscribedAt: '2026-01-12',
-  expiresAt: '2027-01-12',
-  status: 'active',
-  amount: 15,
-  paymentMethod: 'lydia',
-};
-
 describe(PublicHeader.name, () => {
   let fixture: ComponentFixture<PublicHeader>;
   let host: HTMLElement;
@@ -49,7 +37,6 @@ describe(PublicHeader.name, () => {
   const settle = async (
     member: { firstName: string | null; lastName: string | null } | null,
     email = 'lea.marchand@enseirb-matmeca.fr',
-    subscriptions: readonly MySubscription[] = [],
   ): Promise<void> => {
     store.load();
     http
@@ -58,10 +45,6 @@ describe(PublicHeader.name, () => {
         user: { id: 7, email },
         member,
       });
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    http.expectOne((req) => req.url.endsWith('/account/subscriptions')).flush(subscriptions);
     await fixture.whenStable();
     fixture.detectChanges();
   };
@@ -104,10 +87,10 @@ describe(PublicHeader.name, () => {
     expect(host.textContent).not.toContain('Mes commandes');
   });
 
-  it('affiche « Mes commandes » une fois connecté', async () => {
+  it('affiche « Mes achats » une fois connecté', async () => {
     await settle({ firstName: 'Léa', lastName: 'Marchand' });
 
-    expect(host.textContent).toContain('Mes commandes');
+    expect(host.textContent).toContain('Mes achats');
   });
 
   it('affiche le nom quand le compte est aussi membre', async () => {
@@ -138,7 +121,7 @@ describe(PublicHeader.name, () => {
     const menu = TestBed.inject(DropdownService).current();
     const labels = menu?.items.map((item) => (item.type === 'action' ? item.label : '—')) ?? [];
 
-    expect(labels).toContain('Mes commandes');
+    expect(labels).toContain('Mes achats');
     expect(labels).toContain('Déconnexion');
   });
 
@@ -177,28 +160,16 @@ describe(PublicHeader.name, () => {
     return menu?.items.map((item) => (item.type === 'action' ? item.label : '—')) ?? [];
   };
 
-  /**
-   * L'entrée dit « vous en avez un » : l'afficher à qui n'a pas cotisé
-   * promettrait un QR que le comptoir refuserait.
-   */
-  it('n’offre pas le FastPass sans cotisation en cours', async () => {
-    await settle({ firstName: 'Léa', lastName: 'Marchand' }, undefined, [
-      { ...ACTIVE, status: 'expired' },
-    ]);
+  it('mène au profil et aux achats depuis le menu de compte', async () => {
+    await settle({ firstName: 'Léa', lastName: 'Marchand' });
 
-    expect(await accountMenuLabels()).not.toContain('FastPass');
-  });
-
-  it('offre le FastPass quand la cotisation est en cours', async () => {
-    await settle({ firstName: 'Léa', lastName: 'Marchand' }, undefined, [ACTIVE]);
-
-    expect(await accountMenuLabels()).toContain('FastPass');
+    expect(await accountMenuLabels()).toEqual(['Mon profil', 'Mes achats', '—', 'Déconnexion']);
   });
 
   // Le menu de compte n'existe pas sur téléphone : sans cette entrée-là, le QR
   // serait inatteignable depuis l'appareil qui doit le montrer au comptoir.
-  it('donne aussi accès au FastPass depuis le menu mobile', async () => {
-    await settle({ firstName: 'Léa', lastName: 'Marchand' }, undefined, [ACTIVE]);
+  it('donne accès au profil depuis le menu mobile', async () => {
+    await settle({ firstName: 'Léa', lastName: 'Marchand' });
 
     host.querySelector<HTMLButtonElement>('button[aria-controls="menu-public"]')?.click();
     await fixture.whenStable();
@@ -207,20 +178,13 @@ describe(PublicHeader.name, () => {
     const links = Array.from(host.querySelectorAll('#menu-public a')).map((a) =>
       a.getAttribute('href'),
     );
-    expect(links).toContain('/ma-carte');
+    expect(links).toContain('/profil');
+    expect(links).toContain('/profil/commandes');
   });
 
-  it('ne demande les cotisations qu’une fois pour la session', async () => {
-    await settle({ firstName: 'Léa', lastName: 'Marchand' }, undefined, [ACTIVE]);
-
-    store.load();
-    http
-      .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({
-        user: { id: 7, email: 'lea.marchand@enseirb-matmeca.fr' },
-        member: { firstName: 'Léa', lastName: 'Marchand' },
-      });
-    await fixture.whenStable();
+  /** Le QR vit sur le profil : l'en-tête n'a plus besoin de savoir qui a cotisé. */
+  it('ne demande aucune cotisation', async () => {
+    await settle({ firstName: 'Léa', lastName: 'Marchand' });
 
     http.expectNone((req) => req.url.endsWith('/account/subscriptions'));
   });

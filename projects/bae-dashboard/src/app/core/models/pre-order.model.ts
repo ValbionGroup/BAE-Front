@@ -35,5 +35,7 @@ export interface PreOrderTicket {
    * le délai de préparation, et deux horloges donneraient deux réponses.
    */
   readonly due: boolean;
+  /** Allergies et consignes déclarées par le client sur son profil. */
+  readonly preparationNote: string | null;
   readonly createdAt: string | null;
 }

@@ -25,6 +25,7 @@ const CLIENT: ClientDetail = {
   note: 'Allergie noix.',
   noteAuthor: 'Sarah K.',
   noteWrittenAt: '2026-01-12T10:00:00.000Z',
+  preparationNote: null,
   subscriptions: [],
   preOrderCount: 0,
   spentCents: 0,

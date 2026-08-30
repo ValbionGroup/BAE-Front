@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 import { Input } from './input';
 
@@ -57,5 +58,37 @@ describe('Input', () => {
     }
 
     expect(host.getAttribute('id'), 'host id').toBeNull();
+  });
+});
+
+@Component({
+  imports: [Input, ReactiveFormsModule],
+  template: `<bae-input [formControl]="control" />`,
+})
+class FormHostComponent {
+  readonly control = new FormControl('0612345678');
+}
+
+describe('Input — mode CVA', () => {
+  /**
+   * `writeValue` arrive après la création, et l'`effect` qui recopie `[value]`
+   * l'écrasait : un `formControl` déjà rempli s'affichait vide.
+   */
+  it('affiche la valeur du formControl, y compris après coup', async () => {
+    await TestBed.configureTestingModule({ imports: [FormHostComponent] }).compileComponents();
+
+    const fixture = TestBed.createComponent(FormHostComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el: HTMLInputElement = fixture.nativeElement.querySelector('bae-input input');
+    expect(el.value).toBe('0612345678');
+
+    fixture.componentInstance.control.setValue('0699999999');
+    fixture.detectChanges();
+    expect(el.value).toBe('0699999999');
+
+    TestBed.resetTestingModule();
   });
 });

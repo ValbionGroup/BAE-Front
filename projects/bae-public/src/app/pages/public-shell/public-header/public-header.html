@@ -43,7 +43,7 @@
 
     <div class="hidden items-center gap-3 md:flex">
       @if (session.isAuthenticated()) {
-        <bae-btn kind="ghost" size="sm" routerLink="/mes-commandes">Mes commandes</bae-btn>
+        <bae-btn kind="ghost" size="sm" routerLink="/profil/commandes">Mes achats</bae-btn>
       }
 
       @switch (session.status()) {
@@ -93,21 +93,20 @@
           >
         }
         @if (session.isAuthenticated()) {
-          @if (hasFastPass()) {
-            <a
-              routerLink="/ma-carte"
-              routerLinkActive="text-text font-medium"
-              (click)="closeMenu()"
-              class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
-              >FastPass</a
-            >
-          }
           <a
-            routerLink="/mes-commandes"
+            routerLink="/profil"
+            routerLinkActive="text-text font-medium"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMenu()"
+            class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
+            >Mon profil</a
+          >
+          <a
+            routerLink="/profil/commandes"
             routerLinkActive="text-text font-medium"
             (click)="closeMenu()"
             class="rounded-md px-2 py-2.5 text-sm text-text-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none"
-            >Mes commandes</a
+            >Mes achats</a
           >
         }
       </nav>

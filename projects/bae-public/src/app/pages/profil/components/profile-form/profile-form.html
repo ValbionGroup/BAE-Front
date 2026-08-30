@@ -1,0 +1,61 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <div data-field="phone">
+    <bae-field label="Téléphone" hint="Pour être joint en cas de souci sur une commande.">
+      <bae-input formControlName="phone" type="tel" placeholder="06 12 34 56 78" />
+    </bae-field>
+  </div>
+
+  <div data-field="telegramHandle">
+    <bae-field label="Pseudo Telegram">
+      <bae-input
+        formControlName="telegramHandle"
+        placeholder="@pseudo"
+        [invalid]="handleRejected()"
+        errorId="telegram-error"
+      />
+    </bae-field>
+
+    <div class="mt-1.5 flex flex-wrap items-center gap-2">
+      <bae-badge kind="neutral">Non lié</bae-badge>
+      <span class="text-[11px] text-muted">
+        Le bot ne peut pas encore vous écrire : la liaison arrivera plus tard.
+      </span>
+    </div>
+
+    @if (handleRejected()) {
+      <p id="telegram-error" class="mt-1.5 mb-0 text-[11.5px] text-danger">
+        Pseudo Telegram invalide : 5 à 32 caractères, commençant par une lettre.
+      </p>
+    }
+  </div>
+
+  <div data-field="preparationNote">
+    <bae-field
+      label="À savoir pour la préparation"
+      hint="Allergies, intolérances, consignes. Visible par l'équipe qui prépare vos commandes."
+    >
+      <bae-textarea
+        formControlName="preparationNote"
+        [rows]="3"
+        [maxlength]="maxNote"
+        placeholder="Allergie à l'arachide…"
+      />
+    </bae-field>
+  </div>
+
+  @if (saveError(); as message) {
+    <p class="m-0 text-[12.5px] text-danger" role="alert">{{ message }}</p>
+  }
+
+  <div class="flex items-center gap-3">
+    <bae-btn type="submit" kind="primary" size="sm" [disabled]="form.pristine || saving()">
+      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </bae-btn>
+
+    <span class="text-[11.5px] text-muted" aria-live="polite">
+      @if (saved() && form.pristine) {
+        Enregistré.
+      }
+    </span>
+  </div>
+</form>

@@ -102,3 +102,92 @@ describe(PurchasesStore.name, () => {
     expect(store.activeSubscription()).toBeNull();
   });
 });
+
+describe(`${PurchasesStore.name} — commandes au comptoir`, () => {
+  let store: PurchasesStore;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://api.test/v1' },
+      ],
+    });
+    store = TestBed.inject(PurchasesStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    TestBed.resetTestingModule();
+  });
+
+  const ORDER = {
+    id: 3,
+    number: 2,
+    eventId: 1,
+    eventName: 'Soirée Hivernale',
+    eventDate: '2026-02-14',
+    status: 'completed',
+    lines: [{ productName: 'Hot-dog', quantity: 2, unitPrice: 250 }],
+    totalCents: 500,
+    savedCents: 0,
+    createdAt: '2026-02-14T21:00:00.000Z',
+  };
+
+  const expectAll = () => ({
+    preOrders: http.expectOne((req) => req.url.endsWith('/account/pre-orders')),
+    subscriptions: http.expectOne((req) => req.url.endsWith('/account/subscriptions')),
+    orders: http.expectOne((req) => req.url.endsWith('/account/orders')),
+  });
+
+  it('charge les trois sources en une passe', () => {
+    store.load();
+
+    const requests = expectAll();
+    requests.preOrders.flush([]);
+    requests.subscriptions.flush([ACTIVE]);
+    requests.orders.flush([ORDER]);
+
+    expect(store.orders()).toEqual([ORDER]);
+    expect(store.status()).toBe('loaded');
+  });
+
+  /** Le compteur d'échecs est passé de deux à trois sources : une panne isolée ne doit pas tout emporter. */
+  it('reste chargé quand une seule des trois échoue', () => {
+    store.load();
+
+    const requests = expectAll();
+    requests.preOrders.flush([]);
+    requests.subscriptions.flush([ACTIVE]);
+    requests.orders.flush({ code: 'E_OOPS', message: 'non' }, { status: 500, statusText: 'nope' });
+
+    expect(store.status()).toBe('loaded');
+  });
+
+  it('bascule en erreur quand les trois échouent', () => {
+    store.load();
+
+    const failure = { code: 'E_OOPS', message: 'non' };
+    const status = { status: 500, statusText: 'nope' };
+    const requests = expectAll();
+    requests.preOrders.flush(failure, status);
+    requests.subscriptions.flush(failure, status);
+    requests.orders.flush(failure, status);
+
+    expect(store.status()).toBe('error');
+  });
+
+  it('n’est vide que sans précommande, sans cotisation et sans commande', () => {
+    store.load();
+
+    const requests = expectAll();
+    requests.preOrders.flush([]);
+    requests.subscriptions.flush([]);
+    requests.orders.flush([ORDER]);
+
+    expect(store.isEmpty()).toBe(false);
+  });
+});

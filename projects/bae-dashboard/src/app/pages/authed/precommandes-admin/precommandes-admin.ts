@@ -54,6 +54,7 @@ interface Ticket {
   /** ISO brut, pour reconnaître le créneau courant dans la liste. */
   readonly pickupAt: string | null;
   readonly due: boolean;
+  readonly preparationNote: string | null;
   readonly picking: readonly PickingLine[];
 }
 
@@ -345,6 +346,7 @@ function toTicket(ticket: PreOrderTicket): Ticket {
     pickupLabel: formatSlot(ticket.pickupAt),
     pickupAt: ticket.pickupAt,
     due: ticket.due,
+    preparationNote: ticket.preparationNote,
     picking: ticket.lines.map((line) => ({
       name: line.productName,
       quantity: line.quantity,
