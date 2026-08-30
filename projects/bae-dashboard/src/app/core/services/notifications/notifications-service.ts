@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
 
 /** `mail` et `in_app` sont les deux seuls canaux que `notifications.channel` accepte. */
-export type NotificationChannel = 'mail' | 'in_app';
+export type NotificationChannel = 'mail' | 'in_app' | 'telegram';
 
 /**
  * Une livraison du fait à cette personne, sur un canal. `sentAt` n'a de sens que

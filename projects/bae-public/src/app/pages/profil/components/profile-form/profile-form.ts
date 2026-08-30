@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Badge, Btn, Field, Input, Textarea } from '@bae/ui';
+import { Badge, Btn, ExternalNavigation, Field, Input, Textarea } from '@bae/ui';
 
 import { ProfileStore, type ProfileWritePayload } from '../../../../core/profile.store';
 import { SessionStore } from '../../../../core/session.store';
@@ -19,6 +19,7 @@ export const PREPARATION_NOTE_MAX = 500;
 export class ProfileForm {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(ProfileStore);
+  private readonly navigation = inject(ExternalNavigation);
   protected readonly session = inject(SessionStore);
 
   protected readonly maxNote = PREPARATION_NOTE_MAX;
@@ -46,6 +47,12 @@ export class ProfileForm {
         telegramHandle: client.telegram.handle ?? '',
         preparationNote: client.preparationNote ?? '',
       });
+
+      // Telegram réécrit le pseudo à chaque liaison : une saisie manuelle serait
+      // effacée sans explication.
+      const handle = this.form.controls.telegramHandle;
+      if (client.telegram.linked) handle.disable();
+      else handle.enable();
     });
   }
 
@@ -80,5 +87,18 @@ export class ProfileForm {
     }
 
     return patch;
+  }
+
+  /**
+   * On quitte l'application, comme pour le SSO : la liaison se termine dans
+   * Telegram, et le retour recharge le profil tout seul.
+   */
+  protected async link(): Promise<void> {
+    const url = await this.store.startTelegramLink();
+    if (url !== null) this.navigation.go(url);
+  }
+
+  protected async unlink(): Promise<void> {
+    await this.store.unlinkTelegram();
   }
 }
