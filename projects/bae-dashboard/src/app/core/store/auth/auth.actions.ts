@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { MemberModel, UserModel } from '#core/models/user.model';
+import { MemberModel, TelegramLinkModel, UserModel } from '#core/models/user.model';
 import { ApiError } from '@bae/ui';
 
 // Logout
@@ -24,6 +24,15 @@ export const loginSuccess = createAction(
 );
 
 export const loginFailure = createAction('[Auth] Login Failure', props<{ error: ApiError }>());
+
+/**
+ * La liaison Telegram a bougé sans que la session change. Ne touche qu'à elle :
+ * réhydrater le profil entier pour un booléen ferait clignoter la page.
+ */
+export const telegramLinkChanged = createAction(
+  '[Auth] Telegram Link Changed',
+  props<{ telegram: TelegramLinkModel }>(),
+);
 
 export const rehydrateAuth = createAction('[Auth] Rehydrate auth');
 

@@ -2,11 +2,26 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL, ExternalNavigation } from '@bae/ui';
 
+/**
+ * L'état de liaison Telegram. `linked` est **dérivé** côté back de
+ * `telegramChatId`, qui ne sort jamais : c'est l'adresse d'émission du bot.
+ */
+export interface TelegramLink {
+  readonly handle: string | null;
+  readonly linked: boolean;
+  readonly linkedAt: string | null;
+}
+
 export interface SessionUser {
   readonly id: number;
   readonly email: string;
   readonly firstName: string | null;
   readonly lastName: string | null;
+  /**
+   * Sur l'utilisateur et non sur le client : la plupart des notifications
+   * s'adressent au bureau, et un membre n'a pas forcément de ligne `clients`.
+   */
+  readonly telegram: TelegramLink;
 }
 
 /**
@@ -23,15 +38,10 @@ export interface ClientProfile {
   readonly school: string | null;
   readonly registeredAt: string | null;
   readonly preparationNote: string | null;
-  readonly telegram: {
-    readonly handle: string | null;
-    readonly linked: boolean;
-    readonly linkedAt: string | null;
-  };
 }
 
-interface ProfileResponse {
-  readonly user: { id: number; email: string };
+export interface ProfileResponse {
+  readonly user: { id: number; email: string; telegram: TelegramLink };
   /** `null` pour un client : la zone publique n'exige aucune ligne `members`. */
   readonly member: { firstName: string | null; lastName: string | null } | null;
   /** `null` pour un membre du bureau qui n'a jamais ouvert la zone publique. */
@@ -72,13 +82,7 @@ export class SessionStore {
   load(): void {
     this.http.get<ProfileResponse>(`${this.baseUrl}/account/profile`).subscribe({
       next: (profile) => {
-        this._user.set({
-          id: profile.user.id,
-          email: profile.user.email,
-          firstName: profile.member?.firstName ?? null,
-          lastName: profile.member?.lastName ?? null,
-        });
-        this._client.set(profile.client ?? null);
+        this.setProfile(profile);
         this._status.set('authenticated');
       },
       // Un 401 est la réponse normale d'un visiteur non connecté, pas un incident.
@@ -91,8 +95,20 @@ export class SessionStore {
   }
 
   /** Point d'écriture unique, réservé à `ProfileStore` après un PATCH réussi. */
-  setClient(next: ClientProfile): void {
-    this._client.set(next);
+  setProfile(profile: ProfileResponse): void {
+    this._user.set({
+      id: profile.user.id,
+      email: profile.user.email,
+      firstName: profile.member?.firstName ?? null,
+      lastName: profile.member?.lastName ?? null,
+      telegram: profile.user.telegram,
+    });
+    this._client.set(profile.client ?? null);
+  }
+
+  /** Délier ne rend que ce bloc : le reste du profil n'a pas bougé. */
+  setTelegram(telegram: TelegramLink): void {
+    this._user.update((user) => (user === null ? null : { ...user, telegram }));
   }
 
   /**
