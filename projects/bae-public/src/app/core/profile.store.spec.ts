@@ -4,7 +4,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '@bae/ui';
 
 import { ProfileStore } from './profile.store';
-import { SessionStore, type ClientProfile } from './session.store';
+import {
+  SessionStore,
+  type ClientProfile,
+  type ProfileResponse,
+  type TelegramLink,
+} from './session.store';
+
+const NO_TELEGRAM: TelegramLink = { handle: null, linked: false, linkedAt: null };
 
 const CLIENT: ClientProfile = {
   phone: '0612345678',
@@ -12,8 +19,15 @@ const CLIENT: ClientProfile = {
   school: 'ENSEIRB',
   registeredAt: '2026-01-12',
   preparationNote: 'Sans gluten',
-  telegram: { handle: null, linked: false, linkedAt: null },
 };
+
+/** Lire et écrire le profil rendent la même enveloppe : le pseudo vit sur `user`. */
+const profile = (over: Partial<ProfileResponse> = {}): ProfileResponse => ({
+  user: { id: 7, email: 'c@enseirb.fr', telegram: NO_TELEGRAM },
+  member: null,
+  client: CLIENT,
+  ...over,
+});
 
 describe(ProfileStore.name, () => {
   let store: ProfileStore;
@@ -33,9 +47,7 @@ describe(ProfileStore.name, () => {
     http = TestBed.inject(HttpTestingController);
 
     session.load();
-    http
-      .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+    http.expectOne((req) => req.url.endsWith('/account/profile')).flush(profile());
   });
 
   afterEach(() => {
@@ -49,7 +61,7 @@ describe(ProfileStore.name, () => {
 
     const request = http.expectOne((req) => req.method === 'PATCH');
     expect(request.request.body).toEqual({ phone: '0699999999' });
-    request.flush({ ...CLIENT, phone: '0699999999' });
+    request.flush(profile({ client: { ...CLIENT, phone: '0699999999' } }));
   });
 
   it('adopte la version normalisée renvoyée par le serveur', async () => {
@@ -57,10 +69,14 @@ describe(ProfileStore.name, () => {
 
     http
       .expectOne((req) => req.method === 'PATCH')
-      .flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+      .flush(
+        profile({
+          user: { id: 7, email: 'c@enseirb.fr', telegram: { ...NO_TELEGRAM, handle: 'lea_m' } },
+        }),
+      );
 
     expect(await saved).toBe(true);
-    expect(session.client()?.telegram.handle).toBe('lea_m');
+    expect(session.user()?.telegram.handle).toBe('lea_m');
     expect(store.saving()).toBe(false);
   });
 
@@ -98,9 +114,7 @@ describe(`${ProfileStore.name} — liaison Telegram`, () => {
     http = TestBed.inject(HttpTestingController);
 
     session.load();
-    http
-      .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+    http.expectOne((req) => req.url.endsWith('/account/profile')).flush(profile());
   });
 
   afterEach(() => {
@@ -137,14 +151,14 @@ describe(`${ProfileStore.name} — liaison Telegram`, () => {
     expect(store.saveError()).toBe('Déjà lié.');
   });
 
-  it('délier remplace le profil par la réponse du serveur', async () => {
+  it('délier remplace la liaison par la réponse du serveur', async () => {
     const unlinked = store.unlinkTelegram();
 
     http
       .expectOne((req) => req.method === 'DELETE' && req.url.endsWith('/account/telegram/link'))
-      .flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+      .flush({ handle: 'lea_m', linked: false, linkedAt: null });
 
     expect(await unlinked).toBe(true);
-    expect(session.client()?.telegram.linked).toBe(false);
+    expect(session.user()?.telegram).toEqual({ handle: 'lea_m', linked: false, linkedAt: null });
   });
 });

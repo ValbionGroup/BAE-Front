@@ -15,7 +15,7 @@
       />
     </bae-field>
 
-    @if (session.client()?.telegram?.linked) {
+    @if (session.user()?.telegram?.linked) {
       <div class="mt-1.5 flex flex-wrap items-center gap-2">
         <bae-badge kind="ok" [dot]="true">Lié</bae-badge>
         <span class="text-[11px] text-muted"> Vous recevez vos notifications dans Telegram. </span>

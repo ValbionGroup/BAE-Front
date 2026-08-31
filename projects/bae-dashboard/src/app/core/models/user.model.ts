@@ -1,3 +1,13 @@
+/**
+ * L'état de liaison Telegram. `linked` est **dérivé** côté back de
+ * `telegramChatId`, qui ne sort jamais : c'est l'adresse d'émission du bot.
+ */
+export interface TelegramLinkModel {
+  handle: string | null;
+  linked: boolean;
+  linkedAt: string | null;
+}
+
 export interface UserModel {
   id: number;
   casId: string;
@@ -19,6 +29,11 @@ export interface UserModel {
   twoFactorEnabled: boolean;
   twoFactorConfirmedAt: string | null;
   recoveryCodesRemaining: number;
+  /**
+   * Sur l'utilisateur et non sur le client : la plupart des notifications
+   * s'adressent au bureau, et un membre n'a pas forcément de ligne `clients`.
+   */
+  telegram: TelegramLinkModel;
 }
 
 export interface MemberModel {

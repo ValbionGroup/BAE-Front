@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL, messageOf } from '@bae/ui';
 
-import { SessionStore, type ClientProfile } from './session.store';
+import { SessionStore, type ProfileResponse, type TelegramLink } from './session.store';
 
 /** Une clé absente veut dire « ne touche pas » ; `null` veut dire « efface ». */
 export interface TelegramLinkTicket {
@@ -42,9 +42,9 @@ export class ProfileStore {
 
     try {
       const updated = await firstValueFrom(
-        this.http.patch<ClientProfile>(`${this.baseUrl}/account/profile`, patch),
+        this.http.patch<ProfileResponse>(`${this.baseUrl}/account/profile`, patch),
       );
-      this.session.setClient(updated);
+      this.session.setProfile(updated);
       return true;
     } catch (error: unknown) {
       this._saveError.set(messageOf(error, 'Vos informations n’ont pas pu être enregistrées.'));
@@ -81,10 +81,10 @@ export class ProfileStore {
     this._saveError.set(null);
 
     try {
-      const updated = await firstValueFrom(
-        this.http.delete<ClientProfile>(`${this.baseUrl}/account/telegram/link`),
+      const telegram = await firstValueFrom(
+        this.http.delete<TelegramLink>(`${this.baseUrl}/account/telegram/link`),
       );
-      this.session.setClient(updated);
+      this.session.setTelegram(telegram);
       return true;
     } catch (error: unknown) {
       this._saveError.set(messageOf(error, 'La déliaison n’a pas pu aboutir.'));

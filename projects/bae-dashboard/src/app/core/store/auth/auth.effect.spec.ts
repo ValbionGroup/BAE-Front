@@ -191,6 +191,7 @@ describe(AuthEffects.name, () => {
           twoFactorEnabled: false,
           twoFactorConfirmedAt: null,
           recoveryCodesRemaining: 0,
+          telegram: { handle: null, linked: false, linkedAt: null },
         },
         member: null,
         permissions: [],

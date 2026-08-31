@@ -6,7 +6,9 @@ import { API_BASE_URL } from '@bae/ui';
 import { findA11yViolations } from '@bae/ui/testing';
 
 import { Profil } from './profil';
-import { SessionStore, type ClientProfile } from '../../core/session.store';
+import { SessionStore, type ClientProfile, type TelegramLink } from '../../core/session.store';
+
+const NO_TELEGRAM: TelegramLink = { handle: null, linked: false, linkedAt: null };
 import type { MyCounterOrder, MyPreOrder, MySubscription } from '../../core/purchases.store';
 
 const CLIENT: ClientProfile = {
@@ -15,7 +17,6 @@ const CLIENT: ClientProfile = {
   school: 'ENSEIRB',
   registeredAt: '2026-01-12',
   preparationNote: 'Allergie arachide',
-  telegram: { handle: null, linked: false, linkedAt: null },
 };
 
 const ACTIVE: MySubscription = {
@@ -92,7 +93,7 @@ describe(Profil.name, () => {
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
       .flush({
-        user: { id: 7, email: 'lea@enseirb.fr' },
+        user: { id: 7, email: 'lea@enseirb.fr', telegram: NO_TELEGRAM },
         member: null,
         client: options.client === undefined ? CLIENT : options.client,
       });

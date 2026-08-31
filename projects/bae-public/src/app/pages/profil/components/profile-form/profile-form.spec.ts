@@ -6,7 +6,20 @@ import { vi } from 'vitest';
 import { findA11yViolations } from '@bae/ui/testing';
 
 import { ProfileForm } from './profile-form';
-import { SessionStore, type ClientProfile } from '../../../../core/session.store';
+import {
+  SessionStore,
+  type ClientProfile,
+  type ProfileResponse,
+  type TelegramLink,
+} from '../../../../core/session.store';
+
+const NO_TELEGRAM: TelegramLink = { handle: null, linked: false, linkedAt: null };
+
+const LINKED: TelegramLink = {
+  handle: 'lea_m',
+  linked: true,
+  linkedAt: '2026-08-30T12:00:00.000Z',
+};
 
 const CLIENT: ClientProfile = {
   phone: '0612345678',
@@ -14,8 +27,17 @@ const CLIENT: ClientProfile = {
   school: 'ENSEIRB',
   registeredAt: '2026-01-12',
   preparationNote: 'Sans gluten',
-  telegram: { handle: null, linked: false, linkedAt: null },
 };
+
+/** Le pseudo vit sur `user`, le reste sur `client` : lire et écrire rendent cette enveloppe. */
+const profileBody = (
+  telegram: TelegramLink = NO_TELEGRAM,
+  client: ClientProfile = CLIENT,
+): ProfileResponse => ({
+  user: { id: 7, email: 'lea@enseirb.fr', telegram },
+  member: null,
+  client,
+});
 
 describe(ProfileForm.name, () => {
   let fixture: ComponentFixture<ProfileForm>;
@@ -40,11 +62,9 @@ describe(ProfileForm.name, () => {
     TestBed.resetTestingModule();
   });
 
-  const mount = async (client: ClientProfile = CLIENT): Promise<void> => {
+  const mount = async (telegram: TelegramLink = NO_TELEGRAM): Promise<void> => {
     TestBed.inject(SessionStore).load();
-    http
-      .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 7, email: 'lea@enseirb.fr' }, member: null, client });
+    http.expectOne((req) => req.url.endsWith('/account/profile')).flush(profileBody(telegram));
 
     fixture = TestBed.createComponent(ProfileForm);
     host = fixture.nativeElement as HTMLElement;
@@ -89,7 +109,7 @@ describe(ProfileForm.name, () => {
 
     const request = http.expectOne((req) => req.method === 'PATCH');
     expect(request.request.body).toEqual({ phone: '0699999999' });
-    request.flush({ ...CLIENT, phone: '0699999999' });
+    request.flush(profileBody(NO_TELEGRAM, { ...CLIENT, phone: '0699999999' }));
   });
 
   it('envoie null plutôt qu’une chaîne vide pour un champ effacé', async () => {
@@ -99,7 +119,7 @@ describe(ProfileForm.name, () => {
 
     const request = http.expectOne((req) => req.method === 'PATCH');
     expect(request.request.body).toEqual({ preparationNote: null });
-    request.flush({ ...CLIENT, preparationNote: null });
+    request.flush(profileBody(NO_TELEGRAM, { ...CLIENT, preparationNote: null }));
   });
 
   /** La règle Telegram est connue du navigateur : inutile de déranger le serveur. */
@@ -119,7 +139,7 @@ describe(ProfileForm.name, () => {
 
     const request = http.expectOne((req) => req.method === 'PATCH');
     expect(request.request.body).toEqual({ telegramHandle: '@lea_m' });
-    request.flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+    request.flush(profileBody({ ...NO_TELEGRAM, handle: 'lea_m' }));
   });
 
   it('annonce l’échec du serveur dans une alerte', async () => {
@@ -143,7 +163,7 @@ describe(ProfileForm.name, () => {
 
   /** Tant qu'aucun bot n'existe, l'état honnête est « non lié », pas un silence. */
   it('dit que le compte Telegram n’est pas encore lié', async () => {
-    await mount({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+    await mount({ ...NO_TELEGRAM, handle: 'lea_m' });
 
     expect(host.textContent).toContain('Non lié');
   });
@@ -153,11 +173,6 @@ describe(ProfileForm.name, () => {
 
     expect(await findA11yViolations(host)).toEqual([]);
   });
-
-  const LINKED: ClientProfile = {
-    ...CLIENT,
-    telegram: { handle: 'lea_m', linked: true, linkedAt: '2026-08-30T12:00:00.000Z' },
-  };
 
   const click = (label: string): void => {
     const button = [...host.querySelectorAll('button')].find((el) =>
@@ -202,7 +217,7 @@ describe(ProfileForm.name, () => {
     click('Délier');
     http
       .expectOne((req) => req.method === 'DELETE' && req.url.endsWith('/account/telegram/link'))
-      .flush({ ...CLIENT, telegram: { handle: 'lea_m', linked: false, linkedAt: null } });
+      .flush({ handle: 'lea_m', linked: false, linkedAt: null });
     await fixture.whenStable();
     fixture.detectChanges();
 

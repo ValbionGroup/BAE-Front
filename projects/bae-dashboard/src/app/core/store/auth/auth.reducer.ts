@@ -27,6 +27,10 @@ export const authReducer = createReducer(
     alert: undefined,
   })),
 
+  on(AuthActions.telegramLinkChanged, (state, { telegram }) =>
+    state.user === undefined ? state : { ...state, user: { ...state.user, telegram } },
+  ),
+
   on(AuthActions.loginFailure, (state, { error }) => ({
     ...state,
     user: undefined,

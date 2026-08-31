@@ -17,6 +17,7 @@ function userWith(hasPassword: boolean, twoFactorEnabled = false): UserModel {
     twoFactorEnabled,
     twoFactorConfirmedAt: twoFactorEnabled ? '2026-08-02T18:00:00.000Z' : null,
     recoveryCodesRemaining: twoFactorEnabled ? 10 : 0,
+    telegram: { handle: null, linked: false, linkedAt: null },
   };
 }
 

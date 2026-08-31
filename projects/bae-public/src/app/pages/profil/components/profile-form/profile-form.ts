@@ -40,18 +40,19 @@ export class ProfileForm {
   constructor() {
     effect(() => {
       const client = this.session.client();
+      const telegram = this.session.user()?.telegram ?? null;
       if (client === null) return;
 
       this.form.reset({
         phone: client.phone ?? '',
-        telegramHandle: client.telegram.handle ?? '',
+        telegramHandle: telegram?.handle ?? '',
         preparationNote: client.preparationNote ?? '',
       });
 
       // Telegram réécrit le pseudo à chaque liaison : une saisie manuelle serait
       // effacée sans explication.
       const handle = this.form.controls.telegramHandle;
-      if (client.telegram.linked) handle.disable();
+      if (telegram?.linked === true) handle.disable();
       else handle.enable();
     });
   }

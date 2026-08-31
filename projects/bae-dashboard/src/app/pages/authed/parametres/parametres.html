@@ -27,6 +27,48 @@
       corrigent pas ici.
     </p>
 
+    <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Telegram</h3>
+    <div class="mb-5 rounded-md border border-border-s bg-surface px-3 py-3">
+      @if (telegramLinked()) {
+        <div class="flex flex-wrap items-center gap-2">
+          <bae-badge kind="ok" [dot]="true">Lié</bae-badge>
+          @if (telegramHandle(); as handle) {
+            <span class="mono text-[12px] text-text-2">&#64;{{ handle }}</span>
+          }
+          <span class="text-[11px] text-muted">Le bot t'écrit tes notifications.</span>
+          <bae-btn
+            type="button"
+            kind="ghost"
+            size="sm"
+            [disabled]="telegramBusy()"
+            (clicked)="unlinkTelegram()"
+          >
+            Délier
+          </bae-btn>
+        </div>
+      } @else {
+        <div class="flex flex-wrap items-center gap-2">
+          <bae-badge kind="neutral">Non lié</bae-badge>
+          <bae-btn
+            type="button"
+            kind="outline"
+            size="sm"
+            [disabled]="telegramBusy()"
+            (clicked)="linkTelegram()"
+          >
+            Lier mon compte Telegram
+          </bae-btn>
+        </div>
+        <p class="mt-1.5 mb-0 text-[11px] text-muted">
+          Tu seras emmené dans Telegram pour confirmer. Le lien est valable 15 minutes.
+        </p>
+      }
+
+      @if (telegramError(); as error) {
+        <p role="alert" class="mt-1.5 mb-0 text-[11.5px] text-danger">{{ error }}</p>
+      }
+    </div>
+
     <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Affichage</h3>
     <div class="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
       @for (opt of themeOptions; track opt.id) {

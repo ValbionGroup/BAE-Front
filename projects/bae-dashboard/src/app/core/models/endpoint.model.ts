@@ -16,6 +16,12 @@ export enum ApiEndPointV1 {
   ACCOUNT_TWO_FACTOR_RECOVERY_CODES = '/account/2fa/recovery-codes',
   ACCOUNT_TWO_FACTOR_DISABLE = '/account/2fa/disable',
 
+  /**
+   * `POST` émet un ticket de liaison, `DELETE` délie. Les deux sont derrière
+   * `audience('client')` côté back : la conversation est portée par `clients`.
+   */
+  ACCOUNT_TELEGRAM_LINK = '/account/telegram/link',
+
   EVENTS = '/events',
   EVENT_MEMBER_RESPONSE = '/events/:id/response',
   EVENT_ROSTER = '/events/:id/roster',

@@ -5,7 +5,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL, ExternalNavigation } from '@bae/ui';
 import { vi } from 'vitest';
 
-import { SessionStore } from './session.store';
+import { SessionStore, type TelegramLink } from './session.store';
+
+const NO_TELEGRAM: TelegramLink = { handle: null, linked: false, linkedAt: null };
 
 describe(SessionStore.name, () => {
   let store: SessionStore;
@@ -46,7 +48,7 @@ describe(SessionStore.name, () => {
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
       .flush({
-        user: { id: 7, email: 'client@enseirb.fr' },
+        user: { id: 7, email: 'client@enseirb.fr', telegram: NO_TELEGRAM },
         member: null,
       });
 
@@ -56,6 +58,7 @@ describe(SessionStore.name, () => {
       email: 'client@enseirb.fr',
       firstName: null,
       lastName: null,
+      telegram: NO_TELEGRAM,
     });
   });
 
@@ -64,7 +67,7 @@ describe(SessionStore.name, () => {
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
       .flush({
-        user: { id: 1, email: 'staff@enseirb.fr' },
+        user: { id: 1, email: 'staff@enseirb.fr', telegram: NO_TELEGRAM },
         member: { firstName: 'Alex', lastName: 'Admin' },
       });
 
@@ -76,7 +79,7 @@ describe(SessionStore.name, () => {
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
       .flush({
-        user: { id: 1, email: 'staff@enseirb.fr' },
+        user: { id: 1, email: 'staff@enseirb.fr', telegram: NO_TELEGRAM },
         member: { firstName: 'Alex', lastName: 'Admin' },
       });
 
@@ -89,7 +92,7 @@ describe(SessionStore.name, () => {
     store.load();
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 7, email: 'client@enseirb.fr' }, member: null });
+      .flush({ user: { id: 7, email: 'client@enseirb.fr', telegram: NO_TELEGRAM }, member: null });
 
     expect(store.displayName()).toBe('client');
   });
@@ -156,14 +159,17 @@ describe(`${SessionStore.name} — bloc client`, () => {
     school: 'ENSEIRB',
     registeredAt: '2026-01-12',
     preparationNote: 'Allergie arachide',
-    telegram: { handle: null, linked: false, linkedAt: null },
   };
 
   it('expose les coordonnées du client', () => {
     store.load();
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+      .flush({
+        user: { id: 7, email: 'c@enseirb.fr', telegram: NO_TELEGRAM },
+        member: null,
+        client: CLIENT,
+      });
 
     expect(store.client()).toEqual(CLIENT);
   });
@@ -173,22 +179,55 @@ describe(`${SessionStore.name} — bloc client`, () => {
     store.load();
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 1, email: 's@enseirb.fr' }, member: null, client: null });
+      .flush({
+        user: { id: 1, email: 's@enseirb.fr', telegram: NO_TELEGRAM },
+        member: null,
+        client: null,
+      });
 
     expect(store.client()).toBeNull();
     expect(store.status()).toBe('authenticated');
   });
 
   /** Une sauvegarde ne doit jamais pouvoir faire basculer l'état de session. */
-  it('remplace le bloc client sans toucher au statut', () => {
+  it('remplace le profil sans toucher au statut', () => {
     store.load();
     http
       .expectOne((req) => req.url.endsWith('/account/profile'))
-      .flush({ user: { id: 7, email: 'c@enseirb.fr' }, member: null, client: CLIENT });
+      .flush({
+        user: { id: 7, email: 'c@enseirb.fr', telegram: NO_TELEGRAM },
+        member: null,
+        client: CLIENT,
+      });
 
-    store.setClient({ ...CLIENT, phone: '0699999999' });
+    store.setProfile({
+      user: { id: 7, email: 'c@enseirb.fr', telegram: NO_TELEGRAM },
+      member: null,
+      client: { ...CLIENT, phone: '0699999999' },
+    });
 
     expect(store.client()?.phone).toBe('0699999999');
     expect(store.status()).toBe('authenticated');
+  });
+
+  /** Délier ne rend que ce bloc : le reste du profil ne doit pas bouger. */
+  it('remplace la seule liaison Telegram', () => {
+    store.load();
+    http
+      .expectOne((req) => req.url.endsWith('/account/profile'))
+      .flush({
+        user: {
+          id: 7,
+          email: 'c@enseirb.fr',
+          telegram: { handle: 'lea_m', linked: true, linkedAt: '2026-08-30T12:00:00.000Z' },
+        },
+        member: null,
+        client: CLIENT,
+      });
+
+    store.setTelegram({ handle: 'lea_m', linked: false, linkedAt: null });
+
+    expect(store.user()?.telegram.linked).toBe(false);
+    expect(store.client()?.phone).toBe('0612345678');
   });
 });
