@@ -106,7 +106,12 @@ export class BarcodeScannerService {
       return false;
     }
 
-    this.detector = await this.decoder(formats);
+    try {
+      this.detector = await this.decoder(formats);
+    } catch {
+      this.stop();
+      return false;
+    }
     this.stopped = false;
 
     video.srcObject = this.stream;
@@ -143,11 +148,30 @@ export class BarcodeScannerService {
     return new (BarcodeDetector as unknown as BarcodeDetectorCtor)({ formats });
   }
 
+  /**
+   * Le binaire est chargé **ici**, pas à la première image.
+   *
+   * Laissé paresseux, un WASM injoignable ne se voyait qu'au premier `detect()`
+   * — et la boucle de lecture, qui avale les images illisibles, se
+   * reprogrammait alors à la fréquence d'affichage en relevant à chaque frame.
+   * Échouer à l'ouverture rend `false` à `start()`, ce que l'écran sait déjà
+   * traduire en saisie manuelle.
+   */
   private loadFallback(): Promise<Ponyfill> {
-    this.fallback ??= import('barcode-detector/ponyfill').then((ponyfill) => {
-      ponyfill.prepareZXingModule({ overrides: { locateFile: wasmUrl } });
-      return ponyfill;
-    });
+    this.fallback ??= import('barcode-detector/ponyfill')
+      .then(async (ponyfill) => {
+        await ponyfill.prepareZXingModule({
+          overrides: { locateFile: wasmUrl },
+          fireImmediately: true,
+        });
+        return ponyfill;
+      })
+      .catch((error: unknown) => {
+        // Oublié pour qu'une coupure passagère ne condamne pas le scanner
+        // jusqu'au rechargement de la page.
+        this.fallback = null;
+        throw error;
+      });
     return this.fallback;
   }
 

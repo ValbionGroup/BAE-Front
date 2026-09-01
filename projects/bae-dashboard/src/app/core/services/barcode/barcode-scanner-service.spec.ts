@@ -78,9 +78,9 @@ describe(BarcodeScannerService.name, () => {
     }
 
     /** Rien de tout cela n'existe sous jsdom : la caméra est posée à la main. */
-    function stubCamera(): HTMLVideoElement {
+    function stubCamera(tracks: { stop: () => void }[] = []): HTMLVideoElement {
       Object.defineProperty(navigator, 'mediaDevices', {
-        value: { getUserMedia: () => Promise.resolve({ getTracks: () => [] }) },
+        value: { getUserMedia: () => Promise.resolve({ getTracks: () => tracks }) },
         configurable: true,
       });
       return { srcObject: null, play: () => Promise.resolve() } as unknown as HTMLVideoElement;
@@ -160,6 +160,41 @@ describe(BarcodeScannerService.name, () => {
       expect(locateFile('zxing_reader.wasm', 'https://cdn.example/')).toBe(
         new URL('zxing/zxing_reader.wasm', document.baseURI).href,
       );
+    });
+
+    /**
+     * Un décodeur qui n'a pas pu s'initialiser doit se voir à l'ouverture, pas
+     * à chaque image : la boucle de lecture se reprogrammait à la fréquence
+     * d'affichage en avalant l'erreur, brûlant le processeur d'un téléphone
+     * sur un scanner qui ne scannait rien.
+     */
+    it('rend `false` quand le décodeur WASM ne s’initialise pas', async () => {
+      const video = stubCamera();
+      prepareZXingModule.mockRejectedValueOnce(new Error('binaire injoignable'));
+
+      expect(await service.start(video, () => undefined, QR_FORMATS)).toBe(false);
+    });
+
+    it('rend la caméra quand le décodeur WASM ne s’initialise pas', async () => {
+      const stopTrack = vi.fn();
+      const video = stubCamera([{ stop: stopTrack }]);
+      prepareZXingModule.mockRejectedValueOnce(new Error('binaire injoignable'));
+
+      await service.start(video, () => undefined, QR_FORMATS);
+
+      // Sans cela le voyant de la caméra reste allumé sur un scanner mort.
+      expect(stopTrack).toHaveBeenCalled();
+    });
+
+    it('réessaye le chargement après un échec', async () => {
+      const video = stubCamera();
+      prepareZXingModule.mockRejectedValueOnce(new Error('binaire injoignable'));
+      await service.start(video, () => undefined, QR_FORMATS);
+
+      // Une coupure réseau passagère ne doit pas condamner le scanner jusqu'au
+      // rechargement de la page.
+      expect(await service.start(video, () => undefined, QR_FORMATS)).toBe(true);
+      expect(ponyfillConstructed).toHaveBeenCalledWith({ formats: QR_FORMATS });
     });
   });
 });
