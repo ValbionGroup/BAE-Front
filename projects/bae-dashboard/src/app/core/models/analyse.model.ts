@@ -12,11 +12,21 @@ export interface AnalyseChartCol {
 }
 
 export interface AnalyseSoiree {
+  readonly id: number;
   readonly n: string;
   readonly d: string;
   readonly rev: string;
   readonly cmd: number | string;
   readonly pred: boolean;
+  /** Une soirée à venir n'a pas de bilan : sa ligne n'ouvre rien. */
+  readonly clickable: boolean;
+  /**
+   * Chiffres bruts, pour l'export CSV : une colonne de tableur veut un nombre,
+   * pas la chaîne déjà formatée que l'écran affiche. `cashedCents` en centimes.
+   */
+  readonly cashedCents: number;
+  readonly presentCount: number;
+  readonly respondentCount: number;
 }
 
 export interface AnalysePrediction {
@@ -26,11 +36,4 @@ export interface AnalysePrediction {
   readonly range: number;
   readonly estimatedRevenue: string;
   readonly prereg: number;
-}
-
-export interface AnalyseSummary {
-  readonly kpis: readonly AnalyseKpi[];
-  readonly chart: readonly AnalyseChartCol[];
-  readonly soirees: readonly AnalyseSoiree[];
-  readonly prediction: AnalysePrediction | null;
 }
