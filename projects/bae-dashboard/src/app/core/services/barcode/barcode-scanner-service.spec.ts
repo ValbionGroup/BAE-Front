@@ -1,6 +1,22 @@
 import { TestBed } from '@angular/core/testing';
+import { afterEach, vi } from 'vitest';
 
-import { BarcodeScannerService, SCAN_COOLDOWN_MS } from './barcode-scanner-service';
+import { BarcodeScannerService, QR_FORMATS, SCAN_COOLDOWN_MS } from './barcode-scanner-service';
+
+const prepareZXingModule = vi.fn();
+const ponyfillConstructed = vi.fn();
+
+vi.mock('barcode-detector/ponyfill', () => ({
+  prepareZXingModule,
+  BarcodeDetector: class {
+    constructor(options?: { formats?: string[] }) {
+      ponyfillConstructed(options);
+    }
+    detect() {
+      return Promise.resolve([]);
+    }
+  },
+}));
 
 describe(BarcodeScannerService.name, () => {
   let service: BarcodeScannerService;
@@ -47,5 +63,138 @@ describe(BarcodeScannerService.name, () => {
     // Revenir sur l'écran ne doit pas faire ignorer le premier scan : le
     // service est `providedIn: 'root'`, il survit à la page.
     expect(service.accepts('3268754117904', 1010)).toBe(true);
+  });
+
+  describe('décodeur', () => {
+    const nativeConstructed = vi.fn();
+
+    class NativeDetector {
+      constructor(options?: { formats?: string[] }) {
+        nativeConstructed(options);
+      }
+      detect() {
+        return Promise.resolve([]);
+      }
+    }
+
+    /** Rien de tout cela n'existe sous jsdom : la caméra est posée à la main. */
+    function stubCamera(tracks: { stop: () => void }[] = []): HTMLVideoElement {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia: () => Promise.resolve({ getTracks: () => tracks }) },
+        configurable: true,
+      });
+      return { srcObject: null, play: () => Promise.resolve() } as unknown as HTMLVideoElement;
+    }
+
+    afterEach(() => {
+      service.stop();
+      Reflect.deleteProperty(globalThis, 'BarcodeDetector');
+      Reflect.deleteProperty(navigator, 'mediaDevices');
+      vi.clearAllMocks();
+    });
+
+    /**
+     * Le cas iOS : tout navigateur y est Safari, et WebKit n'a jamais
+     * implémenté `BarcodeDetector`. L'absence du décodeur natif ne doit plus
+     * masquer le bouton de scan — c'est le repli WASM qui prend la main.
+     */
+    it('reste disponible sans `BarcodeDetector` natif', () => {
+      stubCamera();
+
+      expect(service.unavailability()).toBeNull();
+      expect(service.isSupported()).toBe(true);
+    });
+
+    it('reste indisponible sans caméra du tout', () => {
+      expect(service.unavailability()).toBe('browser');
+    });
+
+    it('reste indisponible hors contexte sécurisé', () => {
+      stubCamera();
+      Object.defineProperty(globalThis, 'isSecureContext', {
+        value: false,
+        configurable: true,
+      });
+
+      // Une IP privée en HTTP n'a pas de caméra : cela se corrige côté serveur,
+      // pas en changeant de navigateur.
+      expect(service.unavailability()).toBe('insecure-context');
+
+      Object.defineProperty(globalThis, 'isSecureContext', { value: true, configurable: true });
+    });
+
+    it('n’embarque pas le décodeur WASM quand le natif est là', async () => {
+      const video = stubCamera();
+      Object.defineProperty(globalThis, 'BarcodeDetector', {
+        value: NativeDetector,
+        configurable: true,
+      });
+
+      expect(await service.start(video, () => undefined, QR_FORMATS)).toBe(true);
+
+      expect(nativeConstructed).toHaveBeenCalledWith({ formats: QR_FORMATS });
+      // Le WASM pèse des centaines de kilo-octets : Chrome ne doit jamais le charger.
+      expect(ponyfillConstructed).not.toHaveBeenCalled();
+      expect(prepareZXingModule).not.toHaveBeenCalled();
+    });
+
+    it('se replie sur le décodeur WASM quand le natif manque', async () => {
+      const video = stubCamera();
+
+      expect(await service.start(video, () => undefined, QR_FORMATS)).toBe(true);
+
+      expect(ponyfillConstructed).toHaveBeenCalledWith({ formats: QR_FORMATS });
+      expect(nativeConstructed).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Par défaut `zxing-wasm` va chercher son binaire sur le CDN jsDelivr : un
+     * comptoir sur le réseau d'une salle des fêtes perdrait son scanner.
+     */
+    it('sert le binaire WASM depuis l’application, pas depuis un CDN', async () => {
+      const video = stubCamera();
+
+      await service.start(video, () => undefined, QR_FORMATS);
+
+      const locateFile = prepareZXingModule.mock.calls[0][0].overrides.locateFile;
+      expect(locateFile('zxing_reader.wasm', 'https://cdn.example/')).toBe(
+        new URL('zxing/zxing_reader.wasm', document.baseURI).href,
+      );
+    });
+
+    /**
+     * Un décodeur qui n'a pas pu s'initialiser doit se voir à l'ouverture, pas
+     * à chaque image : la boucle de lecture se reprogrammait à la fréquence
+     * d'affichage en avalant l'erreur, brûlant le processeur d'un téléphone
+     * sur un scanner qui ne scannait rien.
+     */
+    it('rend `false` quand le décodeur WASM ne s’initialise pas', async () => {
+      const video = stubCamera();
+      prepareZXingModule.mockRejectedValueOnce(new Error('binaire injoignable'));
+
+      expect(await service.start(video, () => undefined, QR_FORMATS)).toBe(false);
+    });
+
+    it('rend la caméra quand le décodeur WASM ne s’initialise pas', async () => {
+      const stopTrack = vi.fn();
+      const video = stubCamera([{ stop: stopTrack }]);
+      prepareZXingModule.mockRejectedValueOnce(new Error('binaire injoignable'));
+
+      await service.start(video, () => undefined, QR_FORMATS);
+
+      // Sans cela le voyant de la caméra reste allumé sur un scanner mort.
+      expect(stopTrack).toHaveBeenCalled();
+    });
+
+    it('réessaye le chargement après un échec', async () => {
+      const video = stubCamera();
+      prepareZXingModule.mockRejectedValueOnce(new Error('binaire injoignable'));
+      await service.start(video, () => undefined, QR_FORMATS);
+
+      // Une coupure réseau passagère ne doit pas condamner le scanner jusqu'au
+      // rechargement de la page.
+      expect(await service.start(video, () => undefined, QR_FORMATS)).toBe(true);
+      expect(ponyfillConstructed).toHaveBeenCalledWith({ formats: QR_FORMATS });
+    });
   });
 });

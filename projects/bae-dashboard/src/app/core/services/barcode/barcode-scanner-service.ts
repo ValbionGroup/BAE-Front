@@ -9,6 +9,23 @@ interface BarcodeDetectorCtor {
   new (options?: { formats?: string[] }): BarcodeDetectorLike;
 }
 
+/** Le repli WASM, jamais importé statiquement — cf. `loadFallback()`. */
+type Ponyfill = typeof import('barcode-detector/ponyfill');
+
+/**
+ * Où le repli va chercher son binaire.
+ *
+ * ⚠️ `zxing-wasm` le télécharge depuis le CDN jsDelivr par défaut : un comptoir
+ * sur le réseau d'une salle des fêtes perdrait son scanner, et le point de
+ * vente dépendrait d'un tiers à l'exécution. Le fichier est copié dans la
+ * sortie de build par l'entrée `assets` d'`angular.json` ; `document.baseURI`
+ * garde l'URL juste sous un déploiement en sous-chemin.
+ */
+function wasmUrl(path: string, prefix: string): string {
+  if (!path.endsWith('.wasm')) return prefix + path;
+  return new URL('zxing/zxing_reader.wasm', document.baseURI).href;
+}
+
 /** Codes-barres produits — le cas des Stocks. */
 export const BARCODE_FORMATS = ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'];
 
@@ -29,9 +46,11 @@ export type ScannerUnavailability = 'insecure-context' | 'browser';
 /**
  * Caméra et décodage, isolés de la page.
  *
- * `getUserMedia` et `BarcodeDetector` n'existent ni sous jsdom ni sur Firefox
- * et Safari desktop : la page doit fonctionner sans eux, la saisie manuelle
- * servant de repli.
+ * `BarcodeDetector` est une API Chromium que WebKit et Gecko n'ont jamais
+ * implémentée. Sur iOS, où l'App Store impose WebKit à **tous** les navigateurs
+ * — Chrome iOS est une coque autour de Safari —, aucun décodeur natif n'existe.
+ * Le repli WASM lui rend le scan ; la saisie manuelle ne sert plus qu'aux
+ * navigateurs sans caméra du tout.
  */
 @Injectable({ providedIn: 'root' })
 export class BarcodeScannerService {
@@ -39,6 +58,7 @@ export class BarcodeScannerService {
   private detector: BarcodeDetectorLike | null = null;
   private stopped = false;
   private readonly lastEmitted = new Map<string, number>();
+  private fallback: Promise<Ponyfill> | null = null;
 
   /**
    * ⚠️ `insecure-context` se corrige côté serveur, `browser` non — les fusionner
@@ -50,7 +70,6 @@ export class BarcodeScannerService {
   unavailability(): ScannerUnavailability | null {
     if (typeof globalThis === 'undefined' || typeof navigator === 'undefined') return 'browser';
     if (globalThis.isSecureContext === false) return 'insecure-context';
-    if (!('BarcodeDetector' in globalThis)) return 'browser';
     if (navigator.mediaDevices?.getUserMedia === undefined) return 'browser';
     return null;
   }
@@ -87,9 +106,12 @@ export class BarcodeScannerService {
       return false;
     }
 
-    const Ctor = (globalThis as unknown as { BarcodeDetector: BarcodeDetectorCtor })
-      .BarcodeDetector;
-    this.detector = new Ctor({ formats });
+    try {
+      this.detector = await this.decoder(formats);
+    } catch {
+      this.stop();
+      return false;
+    }
     this.stopped = false;
 
     video.srcObject = this.stream;
@@ -108,6 +130,49 @@ export class BarcodeScannerService {
     void tick();
 
     return true;
+  }
+
+  /**
+   * Le décodeur natif s'il existe, le repli WASM sinon.
+   *
+   * L'import est dynamique pour que le binaire parte dans son propre morceau :
+   * un navigateur qui sait décoder ne doit pas payer les centaines de
+   * kilo-octets d'un décodeur qu'il n'utilisera pas.
+   */
+  private async decoder(formats: string[]): Promise<BarcodeDetectorLike> {
+    const native = (globalThis as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
+      .BarcodeDetector;
+    if (native) return new native({ formats });
+
+    const { BarcodeDetector } = await this.loadFallback();
+    return new (BarcodeDetector as unknown as BarcodeDetectorCtor)({ formats });
+  }
+
+  /**
+   * Le binaire est chargé **ici**, pas à la première image.
+   *
+   * Laissé paresseux, un WASM injoignable ne se voyait qu'au premier `detect()`
+   * — et la boucle de lecture, qui avale les images illisibles, se
+   * reprogrammait alors à la fréquence d'affichage en relevant à chaque frame.
+   * Échouer à l'ouverture rend `false` à `start()`, ce que l'écran sait déjà
+   * traduire en saisie manuelle.
+   */
+  private loadFallback(): Promise<Ponyfill> {
+    this.fallback ??= import('barcode-detector/ponyfill')
+      .then(async (ponyfill) => {
+        await ponyfill.prepareZXingModule({
+          overrides: { locateFile: wasmUrl },
+          fireImmediately: true,
+        });
+        return ponyfill;
+      })
+      .catch((error: unknown) => {
+        // Oublié pour qu'une coupure passagère ne condamne pas le scanner
+        // jusqu'au rechargement de la page.
+        this.fallback = null;
+        throw error;
+      });
+    return this.fallback;
   }
 
   stop(): void {
