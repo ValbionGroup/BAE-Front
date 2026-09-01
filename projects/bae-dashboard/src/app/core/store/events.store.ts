@@ -51,14 +51,38 @@ const initialState: EventsState = {
   savingMenuKeys: [],
 };
 
-function toEventsDict(eventsList: readonly EventDetail[]): Record<string, EventDetail> {
+/**
+ * Fond la liste relue dans le dictionnaire vivant.
+ *
+ * ⚠️ **`GET /events` ne sert aucun détail** : ni `menu`, ni `roster`, ni
+ * `memberPresence`. Ces trois-là n'arrivent que par leurs endpoints propres.
+ * Reconstruire le dictionnaire à neuf les jetait donc à chaque relecture, et
+ * seuls les écrans qui rechargent sur `…Status === 'init'` s'en relevaient.
+ *
+ * La caisse, elle, ne charge son menu qu'une fois, dans `startSession()`, qui
+ * ne se rejoue que si la soirée **change**. Un `refresh()` arrivé après —
+ * course au montage, ou simple retour sur la page — vidait la grille en plein
+ * service sur un « Aucun produit dans le menu de cette soirée », définitif
+ * jusqu'au rechargement complet.
+ *
+ * Le détail conservé peut être périmé d'un cycle ; il est rechargé par qui le
+ * lit. Un menu périmé reste infiniment préférable à un menu absent.
+ */
+function mergeEventsDict(
+  previous: Record<string, EventDetail>,
+  eventsList: readonly EventDetail[],
+): Record<string, EventDetail> {
   return eventsList.reduce(
     (acc, ev) => {
+      const cached = previous[ev.id];
       acc[ev.id] = {
         ...ev,
-        memberPresenceStatus: 'init',
-        menuStatus: 'init',
-        rosterStatus: 'init',
+        memberPresence: cached?.memberPresence,
+        memberPresenceStatus: cached?.memberPresenceStatus ?? 'init',
+        menu: cached?.menu,
+        menuStatus: cached?.menuStatus ?? 'init',
+        roster: cached?.roster,
+        rosterStatus: cached?.rosterStatus ?? 'init',
       };
       return acc;
     },
@@ -242,7 +266,10 @@ export const EventsStore = signalStore(
         patchState(store, { loading: 'loading' });
         try {
           const eventsList = await lastValueFrom(eventService.fetchAll());
-          patchState(store, { events: toEventsDict(eventsList), loading: 'loaded' });
+          patchState(store, {
+            events: mergeEventsDict(store.events(), eventsList),
+            loading: 'loaded',
+          });
         } catch (error) {
           patchState(store, { loading: 'error' });
         }
@@ -262,7 +289,10 @@ export const EventsStore = signalStore(
         patchState(store, { loading: 'refreshing' });
         try {
           const eventsList = await lastValueFrom(eventService.fetchAll());
-          patchState(store, { events: toEventsDict(eventsList), loading: 'loaded' });
+          patchState(store, {
+            events: mergeEventsDict(store.events(), eventsList),
+            loading: 'loaded',
+          });
         } catch (error) {
           patchState(store, { loading: 'error' });
         }
