@@ -25,6 +25,7 @@ export const ROUTE_PERMISSIONS = {
   [AppRoutes.soireeLive]: 'order:serve',
   [AppRoutes.soireeBilan]: 'event:settle',
   [AppRoutes.paiements]: 'transaction:read',
+  [AppRoutes.analyse]: 'transaction:read',
   [AppRoutes.equipe]: 'role:read',
   [AppRoutes.referentiels]: [
     'category:read',

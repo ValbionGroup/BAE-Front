@@ -187,6 +187,7 @@ export const routes: Routes = [
       },
       {
         path: AppRoutes.analyse,
+        canActivate: [permissionGuardFor(AppRoutes.analyse)],
         loadComponent: () => import('#pages/authed/analyse/analyse').then((m) => m.Analyse),
       },
       {

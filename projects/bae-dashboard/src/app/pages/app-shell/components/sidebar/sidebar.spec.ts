@@ -109,11 +109,12 @@ describe('Sidebar — ce que chaque rôle voit', () => {
   it('Membre : la base seule, donc aucun poste de préparation', async () => {
     const fixture = await render(BASE);
 
+    // « Analyse » a rejoint les écrans d'argent : son endpoint exige
+    // `transaction:read`, que la base ne porte pas.
     expect(labels(fixture)).toEqual([
       'Accueil',
       'Présences',
       'Pilotage soirée',
-      'Analyse',
       'Tickets',
       'Paramètres',
     ]);

@@ -29,31 +29,33 @@ describe(Analyse.name, () => {
    * dans une micro-tâche. Un `detectChanges()` immédiat rendrait l'écran vide.
    */
   async function flush(orderCounts: number[]): Promise<void> {
-    httpMock.expectOne((r) => r.url === `${baseUrl}/analytics/season`).flush({
-      season: { startYear: 2025, label: 'Saison 2025-2026' },
-      seasons: [{ startYear: 2025, label: 'Saison 2025-2026', eventCount: orderCounts.length }],
-      kpis: {
-        cashedCents: 790000,
-        cashedDeltaPct: 18,
-        avgOrdersPerEvent: 285,
-        ordersStdDev: 48,
-        avgBasketCents: 580,
-        avgBasketDeltaCents: 40,
-        presenceRate: 0.92,
-        presenceDeltaPts: -3,
-      },
-      events: orderCounts.map((orderCount, index) => ({
-        id: index + 1,
-        name: `Soirée ${index + 1}`,
-        date: `2025-09-${String(index + 1).padStart(2, '0')}T20:00:00.000+00:00`,
-        orderCount,
-        cashedCents: 100000,
-        presentCount: 20,
-        respondentCount: 22,
-        upcoming: false,
-      })),
-      prediction: null,
-    });
+    httpMock
+      .expectOne((r) => r.url === `${baseUrl}/analytics/season`)
+      .flush({
+        season: { startYear: 2025, label: 'Saison 2025-2026' },
+        seasons: [{ startYear: 2025, label: 'Saison 2025-2026', eventCount: orderCounts.length }],
+        kpis: {
+          cashedCents: 790000,
+          cashedDeltaPct: 18,
+          avgOrdersPerEvent: 285,
+          ordersStdDev: 48,
+          avgBasketCents: 580,
+          avgBasketDeltaCents: 40,
+          presenceRate: 0.92,
+          presenceDeltaPts: -3,
+        },
+        events: orderCounts.map((orderCount, index) => ({
+          id: index + 1,
+          name: `Soirée ${index + 1}`,
+          date: `2025-09-${String(index + 1).padStart(2, '0')}T20:00:00.000+00:00`,
+          orderCount,
+          cashedCents: 100000,
+          presentCount: 20,
+          respondentCount: 22,
+          upcoming: false,
+        })),
+        prediction: null,
+      });
     await fixture.whenStable();
     fixture.detectChanges();
   }

@@ -53,7 +53,9 @@ describe(CoordinationStore.name, () => {
   });
 
   it('classe une soirée dont la date est dépassée comme passée', async () => {
-    await load([{ id: 3, name: 'Ancienne', date: A_YEAR_AGO, duration: null, status: 'scheduled' }]);
+    await load([
+      { id: 3, name: 'Ancienne', date: A_YEAR_AGO, duration: null, status: 'scheduled' },
+    ]);
 
     const [event] = store.events();
     expect(event.status).toBe('past');
