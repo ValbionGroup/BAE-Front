@@ -24,6 +24,7 @@ export * from './lib/components/ui/kbd/kbd';
 export * from './lib/components/ui/logo/logo';
 export * from './lib/components/ui/otp-input/otp-input';
 export * from './lib/components/ui/qr-code/qr-code';
+export * from './lib/components/ui/qr-code/qr-png';
 export * from './lib/components/ui/skeleton/skeleton';
 export * from './lib/components/ui/textarea/textarea';
 export * from './lib/components/ui/toggle/toggle';

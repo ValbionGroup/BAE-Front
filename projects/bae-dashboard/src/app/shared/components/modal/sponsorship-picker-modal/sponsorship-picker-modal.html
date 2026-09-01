@@ -1,0 +1,63 @@
+<bfd-modal-shell
+  [icon]="icHand"
+  tone="warn"
+  title="Prise en charge"
+  subtitle="Sans le QR, pour le retardataire. Les prix de la tranche remplacent les prix publics."
+  [width]="480"
+  (close)="cancel()"
+>
+  <div class="flex flex-col gap-3">
+    @if (loading()) {
+      <p class="m-0 text-[12px] text-muted">Chargement des prises en charge…</p>
+    } @else if (error(); as message) {
+      <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+    } @else if (categories().length === 0) {
+      <p class="m-0 text-[12px] text-muted">
+        Aucune prise en charge sur cette soirée. Elles se créent depuis Coordination.
+      </p>
+    } @else {
+      <ul
+        class="m-0 flex max-h-[320px] list-none flex-col gap-1 overflow-y-auto p-0"
+        aria-label="Prises en charge de la soirée"
+      >
+        @for (category of categories(); track category.id) {
+          @let active = category.id === currentId();
+          @let lowest = lowestPrice(category);
+          <li>
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left hover:border-warn hover:bg-warn-soft focus-visible:ring-2 focus-visible:ring-blue/40"
+              [class]="active ? 'border-warn bg-warn-soft' : 'border-border-s bg-surface'"
+              [attr.aria-current]="active ? 'true' : null"
+              (click)="choose(category)"
+            >
+              <span class="flex min-w-0 flex-col">
+                <span class="truncate text-[12.5px] font-semibold text-text">
+                  {{ category.label }}
+                </span>
+                <span class="truncate text-[11.5px] text-muted">
+                  {{ modeLabels[category.mode] }}
+                </span>
+              </span>
+              <span class="tnum ml-auto shrink-0 text-[11.5px] text-text-2">
+                @if (lowest !== null) {
+                  dès {{ formatCents(lowest) }} €
+                } @else {
+                  prix public
+                }
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <div modal-footer class="flex flex-1 items-center gap-2">
+    @if (currentId() !== null) {
+      <bae-btn kind="ghost" size="md" (clicked)="remove()">Retirer la prise en charge</bae-btn>
+    }
+    <span class="flex-1"></span>
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+  </div>
+</bfd-modal-shell>

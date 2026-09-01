@@ -34,6 +34,7 @@ import { MenuItem } from '#core/models/event.model';
 import { Btn, Badge, Kbd, formatCents } from '@bae/ui';
 import { ModalService } from '#shared/components/modal/modal.service';
 import { DiscountModal } from '#shared/components/modal/discount-modal/discount-modal';
+import { SponsorshipPickerModal } from '#shared/components/modal/sponsorship-picker-modal/sponsorship-picker-modal';
 import { Store } from '@ngrx/store';
 import { selectPermissions } from '#core/store/auth/auth.selector';
 import type { OrderDiscount } from '#core/services/orders/orders-service';
@@ -42,6 +43,7 @@ import type { PaymentMethod } from '#core/models/order.model';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
 import type { Buyer, ScannedCategory } from '#core/services/buyers/buyers-service';
+import type { SponsorshipCategory } from '#core/services/sponsorships/sponsorships-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
 import { STOCK_AUDIT_MS } from '#shared/utils/stock-level';
 
@@ -178,6 +180,35 @@ export class Caisse implements OnInit {
         applied: (discount: OrderDiscount | null) =>
           discount ? this.store.setDiscount(discount) : this.store.clearDiscount(),
       },
+    });
+  }
+
+  /**
+   * Pose une prise en charge sans passer par le QR — le retardataire qui se
+   * présente sans son exemplaire.
+   */
+  protected openCategoryPicker(): void {
+    const eventId = this.store.sessionEventId();
+    if (!eventId) return;
+
+    this.modalService.open({
+      type: 'component',
+      component: SponsorshipPickerModal,
+      inputs: {
+        eventId,
+        currentId: this.store.category()?.id ?? null,
+        picked: (category: SponsorshipCategory | null) =>
+          category ? this.applyCategory(category) : this.store.clearCategory(),
+      },
+    });
+  }
+
+  /** Le payeur n'est pas porté par la tranche mais par la soirée : le scan le
+   *  dénormalise, la sélection manuelle doit le relire elle-même. */
+  private applyCategory(category: SponsorshipCategory): void {
+    this.store.applyCategory({
+      ...category,
+      payerName: this.store.sessionEvent()?.payerName ?? null,
     });
   }
 

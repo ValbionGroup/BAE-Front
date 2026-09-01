@@ -162,6 +162,15 @@
               {{ store.totalQuantity() }} quantité{{ store.totalQuantity() > 1 ? 's' : '' }}
             </div>
           </div>
+          <bae-btn
+            [kind]="store.category() ? 'secondary' : 'ghost'"
+            size="sm"
+            [icon]="icHand"
+            [ariaLabel]="
+              store.category() ? 'Changer la prise en charge' : 'Appliquer une prise en charge'
+            "
+            (clicked)="openCategoryPicker()"
+          ></bae-btn>
           <!-- La remise vit ici et non dans le pied `hidden md:block` : sous `md`
                ce pied n'existe pas, et le geste était donc injoignable sur la
                vue la plus utilisée. En-tête du ticket = visible dans les deux
