@@ -8,8 +8,14 @@ import {
   signal,
 } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
-import { LucideHandCoins, LucidePlus, LucideQrCode, LucideTrash2 } from '@lucide/angular';
-import { Btn, Input, QrCode, ToastService, formatCents, parseEuros } from '@bae/ui';
+import {
+  LucideDownload,
+  LucideHandCoins,
+  LucidePlus,
+  LucideQrCode,
+  LucideTrash2,
+} from '@lucide/angular';
+import { Btn, Input, QrCode, ToastService, downloadQrPng, formatCents, parseEuros } from '@bae/ui';
 import { EventsStore } from '#core/store/events.store';
 import type { MenuItem } from '#core/models/event.model';
 import {
@@ -30,6 +36,17 @@ interface GridRow {
   /** `null` = pas de prix de catégorie, l'article part au prix public. */
   price: number | null;
   draft: string | null;
+}
+
+function slug(label: string): string {
+  return (
+    label
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'qr'
+  );
 }
 
 function messageOf(error: unknown, fallback: string): string {
@@ -56,6 +73,7 @@ export class SponsorshipCategoriesModal {
   protected readonly icHand = LucideHandCoins;
   protected readonly icPlus = LucidePlus;
   protected readonly icQr = LucideQrCode;
+  protected readonly icDownload = LucideDownload;
   protected readonly icTrash = LucideTrash2;
 
   protected readonly categories = signal<readonly SponsorshipCategory[]>([]);
@@ -225,6 +243,17 @@ export class SponsorshipCategoriesModal {
       this.qrToken.set(token);
     } catch (error) {
       this.error.set(messageOf(error, "Impossible d'émettre le QR."));
+    }
+  }
+
+  protected async downloadQr(): Promise<void> {
+    const token = this.qrToken();
+    const category = this.selected();
+    if (!token || !category) return;
+    try {
+      await downloadQrPng(token, `qr-${slug(this.eventLabel())}-${slug(category.label)}.png`);
+    } catch (error) {
+      this.error.set(messageOf(error, "Impossible de générer l'image du QR."));
     }
   }
 

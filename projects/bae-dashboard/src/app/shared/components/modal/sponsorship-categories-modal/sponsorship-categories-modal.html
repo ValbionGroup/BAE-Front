@@ -101,6 +101,15 @@
         @if (qrToken(); as token) {
           <div class="mb-3 rounded-md border border-border-s bg-surface-2 p-3 text-center">
             <bae-qr-code class="mx-auto block w-52" [value]="token" />
+            <bae-btn
+              class="mt-2 inline-block"
+              kind="ghost"
+              size="sm"
+              [icon]="icDownload"
+              (clicked)="downloadQr()"
+            >
+              Télécharger en PNG
+            </bae-btn>
             <div class="mt-2 text-[11px] text-muted">
               À imprimer et remettre à l'association. Un seul QR par catégorie.
             </div>
