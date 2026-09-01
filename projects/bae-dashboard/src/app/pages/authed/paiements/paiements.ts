@@ -18,6 +18,7 @@ import {
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import {
+  PAYMENT_METHOD_LABEL,
   TransactionsService,
   type ApiTransaction,
   type TransactionType,
@@ -53,11 +54,6 @@ interface PaymentRow {
   readonly reference: string;
 }
 
-const METHOD_LABEL: Record<TransactionType, string> = {
-  cash: 'Espèces',
-  lydia: 'Lydia',
-};
-
 const STATUS_LABEL: Record<PaymentStatus, string> = {
   pending: 'En attente',
   paid: 'Payé',
@@ -73,6 +69,8 @@ const STATUS_KIND: Record<PaymentStatus, BadgeKind> = {
   cancelled: 'neutral',
   expired: 'ghost',
 };
+
+const METHODS: readonly TransactionType[] = ['cash', 'lydia', 'card'];
 
 const KIND_LABEL: Record<string, string> = {
   pre_order: 'Précommande',
@@ -133,18 +131,16 @@ export class Paiements implements OnInit {
       id: transaction.id,
       reference: `T-${String(transaction.id).padStart(5, '0')}`,
       when: formatWhen(transaction.createdAt),
-      method: METHOD_LABEL[transaction.type] ?? transaction.type,
+      method: PAYMENT_METHOD_LABEL[transaction.type],
       amount: transaction.amount,
       orderCount: transaction.orderIds.length,
     })),
   );
 
   /**
-   * ⚠️ Deux KPI seulement, là où la maquette en montrait quatre.
-   * `transactions.type` est un enum `cash | lydia` : la distinction « Lydia
-   * online » / « QR sur place » **n'existe pas en base**. L'afficher demanderait
-   * d'inventer la répartition, et un chiffre faux sur un écran d'argent est pire
-   * qu'un chiffre absent.
+   * Un KPI par moyen de paiement, plus le total. La maquette distinguait
+   * « Lydia online » et « QR sur place » : `transactions.type` ne sépare pas ce
+   * canal-là, et un chiffre inventé sur un écran d'argent est pire qu'absent.
    */
   protected readonly kpis = computed(() => {
     const all = this.transactions();
@@ -158,16 +154,11 @@ export class Paiements implements OnInit {
         value: formatMoney(all.reduce((total, t) => total + t.amount, 0)),
         detail: `${all.length} transactions`,
       },
-      {
-        label: 'Espèces',
-        value: formatMoney(sum('cash')),
-        detail: `${count('cash')} transactions`,
-      },
-      {
-        label: 'Lydia',
-        value: formatMoney(sum('lydia')),
-        detail: `${count('lydia')} transactions`,
-      },
+      ...METHODS.map((method) => ({
+        label: PAYMENT_METHOD_LABEL[method],
+        value: formatMoney(sum(method)),
+        detail: `${count(method)} transactions`,
+      })),
     ];
   });
 

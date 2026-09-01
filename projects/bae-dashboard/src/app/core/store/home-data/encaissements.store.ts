@@ -4,10 +4,11 @@ import { lastValueFrom } from 'rxjs';
 import {
   TransactionsService,
   type ApiTransaction,
+  type TransactionType,
 } from '#core/services/transactions/transactions-service';
 import { EventsStore } from '#core/store/events.store';
 import type { LoadingStatus } from '#core/models/global.model';
-import { ChartBar } from './models';
+import { CHART_SERIES, type ChartBar } from './models';
 
 /**
  * "Encaissements" chart.
@@ -19,8 +20,8 @@ import { ChartBar } from './models';
  *
  * ⚠️ The mockup legend read "Caisse sur place" vs "Précommandes". The API has
  * no such channel split: `transactions.type` is a *payment method*
- * (`cash` | `lydia`). Mapping one onto the other would invent data, so `v1` is
- * the cash total and `v2` the Lydia total, and the template legend says so.
+ * (`cash` | `lydia` | `card`). Mapping one onto the other would invent data, so
+ * each bar is split by payment method and the legend says so.
  *
  * ⚠️ `ChartBar.isNext` drives the dashed "(est.)" projection bar. There is no
  * forecasting endpoint, so it is always `false` — the chart shows recorded
@@ -45,12 +46,17 @@ const initialState: EncaissementsState = {
   limit: DEFAULT_LIMIT,
 };
 
-/** `v1` (espèces) et `v2` (Lydia) sont des totaux **en centimes**. */
+/** Un total **en centimes** par moyen de paiement. */
+type MethodTotals = Record<TransactionType, number>;
+
 interface EventBucket {
   readonly label: string;
   readonly time: number;
-  readonly v1: number;
-  readonly v2: number;
+  readonly totals: MethodTotals;
+}
+
+function emptyTotals(): MethodTotals {
+  return { cash: 0, lydia: 0, card: 0 };
 }
 
 export const EncaissementsStore = signalStore(
@@ -60,26 +66,24 @@ export const EncaissementsStore = signalStore(
     const events = inject(EventsStore);
 
     const buckets = computed<readonly EventBucket[]>(() => {
-      const byEvent = new Map<string, { v1: number; v2: number }>();
+      const byEvent = new Map<string, MethodTotals>();
       for (const tx of store.transactions()) {
         if (tx.eventId === null) continue;
         const key = String(tx.eventId);
-        const bucket = byEvent.get(key) ?? { v1: 0, v2: 0 };
-        if (tx.type === 'lydia') bucket.v2 += tx.amount;
-        else bucket.v1 += tx.amount;
-        byEvent.set(key, bucket);
+        const totals = byEvent.get(key) ?? emptyTotals();
+        totals[tx.type] += tx.amount;
+        byEvent.set(key, totals);
       }
 
       const eventById = new Map(events.allEvents().map((e) => [String(e.id), e]));
 
       return [...byEvent.entries()]
-        .map(([id, sums]) => {
+        .map(([id, totals]) => {
           const event = eventById.get(id);
           return {
             label: event ? LABEL_FMT.format(event.date).replace('.', '') : `Soirée ${id}`,
             time: event ? event.date.getTime() : 0,
-            v1: sums.v1,
-            v2: sums.v2,
+            totals,
           };
         })
         .sort((a, b) => a.time - b.time);
@@ -88,7 +92,11 @@ export const EncaissementsStore = signalStore(
     const data = computed<readonly ChartBar[]>(() =>
       buckets()
         .slice(-store.limit())
-        .map((b) => ({ label: b.label, v1: b.v1, v2: b.v2, isNext: false })),
+        .map((b) => ({
+          label: b.label,
+          slices: CHART_SERIES.map((serie) => ({ ...serie, amount: b.totals[serie.method] })),
+          isNext: false,
+        })),
     );
 
     return {
@@ -98,8 +106,13 @@ export const EncaissementsStore = signalStore(
       }),
       data,
       /** Tallest single bar, floored at 1 so `pct()` never divides by zero. */
-      max: computed<number>(() => Math.max(1, ...data().flatMap((b) => [b.v1, b.v2]))),
-      total: computed<number>(() => data().reduce((sum, b) => sum + b.v1 + b.v2, 0)),
+      max: computed<number>(() =>
+        Math.max(1, ...data().flatMap((b) => b.slices.map((s) => s.amount))),
+      ),
+      /** Somme de tout ce qui est encaissé sur la période, **en centimes**. */
+      total: computed<number>(() =>
+        data().reduce((sum, b) => sum + b.slices.reduce((acc, s) => acc + s.amount, 0), 0),
+      ),
     };
   }),
   withMethods((store, svc = inject(TransactionsService)) => ({
