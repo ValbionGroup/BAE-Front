@@ -33,11 +33,32 @@ export const BARCODE_FORMATS = ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e']
 export const QR_FORMATS = ['qr_code'];
 
 /**
+ * ⚠️ Sans contrainte de résolution, Chrome capture dans son format par défaut —
+ * 640×480 — quel que soit le capteur : l'aperçu plein écran d'un téléphone récent
+ * n'est alors qu'un agrandissement de 640 px, et les barres fines d'un EAN-13
+ * tombent sous le seuil de lisibilité. `ideal` et non `min` : une webcam incapable
+ * de 1080p doit dégrader, pas faire échouer `getUserMedia`.
+ */
+const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+  facingMode: 'environment',
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
+};
+
+/**
+ * Délai entre deux lectures — ~12 par seconde.
+ *
+ * Décoder chaque image affichée sature le thread principal en 1080p, surtout sur
+ * le repli WASM où un `detect()` coûte des dizaines de millisecondes. 12 Hz reste
+ * très au-dessus du geste humain.
+ */
+const SCAN_INTERVAL_MS = 80;
+
+/**
  * Fenêtre pendant laquelle un même code relu ne compte pas.
  *
- * Le décodage tourne à la fréquence d'affichage : un paquet tenu deux secondes
- * devant l'objectif est lu cent fois, et sans ce délai il entrerait cent unités
- * en stock.
+ * Le décodage est continu : un paquet tenu deux secondes devant l'objectif est lu
+ * une vingtaine de fois, et sans ce délai il entrerait vingt unités en stock.
  */
 export const SCAN_COOLDOWN_MS = 1500;
 
@@ -99,9 +120,7 @@ export class BarcodeScannerService {
     if (!this.isSupported()) return false;
 
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
+      this.stream = await navigator.mediaDevices.getUserMedia({ video: VIDEO_CONSTRAINTS });
     } catch {
       return false;
     }
@@ -125,7 +144,7 @@ export class BarcodeScannerService {
       } catch {
         // Une image illisible n'a rien d'exceptionnel — on retente.
       }
-      if (!this.stopped) requestAnimationFrame(() => void tick());
+      if (!this.stopped) setTimeout(() => void tick(), SCAN_INTERVAL_MS);
     };
     void tick();
 
@@ -152,10 +171,9 @@ export class BarcodeScannerService {
    * Le binaire est chargé **ici**, pas à la première image.
    *
    * Laissé paresseux, un WASM injoignable ne se voyait qu'au premier `detect()`
-   * — et la boucle de lecture, qui avale les images illisibles, se
-   * reprogrammait alors à la fréquence d'affichage en relevant à chaque frame.
-   * Échouer à l'ouverture rend `false` à `start()`, ce que l'écran sait déjà
-   * traduire en saisie manuelle.
+   * — et la boucle de lecture, qui avale les images illisibles, se reprogrammait
+   * indéfiniment en relevant l'erreur à chaque tour. Échouer à l'ouverture rend
+   * `false` à `start()`, ce que l'écran sait déjà traduire en saisie manuelle.
    */
   private loadFallback(): Promise<Ponyfill> {
     this.fallback ??= import('barcode-detector/ponyfill')

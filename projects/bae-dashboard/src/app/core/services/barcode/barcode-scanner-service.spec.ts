@@ -77,10 +77,13 @@ describe(BarcodeScannerService.name, () => {
       }
     }
 
+    const getUserMedia = vi.fn();
+
     /** Rien de tout cela n'existe sous jsdom : la caméra est posée à la main. */
     function stubCamera(tracks: { stop: () => void }[] = []): HTMLVideoElement {
+      getUserMedia.mockImplementation(() => Promise.resolve({ getTracks: () => tracks }));
       Object.defineProperty(navigator, 'mediaDevices', {
-        value: { getUserMedia: () => Promise.resolve({ getTracks: () => tracks }) },
+        value: { getUserMedia },
         configurable: true,
       });
       return { srcObject: null, play: () => Promise.resolve() } as unknown as HTMLVideoElement;
@@ -91,6 +94,22 @@ describe(BarcodeScannerService.name, () => {
       Reflect.deleteProperty(globalThis, 'BarcodeDetector');
       Reflect.deleteProperty(navigator, 'mediaDevices');
       vi.clearAllMocks();
+    });
+
+    /**
+     * Sans contrainte de résolution, Chrome capture en 640×480 quel que soit le
+     * capteur : l'aperçu d'un téléphone récent n'est plus qu'un agrandissement
+     * flou, et les barres fines d'un EAN-13 cessent d'être lisibles. `ideal` et
+     * non `min` : une webcam limitée doit dégrader, pas perdre sa caméra.
+     */
+    it('demande une résolution utilisable sans la rendre obligatoire', async () => {
+      const video = stubCamera();
+
+      await service.start(video, () => undefined, QR_FORMATS);
+
+      const constraints = getUserMedia.mock.calls[0][0].video;
+      expect(constraints.width).toEqual({ ideal: expect.any(Number) });
+      expect(constraints.height).toEqual({ ideal: expect.any(Number) });
     });
 
     /**
