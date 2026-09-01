@@ -1,3 +1,22 @@
+<ng-template #headerActions>
+  <button
+    type="button"
+    (click)="openSeasons($event)"
+    class="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-[12px] text-text hover:bg-surface-3"
+  >
+    <svg [lucideIcon]="icFilter" [size]="14" aria-hidden="true"></svg>
+    Période
+  </button>
+  <button
+    type="button"
+    (click)="exportCsv()"
+    class="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-blue bg-blue px-2.5 py-1.5 text-[12px] text-bg hover:opacity-90"
+  >
+    <svg [lucideIcon]="icDownload" [size]="14" aria-hidden="true"></svg>
+    Exporter
+  </button>
+</ng-template>
+
 <div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
   @if (store.loadError(); as err) {
     <div

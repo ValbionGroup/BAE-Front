@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { API_BASE_URL } from '@bae/ui';
+import { API_BASE_URL, DropdownService } from '@bae/ui';
 import { vi } from 'vitest';
 
 import { Analyse } from './analyse';
@@ -86,6 +86,37 @@ describe(Analyse.name, () => {
     await flush([]);
     const component = fixture.componentInstance as unknown as { chartMax(): number };
     expect(component.chartMax()).toBe(50);
+  });
+
+  it('propose les saisons connues dans le menu Période', async () => {
+    await flush([200]);
+    const dropdown = TestBed.inject(DropdownService);
+    const spy = vi.spyOn(dropdown, 'toggle');
+    const button = document.createElement('button');
+
+    const component = fixture.componentInstance as unknown as {
+      openSeasons(event: MouseEvent): void;
+    };
+    component.openSeasons({ currentTarget: button } as unknown as MouseEvent);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const items = spy.mock.calls[0][0].items;
+    expect(items.map((i) => ('label' in i ? i.label : '—'))).toContain('Saison 2025-2026');
+  });
+
+  it('exporte l’historique en CSV, entêtes comprises', async () => {
+    await flush([200]);
+    const component = fixture.componentInstance as unknown as { csvContent(): string };
+
+    const lines = component.csvContent().split('\n');
+    expect(lines[0]).toBe('Soirée;Date;Commandes;Encaissé;Présents;Répondants');
+    expect(lines[1]).toBe('Soirée 1;01/09;200;1000,00;20;22');
+  });
+
+  it('titre la page avec la saison chargée', async () => {
+    await flush([200]);
+    const component = fixture.componentInstance as unknown as { subtitle(): string };
+    expect(component.subtitle()).toBe('Saison 2025-2026');
   });
 
   it('ouvre le bilan d’une soirée achevée', async () => {

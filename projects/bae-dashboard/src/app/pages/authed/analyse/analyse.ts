@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  computed,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import {
   LucideChevronRight,
@@ -7,7 +16,7 @@ import {
   LucideFunnel,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
-import { Badge, Skeleton } from '@bae/ui';
+import { Badge, DropdownService, Skeleton, formatCents } from '@bae/ui';
 import { AnalyseStore } from '#core/store/analyse.store';
 import type { AnalyseSoiree } from '#core/models/analyse.model';
 
@@ -25,12 +34,21 @@ export class Analyse implements OnInit {
   private readonly router = inject(Router);
   private readonly pageHeader = inject(PageHeaderService);
 
+  private readonly dropdown = inject(DropdownService);
+
+  private readonly headerActions = viewChild.required<TemplateRef<unknown>>('headerActions');
+
+  protected readonly subtitle = computed(() => this.store.season()?.label ?? 'Toutes les soirées');
+
   constructor() {
-    this.pageHeader.set({
-      title: 'Analyse & historique',
-      subtitle: 'Saison 2025-2026',
-      breadcrumb: ['Suivi', 'Analyse'],
-      activeNavId: 'ana',
+    effect(() => {
+      this.pageHeader.set({
+        title: 'Analyse & historique',
+        subtitle: this.subtitle(),
+        breadcrumb: ['Suivi', 'Analyse'],
+        activeNavId: 'ana',
+      });
+      this.pageHeader.setActions(this.headerActions());
     });
   }
 
@@ -76,5 +94,56 @@ export class Analyse implements OnInit {
   protected openSoiree(row: Pick<AnalyseSoiree, 'id' | 'clickable'>): void {
     if (!row.clickable) return;
     void this.router.navigate(['/soiree/bilan', row.id]);
+  }
+
+  protected openSeasons(event: MouseEvent): void {
+    const anchor = event.currentTarget;
+    if (!(anchor instanceof HTMLElement)) return;
+
+    this.dropdown.toggle({
+      anchor,
+      placement: 'bottom-end',
+      width: 220,
+      header: 'Période',
+      emptyLabel: 'Aucune saison',
+      items: this.store.seasons().map((season) => ({
+        type: 'action' as const,
+        label: season.label,
+        trailing: `${season.eventCount}`,
+        onClick: () => void this.store.selectSeason(season.startYear),
+      })),
+    });
+  }
+
+  /**
+   * Séparateur `;` : Excel en locale française lit la virgule comme décimale.
+   * L'encaissé sort sans le symbole `€` — une cellule porteuse d'unité cesse
+   * d'être un nombre, et ne se somme plus.
+   */
+  protected csvContent(): string {
+    const header = 'Soirée;Date;Commandes;Encaissé;Présents;Répondants';
+    const rows = this.store
+      .soirees()
+      .map((row) =>
+        [
+          row.n,
+          row.d,
+          row.pred ? '' : row.cmd,
+          row.pred ? '' : formatCents(row.cashedCents),
+          row.presentCount,
+          row.respondentCount,
+        ].join(';'),
+      );
+    return [header, ...rows].join('\n');
+  }
+
+  protected exportCsv(): void {
+    const blob = new Blob([`\ufeff${this.csvContent()}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `analyse-${this.store.season()?.startYear ?? 'saison'}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 }
