@@ -244,4 +244,71 @@ describe(EventsStore.name, () => {
       expect(menu[0].quantity).toBe(999);
     });
   });
+
+  describe('refresh', () => {
+    /**
+     * `GET /events` ne sert ni menu ni détail. Reconstruire le dictionnaire à
+     * neuf vidait donc le menu sous la caisse en plein service : plus rien ne
+     * le rechargeait, et l'écran annonçait « Aucun produit dans le menu de
+     * cette soirée » sur une soirée qui en avait un.
+     */
+    it('conserve le menu déjà chargé d’une soirée toujours listée', async () => {
+      await seedMenu('7', [menuLine()]);
+
+      const pending = store.refresh();
+      httpMock
+        .expectOne(`${baseUrl}/events`)
+        .flush([
+          { id: '7', name: 'Soirée test', location: 'Foyer', date: new Date().toISOString() },
+        ]);
+      await pending;
+
+      expect(store.getEventById('7')?.menu).toHaveLength(1);
+      expect(store.getEventById('7')?.menuStatus).toBe('loaded');
+    });
+
+    it('conserve la présence déjà lue', async () => {
+      await loadOneEvent();
+      const presence = store.setMemberPresence('7', Presence.PRESENT);
+      httpMock.expectOne(`${baseUrl}/events/7/response`).flush(Presence.PRESENT);
+      await presence;
+
+      const pending = store.refresh();
+      httpMock
+        .expectOne(`${baseUrl}/events`)
+        .flush([{ id: '7', name: 'Soirée test', date: new Date().toISOString() }]);
+      await pending;
+
+      expect(store.getEventById('7')?.memberPresence).toBe(Presence.PRESENT);
+      expect(store.getEventById('7')?.memberPresenceStatus).toBe('loaded');
+    });
+
+    it('relit les champs que la liste porte', async () => {
+      await seedMenu('7', [menuLine()]);
+
+      const pending = store.refresh();
+      httpMock.expectOne(`${baseUrl}/events`).flush([
+        {
+          id: '7',
+          name: 'Soirée renommée',
+          status: 'completed',
+          date: new Date().toISOString(),
+        },
+      ]);
+      await pending;
+
+      expect(store.getEventById('7')?.name).toBe('Soirée renommée');
+      expect(store.getEventById('7')?.status).toBe('completed');
+    });
+
+    it('oublie une soirée qui a quitté la liste', async () => {
+      await seedMenu('7', [menuLine()]);
+
+      const pending = store.refresh();
+      httpMock.expectOne(`${baseUrl}/events`).flush([]);
+      await pending;
+
+      expect(store.getEventById('7')).toBeUndefined();
+    });
+  });
 });
