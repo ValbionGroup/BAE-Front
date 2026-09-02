@@ -6,6 +6,7 @@ import {
   AnalyseService,
   type ApiSeasonAnalytics,
   type ApiSeasonOption,
+  type ApiSeasonPrediction,
   type ApiSeasonRef,
 } from '#core/services/analyse/analyse-service';
 import { LoadingStatus } from '#core/models/global.model';
@@ -18,6 +19,9 @@ import {
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
 
+/** « 28 févr. » — la soirée modèle se nomme, elle ne se numérote pas. */
+const MODEL_DATE_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+
 const money = (cents: number): string => `${formatCents(cents)} €`;
 
 /** `—` et non `+0%` : une comparaison impossible n'est pas une stagnation. */
@@ -29,6 +33,40 @@ const deltaClass = (value: number | null): string => {
   if (value === null || value === 0) return 'text-muted';
   return value > 0 ? 'text-ok' : 'text-warn';
 };
+
+/**
+ * Dit ce que le calcul a réellement fait : sur quelle soirée il s'est calé, de
+ * combien il l'a recadrée, et si les précommandes ont relevé le résultat. Un
+ * chiffre de prévision sans sa méthode ne se conteste pas.
+ */
+function predictionDescription(prediction: ApiSeasonPrediction): string {
+  const parts: string[] = [];
+
+  if (prediction.method === 'seasonal' && prediction.modelEventName !== null) {
+    const when = prediction.modelEventDate
+      ? MODEL_DATE_FMT.format(new Date(prediction.modelEventDate))
+      : '—';
+    const trend =
+      prediction.trendPct === null || prediction.trendPct === 0
+        ? ''
+        : `, recadrée de ${prediction.trendPct > 0 ? '+' : ''}${prediction.trendPct} % sur la tendance de la saison`;
+    parts.push(
+      `D’après « ${prediction.modelEventName} » (${when}, ${prediction.modelOrderCount} commandes)${trend}.`,
+    );
+  } else {
+    parts.push(
+      `Moyenne des ${prediction.basedOnEventCount} dernières soirées, faute d’équivalente la saison passée.`,
+    );
+  }
+
+  parts.push(`${prediction.preOrderCount} précommandes déjà posées.`);
+
+  if (prediction.flooredByPreOrders) {
+    parts.push('Estimation relevée au nombre de précommandes déjà enregistrées.');
+  }
+
+  return parts.join(' ');
+}
 
 interface AnalyseState {
   readonly loading: LoadingStatus;
@@ -131,7 +169,7 @@ export const AnalyseStore = signalStore(
 
         return {
           label: `PRÉDICTION · ${prediction.eventName.toUpperCase()}`,
-          description: `Moyenne des ${prediction.basedOnEventCount} dernières soirées, et ${prediction.preOrderCount} précommandes déjà enregistrées.`,
+          description: predictionDescription(prediction),
           expectedOrders: prediction.expectedOrders,
           range: prediction.range,
           estimatedRevenue: money(prediction.estimatedRevenueCents),

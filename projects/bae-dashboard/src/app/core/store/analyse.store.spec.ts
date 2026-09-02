@@ -52,6 +52,12 @@ const PAYLOAD: ApiSeasonAnalytics = {
     estimatedRevenueCents: 168200,
     preOrderCount: 47,
     basedOnEventCount: 6,
+    method: 'seasonal',
+    modelEventName: 'Hivernale 2025',
+    modelEventDate: '2025-02-28T20:00:00.000+00:00',
+    modelOrderCount: 251,
+    trendPct: 15,
+    flooredByPreOrders: false,
   },
 };
 
@@ -163,5 +169,68 @@ describe(AnalyseStore.name, () => {
     expect(store.loading()).toBe('error');
     expect(store.loadError()).toBeTruthy();
     expect(store.kpis()).toEqual([]);
+  });
+});
+
+describe(`${AnalyseStore.name} — libellé de la prédiction`, () => {
+  let store: InstanceType<typeof AnalyseStore>;
+  let httpMock: HttpTestingController;
+  let baseUrl: string;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    store = TestBed.inject(AnalyseStore);
+    httpMock = TestBed.inject(HttpTestingController);
+    baseUrl = TestBed.inject(API_BASE_URL);
+  });
+
+  async function withPrediction(
+    over: Partial<NonNullable<ApiSeasonAnalytics['prediction']>>,
+  ): Promise<void> {
+    const loaded = store.load();
+    httpMock
+      .expectOne((r) => r.url === `${baseUrl}/analytics/season`)
+      .flush({ ...PAYLOAD, prediction: { ...PAYLOAD.prediction!, ...over } });
+    await loaded;
+  }
+
+  it('nomme la soirée modèle et le recadrage appliqué', async () => {
+    await withPrediction({});
+
+    expect(store.prediction()?.description).toBe(
+      'D’après « Hivernale 2025 » (28 févr., 251 commandes), recadrée de +15 % sur la tendance de la saison. 47 précommandes déjà posées.',
+    );
+  });
+
+  it('tait le recadrage quand il est neutre', async () => {
+    await withPrediction({ trendPct: 0 });
+
+    expect(store.prediction()?.description).toBe(
+      'D’après « Hivernale 2025 » (28 févr., 251 commandes). 47 précommandes déjà posées.',
+    );
+  });
+
+  it('dit qu’il n’y avait pas d’équivalente quand elle retombe sur la moyenne', async () => {
+    await withPrediction({
+      method: 'average',
+      modelEventName: null,
+      modelEventDate: null,
+      modelOrderCount: null,
+      trendPct: null,
+    });
+
+    expect(store.prediction()?.description).toBe(
+      'Moyenne des 6 dernières soirées, faute d’équivalente la saison passée. 47 précommandes déjà posées.',
+    );
+  });
+
+  it('signale que les précommandes ont relevé l’estimation', async () => {
+    await withPrediction({ flooredByPreOrders: true });
+
+    expect(store.prediction()?.description).toContain(
+      'Estimation relevée au nombre de précommandes déjà enregistrées.',
+    );
   });
 });

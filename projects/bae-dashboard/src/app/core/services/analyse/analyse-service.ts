@@ -38,6 +38,9 @@ export interface ApiSeasonKpis {
   readonly presenceDeltaPts: number | null;
 }
 
+/** `seasonal` : calée sur la soirée équivalente de n-1. `average` : à défaut. */
+export type PredictionMethod = 'seasonal' | 'average';
+
 export interface ApiSeasonPrediction {
   readonly eventId: number;
   readonly eventName: string;
@@ -46,6 +49,15 @@ export interface ApiSeasonPrediction {
   readonly estimatedRevenueCents: number;
   readonly preOrderCount: number;
   readonly basedOnEventCount: number;
+  readonly method: PredictionMethod;
+  /** Renseignés en méthode `seasonal` seulement. */
+  readonly modelEventName: string | null;
+  readonly modelEventDate: string | null;
+  readonly modelOrderCount: number | null;
+  /** Recadrage appliqué, en pourcentage : `15` vaut ×1,15, `0` est neutre. */
+  readonly trendPct: number | null;
+  /** Vrai quand les précommandes ont relevé l'estimation. */
+  readonly flooredByPreOrders: boolean;
 }
 
 export interface ApiSeasonAnalytics {
