@@ -94,7 +94,7 @@ describe('permissionFor', () => {
   });
 
   it('rend un tableau vide pour une route non gardée', () => {
-    expect(permissionFor(AppRoutes.analyse)).toEqual([]);
+    expect(permissionFor(AppRoutes.notifications)).toEqual([]);
   });
 });
 

@@ -427,16 +427,13 @@
                       "
                     ></div>
                   } @else {
-                    <div
-                      class="w-[40%] rounded-t-[3px] bg-blue"
-                      [style.height.%]="pct(b.v1)"
-                      [title]="'Espèces : ' + b.v1 + ' €'"
-                    ></div>
-                    <div
-                      class="w-[40%] rounded-t-[3px] bg-red"
-                      [style.height.%]="pct(b.v2)"
-                      [title]="'Lydia : ' + b.v2 + ' €'"
-                    ></div>
+                    @for (s of b.slices; track s.method) {
+                      <div
+                        [class]="'w-[26%] rounded-t-[3px] ' + s.colorClass"
+                        [style.height.%]="pct(s.amount)"
+                        [title]="s.label + ' : ' + money(s.amount)"
+                      ></div>
+                    }
                   }
                 </div>
                 <div
@@ -448,12 +445,11 @@
             }
           </div>
           <div class="flex gap-4.5 px-4 pb-3.5 text-[11px] text-muted">
-            <span class="inline-flex items-center gap-1.5">
-              <span class="h-2.5 w-2.5 rounded-sm bg-blue"></span>Espèces
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <span class="h-2.5 w-2.5 rounded-sm bg-red"></span>Lydia
-            </span>
+            @for (s of chartSeries; track s.method) {
+              <span class="inline-flex items-center gap-1.5">
+                <span [class]="'h-2.5 w-2.5 rounded-sm ' + s.colorClass"></span>{{ s.label }}
+              </span>
+            }
             <span class="ml-auto">Total · {{ encaissementsTotal() }}</span>
           </div>
         }

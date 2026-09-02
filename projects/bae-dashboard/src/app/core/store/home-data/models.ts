@@ -1,6 +1,10 @@
 import type { LucideIconInput } from '@lucide/angular';
 import type { BadgeKind } from '@bae/ui';
 import type { JobPeriod } from '#core/models/job-period.model';
+import {
+  PAYMENT_METHOD_LABEL,
+  type TransactionType,
+} from '#core/services/transactions/transactions-service';
 
 export interface KpiTile {
   readonly label: string;
@@ -44,12 +48,31 @@ export interface AlertItem {
   readonly fgClass: string;
 }
 
+/** Ce qu'un moyen de paiement a encaissé sur une soirée, **en centimes**. */
+export interface ChartSlice {
+  readonly method: TransactionType;
+  readonly label: string;
+  readonly colorClass: string;
+  readonly amount: number;
+}
+
 export interface ChartBar {
   readonly label: string;
-  readonly v1: number;
-  readonly v2: number;
+  /** Une part par moyen de paiement, toujours dans l'ordre de `CHART_SERIES`. */
+  readonly slices: readonly ChartSlice[];
   readonly isNext: boolean;
 }
+
+/**
+ * Les trois moyens de paiement, dans l'ordre où ils sont dessinés et légendés.
+ * Le `satisfies` garde la liste alignée sur `TransactionType` sans figer le
+ * type de `colorClass`, que le gabarit concatène.
+ */
+export const CHART_SERIES = [
+  { method: 'cash', label: PAYMENT_METHOD_LABEL.cash, colorClass: 'bg-ok' },
+  { method: 'lydia', label: PAYMENT_METHOD_LABEL.lydia, colorClass: 'bg-blue' },
+  { method: 'card', label: PAYMENT_METHOD_LABEL.card, colorClass: 'bg-warn' },
+] as const satisfies readonly { method: TransactionType; label: string; colorClass: string }[];
 
 export interface RoleMeta {
   readonly label: string;

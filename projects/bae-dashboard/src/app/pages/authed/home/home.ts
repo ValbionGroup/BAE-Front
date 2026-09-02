@@ -26,9 +26,10 @@ import { selectMember } from '#core/store/auth/auth.selector';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { RouterLink } from '@angular/router';
 import { AppRoutes } from '#app/app.routes';
-import { Btn, Badge, Card, Avatar, Skeleton, ToastService } from '@bae/ui';
+import { Btn, Badge, Card, Avatar, Skeleton, ToastService, formatCents } from '@bae/ui';
 import { StatsStore } from '#core/store/home-data/stats.store';
 import { EncaissementsStore } from '#core/store/home-data/encaissements.store';
+import { CHART_SERIES } from '#core/store/home-data/models';
 import { QUICK_ACTION_ROUTES, QuickActionsStore } from '#core/store/home-data/quick-actions.store';
 import { ActivityFeedStore } from '#core/store/home-data/activity-feed.store';
 import { RoleAssignmentStore } from '#core/store/home-data/role-assignment.store';
@@ -52,12 +53,6 @@ import { startOfDay } from 'date-fns';
 export { presenceErrorView, presenceLockExplanation, type PresenceErrorView };
 
 const PERIOD_LIMITS: readonly number[] = [1, 3, 6, 12];
-
-const EUR = new Intl.NumberFormat('fr-FR', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-});
 
 @Component({
   selector: 'bfd-home',
@@ -187,10 +182,19 @@ export class Home implements OnInit {
   protected readonly icZap = LucideZap;
   protected readonly icChevronRight = LucideChevronRight;
 
+  protected readonly chartSeries = CHART_SERIES;
+
   protected readonly periods = ['1A', '3A', '6A', '12A'];
   protected readonly activePeriodIndex = signal(PERIOD_LIMITS.indexOf(6));
 
-  protected readonly encaissementsTotal = computed(() => EUR.format(this.encaissements.total()));
+  /** `total()` est en centimes : le formater brut affichait cent fois la somme. */
+  protected readonly encaissementsTotal = computed(
+    () => `${formatCents(this.encaissements.total())} €`,
+  );
+
+  protected money(cents: number): string {
+    return `${formatCents(cents)} €`;
+  }
   protected readonly periodCount = computed(() => PERIOD_LIMITS[this.activePeriodIndex()]);
 
   protected setPeriod(index: number): void {

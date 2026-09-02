@@ -4,11 +4,14 @@ import { forkJoin, Observable } from 'rxjs';
 import { API_BASE_URL } from '@bae/ui';
 import type { JobPeriod } from '#core/models/job-period.model';
 import type { ApiTeamMember } from '#core/services/team/team-service';
+import type { EventStatus } from '#core/models/event.model';
 
 export interface ApiEvent {
   id: number;
   name: string;
   date: string;
+  /** Cycle de vie côté back ; `completed` est posé par la clôture de soirée. */
+  status?: EventStatus;
   duration: number | null;
   description?: string | null;
   /** Plafond de précommandes. `0` ferme la soirée. */

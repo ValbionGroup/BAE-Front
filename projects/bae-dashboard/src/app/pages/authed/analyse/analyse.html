@@ -1,4 +1,31 @@
+<ng-template #headerActions>
+  <button
+    type="button"
+    (click)="openSeasons($event)"
+    class="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-[12px] text-text hover:bg-surface-3"
+  >
+    <svg [lucideIcon]="icFilter" [size]="14" aria-hidden="true"></svg>
+    Période
+  </button>
+  <button
+    type="button"
+    (click)="exportCsv()"
+    class="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-blue bg-blue px-2.5 py-1.5 text-[12px] text-bg hover:opacity-90"
+  >
+    <svg [lucideIcon]="icDownload" [size]="14" aria-hidden="true"></svg>
+    Exporter
+  </button>
+</ng-template>
+
 <div class="h-full overflow-y-auto px-4 md:px-6 pt-5 pb-8">
+  @if (store.loadError(); as err) {
+    <div
+      class="mb-4 rounded-md border border-border-s bg-surface px-4 py-3 text-[12px] text-danger"
+      role="alert"
+    >
+      {{ err }}
+    </div>
+  }
   <!-- KPI row -->
   <div class="mb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
     @if (isLoading()) {
@@ -59,7 +86,7 @@
       </div>
     } @else {
       <div class="relative flex h-45 items-end gap-3.5 pb-5.5">
-        @for (tick of axisTicks; track tick) {
+        @for (tick of axisTicks(); track tick) {
           <div
             class="pointer-events-none absolute left-0 right-0 h-px bg-border-s"
             [style.bottom.px]="tickBottom(tick)"
@@ -171,11 +198,15 @@
       } @else if (store.soirees().length === 0) {
         <div class="px-3.5 py-8 text-center text-[12px] text-muted">Aucune soirée à afficher.</div>
       } @else {
-        @for (s of store.soirees(); track s.n; let i = $index) {
-          <div
+        @for (s of store.soirees(); track s.id; let i = $index) {
+          <button
+            type="button"
+            [disabled]="!s.clickable"
+            (click)="openSoiree(s)"
             [class]="
-              'flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
-              (i ? 'border-t border-border-s' : '')
+              'w-full text-left flex flex-wrap items-center gap-x-3 gap-y-1 md:grid md:grid-cols-[1.4fr_70px_90px_70px_60px] items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] ' +
+              (s.clickable ? 'cursor-pointer hover:bg-surface-2' : 'cursor-default') +
+              (i ? ' border-t border-border-s' : '')
             "
           >
             <div class="flex items-center gap-2">
@@ -187,13 +218,17 @@
             <span class="mono text-[11px] text-muted">{{ s.d }}</span>
             <span class="mono tnum text-right text-[13px] text-text">{{ s.rev }}</span>
             <span class="mono tnum text-right text-[12px] text-text-2">{{ s.cmd }} cmd</span>
-            <svg
-              [lucideIcon]="icChevronRight"
-              [size]="14"
-              class="justify-self-end text-muted"
-              aria-hidden="true"
-            ></svg>
-          </div>
+            @if (s.clickable) {
+              <svg
+                [lucideIcon]="icChevronRight"
+                [size]="14"
+                class="justify-self-end text-muted"
+                aria-hidden="true"
+              ></svg>
+            } @else {
+              <span class="justify-self-end"></span>
+            }
+          </button>
         }
       }
     </div>

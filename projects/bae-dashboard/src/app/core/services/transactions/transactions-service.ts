@@ -9,11 +9,24 @@ import { API_BASE_URL } from '@bae/ui';
  * All fields are camelCase: the apiResponseCaseInterceptor converts snake_case
  * responses automatically.
  */
-export type TransactionType = 'cash' | 'lydia';
+export type TransactionType = 'cash' | 'lydia' | 'card';
+
+/**
+ * Libellés des trois moyens de paiement. Le `Record` est exhaustif à dessein :
+ * ajouter une valeur à `TransactionType` sans l'étiqueter ne compile pas.
+ */
+export const PAYMENT_METHOD_LABEL: Record<TransactionType, string> = {
+  cash: 'Espèces',
+  lydia: 'Lydia',
+  card: 'CB',
+};
 
 export interface ApiTransaction {
   id: number;
-  /** Payment method. NOT a caisse/précommande channel — the API has no such split. */
+  /**
+   * Moyen de paiement, pas un canal caisse/précommande — l'API n'a pas ce
+   * découpage. `card` a été ouvert par `add_card_to_transactions_type`.
+   */
   type: TransactionType;
   /** `decimal(10,2)` already coerced to a number server-side — do not re-parse. */
   /** En **centimes**, comme tout montant de l'API. */

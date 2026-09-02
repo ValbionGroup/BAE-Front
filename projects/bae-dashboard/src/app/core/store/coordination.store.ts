@@ -22,7 +22,13 @@ function toCoordinationEvent(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dt = new Date(apiEvent.date);
-  const isPast = dt < today;
+  /**
+   * Une soirée close est passée quelle que soit sa date : `events.status`
+   * bascule à `completed` à la clôture, et la ranger dans « À venir » parce que
+   * son plan de postes est incomplet la ferait revenir indéfiniment.
+   */
+  const isCompleted = apiEvent.status === 'completed';
+  const isPast = isCompleted || dt < today;
 
   const assignedCount = new Set(
     assignments.filter((a) => a.eventId === apiEvent.id).map((a) => a.memberId),
@@ -39,7 +45,7 @@ function toCoordinationEvent(
     date: dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
     rawDate: apiEvent.date,
     status,
-    statusLabel: isPast ? 'Passée' : 'En préparation',
+    statusLabel: isCompleted ? 'Achevée' : isPast ? 'Passée' : 'En préparation',
     statusKind: isPast ? 'ok' : 'warn',
     members: assignedCount,
     maxMembers,

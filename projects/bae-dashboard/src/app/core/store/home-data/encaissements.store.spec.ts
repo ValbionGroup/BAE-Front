@@ -7,11 +7,12 @@ import { EventsStore } from '#core/store/events.store';
 
 import { EncaissementsStore } from './encaissements.store';
 
+/** Montants **en centimes**, comme `transactions.amount`. */
 const TRANSACTIONS: ApiTransaction[] = [
   {
     id: 900003,
     type: 'cash',
-    amount: 42.25,
+    amount: 4225,
     eventId: 7,
     orderIds: [900003],
     createdAt: '2026-08-04T23:29:21.775+00:00',
@@ -19,7 +20,7 @@ const TRANSACTIONS: ApiTransaction[] = [
   {
     id: 900001,
     type: 'cash',
-    amount: 124.5,
+    amount: 12450,
     eventId: 10,
     orderIds: [900001],
     createdAt: '2026-07-06T23:29:21.775+00:00',
@@ -27,20 +28,32 @@ const TRANSACTIONS: ApiTransaction[] = [
   {
     id: 900002,
     type: 'lydia',
-    amount: 86,
+    amount: 8600,
     eventId: 10,
     orderIds: [900002],
     createdAt: '2026-07-06T23:29:21.775+00:00',
   },
   {
+    id: 900005,
+    type: 'card',
+    amount: 3000,
+    eventId: 10,
+    orderIds: [900005],
+    createdAt: '2026-07-06T23:29:21.775+00:00',
+  },
+  {
     id: 900004,
     type: 'cash',
-    amount: 10,
+    amount: 1000,
     eventId: null,
     orderIds: [],
     createdAt: '2026-07-06T23:29:21.775+00:00',
   },
 ];
+
+function amounts(bar: { slices: readonly { method: string; amount: number }[] }) {
+  return Object.fromEntries(bar.slices.map((s) => [s.method, s.amount]));
+}
 
 describe(EncaissementsStore.name, () => {
   let store: InstanceType<typeof EncaissementsStore>;
@@ -72,20 +85,20 @@ describe(EncaissementsStore.name, () => {
     expect(store.max()).toBe(1);
   });
 
-  it('groups transactions per event and splits them by payment method', async () => {
+  it('groups transactions per event and splits them by the three payment methods', async () => {
     await load();
 
     // Events are not loaded here, so labels fall back to the event id.
     const byLabel = new Map(store.data().map((b) => [b.label, b]));
-    expect(byLabel.get('Soirée 10')).toEqual({
-      label: 'Soirée 10',
-      v1: 124.5,
-      v2: 86,
-      isNext: false,
-    });
-    expect(byLabel.get('Soirée 7')).toEqual({ label: 'Soirée 7', v1: 42.25, v2: 0, isNext: false });
-    expect(store.max()).toBe(124.5);
-    expect(store.total()).toBe(252.75);
+    expect(amounts(byLabel.get('Soirée 10')!)).toEqual({ cash: 12450, lydia: 8600, card: 3000 });
+    expect(amounts(byLabel.get('Soirée 7')!)).toEqual({ cash: 4225, lydia: 0, card: 0 });
+    expect(store.max()).toBe(12450);
+    expect(store.total()).toBe(28275);
+  });
+
+  it('labels every bar with its payment method, CB included', async () => {
+    await load();
+    expect(store.data()[0].slices.map((s) => s.label)).toEqual(['Espèces', 'Lydia', 'CB']);
   });
 
   it('drops transactions that settle no event — they belong to no soirée', async () => {
