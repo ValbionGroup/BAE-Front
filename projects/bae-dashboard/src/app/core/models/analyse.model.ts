@@ -37,3 +37,29 @@ export interface AnalysePrediction {
   readonly estimatedRevenue: string;
   readonly prereg: number;
 }
+
+export interface ProductionLineView {
+  readonly id: number;
+  readonly name: string;
+  readonly planned: number;
+  /** Déjà formaté : `'—'` quand le produit n'a aucun passé. */
+  readonly expected: string;
+  /** Écart au prévu, signé ; `'—'` sans estimation, `'='` quand ils coïncident. */
+  readonly delta: string;
+  readonly deltaClass: string;
+  readonly reserved: number;
+}
+
+export interface ProductionCategoryView {
+  readonly name: string;
+  readonly planned: number;
+  readonly expected: number;
+  readonly lines: readonly ProductionLineView[];
+}
+
+export interface ProductionView {
+  readonly categories: readonly ProductionCategoryView[];
+  readonly totalPlanned: number;
+  readonly totalExpected: number;
+  readonly withoutBasis: number;
+}

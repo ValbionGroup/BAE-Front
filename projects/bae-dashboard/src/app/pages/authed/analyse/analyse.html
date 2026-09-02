@@ -233,4 +233,71 @@
       }
     </div>
   </div>
+
+  <div class="mt-3.5 overflow-hidden rounded-md border border-border-s bg-surface">
+    <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border-s px-3.5 py-3">
+      <span class="text-[13px] font-semibold text-text">Production estimée</span>
+      <span class="text-[11px] text-muted">Ce que la soirée devrait écouler</span>
+      <div class="flex-1"></div>
+      @if (store.production(); as p) {
+        <span class="text-[11px] text-muted">prévu</span>
+        <span class="mono tnum text-[13px] text-text-2">{{ p.totalPlanned }}</span>
+        <span class="mono tnum text-[21px] font-semibold text-text">{{ p.totalExpected }}</span>
+        <span class="text-[11px] text-muted">articles</span>
+      }
+    </div>
+
+    @if (isLoading()) {
+      @for (_ of skeletonRows; track $index) {
+        <div class="flex items-center gap-2.5 border-b border-border-s px-3.5 py-2.5">
+          <bae-skeleton width="40%" height="12px" variant="surface-3" />
+          <div class="flex-1"></div>
+          <bae-skeleton width="40px" height="12px" />
+        </div>
+      }
+    } @else if (store.production(); as p) {
+      @if (p.categories.length === 0) {
+        <div class="px-3.5 py-8 text-center text-[12px] text-muted">
+          Aucun produit au menu de la prochaine soirée.
+        </div>
+      } @else {
+        @for (category of p.categories; track category.name) {
+          <div
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-s bg-surface-2 px-3.5 py-2 md:grid md:grid-cols-[1fr_70px_70px_60px] md:gap-2.5"
+          >
+            <span class="text-[12px] font-semibold text-text">{{ category.name }}</span>
+            <span class="mono tnum text-right text-[12px] text-muted">{{ category.planned }}</span>
+            <span class="mono tnum text-right text-[12px] font-semibold text-text">{{
+              category.expected
+            }}</span>
+            <span></span>
+          </div>
+          @for (line of category.lines; track line.id) {
+            <div
+              class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-s px-3.5 py-2.5 text-[12.5px] md:grid md:grid-cols-[1fr_70px_70px_60px] md:gap-2.5"
+            >
+              <span class="pl-3 text-text-2">{{ line.name }}</span>
+              <span class="mono tnum text-right text-[12px] text-muted">{{ line.planned }}</span>
+              <span class="mono tnum text-right text-[13px] text-text">{{ line.expected }}</span>
+              <span [class]="'mono tnum text-right text-[12px] ' + line.deltaClass">{{
+                line.delta
+              }}</span>
+            </div>
+          }
+        }
+        <div class="px-3.5 py-2.5 text-[11px] text-muted">
+          « prévu » vient du menu de la soirée ; « estimé » de la soirée équivalente de la saison
+          passée.
+          @if (p.withoutBasis > 0) {
+            {{ p.withoutBasis }} produit(s) sans historique restent à « — » et comptent pour zéro
+            dans le total.
+          }
+        </div>
+      }
+    } @else {
+      <div class="px-3.5 py-8 text-center text-[12px] text-muted">
+        Aucune soirée à venir : rien à produire.
+      </div>
+    }
+  </div>
 </div>

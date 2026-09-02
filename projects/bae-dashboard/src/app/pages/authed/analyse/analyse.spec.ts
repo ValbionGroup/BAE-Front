@@ -60,6 +60,76 @@ describe(Analyse.name, () => {
     fixture.detectChanges();
   }
 
+  /** Une soirée à venir, deux produits au menu, dont un sans historique. */
+  async function flushWithProduction(): Promise<void> {
+    httpMock
+      .expectOne((r) => r.url === `${baseUrl}/analytics/season`)
+      .flush({
+        season: { startYear: 2025, label: 'Saison 2025-2026' },
+        seasons: [{ startYear: 2025, label: 'Saison 2025-2026', eventCount: 1 }],
+        kpis: {
+          cashedCents: 790000,
+          cashedDeltaPct: 18,
+          avgOrdersPerEvent: 285,
+          ordersStdDev: 48,
+          avgBasketCents: 580,
+          avgBasketDeltaCents: 40,
+          presenceRate: 0.92,
+          presenceDeltaPts: -3,
+        },
+        events: [],
+        prediction: {
+          eventId: 11,
+          eventName: 'Hivernale 2026',
+          expectedOrders: 290,
+          range: 48,
+          estimatedRevenueCents: 168200,
+          preOrderCount: 47,
+          basedOnEventCount: 6,
+          method: 'seasonal',
+          modelEventName: 'Hivernale 2025',
+          modelEventDate: '2025-02-28T20:00:00.000+00:00',
+          modelOrderCount: 251,
+          trendPct: 15,
+          flooredByPreOrders: false,
+          production: {
+            categories: [
+              {
+                categoryName: 'Plats',
+                plannedQty: 250,
+                expectedQty: 510,
+                lines: [
+                  {
+                    productId: 3,
+                    productName: 'Frites portion',
+                    categoryName: 'Plats',
+                    plannedQty: 50,
+                    expectedQty: 330,
+                    reservedQty: 0,
+                    flooredByPreOrders: false,
+                  },
+                  {
+                    productId: 1,
+                    productName: 'Hot-dog classique',
+                    categoryName: 'Plats',
+                    plannedQty: 200,
+                    expectedQty: 180,
+                    reservedQty: 0,
+                    flooredByPreOrders: false,
+                  },
+                ],
+              },
+            ],
+            totalPlannedQty: 250,
+            totalExpectedQty: 510,
+            linesWithoutBasis: 0,
+          },
+        },
+      });
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
   it('should create', async () => {
     await flush([200]);
     expect(fixture.componentInstance).toBeTruthy();
@@ -119,6 +189,16 @@ describe(Analyse.name, () => {
     await flush([200]);
     const component = fixture.componentInstance as unknown as { subtitle(): string };
     expect(component.subtitle()).toBe('Saison 2025-2026');
+  });
+
+  it('rend le panneau de production avec son total tous produits confondus', async () => {
+    await flushWithProduction();
+    const text = fixture.nativeElement.textContent as string;
+
+    expect(text).toContain('Production estimée');
+    expect(text).toContain('Hot-dog classique');
+    expect(text).toContain('Frites portion');
+    expect(text).toContain('510');
   });
 
   it('ouvre le bilan d’une soirée achevée', async () => {

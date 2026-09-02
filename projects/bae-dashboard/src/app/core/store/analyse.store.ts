@@ -6,6 +6,7 @@ import {
   AnalyseService,
   type ApiSeasonAnalytics,
   type ApiSeasonOption,
+  type ApiProductionForecast,
   type ApiSeasonPrediction,
   type ApiSeasonRef,
 } from '#core/services/analyse/analyse-service';
@@ -15,6 +16,7 @@ import {
   AnalyseKpi,
   AnalysePrediction,
   AnalyseSoiree,
+  ProductionView,
 } from '#core/models/analyse.model';
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
@@ -66,6 +68,41 @@ function predictionDescription(prediction: ApiSeasonPrediction): string {
   }
 
   return parts.join(' ');
+}
+
+/** `−` est le vrai signe moins : le trait d'union se lit mal sur un chiffre. */
+function signedDelta(expected: number | null, planned: number): string {
+  if (expected === null) return '—';
+  const gap = expected - planned;
+  if (gap === 0) return '=';
+  return gap > 0 ? `+${gap}` : `−${Math.abs(gap)}`;
+}
+
+function toProductionView(forecast: ApiProductionForecast): ProductionView {
+  return {
+    categories: forecast.categories.map((category) => ({
+      name: category.categoryName,
+      planned: category.plannedQty,
+      expected: category.expectedQty,
+      lines: category.lines.map((line) => ({
+        id: line.productId,
+        name: line.productName,
+        planned: line.plannedQty,
+        expected: line.expectedQty === null ? '—' : String(line.expectedQty),
+        delta: signedDelta(line.expectedQty, line.plannedQty),
+        deltaClass:
+          line.expectedQty === null || line.expectedQty === line.plannedQty
+            ? 'text-muted'
+            : line.expectedQty > line.plannedQty
+              ? 'text-warn'
+              : 'text-ok',
+        reserved: line.reservedQty,
+      })),
+    })),
+    totalPlanned: forecast.totalPlannedQty,
+    totalExpected: forecast.totalExpectedQty,
+    withoutBasis: forecast.linesWithoutBasis,
+  };
 }
 
 interface AnalyseState {
@@ -162,6 +199,11 @@ export const AnalyseStore = signalStore(
           respondentCount: event.respondentCount,
         })),
       ),
+
+      production: computed<ProductionView | null>(() => {
+        const prediction = store.data()?.prediction;
+        return prediction ? toProductionView(prediction.production) : null;
+      }),
 
       prediction: computed<AnalysePrediction | null>(() => {
         const prediction = store.data()?.prediction;

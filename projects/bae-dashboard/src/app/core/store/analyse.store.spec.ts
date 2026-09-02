@@ -58,6 +58,63 @@ const PAYLOAD: ApiSeasonAnalytics = {
     modelOrderCount: 251,
     trendPct: 15,
     flooredByPreOrders: false,
+    production: {
+      categories: [
+        {
+          categoryName: 'Boissons',
+          plannedQty: 200,
+          expectedQty: 210,
+          lines: [
+            {
+              productId: 5,
+              productName: 'Bière pression 25cl',
+              categoryName: 'Boissons',
+              plannedQty: 200,
+              expectedQty: 210,
+              reservedQty: 0,
+              flooredByPreOrders: false,
+            },
+          ],
+        },
+        {
+          categoryName: 'Plats',
+          plannedQty: 280,
+          expectedQty: 300,
+          lines: [
+            {
+              productId: 3,
+              productName: 'Frites portion',
+              categoryName: 'Plats',
+              plannedQty: 50,
+              expectedQty: 75,
+              reservedQty: 0,
+              flooredByPreOrders: false,
+            },
+            {
+              productId: 1,
+              productName: 'Hot-dog classique',
+              categoryName: 'Plats',
+              plannedQty: 200,
+              expectedQty: 180,
+              reservedQty: 0,
+              flooredByPreOrders: false,
+            },
+            {
+              productId: 9,
+              productName: 'Wrap inédit',
+              categoryName: 'Plats',
+              plannedQty: 30,
+              expectedQty: null,
+              reservedQty: 0,
+              flooredByPreOrders: false,
+            },
+          ],
+        },
+      ],
+      totalPlannedQty: 480,
+      totalExpectedQty: 510,
+      linesWithoutBasis: 1,
+    },
   },
 };
 
@@ -232,5 +289,57 @@ describe(`${AnalyseStore.name} — libellé de la prédiction`, () => {
     expect(store.prediction()?.description).toContain(
       'Estimation relevée au nombre de précommandes déjà enregistrées.',
     );
+  });
+});
+
+describe(`${AnalyseStore.name} — production estimée`, () => {
+  let store: InstanceType<typeof AnalyseStore>;
+  let httpMock: HttpTestingController;
+  let baseUrl: string;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    store = TestBed.inject(AnalyseStore);
+    httpMock = TestBed.inject(HttpTestingController);
+    baseUrl = TestBed.inject(API_BASE_URL);
+  });
+
+  async function load(payload: ApiSeasonAnalytics = PAYLOAD): Promise<void> {
+    const loaded = store.load();
+    httpMock.expectOne((r) => r.url === `${baseUrl}/analytics/season`).flush(payload);
+    await loaded;
+  }
+
+  it('rend le total tous produits confondus, en tête', async () => {
+    await load();
+
+    expect(store.production()?.totalExpected).toBe(510);
+    expect(store.production()?.totalPlanned).toBe(480);
+  });
+
+  it('groupe par catégorie et calcule l’écart de chaque ligne', async () => {
+    await load();
+
+    const plats = store.production()!.categories[1];
+    expect(plats.name).toBe('Plats');
+    expect(plats.lines.map((l) => [l.name, l.planned, l.expected, l.delta])).toEqual([
+      ['Frites portion', 50, '75', '+25'],
+      ['Hot-dog classique', 200, '180', '−20'],
+      ['Wrap inédit', 30, '—', '—'],
+    ]);
+  });
+
+  it('signale combien de produits n’ont aucun historique', async () => {
+    await load();
+
+    expect(store.production()?.withoutBasis).toBe(1);
+  });
+
+  it('ne rend rien quand il n’y a pas de prédiction', async () => {
+    await load({ ...PAYLOAD, prediction: null });
+
+    expect(store.production()).toBeNull();
   });
 });
