@@ -159,6 +159,19 @@ describe(CaisseStore.name, () => {
       await pending;
     });
 
+    it('envoie paymentData avec l’encaissement Lydia', async () => {
+      cartOfTwo();
+
+      const pending = store.checkout('lydia', 'QR-BRUT-XYZ');
+      const request = http.expectOne(
+        (req) => req.url.endsWith('/events/3/orders') && req.method === 'POST',
+      );
+      expect(request.request.body.paymentMethod).toBe('lydia');
+      expect(request.request.body.paymentData).toBe('QR-BRUT-XYZ');
+      request.flush(orderFor('3'));
+      await pending;
+    });
+
     it('envoie la remise au terminal carte, pas seulement à la confirmation', async () => {
       cartOfTwo();
       store.setDiscount({ amountCents: 100, label: 'Geste commercial' });
