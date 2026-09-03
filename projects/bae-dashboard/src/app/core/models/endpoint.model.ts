@@ -11,6 +11,7 @@ export enum ApiEndPointV1 {
 
   /** Sécurité du compte : authentifié **et** réservé aux membres. */
   ACCOUNT_PASSWORD = '/account/password',
+  ACCOUNT_PHONE = '/account/phone',
   ACCOUNT_TWO_FACTOR = '/account/2fa',
   ACCOUNT_TWO_FACTOR_CONFIRM = '/account/2fa/confirm',
   ACCOUNT_TWO_FACTOR_RECOVERY_CODES = '/account/2fa/recovery-codes',
