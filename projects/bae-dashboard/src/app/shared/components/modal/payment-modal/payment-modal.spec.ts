@@ -2,8 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { PaymentModal, type PaymentMethod } from './payment-modal';
 import { ModalService } from '../modal.service';
+import { BarcodeScannerService } from '#core/services/barcode/barcode-scanner-service';
 
 describe(PaymentModal.name, () => {
   let fixture: ComponentFixture<PaymentModal>;
@@ -13,7 +15,17 @@ describe(PaymentModal.name, () => {
     paid = [];
     await TestBed.configureTestingModule({
       imports: [PaymentModal],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideMockStore({
+          initialState: {
+            auth: {
+              member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'x', phone: '0612345678' },
+            },
+          },
+        }),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PaymentModal);
@@ -131,5 +143,107 @@ describe(PaymentModal.name, () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('Lydia', () => {
+    function scanner(): BarcodeScannerService {
+      return TestBed.inject(BarcodeScannerService);
+    }
+
+    function setMemberPhone(phone: string | null): void {
+      TestBed.inject(MockStore).setState({
+        auth: { member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'x', phone } },
+      });
+      fixture.detectChanges();
+    }
+
+    const lydiaButton = (): HTMLButtonElement | undefined =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+      ).find((el) => el.textContent?.trim() === 'Lydia') as HTMLButtonElement | undefined;
+
+    it('désactive le bouton Lydia quand le membre connecté n’a pas de téléphone', () => {
+      setMemberPhone(null);
+      expect(lydiaButton()?.disabled).toBe(true);
+    });
+
+    it('active le bouton Lydia quand le membre connecté a un téléphone', () => {
+      setMemberPhone('0612345678');
+      expect(lydiaButton()?.disabled).toBe(false);
+    });
+
+    it('scanne puis soumet automatiquement le contenu du QR', async () => {
+      const calls: Array<[string, string | undefined]> = [];
+      fixture.componentRef.setInput(
+        'onConfirm',
+        (method: PaymentMethod, paymentData?: string) => {
+          calls.push([method, paymentData]);
+          return Promise.resolve(null);
+        },
+      );
+      fixture.detectChanges();
+      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
+        onCode('QR-BRUT-TEST');
+        return true;
+      });
+
+      fixture.componentInstance['choose']('lydia');
+      await fixture.whenStable();
+
+      expect(calls).toEqual([['lydia', 'QR-BRUT-TEST']]);
+    });
+
+    it('referme la modale quand le paiement aboutit', async () => {
+      const modals = TestBed.inject(ModalService);
+      const closed: string[] = [];
+      modals.close = (id: string) => void closed.push(id);
+
+      fixture.componentRef.setInput('onConfirm', () => Promise.resolve(null));
+      fixture.detectChanges();
+      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
+        onCode('QR-BRUT-TEST');
+        return true;
+      });
+
+      fixture.componentInstance['choose']('lydia');
+      await fixture.whenStable();
+
+      expect(closed).toEqual(['m1']);
+    });
+
+    /**
+     * Le défaut visé : renvoyer le caissier sur la page caisse pour rouvrir la
+     * modale, alors que le client est encore là, QR en main.
+     */
+    it('garde la modale ouverte et propose de rescanner quand Lydia refuse', async () => {
+      const modals = TestBed.inject(ModalService);
+      const closed: string[] = [];
+      modals.close = (id: string) => void closed.push(id);
+
+      fixture.componentRef.setInput('onConfirm', () => Promise.resolve('QR expiré.'));
+      fixture.detectChanges();
+      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
+        onCode('QR-BRUT-TEST');
+        return true;
+      });
+
+      fixture.componentInstance['choose']('lydia');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(closed).toEqual([]);
+      expect(text()).toContain('QR expiré.');
+      expect(text()).toContain('Rescanner');
+    });
+
+    it('affiche un message si la caméra est indisponible', async () => {
+      vi.spyOn(scanner(), 'start').mockResolvedValue(false);
+
+      fixture.componentInstance['choose']('lydia');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(text()).toContain('Caméra indisponible');
+    });
   });
 });

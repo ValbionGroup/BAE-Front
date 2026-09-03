@@ -43,8 +43,9 @@
           size="lg"
           [full]="true"
           [icon]="icLydia"
-          [disabled]="true"
-          title="L'encaissement Lydia attend l'accès à leur API."
+          [disabled]="submitting() || lydiaDisabledReason() !== null"
+          [title]="lydiaDisabledReason()"
+          (clicked)="choose('lydia')"
           >Lydia</bae-btn
         >
       </div>
@@ -70,7 +71,7 @@
           </bae-btn>
         </div>
       }
-    } @else {
+    } @else if (step() === 'cash') {
       <div class="flex flex-col gap-1.5">
         <label for="given" class="text-[12px] font-medium text-text">Montant remis</label>
         <div class="flex items-center gap-2">
@@ -135,7 +136,50 @@
       <p class="text-[11px] text-muted">
         Le rendu est une aide au comptage : seul le total de la commande est enregistré.
       </p>
+    } @else {
+      <p class="text-[11.5px] text-muted">Client : {{ clientName() }}</p>
+
+      @if (lydiaFailure(); as message) {
+        <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+      }
+
+      @if (lydiaScanError(); as message) {
+        <p role="alert" class="m-0 text-[12px] text-danger">{{ message }}</p>
+      }
     }
+
+    <div
+      [class]="
+        step() === 'lydia' && !lydiaFailure()
+          ? 'relative overflow-hidden rounded-md border border-border-s bg-black'
+          : 'hidden'
+      "
+    >
+      <video
+        #video
+        class="block h-56 w-full object-cover"
+        muted
+        autoplay
+        playsinline
+        aria-label="Aperçu de la caméra"
+      ></video>
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          class="h-40 w-40 rounded-lg border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+        ></div>
+      </div>
+      <div
+        class="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-2 py-2 text-center text-[12.5px] font-medium text-white"
+      >
+        @if (lydiaCamera() === 'starting') {
+          Ouverture de la caméra…
+        } @else if (submitting()) {
+          Paiement en cours…
+        } @else {
+          Présentez le QR Lydia du client
+        }
+      </div>
+    </div>
   </div>
 
   <div class="flex flex-1 justify-end gap-2" modal-footer>
@@ -146,6 +190,11 @@
       <bae-btn kind="primary" [disabled]="!canConfirmCash()" (clicked)="pay('cash')">
         Encaisser {{ formatCents(totalCents()) }} €
       </bae-btn>
+    } @else if (step() === 'lydia') {
+      <bae-btn kind="ghost" (clicked)="cancel()">Annuler</bae-btn>
+      @if (lydiaFailure()) {
+        <bae-btn kind="primary" (clicked)="rescanLydia()">Rescanner</bae-btn>
+      }
     } @else {
       <bae-btn kind="ghost" [disabled]="submitting()" (clicked)="cancel()">Annuler</bae-btn>
     }

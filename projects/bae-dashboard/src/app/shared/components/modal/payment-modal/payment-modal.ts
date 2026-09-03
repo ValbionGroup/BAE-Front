@@ -1,16 +1,22 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  OnDestroy,
   computed,
   effect,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { LucideCreditCard, LucideEuro, LucideQrCode } from '@lucide/angular';
 import { Btn, formatCents, parseEuros } from '@bae/ui';
 import type { PaymentMethod } from '#core/models/order.model';
 import { CaisseStore } from '#core/store/caisse.store';
+import { selectMember } from '#core/store/auth/auth.selector';
+import { BarcodeScannerService, QR_FORMATS } from '#core/services/barcode/barcode-scanner-service';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -24,14 +30,22 @@ const DENOMINATIONS = [5000, 2000, 1000, 500, 200, 100, 50, 20, 10];
   templateUrl: './payment-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PaymentModal {
+export class PaymentModal implements OnDestroy {
   readonly id = input.required<string>();
   readonly totalCents = input.required<number>();
   readonly clientName = input<string>('Anonyme');
-  readonly onConfirm = input<(method: PaymentMethod) => Promise<void> | void>(() => {});
+  /** `Promise<string | null>` : `null` vaut succès, une chaîne est le message
+   *  d'échec — c'est ce que l'étape Lydia utilise pour rester ouverte plutôt
+   *  que de refermer aveuglément comme `cash`/`card`. */
+  readonly onConfirm =
+    input<(method: PaymentMethod, paymentData?: string) => Promise<string | null> | Promise<void> | void>(
+      () => {},
+    );
 
   private readonly modalService = inject(ModalService);
   private readonly caisse = inject(CaisseStore);
+  private readonly scanner = inject(BarcodeScannerService);
+  private readonly member = inject(Store).selectSignal(selectMember);
 
   protected readonly submitting = signal(false);
   protected readonly formatCents = formatCents;
@@ -39,7 +53,20 @@ export class PaymentModal {
   protected readonly icLydia = LucideQrCode;
   protected readonly icCard = LucideCreditCard;
 
-  protected readonly step = signal<'method' | 'cash' | 'card'>('method');
+  protected readonly step = signal<'method' | 'cash' | 'card' | 'lydia'>('method');
+
+  /** `null` tant que le membre connecté a un téléphone renseigné — sinon le
+   *  motif à afficher : Lydia exige le numéro du caissier. */
+  protected readonly lydiaDisabledReason = computed(() =>
+    this.member()?.phone ? null : 'Renseignez votre téléphone dans Équipe avant d’utiliser Lydia.',
+  );
+
+  private readonly videoRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
+  protected readonly lydiaCamera = signal<'idle' | 'starting' | 'scanning'>('idle');
+  /** Caméra indisponible, refusée, etc. — distinct d'un refus de paiement. */
+  protected readonly lydiaScanError = signal<string | null>(null);
+  /** Le message renvoyé par `onConfirm` en cas d'échec du paiement lui-même. */
+  protected readonly lydiaFailure = signal<string | null>(null);
 
   /** Le paiement en cours sur le terminal, `null` dès qu'il est conclu. */
   protected readonly cardPayment = this.caisse.cardPayment;
@@ -64,12 +91,18 @@ export class PaymentModal {
 
   protected readonly denominations = DENOMINATIONS;
 
-  protected titleOf(step: 'method' | 'cash' | 'card'): string {
+  ngOnDestroy(): void {
+    this.scanner.stop();
+  }
+
+  protected titleOf(step: 'method' | 'cash' | 'card' | 'lydia'): string {
     switch (step) {
       case 'cash':
         return 'Paiement en espèces';
       case 'card':
         return 'Paiement par carte';
+      case 'lydia':
+        return 'Paiement par QR Lydia';
       case 'method':
         return 'Moyen de paiement';
     }
@@ -121,7 +154,47 @@ export class PaymentModal {
       return;
     }
 
-    void this.pay(method);
+    this.step.set('lydia');
+    this.lydiaFailure.set(null);
+    void this.startLydiaScan();
+  }
+
+  protected async startLydiaScan(): Promise<void> {
+    this.lydiaScanError.set(null);
+    this.lydiaCamera.set('starting');
+
+    const started = await this.scanner.start(
+      this.videoRef().nativeElement,
+      (code) => void this.onLydiaScanned(code),
+      QR_FORMATS,
+    );
+
+    if (started) {
+      this.lydiaCamera.set('scanning');
+    } else {
+      this.lydiaCamera.set('idle');
+      this.lydiaScanError.set('Caméra indisponible — choisissez un autre moyen de paiement.');
+    }
+  }
+
+  private async onLydiaScanned(paymentData: string): Promise<void> {
+    this.scanner.stop();
+    this.lydiaCamera.set('idle');
+    this.submitting.set(true);
+
+    const failure = await this.onConfirm()('lydia', paymentData);
+
+    this.submitting.set(false);
+    if (!failure) {
+      this.modalService.close(this.id());
+      return;
+    }
+    this.lydiaFailure.set(failure);
+  }
+
+  protected rescanLydia(): void {
+    this.lydiaFailure.set(null);
+    void this.startLydiaScan();
   }
 
   protected async cancelCard(): Promise<void> {
@@ -146,6 +219,7 @@ export class PaymentModal {
 
   protected cancel(): void {
     clearTimeout(this.recheckTimer);
+    this.scanner.stop();
     this.modalService.close(this.id());
   }
 }
