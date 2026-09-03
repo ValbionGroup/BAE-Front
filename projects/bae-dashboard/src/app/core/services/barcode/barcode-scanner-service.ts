@@ -13,12 +13,9 @@ interface BarcodeDetectorCtor {
 type Ponyfill = typeof import('barcode-detector/ponyfill');
 
 /**
- * Où le repli va chercher son binaire.
+ * URL vers le fichier WASM.
  *
- * ⚠️ `zxing-wasm` le télécharge depuis le CDN jsDelivr par défaut : un comptoir
- * sur le réseau d'une salle des fêtes perdrait son scanner, et le point de
- * vente dépendrait d'un tiers à l'exécution. Le fichier est copié dans la
- * sortie de build par l'entrée `assets` d'`angular.json` ; `document.baseURI`
+ * ⚠️ Le fichier est copié dans la sortie de build par l'entrée `assets` d'`angular.json` ; `document.baseURI`
  * garde l'URL juste sous un déploiement en sous-chemin.
  */
 function wasmUrl(path: string, prefix: string): string {
@@ -141,9 +138,8 @@ export class BarcodeScannerService {
       try {
         const found = await this.detector.detect(video);
         if (found.length > 0 && this.accepts(found[0].rawValue)) onCode(found[0].rawValue);
-      } catch {
-        // Une image illisible n'a rien d'exceptionnel — on retente.
-      }
+      } catch {}
+
       if (!this.stopped) setTimeout(() => void tick(), SCAN_INTERVAL_MS);
     };
     void tick();
@@ -185,8 +181,6 @@ export class BarcodeScannerService {
         return ponyfill;
       })
       .catch((error: unknown) => {
-        // Oublié pour qu'une coupure passagère ne condamne pas le scanner
-        // jusqu'au rechargement de la page.
         this.fallback = null;
         throw error;
       });
@@ -198,8 +192,6 @@ export class BarcodeScannerService {
     this.detector = null;
     this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = null;
-    // Le service est `providedIn: 'root'` : sans cet oubli, revenir sur l'écran
-    // ferait ignorer le premier scan.
     this.lastEmitted.clear();
   }
 }
