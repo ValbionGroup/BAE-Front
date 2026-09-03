@@ -5,7 +5,6 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { PaymentModal, type PaymentMethod } from './payment-modal';
 import { ModalService } from '../modal.service';
-import { BarcodeScannerService } from '#core/services/barcode/barcode-scanner-service';
 
 describe(PaymentModal.name, () => {
   let fixture: ComponentFixture<PaymentModal>;
@@ -153,10 +152,6 @@ describe(PaymentModal.name, () => {
   });
 
   describe('Lydia', () => {
-    function scanner(): BarcodeScannerService {
-      return TestBed.inject(BarcodeScannerService);
-    }
-
     function setMemberPhone(phone: string | null): void {
       TestBed.inject(MockStore).setState({
         auth: { member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'x', phone } },
@@ -179,96 +174,26 @@ describe(PaymentModal.name, () => {
       expect(lydiaButton()?.disabled).toBe(false);
     });
 
-    it('scanne puis soumet automatiquement le contenu du QR', async () => {
-      const calls: Array<[string, string | undefined]> = [];
-      fixture.componentRef.setInput('onConfirm', (method: PaymentMethod, paymentData?: string) => {
-        calls.push([method, paymentData]);
-        return Promise.resolve(null);
-      });
-      fixture.detectChanges();
-      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
-        onCode('QR-BRUT-TEST');
-        return true;
-      });
-
-      fixture.componentInstance['choose']('lydia');
-      await fixture.whenStable();
-
-      expect(calls).toEqual([['lydia', 'QR-BRUT-TEST']]);
-    });
-
-    it('referme la modale quand le paiement aboutit', async () => {
-      const modals = TestBed.inject(ModalService);
-      const closed: string[] = [];
-      modals.close = (id: string) => void closed.push(id);
-
-      fixture.componentRef.setInput('onConfirm', () => Promise.resolve(null));
-      fixture.detectChanges();
-      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
-        onCode('QR-BRUT-TEST');
-        return true;
-      });
-
-      fixture.componentInstance['choose']('lydia');
-      await fixture.whenStable();
-
-      expect(closed).toEqual(['m1']);
-    });
-
     /**
-     * Le défaut visé : garder la modale ouverte sur un refus. L'échec
-     * s'annonce sur la page — plein écran sur téléphone, en bandeau au-dessus
-     * — et une modale par-dessus le cacherait.
+     * Le scan ne peut pas vivre ici : le conteneur des modales porte un
+     * `transform`, qui piège tout `position: fixed`. La modale passe donc la
+     * main à la page, qui l'ouvre en plein écran.
      */
-    it('referme la modale même quand Lydia refuse', async () => {
+    it('passe la main à la page et se referme au lieu de scanner elle-même', async () => {
       const modals = TestBed.inject(ModalService);
       const closed: string[] = [];
       modals.close = (id: string) => void closed.push(id);
 
-      fixture.componentRef.setInput('onConfirm', () => Promise.resolve());
+      let requested = 0;
+      setMemberPhone('0612345678');
+      fixture.componentRef.setInput('onLydiaRequested', () => (requested += 1));
       fixture.detectChanges();
-      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
-        onCode('QR-BRUT-TEST');
-        return true;
-      });
 
       fixture.componentInstance['choose']('lydia');
       await fixture.whenStable();
-      fixture.detectChanges();
 
+      expect(requested).toBe(1);
       expect(closed).toEqual(['m1']);
-    });
-
-    /** Le défaut visé : une modale bloquée sur « Paiement en cours… » si
-     *  l'encaissement lève au lieu de se résoudre. */
-    it('referme la modale même si l’encaissement lève', async () => {
-      const modals = TestBed.inject(ModalService);
-      const closed: string[] = [];
-      modals.close = (id: string) => void closed.push(id);
-
-      fixture.componentRef.setInput('onConfirm', () => Promise.reject(new Error('réseau')));
-      fixture.detectChanges();
-      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
-        onCode('QR-BRUT-TEST');
-        return true;
-      });
-
-      fixture.componentInstance['choose']('lydia');
-      await fixture.whenStable();
-      fixture.detectChanges();
-
-      expect(closed).toEqual(['m1']);
-      expect(fixture.componentInstance['submitting']()).toBe(false);
-    });
-
-    it('affiche un message si la caméra est indisponible', async () => {
-      vi.spyOn(scanner(), 'start').mockResolvedValue(false);
-
-      fixture.componentInstance['choose']('lydia');
-      await fixture.whenStable();
-      fixture.detectChanges();
-
-      expect(text()).toContain('Caméra indisponible');
     });
   });
 });

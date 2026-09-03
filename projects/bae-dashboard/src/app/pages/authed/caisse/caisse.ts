@@ -42,6 +42,7 @@ import { PaymentModal } from '#shared/components/modal/payment-modal/payment-mod
 import type { PaymentMethod } from '#core/models/order.model';
 import { BuyerPicker } from '#shared/components/buyer-picker/buyer-picker';
 import { CheckoutFeedback, type Pickup } from './checkout-feedback/checkout-feedback';
+import { LydiaScan } from './lydia-scan/lydia-scan';
 import type { Buyer, ScannedCategory } from '#core/services/buyers/buyers-service';
 import type { SponsorshipCategory } from '#core/services/sponsorships/sponsorships-service';
 import { WebsocketService } from '#core/services/websocket/websocket-service';
@@ -49,7 +50,7 @@ import { STOCK_AUDIT_MS } from '#shared/utils/stock-level';
 
 @Component({
   selector: 'bfd-caisse',
-  imports: [Btn, Badge, Kbd, LucideDynamicIcon, BuyerPicker, CheckoutFeedback],
+  imports: [Btn, Badge, Kbd, LucideDynamicIcon, BuyerPicker, CheckoutFeedback, LydiaScan],
   templateUrl: './caisse.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown)': 'onKey($event)' },
@@ -256,8 +257,27 @@ export class Caisse implements OnInit {
         clientName: this.store.selectedBuyer()?.name ?? 'Anonyme',
         onConfirm: (method: PaymentMethod, paymentData?: string) =>
           this.checkout(method, paymentData),
+        onLydiaRequested: () => this.lydiaScanning.set(true),
       },
     });
+  }
+
+  /** Le scan Lydia vit dans la page, pas dans la modale : un `position: fixed`
+   *  y serait piégé par le `transform` du conteneur des modales. */
+  protected readonly lydiaScanning = signal(false);
+  /** Entre le scan et la réponse de Lydia — l'attente doit se voir. */
+  protected readonly lydiaSubmitting = signal(false);
+
+  protected async onLydiaScanned(paymentData: string): Promise<void> {
+    if (this.lydiaSubmitting()) return;
+    this.lydiaSubmitting.set(true);
+
+    try {
+      await this.checkout('lydia', paymentData);
+    } finally {
+      this.lydiaSubmitting.set(false);
+      this.lydiaScanning.set(false);
+    }
   }
 
   /** Le bandeau de confirmation porte le retour : pas de toast en doublon. */

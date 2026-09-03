@@ -1,0 +1,58 @@
+<div class="fixed inset-0 z-50 flex flex-col bg-black">
+  <div class="flex items-center gap-2 px-4 py-3 text-white">
+    <span class="flex-1 text-[15px] font-medium">Scanner le QR Lydia</span>
+    <bae-btn kind="ghost" size="sm" [icon]="icClose" (clicked)="close()"></bae-btn>
+  </div>
+
+  <div class="relative flex-1">
+    <video
+      #video
+      class="block h-full w-full object-cover"
+      muted
+      autoplay
+      playsinline
+      aria-label="Aperçu de la caméra"
+    ></video>
+
+    @if (submitting()) {
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        <div
+          class="h-12 w-12 animate-spin rounded-full border-4 border-white/25 border-t-white"
+          aria-hidden="true"
+        ></div>
+        <div class="text-[16px] font-medium text-white">Paiement en cours…</div>
+        <div class="text-[13px] text-white/70">Lydia confirme le débit du client.</div>
+      </div>
+    } @else {
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          class="h-56 w-56 rounded-lg border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+        ></div>
+      </div>
+
+      <div
+        class="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-3 py-2 text-center text-[13px] font-medium text-white"
+      >
+        @if (camera() === 'starting') {
+          Ouverture de la caméra…
+        } @else {
+          Présentez le QR Lydia du client
+        }
+      </div>
+    }
+  </div>
+
+  @if (error(); as message) {
+    <p role="alert" class="px-4 py-2 text-center text-[13px] text-danger">{{ message }}</p>
+  }
+
+  <div class="px-4 pb-6 pt-3">
+    <bae-btn kind="secondary" [full]="true" [disabled]="submitting()" (clicked)="close()">
+      Annuler
+    </bae-btn>
+  </div>
+</div>
