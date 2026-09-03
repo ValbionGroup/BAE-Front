@@ -24,7 +24,6 @@ export interface SubscriptionRow {
 
 export interface ClientDetail extends ClientRow {
   readonly school: string | null;
-  readonly phone: string | null;
   readonly registeredAt: string;
   readonly note: string | null;
   readonly noteAuthor: string | null;
@@ -48,6 +47,5 @@ export interface ClientsSummary {
 }
 
 export interface ClientWritePayload {
-  readonly phone?: string | null;
   readonly note?: string | null;
 }

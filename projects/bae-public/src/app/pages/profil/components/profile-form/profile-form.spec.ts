@@ -22,7 +22,6 @@ const LINKED: TelegramLink = {
 };
 
 const CLIENT: ClientProfile = {
-  phone: '0612345678',
   promotion: 'I2',
   school: 'ENSEIRB',
   registeredAt: '2026-01-12',
@@ -91,7 +90,6 @@ describe(ProfileForm.name, () => {
   it('reprend les valeurs déjà enregistrées', async () => {
     await mount();
 
-    expect(field('phone').value).toBe('0612345678');
     expect(field('preparationNote').value).toBe('Sans gluten');
   });
 
@@ -104,12 +102,12 @@ describe(ProfileForm.name, () => {
 
   it('n’envoie que les champs modifiés', async () => {
     await mount();
-    type('phone', '0699999999');
+    type('preparationNote', 'Sans lactose');
     submit();
 
     const request = http.expectOne((req) => req.method === 'PATCH');
-    expect(request.request.body).toEqual({ phone: '0699999999' });
-    request.flush(profileBody(NO_TELEGRAM, { ...CLIENT, phone: '0699999999' }));
+    expect(request.request.body).toEqual({ preparationNote: 'Sans lactose' });
+    request.flush(profileBody(NO_TELEGRAM, { ...CLIENT, preparationNote: 'Sans lactose' }));
   });
 
   it('envoie null plutôt qu’une chaîne vide pour un champ effacé', async () => {
@@ -144,7 +142,7 @@ describe(ProfileForm.name, () => {
 
   it('annonce l’échec du serveur dans une alerte', async () => {
     await mount();
-    type('phone', '0699999999');
+    type('preparationNote', 'Sans lactose');
     submit();
 
     http

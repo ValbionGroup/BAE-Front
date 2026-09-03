@@ -26,7 +26,6 @@ export class ProfileForm {
   protected readonly saved = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
-    phone: [''],
     telegramHandle: ['', [Validators.pattern(TELEGRAM_HANDLE)]],
     preparationNote: ['', [Validators.maxLength(PREPARATION_NOTE_MAX)]],
   });
@@ -44,7 +43,6 @@ export class ProfileForm {
       if (client === null) return;
 
       this.form.reset({
-        phone: client.phone ?? '',
         telegramHandle: telegram?.handle ?? '',
         preparationNote: client.preparationNote ?? '',
       });
@@ -79,7 +77,7 @@ export class ProfileForm {
   private changedFields(): ProfileWritePayload {
     const patch: ProfileWritePayload = {};
 
-    for (const key of ['phone', 'telegramHandle', 'preparationNote'] as const) {
+    for (const key of ['telegramHandle', 'preparationNote'] as const) {
       const control = this.form.controls[key];
       if (!control.dirty) continue;
 

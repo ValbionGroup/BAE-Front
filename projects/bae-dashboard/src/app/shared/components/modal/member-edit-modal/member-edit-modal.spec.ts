@@ -189,6 +189,7 @@ describe(MemberEditModal.name, () => {
       id: 2,
       user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
       roleId: null,
+      phone: null,
       points: 0,
       createdAt: null,
       updatedAt: null,
@@ -271,6 +272,25 @@ describe(MemberEditModal.name, () => {
       expect(root.textContent).toContain(
         'Ce membre porte des permissions que vous n’avez pas : role:write.',
       );
+    });
+
+    /**
+     * Le téléphone du membre est celui qu'exige l'encaissement Lydia par QR au
+     * comptoir : l'éditer ici doit l'envoyer dans le PATCH.
+     */
+    it('envoie le téléphone édité dans le PATCH', async () => {
+      const { fixture } = await openOnMember();
+
+      (fixture.componentInstance as unknown as { onPhone(value: string): void }).onPhone(
+        '0612345678',
+      );
+      void (fixture.componentInstance as unknown as { submit(): Promise<void> }).submit();
+
+      const req = httpMock.expectOne(`${baseUrl}/members/${MEMBER.id}`);
+      expect(req.request.body.phone).toBe('0612345678');
+      req.flush({ ...MEMBER, phone: '0612345678' });
+      await flushMicrotasks();
+      await fixture.whenStable();
     });
   });
 });

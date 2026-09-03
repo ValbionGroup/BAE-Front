@@ -1,18 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideUserPen } from '@lucide/angular';
-import { Btn, Field, Input } from '@bae/ui';
+import { Btn, Field } from '@bae/ui';
 import { ClientsStore } from '#core/store/clients.store';
 import type { ClientDetail } from '#pages/authed/adherents/adherents.types';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
 /**
- * Téléphone et note seulement : `updateClientValidator` refuse promotion et
- * école, qui dérivent des claims SSO et seraient écrasées au prochain login.
+ * La note seulement : `updateClientValidator` refuse promotion et école, qui
+ * dérivent des claims SSO et seraient écrasées au prochain login. Le téléphone
+ * a déménagé sur `members` — un client n'en porte plus.
  */
 @Component({
   selector: 'bfd-client-edit-modal',
-  imports: [Btn, Field, Input, ModalShell],
+  imports: [Btn, Field, ModalShell],
   templateUrl: './client-edit-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -32,15 +33,9 @@ export class ClientEditModal {
     this.store.clearSaveError();
   }
 
-  private readonly phoneEdit = signal<string | null>(null);
   private readonly noteEdit = signal<string | null>(null);
 
-  protected readonly phone = computed(() => this.phoneEdit() ?? this.client().phone ?? '');
   protected readonly note = computed(() => this.noteEdit() ?? this.client().note ?? '');
-
-  protected onPhone(value: string): void {
-    this.phoneEdit.set(value);
-  }
 
   protected onNote(value: string): void {
     this.noteEdit.set(value);
@@ -56,7 +51,6 @@ export class ClientEditModal {
 
     // `null` vide le champ côté validateur, `undefined` ne le touche pas.
     const ok = await this.store.updateClient(this.client().id, {
-      phone: this.emptyToNull(this.phone()),
       note: this.emptyToNull(this.note()),
     });
 

@@ -12,6 +12,7 @@ const MEMBER: ApiTeamMember = {
   id: 2,
   user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
   roleId: 1,
+  phone: null,
   points: 0,
   createdAt: '2026-07-08T20:33:03.835+00:00',
   updatedAt: '2026-07-08T20:33:03.835+00:00',

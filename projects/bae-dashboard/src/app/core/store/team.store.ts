@@ -196,6 +196,7 @@ export const TeamStore = signalStore(
       const optimistic = {
         ...target,
         user: patchedUser,
+        ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
         ...(patch.roleId !== undefined
           ? {
               roleId: patch.roleId,

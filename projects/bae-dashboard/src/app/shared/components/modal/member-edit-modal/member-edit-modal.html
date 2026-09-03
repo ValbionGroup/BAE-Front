@@ -14,6 +14,10 @@
       <bae-input [value]="lastName()" (valueChange)="onLastName($event)" />
     </bae-field>
 
+    <bae-field label="Téléphone" hint="Exigé pour encaisser Lydia par QR au comptoir.">
+      <bae-input [value]="phone()" (valueChange)="onPhone($event)" />
+    </bae-field>
+
     <bae-field
       label="Rôle"
       [hint]="

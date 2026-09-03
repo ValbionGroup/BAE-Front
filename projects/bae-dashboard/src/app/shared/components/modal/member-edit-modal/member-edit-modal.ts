@@ -6,7 +6,7 @@ import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
 /**
- * Édition d'un membre : prénom, nom, rôle.
+ * Édition d'un membre : prénom, nom, téléphone, rôle.
  *
  * Le rôle est un `<select>` natif et non un composant maison : il n'existe pas
  * de `bfd-select` dans le dépôt, et en fabriquer un pour trois options serait un
@@ -49,6 +49,7 @@ export class MemberEditModal {
    *  valeur du store, y compris si une autre écriture la met à jour. */
   private readonly firstNameEdit = signal<string | null>(null);
   private readonly lastNameEdit = signal<string | null>(null);
+  private readonly phoneEdit = signal<string | null>(null);
   private readonly roleIdEdit = signal<number | null | undefined>(undefined);
 
   protected readonly firstName = computed(
@@ -57,6 +58,8 @@ export class MemberEditModal {
   protected readonly lastName = computed(
     () => this.lastNameEdit() ?? this.member()?.user?.lastName ?? '',
   );
+  /** Le numéro du caissier, exigé par l'encaissement Lydia par QR au comptoir. */
+  protected readonly phone = computed(() => this.phoneEdit() ?? this.member()?.phone ?? '');
   protected readonly roleId = computed(() => {
     const edited = this.roleIdEdit();
     return edited === undefined ? (this.member()?.roleId ?? null) : edited;
@@ -86,6 +89,10 @@ export class MemberEditModal {
     this.lastNameEdit.set(value);
   }
 
+  protected onPhone(value: string): void {
+    this.phoneEdit.set(value);
+  }
+
   protected onRole(value: string): void {
     this.roleIdEdit.set(value === '' ? null : Number(value));
   }
@@ -100,6 +107,7 @@ export class MemberEditModal {
     await this.store.updateMember(this.memberId(), {
       firstName: this.firstName().trim(),
       lastName: this.lastName().trim(),
+      phone: this.phone().trim() || null,
       roleId: this.roleId(),
     });
 

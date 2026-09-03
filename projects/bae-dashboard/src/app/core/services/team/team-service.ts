@@ -45,6 +45,8 @@ export interface ApiTeamMemberUser {
 export interface ApiTeamMember {
   id: number;
   roleId: number | null;
+  /** Le numéro du caissier, exigé par l'encaissement Lydia par QR au comptoir. */
+  phone: string | null;
   points: number;
   createdAt: string | null;
   updatedAt: string | null;
@@ -119,14 +121,16 @@ export interface LogPage {
 }
 
 /**
- * Corps de `PATCH /members/:id`. Les trois champs sont optionnels et le corps
- * est un delta : ce qui n'y figure pas n'est pas touché. `roleId: null` signifie
- * « sans rôle » et n'est donc pas équivalent à son absence.
+ * Corps de `PATCH /members/:id`. Les champs sont optionnels et le corps
+ * est un delta : ce qui n'y figure pas n'est pas touché. `roleId`/`phone: null`
+ * signifie « sans rôle »/« aucun numéro », et n'est donc pas équivalent à son
+ * absence.
  */
 export interface UpdateMemberPatch {
   firstName?: string;
   lastName?: string;
   roleId?: number | null;
+  phone?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

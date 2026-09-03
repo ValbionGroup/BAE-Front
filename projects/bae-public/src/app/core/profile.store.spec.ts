@@ -14,7 +14,6 @@ import {
 const NO_TELEGRAM: TelegramLink = { handle: null, linked: false, linkedAt: null };
 
 const CLIENT: ClientProfile = {
-  phone: '0612345678',
   promotion: 'I2',
   school: 'ENSEIRB',
   registeredAt: '2026-01-12',
@@ -57,11 +56,11 @@ describe(ProfileStore.name, () => {
 
   /** Une clé absente veut dire « ne touche pas » : envoyer tout le profil effacerait. */
   it('n’envoie que les champs fournis', () => {
-    void store.save({ phone: '0699999999' });
+    void store.save({ preparationNote: 'Sans lactose' });
 
     const request = http.expectOne((req) => req.method === 'PATCH');
-    expect(request.request.body).toEqual({ phone: '0699999999' });
-    request.flush(profile({ client: { ...CLIENT, phone: '0699999999' } }));
+    expect(request.request.body).toEqual({ preparationNote: 'Sans lactose' });
+    request.flush(profile({ client: { ...CLIENT, preparationNote: 'Sans lactose' } }));
   });
 
   it('adopte la version normalisée renvoyée par le serveur', async () => {

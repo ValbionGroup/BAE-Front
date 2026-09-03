@@ -20,7 +20,6 @@ const CLIENT: ClientDetail = {
   expiresAt: '2026-08-31',
   daysUntilExpiry: 40,
   school: 'ENSEIRB-MATMECA',
-  phone: '06 24 31 88 02',
   registeredAt: '2025-09-12',
   note: 'Allergie noix.',
   noteAuthor: 'Sarah K.',
@@ -81,11 +80,10 @@ describe(ClientEditModal.name, () => {
     buttons.find((button) => button.textContent?.includes('Enregistrer'))!.click();
   }
 
-  it('prefills both fields from the client it was given', async () => {
+  it('prefills the note field from the client it was given', async () => {
     const fixture = await render();
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector<HTMLInputElement>('input[type="tel"]')?.value).toBe('06 24 31 88 02');
     expect(el.querySelector('textarea')?.value).toBe('Allergie noix.');
   });
 
@@ -96,9 +94,10 @@ describe(ClientEditModal.name, () => {
       (span) => span.textContent?.trim(),
     );
 
-    expect(labels).toContain('Téléphone');
+    expect(labels).toContain('Note interne');
     expect(labels).not.toContain('Promotion');
     expect(labels).not.toContain('École');
+    expect(labels).not.toContain('Téléphone');
   });
 
   it('sends null, not an empty string, for a cleared field', async () => {
@@ -111,7 +110,7 @@ describe(ClientEditModal.name, () => {
     submit(fixture);
     const request = http.expectOne(`${baseUrl}/clients/7`);
     expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ phone: '06 24 31 88 02', note: null });
+    expect(request.request.body).toEqual({ note: null });
 
     request.flush({ ...CLIENT, note: null });
     await flushReload(fixture);
@@ -136,12 +135,12 @@ describe(ClientEditModal.name, () => {
     submit(fixture);
     http
       .expectOne(`${baseUrl}/clients/7`)
-      .flush({ message: 'Numéro de téléphone invalide.' }, { status: 422, statusText: 'Unpro' });
+      .flush({ message: 'Note trop longue.' }, { status: 422, statusText: 'Unpro' });
     await fixture.whenStable();
     fixture.detectChanges();
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Numéro de téléphone invalide.');
+    expect(text).toContain('Note trop longue.');
     expect((fixture.nativeElement as HTMLElement).querySelector('textarea')).not.toBeNull();
   });
 

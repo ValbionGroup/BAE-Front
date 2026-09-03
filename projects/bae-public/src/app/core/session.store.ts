@@ -33,7 +33,6 @@ export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
 
 /** Ce que le client renseigne sur lui-même, plus ce qu'EirbConnect a fourni. */
 export interface ClientProfile {
-  readonly phone: string | null;
   readonly promotion: string | null;
   readonly school: string | null;
   readonly registeredAt: string | null;
