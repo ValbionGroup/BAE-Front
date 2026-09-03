@@ -250,14 +250,17 @@ export class Caisse implements OnInit {
       inputs: {
         totalCents: this.store.netTotal(),
         clientName: this.store.selectedBuyer()?.name ?? 'Anonyme',
-        onConfirm: (method: PaymentMethod) => this.checkout(method),
+        onConfirm: (method: PaymentMethod, paymentData?: string) => this.checkout(method, paymentData),
       },
     });
   }
 
-  /** Le bandeau de confirmation porte le retour : pas de toast en doublon. */
-  private async checkout(method: PaymentMethod): Promise<void> {
-    await this.store.checkout(method);
+  /** Le bandeau de confirmation porte le retour : pas de toast en doublon.
+   *  Rend le message d'échec (`null` si réussi) — c'est ce que le modal Lydia
+   *  utilise pour décider de rester ouvert plutôt que de refermer aveuglément. */
+  private async checkout(method: PaymentMethod, paymentData?: string): Promise<string | null> {
+    const order = await this.store.checkout(method, paymentData);
+    return order !== null ? null : this.store.checkoutError();
   }
 
   protected onCategoryClick(category: string): void {

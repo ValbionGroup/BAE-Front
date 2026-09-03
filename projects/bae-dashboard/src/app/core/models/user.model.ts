@@ -42,6 +42,8 @@ export interface MemberModel {
   firstName: string;
   lastName: string;
   role: string;
+  /** Exigé par l'encaissement Lydia par QR au comptoir. */
+  phone: string | null;
 }
 
 export interface UserProfileModel {

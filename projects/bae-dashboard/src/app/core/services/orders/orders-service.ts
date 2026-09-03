@@ -88,6 +88,7 @@ export class OrdersService {
     paymentMethod: PaymentMethod = 'cash',
     sponsorshipCategoryId?: number | null,
     discount?: OrderDiscount | null,
+    paymentData?: string,
   ): Observable<ApiOrder> {
     return this.http.post<ApiOrder>(`${this.baseUrl}/events/${eventId}/orders`, {
       lines,
@@ -95,6 +96,7 @@ export class OrdersService {
       ...(clientId ? { clientId } : {}),
       ...(sponsorshipCategoryId ? { sponsorshipCategoryId } : {}),
       ...(discount ? { discount } : {}),
+      ...(paymentData ? { paymentData } : {}),
     });
   }
 

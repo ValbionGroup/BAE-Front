@@ -209,6 +209,7 @@ export const OrdersStore = signalStore(
         paymentMethod: PaymentMethod = 'cash',
         sponsorshipCategoryId?: number | null,
         discount?: OrderDiscount | null,
+        paymentData?: string,
       ): Promise<Order | null> {
         try {
           const order = toOrder(
@@ -220,6 +221,7 @@ export const OrdersStore = signalStore(
                 paymentMethod,
                 sponsorshipCategoryId,
                 discount,
+                paymentData,
               ),
             ),
           );
