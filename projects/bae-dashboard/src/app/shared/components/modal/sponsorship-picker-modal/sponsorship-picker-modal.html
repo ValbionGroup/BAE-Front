@@ -23,12 +23,14 @@
         @for (category of categories(); track category.id) {
           @let active = category.id === currentId();
           @let lowest = lowestPrice(category);
+          @let spent = exhausted(category);
           <li>
             <button
               type="button"
-              class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left hover:border-warn hover:bg-warn-soft focus-visible:ring-2 focus-visible:ring-blue/40"
+              class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left focus-visible:ring-2 focus-visible:ring-blue/40 disabled:cursor-not-allowed disabled:opacity-60 enabled:hover:border-warn enabled:hover:bg-warn-soft"
               [class]="active ? 'border-warn bg-warn-soft' : 'border-border-s bg-surface'"
               [attr.aria-current]="active ? 'true' : null"
+              [disabled]="spent"
               (click)="choose(category)"
             >
               <span class="flex min-w-0 flex-col">
@@ -37,10 +39,15 @@
                 </span>
                 <span class="truncate text-[11.5px] text-muted">
                   {{ modeLabels[category.mode] }}
+                  @if (category.maxOrders !== null) {
+                    · {{ category.usedOrders }} / {{ category.maxOrders }} commandes
+                  }
                 </span>
               </span>
               <span class="tnum ml-auto shrink-0 text-[11.5px] text-text-2">
-                @if (lowest !== null) {
+                @if (spent) {
+                  épuisée
+                } @else if (lowest !== null) {
                   dès {{ formatCents(lowest) }} €
                 } @else {
                   prix public

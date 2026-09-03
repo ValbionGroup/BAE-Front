@@ -38,7 +38,7 @@ describe(SponsorshipCategoriesModal.name, () => {
   });
 
   /** Peuple le menu par le réseau, seule porte d'entrée du store. */
-  async function seed(): Promise<void> {
+  async function seed(category: Record<string, unknown> = {}): Promise<void> {
     const loaded = store.load();
     http
       .expectOne(`${baseUrl}/events`)
@@ -61,7 +61,18 @@ describe(SponsorshipCategoriesModal.name, () => {
     await menu;
 
     for (const request of http.match((r) => r.url.includes('sponsorship-categories'))) {
-      request.flush([{ id: 3, eventId: 7, label: 'Staff BDE', mode: 'external', prices: [] }]);
+      request.flush([
+        {
+          id: 3,
+          eventId: 7,
+          label: 'Staff BDE',
+          mode: 'external',
+          maxOrders: null,
+          usedOrders: 0,
+          prices: [],
+          ...category,
+        },
+      ]);
     }
     // `reload()` est asynchrone : sans ce tour de boucle, `categories()` est
     // encore vide et `save()` sortirait sans rien envoyer.
@@ -124,7 +135,11 @@ describe(SponsorshipCategoriesModal.name, () => {
 
     const added = component['addCategory']();
     const request = http.expectOne(`${baseUrl}/events/7/sponsorship-categories`);
-    expect(request.request.body).toEqual({ label: 'Invités du BAE', mode: 'internal' });
+    expect(request.request.body).toEqual({
+      label: 'Invités du BAE',
+      mode: 'internal',
+      maxOrders: null,
+    });
     request.flush({ id: 4, eventId: 7, label: 'Invités du BAE', mode: 'internal', prices: [] });
     await added;
 
@@ -156,5 +171,77 @@ describe(SponsorshipCategoriesModal.name, () => {
     );
     // La catégorie garde son mode d'origine : l'écran ne doit pas mentir.
     expect(component['selected']()!.mode).toBe('external');
+  });
+  it('crée la catégorie avec sa limite de commandes', async () => {
+    await seed();
+    component['newLabel'].set('Staff bar');
+    component['newMaxOrders'].set('10');
+
+    const added = component['addCategory']();
+    const request = http.expectOne(`${baseUrl}/events/7/sponsorship-categories`);
+    expect(request.request.body).toEqual({
+      label: 'Staff bar',
+      mode: 'external',
+      maxOrders: 10,
+    });
+    request.flush({
+      id: 4,
+      eventId: 7,
+      label: 'Staff bar',
+      mode: 'external',
+      maxOrders: 10,
+      usedOrders: 0,
+      prices: [],
+    });
+    await added;
+
+    expect(component['newMaxOrders']()).toBe('');
+  });
+
+  it('lève le plafond quand le champ est vidé', async () => {
+    await seed({ maxOrders: 10, usedOrders: 3 });
+
+    const changed = component['commitMaxOrders']('');
+    const request = http.expectOne(`${baseUrl}/events/7/sponsorship-categories/3`);
+    expect(request.request.body).toEqual({ maxOrders: null });
+    request.flush({
+      id: 3,
+      eventId: 7,
+      label: 'Staff BDE',
+      mode: 'external',
+      maxOrders: null,
+      usedOrders: 3,
+      prices: [],
+    });
+    await changed;
+
+    expect(component['selected']()!.maxOrders).toBeNull();
+  });
+
+  it('n’envoie rien quand la limite saisie est illisible', async () => {
+    await seed({ maxOrders: 10, usedOrders: 3 });
+
+    await component['commitMaxOrders']('dix');
+
+    http.expectNone(`${baseUrl}/events/7/sponsorship-categories/3`);
+    expect(component['selected']()!.maxOrders).toBe(10);
+  });
+
+  it('résume ce que le QR a consommé', async () => {
+    await seed({ maxOrders: 10, usedOrders: 3 });
+
+    expect(component['usageLabel'](component['selected']()!)).toBe('3 / 10 commandes utilisées');
+  });
+
+  it('ne résume rien quand la limite est levée', async () => {
+    await seed();
+
+    expect(component['usageLabel'](component['selected']()!)).toBeNull();
+  });
+
+  it('signale un QR épuisé', async () => {
+    await seed({ maxOrders: 2, usedOrders: 2 });
+
+    expect(component['exhausted'](component['selected']()!)).toBe(true);
   });
 });

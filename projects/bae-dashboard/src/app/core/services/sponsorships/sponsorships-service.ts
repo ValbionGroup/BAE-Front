@@ -26,6 +26,10 @@ export interface SponsorshipCategory {
   readonly eventId: number;
   readonly label: string;
   readonly mode: SponsorshipMode;
+  /** Commandes que le QR accepte avant de cesser de valoir. `null` = illimité. */
+  readonly maxOrders: number | null;
+  /** Commandes déjà passées, annulées exclues. */
+  readonly usedOrders: number;
   readonly prices: readonly CategoryPrice[];
 }
 
@@ -46,10 +50,15 @@ export class SponsorshipsService {
     );
   }
 
-  create(eventId: string, label: string, mode: SponsorshipMode): Observable<SponsorshipCategory> {
+  create(
+    eventId: string,
+    label: string,
+    mode: SponsorshipMode,
+    maxOrders: number | null,
+  ): Observable<SponsorshipCategory> {
     return this.http.post<SponsorshipCategory>(
       `${this.baseUrl}/events/${eventId}/sponsorship-categories`,
-      { label, mode },
+      { label, mode, maxOrders },
     );
   }
 
@@ -58,7 +67,7 @@ export class SponsorshipsService {
   update(
     eventId: string,
     categoryId: number,
-    changes: { label?: string; mode?: SponsorshipMode },
+    changes: { label?: string; mode?: SponsorshipMode; maxOrders?: number | null },
   ): Observable<SponsorshipCategory> {
     return this.http.patch<SponsorshipCategory>(
       `${this.baseUrl}/events/${eventId}/sponsorship-categories/${categoryId}`,

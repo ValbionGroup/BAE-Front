@@ -44,6 +44,9 @@ export interface ScannedCategory {
   /** `internal` : c'est le BAE qui offre l'écart, il n'y a pas de payeur. */
   readonly mode: SponsorshipMode;
   readonly payerName: string | null;
+  /** Commandes que le QR accepte en tout ; `null` = illimité. */
+  readonly maxOrders: number | null;
+  readonly usedOrders: number;
   readonly prices: readonly { readonly productId: number; readonly priceCents: number }[];
 }
 

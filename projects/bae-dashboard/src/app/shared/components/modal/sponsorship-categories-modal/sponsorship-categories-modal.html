@@ -36,6 +36,14 @@
               category.prices.length > 1 ? 's' : ''
             }}
           </div>
+          @if (usageLabel(category); as usage) {
+            <div
+              class="mt-0.5 text-[11px]"
+              [class]="exhausted(category) ? 'text-danger' : 'text-muted'"
+            >
+              {{ exhausted(category) ? 'QR épuisé — ' + usage : usage }}
+            </div>
+          }
         </button>
       } @empty {
         <div
@@ -52,6 +60,15 @@
             size="sm"
             [value]="newLabel()"
             (valueChange)="newLabel.set($event)"
+          />
+          <bae-input
+            class="w-24 shrink-0"
+            placeholder="Illimité"
+            ariaLabel="Limite de commandes de la nouvelle catégorie"
+            type="number"
+            size="sm"
+            [value]="newMaxOrders()"
+            (valueChange)="newMaxOrders.set($event)"
           />
           <bae-btn
             kind="secondary"
@@ -96,6 +113,35 @@
           <bae-btn kind="ghost" size="sm" [icon]="icQr" (clicked)="showQr()">QR</bae-btn>
           <bae-btn kind="ghost" size="sm" (clicked)="rotateQr()">Régénérer</bae-btn>
           <bae-btn kind="ghost" size="sm" [icon]="icTrash" (clicked)="removeCategory()" />
+        </div>
+
+        <div
+          class="mb-2.5 flex flex-wrap items-center gap-2 rounded-md border border-border-s bg-surface-2 px-3 py-2"
+        >
+          <label class="text-[11.5px] text-text-2" [attr.for]="'category-max-' + category.id">
+            Commandes maximum
+          </label>
+          <input
+            [id]="'category-max-' + category.id"
+            type="number"
+            min="1"
+            inputmode="numeric"
+            placeholder="Illimité"
+            [value]="category.maxOrders ?? ''"
+            [disabled]="busy()"
+            (change)="commitMaxOrders($any($event.target).value)"
+            class="mono tnum w-24 rounded-md border border-border bg-surface px-2 py-1 text-right text-[12px] text-text outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          @if (usageLabel(category); as usage) {
+            <span
+              class="text-[11.5px]"
+              [class]="exhausted(category) ? 'text-danger' : 'text-muted'"
+            >
+              {{ usage }}{{ exhausted(category) ? ' — le QR ne tarife plus rien' : '' }}
+            </span>
+          } @else {
+            <span class="text-[11.5px] text-muted"> Sans limite, le QR vaut toute la soirée. </span>
+          }
         </div>
 
         @if (qrToken(); as token) {

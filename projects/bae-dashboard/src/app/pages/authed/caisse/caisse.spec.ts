@@ -428,6 +428,20 @@ describe(Caisse.name, () => {
       expect(store.receivableTotal()).toBe(300);
     });
 
+    it('retient ce qu’il reste au QR appliqué', async () => {
+      const store = await withCart();
+      store.applyCategory(staffCategory({ maxOrders: 10, usedOrders: 7 }) as never);
+
+      expect(store.category()!.remaining).toBe(3);
+    });
+
+    it('ne décompte rien pour une catégorie sans limite', async () => {
+      const store = await withCart();
+      store.applyCategory(staffCategory({ maxOrders: null, usedOrders: 4 }) as never);
+
+      expect(store.category()!.remaining).toBeNull();
+    });
+
     it('restaure les prix publics quand la catégorie est retirée', async () => {
       const store = await withCart();
       store.applyCategory(staffCategory() as never);

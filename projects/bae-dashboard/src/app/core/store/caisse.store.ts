@@ -31,6 +31,8 @@ export interface AppliedCategory {
   /** `internal` : le BAE offre l'écart, `payerName` n'a alors aucun sens. */
   readonly mode: SponsorshipMode;
   readonly payerName: string | null;
+  /** Commandes encore acceptées par le QR ; `null` quand il n'a pas de plafond. */
+  readonly remaining: number | null;
   readonly priceByProduct: ReadonlyMap<number, number>;
 }
 
@@ -332,6 +334,10 @@ export const CaisseStore = signalStore(
               eventId: String(scanned.eventId),
               mode: scanned.mode,
               payerName: scanned.payerName,
+              remaining:
+                scanned.maxOrders === null
+                  ? null
+                  : Math.max(0, scanned.maxOrders - scanned.usedOrders),
               priceByProduct: new Map(scanned.prices.map((p) => [p.productId, p.priceCents])),
             },
           });
