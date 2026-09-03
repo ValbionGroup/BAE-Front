@@ -240,6 +240,32 @@ describe(PaymentModal.name, () => {
       expect(text()).toContain('Rescanner');
     });
 
+    /**
+     * Le défaut visé : `submitting` bloqué à vrai. C'est le seul écran qui ne
+     * se referme pas tout seul — le caissier resterait sur « Paiement en
+     * cours… » sans même pouvoir rescanner.
+     */
+    it('reste utilisable si l’encaissement lève au lieu de rendre un message', async () => {
+      const modals = TestBed.inject(ModalService);
+      const closed: string[] = [];
+      modals.close = (id: string) => void closed.push(id);
+
+      fixture.componentRef.setInput('onConfirm', () => Promise.reject(new Error('réseau')));
+      fixture.detectChanges();
+      vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
+        onCode('QR-BRUT-TEST');
+        return true;
+      });
+
+      fixture.componentInstance['choose']('lydia');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(closed).toEqual([]);
+      expect(fixture.componentInstance['submitting']()).toBe(false);
+      expect(text()).toContain('Rescanner');
+    });
+
     it('affiche un message si la caméra est indisponible', async () => {
       vi.spyOn(scanner(), 'start').mockResolvedValue(false);
 

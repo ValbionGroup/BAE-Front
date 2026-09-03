@@ -176,14 +176,22 @@ export class PaymentModal implements OnDestroy {
     }
   }
 
+  /** `try`/`catch` : c'est le seul écran dont un `submitting` bloqué ne se
+   *  rattrape pas — espèces et carte referment la modale quoi qu'il arrive. */
   private async onLydiaScanned(paymentData: string): Promise<void> {
     this.scanner.stop();
     this.lydiaCamera.set('idle');
     this.submitting.set(true);
 
-    const failure = await this.onConfirm()('lydia', paymentData);
+    let failure: string | null | void;
+    try {
+      failure = await this.onConfirm()('lydia', paymentData);
+    } catch {
+      failure = 'L’encaissement a échoué.';
+    } finally {
+      this.submitting.set(false);
+    }
 
-    this.submitting.set(false);
     if (!failure) {
       this.modalService.close(this.id());
       return;
