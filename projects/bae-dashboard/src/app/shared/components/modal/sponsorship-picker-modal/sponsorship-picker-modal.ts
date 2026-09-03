@@ -75,7 +75,14 @@ export class SponsorshipPickerModal {
     return Math.min(...category.prices.map((price) => price.priceCents));
   }
 
+  /** Le QR a consommé son quota : la tranche n'est plus applicable. */
+  protected exhausted(category: SponsorshipCategory): boolean {
+    return category.maxOrders !== null && category.usedOrders >= category.maxOrders;
+  }
+
   protected choose(category: SponsorshipCategory): void {
+    if (this.exhausted(category)) return;
+
     this.picked()?.(category);
     this.modalService.close(this.id());
   }

@@ -215,6 +215,11 @@
                 } @else {
                   Remboursé par {{ tier.payerName ?? 'payeur non renseigné' }}
                 }
+                @if (tier.remaining !== null) {
+                  · {{ tier.remaining }} commande{{ tier.remaining > 1 ? 's' : '' }} restante{{
+                    tier.remaining > 1 ? 's' : ''
+                  }}
+                }
               </div>
             </div>
             <bae-btn kind="ghost" size="sm" (clicked)="store.clearCategory()">Retirer</bae-btn>

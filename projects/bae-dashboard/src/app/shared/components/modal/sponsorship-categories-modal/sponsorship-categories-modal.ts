@@ -49,6 +49,15 @@ function slug(label: string): string {
   );
 }
 
+/** `''` lève le plafond ; `undefined` = saisie illisible, qui ne vaut pas un ordre. */
+function parseLimit(value: string): number | null | undefined {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+
+  const parsed = Number(trimmed);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function messageOf(error: unknown, fallback: string): string {
   const body = (error as { error?: { message?: string } })?.error;
   return body?.message ?? fallback;
@@ -82,6 +91,7 @@ export class SponsorshipCategoriesModal {
   protected readonly newLabel = signal('');
   /** Externe par défaut : refacturer reste le cas courant. */
   protected readonly newMode = signal<SponsorshipMode>('external');
+  protected readonly newMaxOrders = signal('');
   protected readonly modeLabels = SPONSORSHIP_MODE_LABELS;
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -194,10 +204,16 @@ export class SponsorshipCategoriesModal {
     this.error.set(null);
     try {
       const created = await lastValueFrom(
-        this.service.create(this.eventId(), label, this.newMode()),
+        this.service.create(
+          this.eventId(),
+          label,
+          this.newMode(),
+          parseLimit(this.newMaxOrders()) ?? null,
+        ),
       );
       this.categories.update((all) => [...all, created]);
       this.newLabel.set('');
+      this.newMaxOrders.set('');
       this.newMode.set('external');
       this.select(created.id);
     } catch (error) {
@@ -209,6 +225,39 @@ export class SponsorshipCategoriesModal {
 
   protected onNewMode(value: string): void {
     this.newMode.set(value as SponsorshipMode);
+  }
+
+  /** Écrit à la volée, comme le mode : la grille et son plafond s'enregistrent
+   *  séparément. */
+  protected async commitMaxOrders(value: string): Promise<void> {
+    const category = this.selected();
+    const maxOrders = parseLimit(value);
+    if (!category || this.busy() || maxOrders === undefined || maxOrders === category.maxOrders) {
+      return;
+    }
+
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const updated = await lastValueFrom(
+        this.service.update(this.eventId(), category.id, { maxOrders }),
+      );
+      this.categories.update((all) => all.map((c) => (c.id === updated.id ? updated : c)));
+    } catch (error) {
+      this.error.set(messageOf(error, 'Impossible de changer la limite de cette catégorie.'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** `null` quand le QR n'a pas de plafond : il n'y a rien à décompter. */
+  protected usageLabel(category: SponsorshipCategory): string | null {
+    if (category.maxOrders === null) return null;
+    return `${category.usedOrders} / ${category.maxOrders} commandes utilisées`;
+  }
+
+  protected exhausted(category: SponsorshipCategory): boolean {
+    return category.maxOrders !== null && category.usedOrders >= category.maxOrders;
   }
 
   /**

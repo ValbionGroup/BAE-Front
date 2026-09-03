@@ -15,6 +15,8 @@ const staff: SponsorshipCategory = {
   eventId: 7,
   label: 'Staff BDE',
   mode: 'internal',
+  maxOrders: null,
+  usedOrders: 0,
   prices: [{ productId: 1, priceCents: 0 }],
 };
 
@@ -23,6 +25,7 @@ describe(SponsorshipPickerModal.name, () => {
     categories(): readonly SponsorshipCategory[];
     loading(): boolean;
     lowestPrice(category: SponsorshipCategory): number | null;
+    exhausted(category: SponsorshipCategory): boolean;
     choose(category: SponsorshipCategory): void;
     remove(): void;
   } {
@@ -30,7 +33,7 @@ describe(SponsorshipPickerModal.name, () => {
   }
 
   /** Rend la modale, sert la liste et capture ce que `picked` reçoit. */
-  async function render(currentId: number | null = null) {
+  async function render(currentId: number | null = null, category: SponsorshipCategory = staff) {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [SponsorshipPickerModal],
@@ -51,7 +54,7 @@ describe(SponsorshipPickerModal.name, () => {
     fixture.detectChanges();
 
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${baseUrl}/events/7/sponsorship-categories`).flush([staff]);
+    http.expectOne(`${baseUrl}/events/7/sponsorship-categories`).flush([category]);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -85,5 +88,25 @@ describe(SponsorshipPickerModal.name, () => {
     component.remove();
 
     expect(picked).toHaveBeenCalledWith(null);
+  });
+  it('reconnaît une tranche qui a épuisé son quota', async () => {
+    const { component } = await render();
+
+    expect(component.exhausted({ ...staff, maxOrders: 2, usedOrders: 2 })).toBe(true);
+    expect(component.exhausted({ ...staff, maxOrders: 2, usedOrders: 1 })).toBe(false);
+    expect(component.exhausted(staff)).toBe(false);
+  });
+
+  /**
+   * Le serveur refuserait de toute façon à l'encaissement. Bloquer ici évite au
+   * comptoir de composer un ticket entier avant de découvrir le refus.
+   */
+  it('refuse de choisir une tranche épuisée', async () => {
+    const spent = { ...staff, maxOrders: 2, usedOrders: 2 };
+    const { component, picked } = await render(null, spent);
+
+    component.choose(spent);
+
+    expect(picked).not.toHaveBeenCalled();
   });
 });
