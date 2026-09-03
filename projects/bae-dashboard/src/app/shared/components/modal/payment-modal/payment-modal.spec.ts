@@ -216,15 +216,16 @@ describe(PaymentModal.name, () => {
     });
 
     /**
-     * Le défaut visé : renvoyer le caissier sur la page caisse pour rouvrir la
-     * modale, alors que le client est encore là, QR en main.
+     * Le défaut visé : garder la modale ouverte sur un refus. L'échec
+     * s'annonce sur la page — plein écran sur téléphone, en bandeau au-dessus
+     * — et une modale par-dessus le cacherait.
      */
-    it('garde la modale ouverte et propose de rescanner quand Lydia refuse', async () => {
+    it('referme la modale même quand Lydia refuse', async () => {
       const modals = TestBed.inject(ModalService);
       const closed: string[] = [];
       modals.close = (id: string) => void closed.push(id);
 
-      fixture.componentRef.setInput('onConfirm', () => Promise.resolve('QR expiré.'));
+      fixture.componentRef.setInput('onConfirm', () => Promise.resolve());
       fixture.detectChanges();
       vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
         onCode('QR-BRUT-TEST');
@@ -235,17 +236,12 @@ describe(PaymentModal.name, () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(closed).toEqual([]);
-      expect(text()).toContain('QR expiré.');
-      expect(text()).toContain('Rescanner');
+      expect(closed).toEqual(['m1']);
     });
 
-    /**
-     * Le défaut visé : `submitting` bloqué à vrai. C'est le seul écran qui ne
-     * se referme pas tout seul — le caissier resterait sur « Paiement en
-     * cours… » sans même pouvoir rescanner.
-     */
-    it('reste utilisable si l’encaissement lève au lieu de rendre un message', async () => {
+    /** Le défaut visé : une modale bloquée sur « Paiement en cours… » si
+     *  l'encaissement lève au lieu de se résoudre. */
+    it('referme la modale même si l’encaissement lève', async () => {
       const modals = TestBed.inject(ModalService);
       const closed: string[] = [];
       modals.close = (id: string) => void closed.push(id);
@@ -261,9 +257,8 @@ describe(PaymentModal.name, () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(closed).toEqual([]);
+      expect(closed).toEqual(['m1']);
       expect(fixture.componentInstance['submitting']()).toBe(false);
-      expect(text()).toContain('Rescanner');
     });
 
     it('affiche un message si la caméra est indisponible', async () => {

@@ -34,12 +34,9 @@ export class PaymentModal implements OnDestroy {
   readonly id = input.required<string>();
   readonly totalCents = input.required<number>();
   readonly clientName = input<string>('Anonyme');
-  /** `Promise<string | null>` : `null` vaut succès, une chaîne est le message
-   *  d'échec — c'est ce que l'étape Lydia utilise pour rester ouverte plutôt
-   *  que de refermer aveuglément comme `cash`/`card`. */
-  readonly onConfirm = input<
-    (method: PaymentMethod, paymentData?: string) => Promise<string | null> | Promise<void> | void
-  >(() => {});
+  readonly onConfirm = input<(method: PaymentMethod, paymentData?: string) => Promise<void> | void>(
+    () => {},
+  );
 
   private readonly modalService = inject(ModalService);
   private readonly caisse = inject(CaisseStore);
@@ -62,10 +59,9 @@ export class PaymentModal implements OnDestroy {
 
   private readonly videoRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
   protected readonly lydiaCamera = signal<'idle' | 'starting' | 'scanning'>('idle');
-  /** Caméra indisponible, refusée, etc. — distinct d'un refus de paiement. */
+  /** Caméra indisponible, refusée, etc. — rien n'a été soumis, donc rien à
+   *  annoncer sur la page : ce refus-là s'affiche ici. */
   protected readonly lydiaScanError = signal<string | null>(null);
-  /** Le message renvoyé par `onConfirm` en cas d'échec du paiement lui-même. */
-  protected readonly lydiaFailure = signal<string | null>(null);
 
   /** Le paiement en cours sur le terminal, `null` dès qu'il est conclu. */
   protected readonly cardPayment = this.caisse.cardPayment;
@@ -154,7 +150,6 @@ export class PaymentModal implements OnDestroy {
     }
 
     this.step.set('lydia');
-    this.lydiaFailure.set(null);
     void this.startLydiaScan();
   }
 
@@ -176,32 +171,27 @@ export class PaymentModal implements OnDestroy {
     }
   }
 
-  /** `try`/`catch` : c'est le seul écran dont un `submitting` bloqué ne se
-   *  rattrape pas — espèces et carte referment la modale quoi qu'il arrive. */
+  /**
+   * La modale se referme quelle que soit l'issue, comme pour les espèces : un
+   * refus s'annonce sur la page — plein écran sur téléphone, en bandeau
+   * au-dessus — et non dans une modale que le caissier devrait fermer.
+   *
+   * Le rejet est absorbé plutôt que relayé : appelé depuis le scanner, il
+   * n'aurait personne pour le rattraper, et le message est déjà au bandeau.
+   */
   private async onLydiaScanned(paymentData: string): Promise<void> {
     this.scanner.stop();
     this.lydiaCamera.set('idle');
     this.submitting.set(true);
 
-    let failure: string | null | void;
     try {
-      failure = await this.onConfirm()('lydia', paymentData);
+      await this.onConfirm()('lydia', paymentData);
     } catch {
-      failure = 'L’encaissement a échoué.';
+      /* empty */
     } finally {
       this.submitting.set(false);
-    }
-
-    if (!failure) {
       this.modalService.close(this.id());
-      return;
     }
-    this.lydiaFailure.set(failure);
-  }
-
-  protected rescanLydia(): void {
-    this.lydiaFailure.set(null);
-    void this.startLydiaScan();
   }
 
   protected async cancelCard(): Promise<void> {

@@ -260,12 +260,9 @@ export class Caisse implements OnInit {
     });
   }
 
-  /** Le bandeau de confirmation porte le retour : pas de toast en doublon.
-   *  Rend le message d'échec (`null` si réussi) — c'est ce que le modal Lydia
-   *  utilise pour décider de rester ouvert plutôt que de refermer aveuglément. */
-  private async checkout(method: PaymentMethod, paymentData?: string): Promise<string | null> {
-    const order = await this.store.checkout(method, paymentData);
-    return order !== null ? null : this.store.checkoutError();
+  /** Le bandeau de confirmation porte le retour : pas de toast en doublon. */
+  private async checkout(method: PaymentMethod, paymentData?: string): Promise<void> {
+    await this.store.checkout(method, paymentData);
   }
 
   protected onCategoryClick(category: string): void {
