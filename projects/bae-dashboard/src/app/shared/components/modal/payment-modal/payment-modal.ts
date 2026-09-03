@@ -7,10 +7,12 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { LucideCreditCard, LucideEuro, LucideQrCode } from '@lucide/angular';
 import { Btn, formatCents, parseEuros } from '@bae/ui';
 import type { PaymentMethod } from '#core/models/order.model';
 import { CaisseStore } from '#core/store/caisse.store';
+import { selectMember } from '#core/store/auth/auth.selector';
 import { ModalService } from '../modal.service';
 import { ModalShell } from '../modal-shell/modal-shell';
 
@@ -28,10 +30,19 @@ export class PaymentModal {
   readonly id = input.required<string>();
   readonly totalCents = input.required<number>();
   readonly clientName = input<string>('Anonyme');
-  readonly onConfirm = input<(method: PaymentMethod) => Promise<void> | void>(() => {});
+  readonly onConfirm = input<(method: PaymentMethod, paymentData?: string) => Promise<void> | void>(
+    () => {},
+  );
+  /**
+   * Lydia ne se scanne pas d'ici : le conteneur des modales porte un
+   * `transform`, qui piège tout `position: fixed` d'un descendant. La modale se
+   * referme et la page ouvre le scanner en plein écran.
+   */
+  readonly onLydiaRequested = input<() => void>(() => {});
 
   private readonly modalService = inject(ModalService);
   private readonly caisse = inject(CaisseStore);
+  private readonly member = inject(Store).selectSignal(selectMember);
 
   protected readonly submitting = signal(false);
   protected readonly formatCents = formatCents;
@@ -40,6 +51,12 @@ export class PaymentModal {
   protected readonly icCard = LucideCreditCard;
 
   protected readonly step = signal<'method' | 'cash' | 'card'>('method');
+
+  /** `null` tant que le membre connecté a un téléphone renseigné — sinon le
+   *  motif à afficher : Lydia exige le numéro du caissier. */
+  protected readonly lydiaDisabledReason = computed(() =>
+    this.member()?.phone ? null : 'Renseignez votre téléphone dans Équipe avant d’utiliser Lydia.',
+  );
 
   /** Le paiement en cours sur le terminal, `null` dès qu'il est conclu. */
   protected readonly cardPayment = this.caisse.cardPayment;
@@ -121,7 +138,8 @@ export class PaymentModal {
       return;
     }
 
-    void this.pay(method);
+    this.onLydiaRequested()();
+    this.modalService.close(this.id());
   }
 
   protected async cancelCard(): Promise<void> {

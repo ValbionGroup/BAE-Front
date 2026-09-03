@@ -437,3 +437,11 @@
     </aside>
   </div>
 }
+
+@if (lydiaScanning()) {
+  <bfd-lydia-scan
+    [submitting]="lydiaSubmitting()"
+    (scanned)="onLydiaScanned($event)"
+    (dismissed)="lydiaScanning.set(false)"
+  />
+}

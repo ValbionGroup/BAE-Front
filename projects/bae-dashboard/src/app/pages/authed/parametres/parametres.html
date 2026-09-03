@@ -27,6 +27,40 @@
       corrigent pas ici.
     </p>
 
+    <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Téléphone</h3>
+    <div class="mb-5 rounded-md border border-border-s bg-surface px-3 py-3">
+      <bae-field
+        label="Mon numéro de mobile"
+        hint="Exigé par Lydia pour encaisser au comptoir. Visible du bureau seulement."
+      >
+        <bae-input
+          type="tel"
+          placeholder="06 12 34 56 78"
+          [value]="phone()"
+          (valueChange)="onPhone($event)"
+        />
+      </bae-field>
+
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <bae-btn
+          type="button"
+          kind="outline"
+          size="sm"
+          [disabled]="phoneSaving()"
+          (clicked)="savePhone()"
+        >
+          {{ phoneSaving() ? 'Enregistrement…' : 'Enregistrer' }}
+        </bae-btn>
+        @if (phoneSaved()) {
+          <bae-badge kind="ok" [dot]="true">Enregistré</bae-badge>
+        }
+      </div>
+
+      @if (phoneError(); as error) {
+        <p role="alert" class="mt-1.5 mb-0 text-[11.5px] text-danger">{{ error }}</p>
+      }
+    </div>
+
     <h3 class="mt-1.5 mb-3 text-[13px] font-semibold text-text">Telegram</h3>
     <div class="mb-5 rounded-md border border-border-s bg-surface px-3 py-3">
       @if (telegramLinked()) {

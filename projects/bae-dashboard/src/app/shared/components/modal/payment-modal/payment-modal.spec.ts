@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { PaymentModal, type PaymentMethod } from './payment-modal';
 import { ModalService } from '../modal.service';
 
@@ -13,7 +14,24 @@ describe(PaymentModal.name, () => {
     paid = [];
     await TestBed.configureTestingModule({
       imports: [PaymentModal],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideMockStore({
+          initialState: {
+            auth: {
+              member: {
+                id: 1,
+                points: 0,
+                firstName: 'A',
+                lastName: 'B',
+                role: 'x',
+                phone: '0612345678',
+              },
+            },
+          },
+        }),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PaymentModal);
@@ -131,5 +149,51 @@ describe(PaymentModal.name, () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('Lydia', () => {
+    function setMemberPhone(phone: string | null): void {
+      TestBed.inject(MockStore).setState({
+        auth: { member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'x', phone } },
+      });
+      fixture.detectChanges();
+    }
+
+    const lydiaButton = (): HTMLButtonElement | undefined =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (el) => el.textContent?.trim() === 'Lydia',
+      ) as HTMLButtonElement | undefined;
+
+    it('désactive le bouton Lydia quand le membre connecté n’a pas de téléphone', () => {
+      setMemberPhone(null);
+      expect(lydiaButton()?.disabled).toBe(true);
+    });
+
+    it('active le bouton Lydia quand le membre connecté a un téléphone', () => {
+      setMemberPhone('0612345678');
+      expect(lydiaButton()?.disabled).toBe(false);
+    });
+
+    /**
+     * Le scan ne peut pas vivre ici : le conteneur des modales porte un
+     * `transform`, qui piège tout `position: fixed`. La modale passe donc la
+     * main à la page, qui l'ouvre en plein écran.
+     */
+    it('passe la main à la page et se referme au lieu de scanner elle-même', async () => {
+      const modals = TestBed.inject(ModalService);
+      const closed: string[] = [];
+      modals.close = (id: string) => void closed.push(id);
+
+      let requested = 0;
+      setMemberPhone('0612345678');
+      fixture.componentRef.setInput('onLydiaRequested', () => (requested += 1));
+      fixture.detectChanges();
+
+      fixture.componentInstance['choose']('lydia');
+      await fixture.whenStable();
+
+      expect(requested).toBe(1);
+      expect(closed).toEqual(['m1']);
+    });
   });
 });

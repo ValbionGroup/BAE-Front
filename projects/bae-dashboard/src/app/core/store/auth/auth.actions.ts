@@ -29,6 +29,11 @@ export const loginFailure = createAction('[Auth] Login Failure', props<{ error: 
  * La liaison Telegram a bougé sans que la session change. Ne touche qu'à elle :
  * réhydrater le profil entier pour un booléen ferait clignoter la page.
  */
+export const memberPhoneChanged = createAction(
+  '[Auth] Member Phone Changed',
+  props<{ phone: string | null }>(),
+);
+
 export const telegramLinkChanged = createAction(
   '[Auth] Telegram Link Changed',
   props<{ telegram: TelegramLinkModel }>(),

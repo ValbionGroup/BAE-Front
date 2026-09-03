@@ -53,7 +53,7 @@ async function render(auth: AuthState): Promise<{
 function memberAuth(hasPassword: boolean, twoFactorEnabled = false): AuthState {
   return {
     user: userWith(hasPassword, twoFactorEnabled),
-    member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'Membre' },
+    member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'Membre', phone: null },
     permissions: [],
   };
 }
@@ -137,7 +137,7 @@ describe(ParametresSecurite.name, () => {
   ])('$label', async ({ hasPassword, visible, subtitle, twoFactorStatus, label }) => {
     const { fixture } = await render({
       user: userWith(hasPassword),
-      member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'Membre' },
+      member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'Membre', phone: null },
       permissions: [],
     });
     const host = fixture.nativeElement as HTMLElement;
@@ -203,7 +203,7 @@ describe(ParametresSecurite.name, () => {
   ])('la jauge mesure la saisie : $label', async ({ typed, bars, strength, advice, label }) => {
     const { fixture } = await render({
       user: userWith(true),
-      member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'Membre' },
+      member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'Membre', phone: null },
       permissions: [],
     });
 

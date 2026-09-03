@@ -27,6 +27,12 @@ export const authReducer = createReducer(
     alert: undefined,
   })),
 
+  on(AuthActions.memberPhoneChanged, (state, { phone }) =>
+    state.member === undefined || state.member === null
+      ? state
+      : { ...state, member: { ...state.member, phone } },
+  ),
+
   on(AuthActions.telegramLinkChanged, (state, { telegram }) =>
     state.user === undefined ? state : { ...state, user: { ...state.user, telegram } },
   ),
