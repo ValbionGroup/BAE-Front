@@ -37,10 +37,9 @@ export class PaymentModal implements OnDestroy {
   /** `Promise<string | null>` : `null` vaut succès, une chaîne est le message
    *  d'échec — c'est ce que l'étape Lydia utilise pour rester ouverte plutôt
    *  que de refermer aveuglément comme `cash`/`card`. */
-  readonly onConfirm =
-    input<(method: PaymentMethod, paymentData?: string) => Promise<string | null> | Promise<void> | void>(
-      () => {},
-    );
+  readonly onConfirm = input<
+    (method: PaymentMethod, paymentData?: string) => Promise<string | null> | Promise<void> | void
+  >(() => {});
 
   private readonly modalService = inject(ModalService);
   private readonly caisse = inject(CaisseStore);

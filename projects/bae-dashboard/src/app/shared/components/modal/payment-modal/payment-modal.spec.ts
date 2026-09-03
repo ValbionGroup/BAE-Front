@@ -21,7 +21,14 @@ describe(PaymentModal.name, () => {
         provideMockStore({
           initialState: {
             auth: {
-              member: { id: 1, points: 0, firstName: 'A', lastName: 'B', role: 'x', phone: '0612345678' },
+              member: {
+                id: 1,
+                points: 0,
+                firstName: 'A',
+                lastName: 'B',
+                role: 'x',
+                phone: '0612345678',
+              },
             },
           },
         }),
@@ -158,9 +165,9 @@ describe(PaymentModal.name, () => {
     }
 
     const lydiaButton = (): HTMLButtonElement | undefined =>
-      Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-      ).find((el) => el.textContent?.trim() === 'Lydia') as HTMLButtonElement | undefined;
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (el) => el.textContent?.trim() === 'Lydia',
+      ) as HTMLButtonElement | undefined;
 
     it('désactive le bouton Lydia quand le membre connecté n’a pas de téléphone', () => {
       setMemberPhone(null);
@@ -174,13 +181,10 @@ describe(PaymentModal.name, () => {
 
     it('scanne puis soumet automatiquement le contenu du QR', async () => {
       const calls: Array<[string, string | undefined]> = [];
-      fixture.componentRef.setInput(
-        'onConfirm',
-        (method: PaymentMethod, paymentData?: string) => {
-          calls.push([method, paymentData]);
-          return Promise.resolve(null);
-        },
-      );
+      fixture.componentRef.setInput('onConfirm', (method: PaymentMethod, paymentData?: string) => {
+        calls.push([method, paymentData]);
+        return Promise.resolve(null);
+      });
       fixture.detectChanges();
       vi.spyOn(scanner(), 'start').mockImplementation(async (_video, onCode) => {
         onCode('QR-BRUT-TEST');

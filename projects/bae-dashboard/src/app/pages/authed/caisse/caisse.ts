@@ -239,6 +239,10 @@ export class Caisse implements OnInit {
   protected openPayment(): void {
     if (this.store.itemCount() === 0) return;
 
+    // `BarcodeScannerService` est un singleton : laisser la caméra du
+    // sélecteur d'acheteur allumée ici la ferait arracher par le scan Lydia.
+    this.pickingBuyer.set(false);
+
     if (this.store.chargedTotal() === 0) {
       void this.checkout('cash');
       return;
@@ -250,7 +254,8 @@ export class Caisse implements OnInit {
       inputs: {
         totalCents: this.store.netTotal(),
         clientName: this.store.selectedBuyer()?.name ?? 'Anonyme',
-        onConfirm: (method: PaymentMethod, paymentData?: string) => this.checkout(method, paymentData),
+        onConfirm: (method: PaymentMethod, paymentData?: string) =>
+          this.checkout(method, paymentData),
       },
     });
   }

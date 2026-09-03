@@ -459,7 +459,10 @@ export const CaisseStore = signalStore(
           }
         },
 
-        async checkout(method: PaymentMethod = 'cash', paymentData?: string): Promise<Order | null> {
+        async checkout(
+          method: PaymentMethod = 'cash',
+          paymentData?: string,
+        ): Promise<Order | null> {
           if (method === 'card') return startCardPayment();
 
           const eventId = store.sessionEventId();
