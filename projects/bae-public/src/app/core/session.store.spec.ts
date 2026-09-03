@@ -154,7 +154,6 @@ describe(`${SessionStore.name} — bloc client`, () => {
   });
 
   const CLIENT = {
-    phone: '0612345678',
     promotion: 'I2',
     school: 'ENSEIRB',
     registeredAt: '2026-01-12',
@@ -203,10 +202,10 @@ describe(`${SessionStore.name} — bloc client`, () => {
     store.setProfile({
       user: { id: 7, email: 'c@enseirb.fr', telegram: NO_TELEGRAM },
       member: null,
-      client: { ...CLIENT, phone: '0699999999' },
+      client: { ...CLIENT, preparationNote: 'Sans lactose' },
     });
 
-    expect(store.client()?.phone).toBe('0699999999');
+    expect(store.client()?.preparationNote).toBe('Sans lactose');
     expect(store.status()).toBe('authenticated');
   });
 
@@ -228,6 +227,6 @@ describe(`${SessionStore.name} — bloc client`, () => {
     store.setTelegram({ handle: 'lea_m', linked: false, linkedAt: null });
 
     expect(store.user()?.telegram.linked).toBe(false);
-    expect(store.client()?.phone).toBe('0612345678');
+    expect(store.client()?.preparationNote).toBe('Allergie arachide');
   });
 });

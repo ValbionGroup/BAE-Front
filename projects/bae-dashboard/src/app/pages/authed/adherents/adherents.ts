@@ -276,7 +276,6 @@ export class Adherents implements OnInit {
     if (!detail) return [];
     return [
       { k: 'Email', v: detail.email },
-      { k: 'Téléphone', v: detail.phone ?? '—' },
       { k: 'Promotion', v: detail.promotion ?? '—' },
       { k: 'École', v: detail.school ?? '—' },
       { k: 'Inscription', v: this.formatDate(detail.registeredAt) },

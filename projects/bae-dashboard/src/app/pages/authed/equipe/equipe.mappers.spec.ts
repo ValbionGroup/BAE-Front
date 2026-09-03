@@ -19,6 +19,7 @@ function member(over: Partial<ApiTeamMember> = {}): ApiTeamMember {
     id: 2,
     user: { id: 2, email: 'tommy@bae.test', firstName: 'Tommy', lastName: 'Klein' },
     roleId: 1,
+    phone: null,
     points: 3,
     createdAt: null,
     updatedAt: null,

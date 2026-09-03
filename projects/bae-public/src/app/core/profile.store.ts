@@ -14,7 +14,6 @@ export interface TelegramLinkTicket {
 }
 
 export type ProfileWritePayload = {
-  phone?: string | null;
   telegramHandle?: string | null;
   preparationNote?: string | null;
 };

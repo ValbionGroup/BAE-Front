@@ -12,7 +12,6 @@ const NO_TELEGRAM: TelegramLink = { handle: null, linked: false, linkedAt: null 
 import type { MyCounterOrder, MyPreOrder, MySubscription } from '../../core/purchases.store';
 
 const CLIENT: ClientProfile = {
-  phone: '0612345678',
   promotion: 'I2',
   school: 'ENSEIRB',
   registeredAt: '2026-01-12',

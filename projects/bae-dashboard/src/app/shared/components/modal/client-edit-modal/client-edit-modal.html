@@ -7,15 +7,6 @@
   (close)="close()"
 >
   <div class="flex flex-col gap-3">
-    <bae-field label="Téléphone" hint="Laisser vide efface le numéro enregistré.">
-      <bae-input
-        type="tel"
-        placeholder="06 12 34 56 78"
-        [value]="phone()"
-        (valueChange)="onPhone($event)"
-      />
-    </bae-field>
-
     <bae-field
       label="Note interne"
       hint="Visible du bureau seulement — allergies, litige en cours, consigne de caisse."

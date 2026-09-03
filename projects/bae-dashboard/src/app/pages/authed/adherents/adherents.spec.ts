@@ -66,7 +66,6 @@ const SUMMARY: ClientsSummary = {
 const DETAIL: ClientDetail = {
   ...CLIENTS[0],
   school: 'ENSEIRB-MATMECA',
-  phone: '06 24 31 88 02',
   registeredAt: '2025-09-12',
   note: 'Allergie noix.',
   noteAuthor: 'Sarah K.',
@@ -285,7 +284,7 @@ describe(Adherents.name, () => {
     const modal = clickAndRead(fixture, 'Modifier');
 
     expect(modal.component).toBe(ClientEditModal);
-    expect((modal.inputs?.['client'] as ClientDetail).phone).toBe('06 24 31 88 02');
+    expect((modal.inputs?.['client'] as ClientDetail).id).toBe(DETAIL.id);
   });
 
   it('renews from the sheet, on the selected client', async () => {
