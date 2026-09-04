@@ -15,6 +15,13 @@ export type TransactionType = 'cash' | 'lydia' | 'card';
  * Libellés des trois moyens de paiement. Le `Record` est exhaustif à dessein :
  * ajouter une valeur à `TransactionType` sans l'étiqueter ne compile pas.
  */
+/**
+ * Ce qui a produit l'encaissement. Les trois valeurs nommées correspondent aux
+ * trois seuls chemins qui créent une transaction : la caisse, une précommande
+ * réglée en ligne, une cotisation. `other` couvre une transaction orpheline.
+ */
+export type TransactionNature = 'order' | 'pre_order' | 'subscription' | 'other';
+
 export const PAYMENT_METHOD_LABEL: Record<TransactionType, string> = {
   cash: 'Espèces',
   lydia: 'Lydia',
@@ -34,6 +41,12 @@ export interface ApiTransaction {
   /** Flattened from the first attached order; null when no order carries an event. */
   eventId: number | null;
   orderIds: number[];
+  nature: TransactionNature;
+  /** Soirée pour la caisse, résumé produit pour une précommande, fast pass pour une cotisation. */
+  label: string | null;
+  /** Somme des quantités achetées, tous articles confondus. `0` pour une cotisation. */
+  itemCount: number;
+  payer: string | null;
   createdAt: string | null;
 }
 
