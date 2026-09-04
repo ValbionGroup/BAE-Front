@@ -45,8 +45,20 @@ export interface RosterRow {
   name: string;
   role: string;
   status: Presence;
-  when: Date;
+  /**
+   * ⚠️ **Aucune source côté back** : `member_responses` ne porte que
+   * `is_available`, jamais la date de la réponse. Le champ reste déclaré parce
+   * que c'est un manque du back, mais le type ne le promet plus.
+   */
+  when?: Date;
+  /** Un rappel `presence.pending` est déjà parti à ce membre sur cette soirée. */
   late: boolean;
+}
+
+/** Retour de `POST /events/:id/reminders`. Les deux comptent des **membres**. */
+export interface RemindResult {
+  queued: number;
+  alreadySent: number;
 }
 
 /**
@@ -96,6 +108,6 @@ export type EventApiDto = Omit<EventData, 'id' | 'date'> & {
 };
 
 export type RosterRowApiDto = Omit<RosterRow, 'when'> & {
-  /** ISO 8601. */
-  readonly when: string;
+  /** ISO 8601. Absent aujourd'hui — cf. `RosterRow.when`. */
+  readonly when?: string;
 };
