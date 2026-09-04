@@ -311,4 +311,33 @@ describe(EventsStore.name, () => {
       expect(store.getEventById('7')).toBeUndefined();
     });
   });
+
+  describe('remindPending', () => {
+    it('rend le compte du serveur', async () => {
+      const pending = store.remindPending('42');
+
+      const req = httpMock.expectOne(`${baseUrl}/events/42/reminders`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ queued: 3, alreadySent: 0 });
+
+      await expect(pending).resolves.toEqual({
+        ok: true,
+        result: { queued: 3, alreadySent: 0 },
+      });
+    });
+
+    it('rend le refus sans le jeter', async () => {
+      const pending = store.remindPending('42');
+
+      httpMock
+        .expectOne(`${baseUrl}/events/42/reminders`)
+        .flush(
+          { code: 'E_EVENT_NOT_SCHEDULED', message: 'Soirée close.' },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+
+      const outcome = await pending;
+      expect(outcome.ok).toBe(false);
+    });
+  });
 });

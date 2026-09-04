@@ -7,6 +7,7 @@ import {
   EventDetail,
   Presence,
   RosterRow,
+  RemindResult,
   RosterRowApiDto,
 } from '#core/models/event.model';
 import { API_BASE_URL } from '@bae/ui';
@@ -66,6 +67,16 @@ export class EventsService {
   }
 
   /**
+   * Relance les membres sans réponse. Le serveur refuse en 422
+   * (`E_EVENT_NOT_SCHEDULED`) sur une soirée passée ou en cours : le message est
+   * lisible, l'appelant doit l'afficher.
+   */
+  remindPending(id: string): Observable<RemindResult> {
+    const url = this.buildUrl(ApiEndPointV1.EVENT_REMINDERS).replace(':id', id);
+    return this.http.post<RemindResult>(url, {});
+  }
+
+  /**
    * Clôture la soirée : consolide les points **et** passe `status: 'completed'`.
    * Un seul appel, idempotent — le serveur fait les deux dans la même
    * transaction. La marche arrière est `node ace event:unsettle`.
@@ -106,8 +117,12 @@ export class EventsService {
     return { ...rest, id: String(id), date: parseEventDate(date) };
   }
 
+  /**
+   * ⚠️ `when` n'arrive pas : `new Date(undefined)` donnait `Invalid Date` à
+   * chaque ligne. Cf. `RosterRow.when`.
+   */
   private toRosterRow({ when, ...rest }: RosterRowApiDto): RosterRow {
-    return { ...rest, when: new Date(when) };
+    return when === undefined ? { ...rest } : { ...rest, when: new Date(when) };
   }
 
   private buildUrl(endpoint: ApiEndPointV1): string {

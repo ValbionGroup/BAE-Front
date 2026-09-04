@@ -1,7 +1,14 @@
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { computed, inject } from '@angular/core';
 import { EventsService } from '#core/services/events/events-service';
-import { EventDetail, EventStatus, MenuItem, Presence, RosterRow } from '#core/models/event.model';
+import {
+  EventDetail,
+  EventStatus,
+  MenuItem,
+  Presence,
+  RemindResult,
+  RosterRow,
+} from '#core/models/event.model';
 import { LogistiqueService } from '#core/services/logistique/logistique-service';
 import { lastValueFrom } from 'rxjs';
 import { LoadingStatus } from '#core/models/global.model';
@@ -30,6 +37,9 @@ export type PresenceUpdateResult = { ok: true } | { ok: false; error: unknown };
  * appelants qui n'attendent pas.
  */
 export type EventStatusResult = PresenceUpdateResult;
+
+/** Retour de `remindPending` : le compte du serveur, ou le refus, jamais un jet. */
+export type RemindOutcome = { ok: true; result: RemindResult } | { ok: false; error: unknown };
 
 interface EventsState {
   readonly loading: LoadingStatus;
@@ -251,6 +261,19 @@ export const EventsStore = signalStore(
        * un appel. Le patch local n'a lieu qu'après un succès serveur — fermer
        * l'écran sur une clôture refusée serait le mensonge d'avant, en pire.
        */
+      /**
+       * Ne patche rien localement : le roster est rechargé par l'appelant, qui
+       * seul sait s'il est à l'écran.
+       */
+      async remindPending(eventId: string): Promise<RemindOutcome> {
+        try {
+          const result = await lastValueFrom(eventService.remindPending(eventId));
+          return { ok: true, result };
+        } catch (error) {
+          return { ok: false, error };
+        }
+      },
+
       async closeEvent(eventId: string): Promise<EventStatusResult> {
         try {
           await lastValueFrom(eventService.settle(eventId));

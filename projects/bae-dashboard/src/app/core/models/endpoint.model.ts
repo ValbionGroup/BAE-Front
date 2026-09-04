@@ -26,6 +26,7 @@ export enum ApiEndPointV1 {
   EVENTS = '/events',
   EVENT_MEMBER_RESPONSE = '/events/:id/response',
   EVENT_ROSTER = '/events/:id/roster',
+  EVENT_REMINDERS = '/events/:id/reminders',
   /** Les deux seules portes vers `events.status` — cf. `EventsStore`. */
   EVENT_OPEN = '/events/:id/open',
   EVENT_SETTLE = '/events/:id/settle',
