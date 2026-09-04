@@ -14,7 +14,6 @@ import {
   LucideDynamicIcon,
   LucideEllipsis,
   LucidePencil,
-  LucidePlus,
   LucideSearch,
   LucideTrash2,
 } from '@lucide/angular';
@@ -52,15 +51,6 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
 export class Equipe implements OnInit {
   protected readonly pageActions = computed<readonly PageAction[]>(() => [
     { label: 'Audit log', icon: this.icDownload, kind: 'ghost', run: () => {} },
-    {
-      label: 'Inviter un membre',
-      icon: this.icPlus,
-      kind: 'primary',
-      primary: true,
-      disabled: true,
-      title: "Endpoint d'invitation non disponible",
-      run: () => {},
-    },
   ]);
 
   private readonly pageHeader = inject(PageHeaderService);
@@ -101,7 +91,6 @@ export class Equipe implements OnInit {
   }
 
   protected readonly icDownload = LucideDownload;
-  protected readonly icPlus = LucidePlus;
   protected readonly icSearch = LucideSearch;
   protected readonly icMore = LucideEllipsis;
   protected readonly icPencil = LucidePencil;
