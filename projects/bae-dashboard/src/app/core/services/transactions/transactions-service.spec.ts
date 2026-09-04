@@ -32,6 +32,10 @@ describe(TransactionsService.name, () => {
       amount: 124.5,
       eventId: 10,
       orderIds: [900001],
+      nature: 'order',
+      label: null,
+      itemCount: 0,
+      payer: null,
       createdAt: '2026-07-06T23:29:21.775+00:00',
     };
 

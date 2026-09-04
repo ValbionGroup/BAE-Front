@@ -10,15 +10,46 @@
       </div>
     }
 
-    <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       @for (k of kpis(); track k.label) {
         <div class="rounded-md border border-border-s bg-surface p-3.5">
-          <div class="text-[11px] text-muted">{{ k.label }}</div>
-          <div class="mono tnum mt-1 text-[22px] font-semibold text-text">{{ k.value }} €</div>
-          <div class="mt-0.5 text-[11px] text-muted">{{ k.detail }}</div>
+          <dt class="text-[11px] text-muted">{{ k.label }}</dt>
+          <dd class="mono tnum mt-1 text-[22px] font-semibold text-text">{{ k.value }} €</dd>
+          <dd class="mt-0.5 text-[11px] text-muted">{{ k.detail }}</dd>
         </div>
       }
+    </dl>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-3 border-b border-border-s px-[22px] py-2.5">
+    <div class="flex items-center gap-1" role="group" aria-label="Filtrer par nature">
+      @for (tab of natureTabs; track tab.label) {
+        <button
+          type="button"
+          data-nature-tab
+          class="h-7 rounded-md px-2.5 text-[11px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          [class]="
+            activeNature() === tab.id
+              ? 'bg-surface-2 text-text'
+              : 'text-muted hover:bg-surface-2/50 hover:text-text'
+          "
+          [attr.aria-pressed]="activeNature() === tab.id"
+          (click)="activeNature.set(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      }
     </div>
+
+    <label class="sr-only" for="paiements-search">Rechercher un encaissement</label>
+    <input
+      id="paiements-search"
+      type="search"
+      class="h-8 min-w-0 flex-1 rounded-md border border-border-s bg-surface px-2.5 text-xs text-text placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      placeholder="Intitulé, payeur, référence…"
+      [value]="searchQuery()"
+      (input)="searchQuery.set($any($event.target).value)"
+    />
   </div>
 
   <div class="min-h-0 flex-1 overflow-y-auto">
@@ -32,142 +63,67 @@
     } @else if (rows().length === 0) {
       <div class="p-[22px] text-xs text-muted">Aucune transaction enregistrée.</div>
     } @else {
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse text-sm">
-          <thead>
-            <tr class="border-b border-border-s text-left">
-              <th
-                class="px-[22px] py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Référence
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Date
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Moyen
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Commandes
-              </th>
-              <th
-                class="px-[22px] py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Montant
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of rows(); track r.id) {
-              <tr class="border-b border-border-s hover:bg-surface-2/50">
-                <td class="mono px-[22px] py-3 text-xs text-text-2">
-                  {{ r.reference }}
-                </td>
-                <td class="mono tnum px-3 py-3 text-xs text-muted">{{ r.when }}</td>
-                <td class="px-3 py-3">
-                  <bae-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">
-                    {{ r.method }}
-                  </bae-badge>
-                </td>
-                <td class="px-3 py-3 text-xs text-muted">
-                  {{ r.orderCount }} {{ r.orderCount > 1 ? 'commandes' : 'commande' }}
-                </td>
-                <td class="mono tnum px-[22px] py-3 text-right font-semibold text-text">
-                  {{ formatMoney(r.amount) }} €
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <ul class="divide-y divide-border-s">
+        @for (r of rows(); track r.id) {
+          <li class="flex items-center gap-4 px-[22px] py-3 hover:bg-surface-2/50">
+            <div class="min-w-0 flex-1">
+              <div data-ledger-title class="truncate text-sm text-text">{{ r.title }}</div>
+              <div class="mono tnum mt-0.5 truncate text-[11px] text-muted">{{ r.detail }}</div>
+            </div>
+            <bae-badge [kind]="r.method === 'Espèces' ? 'neutral' : 'blue'">{{
+              r.method
+            }}</bae-badge>
+            <div class="w-32 shrink-0 truncate text-right text-xs text-muted">{{ r.payer }}</div>
+            <div class="mono tnum w-24 shrink-0 text-right text-sm font-semibold text-text">
+              {{ r.amount }} €
+            </div>
+          </li>
+        }
+      </ul>
+
+      @if (hiddenCount() > 0) {
+        <div class="border-t border-border-s px-[22px] py-3">
+          <button
+            type="button"
+            data-show-more
+            class="h-8 rounded-md border border-border-s px-3 text-xs text-text-2 hover:bg-surface-2/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            (click)="showMore()"
+          >
+            Afficher {{ hiddenCount() }} encaissement{{ hiddenCount() > 1 ? 's' : '' }} de plus
+          </button>
+        </div>
+      }
     }
-    <div class="border-t border-border-s px-[22px] py-4">
-      <div class="flex items-center gap-2">
-        <svg [lucideIcon]="icQr" [size]="12" class="text-muted" aria-hidden="true"></svg>
-        <span class="text-[10.5px] font-semibold uppercase tracking-wider text-muted">
-          Paiements en ligne
-        </span>
-      </div>
-      <div class="mt-1 text-[11px] text-muted">
-        Toutes soirées confondues : une demande de paiement n'appartient à aucune soirée avant
-        d'avoir abouti.
-      </div>
-    </div>
 
     @if (paymentsError(); as error) {
-      <div class="flex items-start gap-2.5 px-[22px] pb-[22px] text-xs text-danger" role="alert">
+      <div class="flex items-start gap-2.5 px-[22px] py-4 text-xs text-danger" role="alert">
         <svg [lucideIcon]="icAlert" [size]="14" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
         <span>{{ error }}</span>
       </div>
-    } @else if (paymentRows().length === 0) {
-      <div class="px-[22px] pb-[22px] text-xs text-muted">Aucun paiement en ligne enregistré.</div>
-    } @else {
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse text-sm">
-          <thead>
-            <tr class="border-b border-border-s text-left">
-              <th
-                class="px-[22px] py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Commande
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Date
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Payeur
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Objet
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Statut
-              </th>
-              <th
-                class="px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Référence prestataire
-              </th>
-              <th
-                class="px-[22px] py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wider text-muted"
-              >
-                Montant
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (p of paymentRows(); track p.id) {
-              <tr class="border-b border-border-s hover:bg-surface-2/50">
-                <td class="mono px-[22px] py-3 text-xs text-text-2">{{ p.orderRef }}</td>
-                <td class="mono tnum px-3 py-3 text-xs text-muted">{{ p.when }}</td>
-                <td class="px-3 py-3 text-xs text-text">{{ p.payer }}</td>
-                <td class="px-3 py-3 text-xs text-muted">{{ p.kind }}</td>
-                <td class="px-3 py-3">
-                  <bae-badge [kind]="p.statusKind">{{ p.statusLabel }}</bae-badge>
-                </td>
-                <td class="mono px-3 py-3 text-xs text-muted">{{ p.reference }}</td>
-                <td class="mono tnum px-[22px] py-3 text-right font-semibold text-text">
-                  {{ p.amount }} €
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+    } @else if (unsettled().length > 0) {
+      <section class="border-t border-border-s">
+        <h2
+          class="px-[22px] pb-2 pt-4 text-[10.5px] font-semibold uppercase tracking-wider text-muted"
+        >
+          {{ unsettled().length }} demande{{ unsettled().length > 1 ? 's' : '' }} non aboutie{{
+            unsettled().length > 1 ? 's' : ''
+          }}
+          · {{ unsettledTotal() }} €
+        </h2>
+        <ul class="divide-y divide-border-s">
+          @for (u of unsettled(); track u.id) {
+            <li class="flex items-center gap-4 px-[22px] py-2.5">
+              <div class="mono min-w-0 flex-1 truncate text-xs text-text-2">{{ u.orderRef }}</div>
+              <div class="mono tnum shrink-0 text-[11px] text-muted">{{ u.when }}</div>
+              <bae-badge [kind]="u.statusKind">{{ u.statusLabel }}</bae-badge>
+              <div class="w-32 shrink-0 truncate text-right text-xs text-muted">{{ u.payer }}</div>
+              <div class="mono tnum w-24 shrink-0 text-right text-xs text-muted">
+                {{ u.amount }} €
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
     }
   </div>
 </div>
