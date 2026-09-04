@@ -5,10 +5,11 @@ import {
   effect,
   inject,
   input,
+  signal,
   untracked,
 } from '@angular/core';
 import { LucideBell } from '@lucide/angular';
-import { Btn, Badge, BadgeKind, Avatar } from '@bae/ui';
+import { Btn, Badge, BadgeKind, Avatar, ToastService, messageOf } from '@bae/ui';
 import { Presence, RosterRow } from '#core/models/event.model';
 import { EventsStore } from '#core/store/events.store';
 
@@ -26,10 +27,13 @@ import { EventsStore } from '#core/store/events.store';
 })
 export class RosterAside {
   private readonly events = inject(EventsStore);
+  private readonly toast = inject(ToastService);
 
   readonly eventId = input<string | undefined>(undefined);
 
   protected readonly icBell = LucideBell;
+
+  protected readonly reminding = signal(false);
 
   protected readonly event = computed(() => {
     const id = this.eventId();
@@ -84,6 +88,46 @@ export class RosterAside {
     effect(() => {
       const id = this.eventId();
       if (id) untracked(() => void this.events.loadEventRoster(id));
+    });
+  }
+
+  /**
+   * Les trois issues d'un succès sont distinctes à l'écran parce qu'elles le
+   * sont pour la personne qui clique : sans le cas « déjà relancés », elle
+   * recliquerait indéfiniment sur un bouton qui ne fait plus rien.
+   */
+  protected async remind(): Promise<void> {
+    const id = this.eventId();
+    if (!id || this.reminding()) return;
+
+    this.reminding.set(true);
+    const outcome = await this.events.remindPending(id);
+    this.reminding.set(false);
+
+    if (!outcome.ok) {
+      this.toast.show({
+        type: 'error',
+        title: 'Relance impossible',
+        message: messageOf(outcome.error, 'La relance a échoué.'),
+      });
+      return;
+    }
+
+    const { queued, alreadySent } = outcome.result;
+
+    if (queued > 0) {
+      const plural = queued === 1 ? '' : 's';
+      this.toast.show({
+        type: 'success',
+        title: `${queued} membre${plural} relancé${plural}.`,
+      });
+      void this.events.loadEventRoster(id);
+      return;
+    }
+
+    this.toast.show({
+      type: 'info',
+      title: alreadySent > 0 ? 'Déjà relancés aujourd’hui.' : 'Tout le monde a répondu.',
     });
   }
 

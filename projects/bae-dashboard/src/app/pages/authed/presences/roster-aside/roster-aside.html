@@ -40,7 +40,15 @@
         <div class="flex-1 text-[12px] font-semibold text-text">
           Réponses · {{ roster().length }} membre{{ roster().length === 1 ? '' : 's' }}
         </div>
-        <bae-btn kind="ghost" size="sm" [icon]="icBell">Relancer</bae-btn>
+        <bae-btn
+          kind="ghost"
+          size="sm"
+          [icon]="icBell"
+          [disabled]="reminding() || roster().length === 0"
+          (clicked)="remind()"
+          data-testid="remind"
+          >Relancer</bae-btn
+        >
       </div>
 
       @if (rosterLoading() && roster().length === 0) {
