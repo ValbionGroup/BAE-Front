@@ -9,7 +9,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import {
   LucideCalendar,
   LucideDownload,
@@ -18,7 +17,6 @@ import {
   LucidePlus,
   LucideSearch,
   LucideTrash2,
-  LucideUsers,
 } from '@lucide/angular';
 import { PageHeaderService } from '#core/services/page-header/page-header-service';
 import { ModalService } from '#shared/components/modal/modal.service';
@@ -56,7 +54,6 @@ export class CoordinationEvents implements OnInit {
 
   private readonly pageHeader = inject(PageHeaderService);
   private readonly modals = inject(ModalService);
-  private readonly router = inject(Router);
   private readonly store = inject(CoordinationStore);
   private readonly actionsTpl = viewChild<TemplateRef<unknown>>('actions');
 
@@ -88,7 +85,6 @@ export class CoordinationEvents implements OnInit {
   protected readonly icSearch = LucideSearch;
   protected readonly icEdit = LucidePencil;
   protected readonly icTrash = LucideTrash2;
-  protected readonly icUsers = LucideUsers;
 
   protected readonly loading = this.store.loading;
   protected readonly loadError = this.store.loadError;
@@ -162,10 +158,6 @@ export class CoordinationEvents implements OnInit {
 
   protected setSearch(q: string): void {
     this.searchQuery.set(q);
-  }
-
-  protected navigate(id: number): void {
-    this.router.navigate(['/coordination', id]);
   }
 
   protected rowAccent(e: CoordinationEvent): { bg: string; text: string } {

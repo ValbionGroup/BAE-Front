@@ -44,7 +44,7 @@
 
     <!-- Header row -->
     <div
-      class="hidden md:grid md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
+      class="hidden md:grid md:grid-cols-[36px_1.4fr_90px_90px_110px_48px] items-center gap-3 border-b border-border-s px-4 md:px-6 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
     >
       <span></span>
       <span>Soirée</span>
@@ -80,7 +80,7 @@
             role="button"
             [attr.aria-current]="selected ? 'true' : null"
             [class]="
-              'relative grid cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1.5 md:grid-cols-[36px_1.4fr_90px_90px_110px_104px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue ' +
+              'relative grid cursor-pointer grid-cols-[36px_1fr_auto] items-center gap-x-2.5 gap-y-1.5 md:grid-cols-[36px_1.4fr_90px_90px_110px_48px] md:gap-3 border-b border-border-s px-4 md:px-6 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue ' +
               (selected ? 'bg-surface-2' : 'hover:bg-surface-2/50') +
               (e.status === 'past' ? ' opacity-80' : '')
             "
@@ -100,9 +100,6 @@
             </span>
             <span class="col-start-2 row-start-1 min-w-0 md:col-start-auto md:row-start-auto">
               <span class="block truncate text-[13px] font-medium text-text">{{ e.name }}</span>
-              <span class="mt-0.5 block text-[11px] text-muted">
-                {{ e.recipes ? e.recipes + ' recettes' : 'aucune recette' }}
-              </span>
             </span>
             <span
               class="col-start-2 row-start-2 mono tnum text-[12px] text-text-2 md:col-start-auto md:row-start-auto"
@@ -121,14 +118,6 @@
               class="col-span-3 row-start-3 inline-flex items-center gap-1 justify-self-end md:col-span-1 md:row-start-auto"
               (click)="$event.stopPropagation()"
             >
-              <button
-                type="button"
-                (click)="navigate(e.id)"
-                class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 font-sans text-[11.5px] font-medium text-text-2 hover:border-blue hover:bg-blue-soft hover:text-blue"
-              >
-                <svg [lucideIcon]="icUsers" [size]="12" aria-hidden="true"></svg>
-                Gérer
-              </button>
               <button
                 type="button"
                 title="Supprimer"

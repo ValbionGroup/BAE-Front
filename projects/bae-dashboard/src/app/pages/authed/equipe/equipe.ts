@@ -14,7 +14,6 @@ import {
   LucideDynamicIcon,
   LucideEllipsis,
   LucidePencil,
-  LucidePlus,
   LucideSearch,
   LucideTrash2,
 } from '@lucide/angular';
@@ -37,7 +36,7 @@ import {
 import { ModalService } from '#shared/components/modal/modal.service';
 import { MemberEditModal } from '#shared/components/modal/member-edit-modal/member-edit-modal';
 import { toAuditEntries, toMemberRows, toPermsMatrix } from './equipe.mappers';
-import type { AuditEntry, Invitation } from './equipe.types';
+import type { AuditEntry } from './equipe.types';
 import { teamMemberName } from '#core/services/team/team-service';
 import type { ApiTeamMember } from '#core/services/team/team-service';
 
@@ -52,15 +51,6 @@ import { PageAction, PageActions } from '#shared/components/page-actions/page-ac
 export class Equipe implements OnInit {
   protected readonly pageActions = computed<readonly PageAction[]>(() => [
     { label: 'Audit log', icon: this.icDownload, kind: 'ghost', run: () => {} },
-    {
-      label: 'Inviter un membre',
-      icon: this.icPlus,
-      kind: 'primary',
-      primary: true,
-      disabled: true,
-      title: "Endpoint d'invitation non disponible",
-      run: () => {},
-    },
   ]);
 
   private readonly pageHeader = inject(PageHeaderService);
@@ -101,7 +91,6 @@ export class Equipe implements OnInit {
   }
 
   protected readonly icDownload = LucideDownload;
-  protected readonly icPlus = LucidePlus;
   protected readonly icSearch = LucideSearch;
   protected readonly icMore = LucideEllipsis;
   protected readonly icPencil = LucidePencil;
@@ -111,7 +100,7 @@ export class Equipe implements OnInit {
   protected readonly loadError = this.store.loadError;
   protected readonly errors = this.store.errors;
 
-  protected readonly tabs = ['Membres', 'Rôles & permissions', 'Audit · activité', 'Invitations'];
+  protected readonly tabs = ['Membres', 'Rôles & permissions', 'Audit · activité'];
   protected readonly activeTab = signal(0);
 
   protected readonly searchQuery = signal('');
@@ -338,16 +327,6 @@ export class Equipe implements OnInit {
     const permissions = this.store.permissions().length;
     return `${members} membre${members > 1 ? 's' : ''} · ${roles} rôle${roles > 1 ? 's' : ''} · ${permissions} permission${permissions > 1 ? 's' : ''}`;
   });
-
-  /**
-   * MOCK — the backend has no `invitations` table and no invitation endpoint.
-   * Per project rule (front feature without a backend ⇒ the backend is incomplete),
-   * the panel stays in place with these placeholder rows until `GET /invitations` exists.
-   */
-  protected readonly invitations: readonly Invitation[] = [
-    { mail: 'c.guerin@etu.ec.fr', role: 'Coordo (suppléant)', exp: '14 fév.' },
-    { mail: 'r.albert@etu.ec.fr', role: 'Membre actif', exp: '14 fév.' },
-  ];
 
   protected readonly skeletonRows = [0, 1, 2, 3, 4];
 

@@ -10,10 +10,8 @@ import {
 import {
   LucideCalendar,
   LucideCheck,
-  LucideChefHat,
   LucideClock,
   LucideDynamicIcon,
-  LucidePlus,
   LucideTrash2,
   LucideUsers,
   LucideX,
@@ -51,7 +49,7 @@ const DEFAULT_CAPACITY = 100;
   imports: [Badge, Btn, Field, Input, Toggle, LucideDynamicIcon],
   templateUrl: './event-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'flex flex-col min-w-0 overflow-hidden' },
+  host: { class: 'flex flex-col min-w-0 overflow-hidden md:h-full' },
 })
 export class CoordinationEventDetail {
   readonly event = input<CoordinationEvent | null>(null);
@@ -65,8 +63,6 @@ export class CoordinationEventDetail {
   protected readonly icClock = LucideClock;
   protected readonly icX = LucideX;
   protected readonly icCheck = LucideCheck;
-  protected readonly icChef = LucideChefHat;
-  protected readonly icPlus = LucidePlus;
   protected readonly icTrash = LucideTrash2;
   protected readonly icUsers = LucideUsers;
 
@@ -159,10 +155,6 @@ export class CoordinationEventDetail {
     });
   }
 
-  protected removeRecipe(name: string): void {
-    this.state.update((s) => (s ? { ...s, recipes: s.recipes.filter((r) => r !== name) } : s));
-  }
-
   protected navigate(): void {
     const s = this.state();
     if (s) void this.router.navigate(['/coordination', s.id]);
@@ -225,7 +217,6 @@ export class CoordinationEventDetail {
       time: timePart,
       endTime,
       description: event.description ?? '',
-      recipes: [],
       capacity: event.capacity,
       expectedAttendees: event.expectedAttendees,
       payerName: event.payerName,

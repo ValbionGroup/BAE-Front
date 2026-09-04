@@ -49,34 +49,6 @@
         ></textarea>
       </bae-field>
 
-      <bae-field [label]="'Recettes assignées (' + s.recipes.length + ')'">
-        <div class="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface-2 p-2">
-          @for (r of s.recipes; track r) {
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full border border-border-s bg-surface px-2 py-1 text-[11.5px] text-text-2"
-            >
-              <svg [lucideIcon]="icChef" [size]="11" class="text-muted" aria-hidden="true"></svg>
-              {{ r }}
-              <button
-                type="button"
-                (click)="removeRecipe(r)"
-                class="inline-flex cursor-pointer items-center border-none bg-transparent p-0 text-muted hover:text-danger"
-                [attr.aria-label]="'Retirer ' + r"
-              >
-                <svg [lucideIcon]="icX" [size]="10" aria-hidden="true"></svg>
-              </button>
-            </span>
-          }
-          <button
-            type="button"
-            class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-border bg-transparent px-2 py-1 font-sans text-[11.5px] text-muted hover:bg-surface hover:text-text-2"
-          >
-            <svg [lucideIcon]="icPlus" [size]="10" aria-hidden="true"></svg>
-            Ajouter
-          </button>
-        </div>
-      </bae-field>
-
       <bae-field label="Personnes attendues">
         <bae-input
           type="number"

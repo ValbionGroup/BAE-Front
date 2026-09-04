@@ -13,7 +13,6 @@ export interface CoordinationEvent {
   readonly statusKind: BadgeKind;
   readonly members: number;
   readonly maxMembers: number;
-  readonly recipes: number;
   readonly duration: number | null;
   readonly description: string | null;
   /** Plafond de précommandes ; `0` = fermées. */
@@ -34,7 +33,6 @@ export interface EditState {
   time: string;
   endTime: string;
   description: string;
-  recipes: string[];
   /** Plafond de précommandes ; `0` = fermées. Il n'y a pas de pause. */
   capacity: number;
   expectedAttendees: number | null;

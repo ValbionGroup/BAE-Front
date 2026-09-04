@@ -19,7 +19,6 @@ const soiree: CoordinationEvent = {
   statusKind: 'blue',
   members: 4,
   maxMembers: 10,
-  recipes: 2,
   duration: null,
   description: null,
   capacity: 50,

@@ -49,7 +49,6 @@ function toCoordinationEvent(
     statusKind: isPast ? 'ok' : 'warn',
     members: assignedCount,
     maxMembers,
-    recipes: 0,
     duration: apiEvent.duration,
     description: apiEvent.description ?? null,
     capacity: apiEvent.capacity ?? 0,

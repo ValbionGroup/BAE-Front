@@ -187,50 +187,56 @@
   [title]="selected()?.name ?? ''"
   (closed)="selectedId.set(null)"
 >
-  <div class="flex min-h-0 flex-col gap-3.5 p-4 md:h-full md:overflow-y-auto md:p-5">
+  <div class="flex min-h-0 flex-col md:h-full">
+    <div class="flex min-h-0 flex-col gap-3.5 p-4 md:flex-1 md:overflow-y-auto md:p-5">
+      @if (selected(); as f) {
+        <div>
+          @if (f.quantity === 0) {
+            <bae-badge kind="warn" [dot]="true">En rupture</bae-badge>
+          } @else {
+            <bae-badge kind="ok" [dot]="true">En stock</bae-badge>
+          }
+          <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
+            {{ f.name }}
+          </h3>
+          <div class="text-[12px] text-muted">Non alimentaire</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5">
+          <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+            <div class="text-[10px] uppercase tracking-wider text-muted">Quantité</div>
+            <div class="tnum text-[18px] font-semibold text-text">{{ f.quantity }}</div>
+          </div>
+          <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+            <div class="text-[10px] uppercase tracking-wider text-muted">Prix unitaire</div>
+            <div class="tnum text-[18px] font-semibold text-text">{{ formatCents(f.price) }} €</div>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
+          <div class="text-[10px] uppercase tracking-wider text-muted">Valeur du stock</div>
+          <div class="tnum text-[18px] font-semibold text-text">{{ formatCents(value(f)) }} €</div>
+        </div>
+      }
+    </div>
+
+    <!-- Le stock d'une fourniture se corrige en retapant le nombre : le
+         serveur ne tient pas d'historique de mouvements pour elles. -->
     @if (selected(); as f) {
-      <div>
-        @if (f.quantity === 0) {
-          <bae-badge kind="warn" [dot]="true">En rupture</bae-badge>
-        } @else {
-          <bae-badge kind="ok" [dot]="true">En stock</bae-badge>
-        }
-        <h3 class="mt-2 mb-1 text-[19px] font-semibold -tracking-[0.3px] text-text">
-          {{ f.name }}
-        </h3>
-        <div class="text-[12px] text-muted">Non alimentaire</div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-1.5">
-        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-          <div class="text-[10px] uppercase tracking-wider text-muted">Quantité</div>
-          <div class="tnum text-[18px] font-semibold text-text">{{ f.quantity }}</div>
+      @if (canWrite() || canDelete()) {
+        <div class="flex gap-2 border-t border-border-s bg-surface p-4 md:px-5 md:py-3">
+          @if (canWrite()) {
+            <bae-btn kind="secondary" size="sm" [full]="true" (clicked)="openEditor(f)">
+              Modifier
+            </bae-btn>
+          }
+          @if (canDelete()) {
+            <bae-btn kind="danger" size="sm" [full]="true" (clicked)="confirmDelete(f)">
+              Supprimer
+            </bae-btn>
+          }
         </div>
-        <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-          <div class="text-[10px] uppercase tracking-wider text-muted">Prix unitaire</div>
-          <div class="tnum text-[18px] font-semibold text-text">{{ formatCents(f.price) }} €</div>
-        </div>
-      </div>
-
-      <div class="rounded-md border border-border-s bg-surface-2 p-2.5">
-        <div class="text-[10px] uppercase tracking-wider text-muted">Valeur du stock</div>
-        <div class="tnum text-[18px] font-semibold text-text">{{ formatCents(value(f)) }} €</div>
-      </div>
-
-      <!-- Le stock d'une fourniture se corrige en retapant le nombre : le
-           serveur ne tient pas d'historique de mouvements pour elles. -->
-      <div class="flex gap-2">
-        @if (canWrite()) {
-          <bae-btn kind="secondary" size="sm" [full]="true" (clicked)="openEditor(f)">
-            Modifier
-          </bae-btn>
-        }
-        @if (canDelete()) {
-          <bae-btn kind="danger" size="sm" [full]="true" (clicked)="confirmDelete(f)">
-            Supprimer
-          </bae-btn>
-        }
-      </div>
+      }
     }
   </div>
 </bae-detail-sheet>
