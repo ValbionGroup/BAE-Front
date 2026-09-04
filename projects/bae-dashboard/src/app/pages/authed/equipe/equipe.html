@@ -19,9 +19,6 @@
         "
       >
         {{ tab }}
-        @if (i === 3) {
-          <bae-badge kind="blue" class="ml-2">{{ invitations.length }}</bae-badge>
-        }
       </button>
     }
   </div>
@@ -286,32 +283,6 @@
                 </div>
               }
             }
-          }
-        </bae-card>
-      }
-
-      @case (3) {
-        <!--
-          MOCK — aucune table `invitations` ni endpoint côté backend.
-          Le panneau est conservé volontairement : le manque est côté API.
-        -->
-        <bae-card class="block">
-          <div class="flex items-center mb-2.5">
-            <div class="flex-1 text-[13px] font-semibold text-text">Invitations en attente</div>
-            <bae-badge kind="blue">{{ invitations.length }}</bae-badge>
-          </div>
-          <p class="text-[11px] text-warn mb-1">
-            Données de démonstration · endpoint non disponible
-          </p>
-          @for (iv of invitations; track iv.mail; let i = $index) {
-            <div [class]="'py-2.5 ' + (i > 0 ? 'border-t border-border-s' : '')">
-              <div class="text-[12.5px] text-text font-medium">{{ iv.mail }}</div>
-              <div class="text-[11px] text-muted mt-0.5">{{ iv.role }} · expire {{ iv.exp }}</div>
-              <div class="flex gap-1.5 mt-2">
-                <bae-btn kind="ghost" size="sm">Renvoyer</bae-btn>
-                <bae-btn kind="ghost" size="sm">Annuler</bae-btn>
-              </div>
-            </div>
           }
         </bae-card>
       }

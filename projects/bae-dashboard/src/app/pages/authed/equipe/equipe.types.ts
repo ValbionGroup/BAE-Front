@@ -85,15 +85,3 @@ export interface AuditEntry {
   /** Derived from `logs.level` (`error` / `warning` / `info`). */
   readonly c: AuditTone;
 }
-
-/**
- * MOCK — kept intentionally.
- * No `invitations` table and no invitation endpoint exist on the backend. Per project rule,
- * a feature present in the front but missing in the back means the BACKEND is incomplete:
- * the UI stays in place with mock rows until `GET /invitations` ships.
- */
-export interface Invitation {
-  readonly mail: string;
-  readonly role: string;
-  readonly exp: string;
-}

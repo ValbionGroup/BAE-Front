@@ -38,12 +38,10 @@
     @if (error(); as message) {
       <p class="text-[11.5px] text-danger" role="alert">{{ message }}</p>
     }
+  </div>
 
-    <div class="mt-1 flex justify-end gap-2">
-      <bae-btn kind="secondary" size="sm" (clicked)="cancel()">Annuler</bae-btn>
-      <bae-btn kind="primary" size="sm" [disabled]="busy()" (clicked)="submit()">
-        Enregistrer
-      </bae-btn>
-    </div>
+  <div modal-footer class="flex flex-1 justify-end gap-2">
+    <bae-btn kind="ghost" size="md" (clicked)="cancel()">Annuler</bae-btn>
+    <bae-btn kind="primary" size="md" [disabled]="busy()" (clicked)="submit()">Enregistrer</bae-btn>
   </div>
 </bfd-modal-shell>
