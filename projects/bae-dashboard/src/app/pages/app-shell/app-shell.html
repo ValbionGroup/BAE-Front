@@ -1,6 +1,11 @@
 <!-- w-full et non w-screen : 100vw inclut la barre de défilement verticale, donc
      toute page assez haute pour en afficher une déborde horizontalement de sa largeur. -->
-<div class="flex h-screen w-full overflow-hidden bg-bg text-text font-sans">
+<!-- relative : un élément en position absolue sans ancêtre positionné prend le bloc
+     conteneur initial, et aucun overflow intermédiaire ne le rogne — `sr-only` est
+     dans ce cas. Les libellés d'une longue liste étendaient donc la hauteur du
+     document, qui défilait en double du contenu. Ancrer ici, et non sur la zone de
+     défilement : là, ils rogneraient encore mais y feraient apparaître sa barre. -->
+<div class="relative flex h-screen w-full overflow-hidden bg-bg text-text font-sans">
   <!-- Tiroir sous `md`, colonne fixe au-delà. -->
   <div
     [class]="
